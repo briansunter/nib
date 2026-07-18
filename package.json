@@ -44,7 +44,8 @@
     "preview": "vite preview --outDir dist/client",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:version-policy": "tsx scripts/check-version-policy.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

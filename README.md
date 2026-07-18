@@ -155,6 +155,8 @@ chore: update dependencies
 
 The [release workflow](.github/workflows/release.yml) uses Bun to install dependencies and run checks, then uses npm from GitHub Actions to publish `mini-static` with provenance. Release Please opens or updates a release PR; merging it creates the tag and GitHub release.
 
+Mini Static intentionally stays in the `0.x` series for now. Release Please uses its pre-major bump rules, and CI refuses to publish any version with a nonzero major component. This prevents an accidental `1.0.0` or later major release.
+
 The first publish is a one-time bootstrap from an authenticated maintainer machine:
 
 ```bash

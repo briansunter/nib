@@ -50,6 +50,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Enforce pre-major version policy
+        run: bun run check:version-policy
+
       - name: Typecheck
         run: bun run typecheck
 

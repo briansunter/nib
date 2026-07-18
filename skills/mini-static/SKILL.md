@@ -37,6 +37,7 @@ Use `bun run typecheck`, `bun run test`, and `bun run build` before handing off 
 - Use `bun run build` to verify client and server bundles plus prerendered HTML.
 - Inspect `dist/client` when a change affects routes, metadata, layouts, or generated HTML.
 - For internal links, use `siteHref` from `src/framework/urls.ts`; it includes the Vite base path.
+- Keep versions in `0.x.y`; run `bun run check:version-policy` before release work.
 
 ### GitHub Pages
 
