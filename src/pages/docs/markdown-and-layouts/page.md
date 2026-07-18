@@ -6,7 +6,7 @@ layout: docs
 
 # Markdown and layouts
 
-Use `page.md` for guides, articles, and documentation. Nib parses frontmatter and renders the Markdown to HTML during the build.
+Use `page.md` for guides, articles, and documentation. Nib parses frontmatter and renders Markdown to HTML during development and the production build.
 
 ## Frontmatter
 
@@ -49,12 +49,12 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
 }
 ```
 
-Select it with `layout: docs`. The layout receives the rendered article as `children`, so it can add a heading, sidebar, table of contents, or other React markup around the article.
+Select it with `layout: docs`. The layout receives the rendered article as `children`, so it can add navigation, a sidebar, or other static TSX around the article.
 
 Layouts may place [React islands](../react-islands/) before, after, or beside those children. Inline JSX inside `page.md` is not supported.
 
 Layout names are flat filenames. `src/layouts/docs.tsx` works; nested layout paths are intentionally unsupported.
 
-## Markdown versus React
+## Markdown page versus TSX page
 
-Choose Markdown when the page is primarily content. Choose `page.tsx` when you need custom static React components or a page-specific layout. Put local state and event handlers in an explicit React island. Both page types are server-rendered and become static HTML in `dist/client`.
+Choose a Markdown page when the route is primarily content. Choose a TSX page when it needs custom static component composition or a page-specific structure. Put browser state and event handlers in an explicit React island. Both page types are server-rendered and become static HTML in `dist/client`.

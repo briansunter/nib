@@ -6,7 +6,7 @@ layout: docs
 
 # Releases
 
-Nib uses Release Please to turn Conventional Commits on `master` into release pull requests. Merging a release pull request updates the version and changelog, creates the Git tag and GitHub release, and publishes the package from that exact tag.
+Nib releases the npm package as `@briansunter/nib`. Release Please turns Conventional Commits on `master` into release pull requests. Merging a release pull request updates the version and changelog, creates the Git tag and GitHub release, and publishes the package from that exact tag.
 
 ## Commit format
 
@@ -39,7 +39,7 @@ bun run build
 bun pm pack --destination ./dist/package
 ```
 
-The package is [`@briansunter/nib`](https://www.npmjs.com/package/@briansunter/nib). The unscoped `nib` name is already registered, so Nib uses the public `@briansunter` scope.
+The product and repository are named **Nib**. Only the npm package uses the scoped name [`@briansunter/nib`](https://www.npmjs.com/package/@briansunter/nib), because the unscoped `nib` name is already registered.
 
 ## npm authentication
 

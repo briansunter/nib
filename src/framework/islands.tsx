@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  type ComponentClass,
   type ComponentType,
   type ReactNode,
 } from 'react'
@@ -15,16 +16,30 @@ export interface IslandControlProps {
 }
 
 type IsAny<Value> = 0 extends (1 & Value) ? true : false
-type AllPropertiesAreJson<Value extends object> = keyof Value extends never
+type IsBroadObject<Value> = [Value] extends [object]
+  ? [object] extends [Value] ? true : false
+  : false
+type IsOptionalKey<Value extends object, Key extends keyof Value> = {} extends Pick<Value, Key>
   ? true
-  : false extends {
-      [Key in keyof Value]-?: IsJsonValue<Value[Key]>
-    }[keyof Value]
+  : false
+type AllPropertiesAreJson<Value extends object> = Value extends unknown
+  ? IsBroadObject<Value> extends true
     ? false
-    : true
+    : keyof Value extends never
+      ? true
+      : false extends {
+          [Key in keyof Value]-?: IsOptionalKey<Value, Key> extends true
+            ? IsJsonValue<Exclude<Value[Key], undefined>>
+            : IsJsonValue<Value[Key]>
+        }[keyof Value]
+        ? false
+        : true
+  : never
 type IsJsonValue<Value> = IsAny<Value> extends true
   ? false
-  : [Value] extends [undefined | null | string | number | boolean]
+  : [Value] extends [never | undefined]
+    ? false
+    : [Value] extends [null | string | number | boolean]
     ? true
     : Value extends (...args: never[]) => unknown
       ? false
@@ -33,11 +48,16 @@ type IsJsonValue<Value> = IsAny<Value> extends true
         : Value extends object
           ? AllPropertiesAreJson<Value>
           : false
-type DefinitionGuard<Props extends object> = 'hydrate' extends keyof Props
+type HasHydrateKey<Props extends object> = Props extends unknown
+  ? 'hydrate' extends keyof Props ? true : false
+  : never
+type DefinitionGuard<Props extends object> = true extends HasHydrateKey<Props>
   ? [error: 'hydrate is reserved for the island hydration strategy']
   : AllPropertiesAreJson<Props> extends true
     ? []
     : [error: 'Island props must be JSON-serializable']
+
+type IslandFunctionComponent = (...args: any[]) => ReactNode | Promise<ReactNode>
 
 export type IslandDefinition<Props extends object = object> = ComponentType<
   Props & IslandControlProps
@@ -65,8 +85,22 @@ function isHydrationStrategy(value: unknown): value is HydrationStrategy {
 
 export function defineIsland<Props extends object>(
   id: string,
-  Component: ComponentType<Props>,
+  Component: (props: Props) => ReactNode | Promise<ReactNode>,
   ..._guard: DefinitionGuard<Props>
+): IslandDefinition<Props>
+export function defineIsland<Component extends IslandFunctionComponent>(
+  id: string,
+  Component: Component & (Parameters<Component> extends [] ? unknown : never),
+): IslandDefinition<Record<never, never>>
+export function defineIsland<Props extends object>(
+  id: string,
+  Component: ComponentClass<Props>,
+  ..._guard: DefinitionGuard<Props>
+): IslandDefinition<Props>
+export function defineIsland<Props extends object>(
+  id: string,
+  Component: ComponentType<Props>,
+  ..._guard: unknown[]
 ): IslandDefinition<Props> {
   const islandId = validateIslandId(id)
   let definition: IslandDefinition<Props>

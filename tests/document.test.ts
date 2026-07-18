@@ -32,4 +32,21 @@ describe('HTML documents', () => {
       page(['counter']),
     )).toThrow('missing the island entry')
   })
+
+  it('requires exactly one head and SSR outlet', () => {
+    expect(() => renderDocument('<body><!--ssr-outlet--></body>', page([])))
+      .toThrow('exactly one <!--head-outlet--> outlet')
+    expect(() => renderDocument('<head><!--head-outlet--></head>', page([])))
+      .toThrow('exactly one <!--ssr-outlet--> outlet')
+    expect(() => renderDocument(
+      '<head><!--head-outlet--><!--head-outlet--></head><body><!--ssr-outlet--></body>',
+      page([]),
+    )).toThrow('exactly one <!--head-outlet--> outlet')
+  })
+
+  it('rejects duplicate island entry blocks', () => {
+    const duplicate = `${template}<script data-nib-islands type="module"></script>`
+    expect(() => renderDocument(duplicate, page([])))
+      .toThrow('multiple island entry blocks')
+  })
 })

@@ -1,13 +1,17 @@
 export function stripBasePath(path: string, basePath: string): string {
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const parsed = new URL(path, 'http://nib.local')
+  const normalizedPath = parsed.pathname.startsWith('/') ? parsed.pathname : `/${parsed.pathname}`
   const normalizedBase = basePath.startsWith('/') ? basePath : `/${basePath}`
   const prefix = normalizedBase.replace(/\/+$/, '')
 
-  if (!prefix) return normalizedPath
-  if (normalizedPath === prefix || normalizedPath === `${prefix}/`) return '/'
-  return normalizedPath.startsWith(`${prefix}/`)
-    ? normalizedPath.slice(prefix.length) || '/'
-    : normalizedPath
+  let stripped = normalizedPath
+  if (prefix && (normalizedPath === prefix || normalizedPath === `${prefix}/`)) {
+    stripped = '/'
+  } else if (prefix && normalizedPath.startsWith(`${prefix}/`)) {
+    stripped = normalizedPath.slice(prefix.length) || '/'
+  }
+
+  return `${stripped}${parsed.search}${parsed.hash}`
 }
 
 export function siteHref(path: string) {

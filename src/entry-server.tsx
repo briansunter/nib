@@ -4,6 +4,7 @@ import { renderHead } from './framework/meta'
 import { getRoute } from './framework/router'
 import type { RenderedPage } from './framework/types'
 import { renderReactPage } from './framework/render-page'
+import { stripBasePath } from './framework/urls'
 import { validateIslandModules, type IslandModule } from './framework/islands'
 import { routes } from './routes'
 
@@ -15,7 +16,7 @@ export const paths = [...routes.values()]
   .map((route) => route.path)
 
 export function render(url: string): RenderedPage {
-  const route = getRoute(routes, url)
+  const route = getRoute(routes, stripBasePath(url, import.meta.env.BASE_URL))
   const page = renderReactPage(<App route={route} site={site} />)
   return {
     status: route.status,

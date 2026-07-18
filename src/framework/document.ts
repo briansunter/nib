@@ -1,13 +1,26 @@
 import type { RenderedPage } from './types'
 
-const ISLANDS_SCRIPT = /<script\b(?=[^>]*\bdata-nib-islands(?:\s|=|>))[^>]*><\/script>/i
+const HEAD_OUTLET = '<!--head-outlet-->'
+const SSR_OUTLET = '<!--ssr-outlet-->'
+const ISLANDS_SCRIPT = /(?:<!--nib-islands-entry-->\s*)?<script\b(?=[^>]*\bdata-nib-islands(?:\s|=|>))[^>]*>[\s\S]*?<\/script>/gi
+
+function replaceSingleOutlet(template: string, outlet: string, value: string): string {
+  const occurrences = template.split(outlet).length - 1
+  if (occurrences !== 1) {
+    throw new Error(`HTML template must contain exactly one ${outlet} outlet`)
+  }
+  return template.replace(outlet, value)
+}
 
 export function renderDocument(template: string, page: RenderedPage): string {
-  const document = template
-    .replace('<!--head-outlet-->', page.head)
-    .replace('<!--ssr-outlet-->', page.html)
+  let document = replaceSingleOutlet(template, HEAD_OUTLET, page.head)
+  document = replaceSingleOutlet(document, SSR_OUTLET, page.html)
+  const islandScripts = [...document.matchAll(ISLANDS_SCRIPT)]
 
-  if (!ISLANDS_SCRIPT.test(document)) {
+  if (islandScripts.length > 1) {
+    throw new Error('HTML template contains multiple island entry blocks')
+  }
+  if (islandScripts.length === 0) {
     if (page.islands.length > 0) throw new Error('HTML template is missing the island entry block')
     return document
   }

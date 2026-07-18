@@ -24,6 +24,17 @@ describe('markdown', () => {
       .toThrow('Markdown layout must be a non-empty string')
   })
 
+  it('validates Markdown frontmatter types at the compiler seam', () => {
+    expect(() => markdownToCompiledPage('---\ntitle: 42\n---\n# World'))
+      .toThrow('Markdown title must be a string')
+    expect(() => markdownToCompiledPage('---\ndescription: [wrong]\n---\n# World'))
+      .toThrow('Markdown description must be a string')
+    expect(() => markdownToCompiledPage('---\ndraft: "false"\n---\n# World'))
+      .toThrow('Markdown draft must be a boolean')
+    expect(() => markdownToCompiledPage('---\nnavtitle: World\n---\n# World'))
+      .toThrow('Unsupported Markdown frontmatter field: navtitle')
+  })
+
   it('generates a Vite module that imports the named layout', async () => {
     const plugin = nibMarkdown()
     if (typeof plugin.load !== 'function') throw new Error('Markdown plugin has no load hook')

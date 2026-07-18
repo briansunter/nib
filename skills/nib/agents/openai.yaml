@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nib"
+  short_description: "Build and maintain static-first Nib sites"
+  default_prompt: "Use $nib to make this change while preserving static output and validating the generated site."

@@ -6,5 +6,5 @@ export const meta: PageMeta = {
 }
 
 export default function AboutPage() {
-  return <article className="prose prose-invert"><h1>About</h1><p>This is a normal TypeScript React page discovered from its folder.</p></article>
+  return <article className="prose prose-invert"><h1>About</h1><p>This TSX page is discovered from its folder and prerendered to static HTML.</p></article>
 }

@@ -2,7 +2,7 @@
   "name": "@briansunter/nib",
   "version": "0.2.0",
   "packageManager": "bun@1.3.3",
-  "description": "A minimal static-site starter with TSX templates, React islands, Vite, Tailwind, and Markdown.",
+  "description": "A small static-site starter for React, Markdown, and opt-in islands.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/briansunter/nib.git"

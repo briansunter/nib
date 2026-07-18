@@ -5,6 +5,7 @@ describe('urls', () => {
   it('strips a project Pages base path before route matching', () => {
     expect(stripBasePath('/nib/', '/nib/')).toBe('/')
     expect(stripBasePath('/nib/docs/', '/nib/')).toBe('/docs/')
+    expect(stripBasePath('/nib/docs/?draft=1#top', '/nib/')).toBe('/docs/?draft=1#top')
   })
 
   it('leaves root and unrelated paths unchanged', () => {

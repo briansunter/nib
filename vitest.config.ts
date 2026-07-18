@@ -11,6 +11,7 @@ export default defineConfig({
         'src/framework/island-paths.ts',
         'src/framework/island-serialization.ts',
         'src/framework/island-vite-plugin.ts',
+        'src/framework/island-runtime.ts',
         'src/framework/islands.tsx',
         'src/framework/markdown.ts',
         'src/framework/meta.ts',

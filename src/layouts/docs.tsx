@@ -5,8 +5,8 @@ const documentation = [
   { label: 'Overview', href: '/docs/' },
   { label: 'Getting started', href: '/docs/getting-started/' },
   { label: 'Pages and routes', href: '/docs/pages-and-routes/' },
-  { label: 'React islands', href: '/docs/react-islands/' },
   { label: 'Markdown and layouts', href: '/docs/markdown-and-layouts/' },
+  { label: 'React islands', href: '/docs/react-islands/' },
   { label: 'GitHub Pages', href: '/docs/github-pages/' },
   { label: 'Releases', href: '/docs/releases/' },
 ]

@@ -30,12 +30,40 @@ function getMarkdownLayoutName(layout: unknown): string | undefined {
   return name
 }
 
+function getMarkdownMeta(data: unknown): { meta: PageMeta; layout: string | undefined } {
+  if (data === null || typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('Markdown frontmatter must be a mapping')
+  }
+
+  const values = data as Record<string, unknown>
+  const supported = new Set(['title', 'description', 'draft', 'layout'])
+  for (const key of Object.keys(values)) {
+    if (!supported.has(key)) throw new Error(`Unsupported Markdown frontmatter field: ${key}`)
+  }
+
+  if ('title' in values && typeof values.title !== 'string') {
+    throw new Error('Markdown title must be a string')
+  }
+  if ('description' in values && typeof values.description !== 'string') {
+    throw new Error('Markdown description must be a string')
+  }
+  if ('draft' in values && typeof values.draft !== 'boolean') {
+    throw new Error('Markdown draft must be a boolean')
+  }
+
+  const { layout, ...meta } = values
+  return {
+    meta: meta as PageMeta,
+    layout: getMarkdownLayoutName(layout),
+  }
+}
+
 export function markdownToCompiledPage(source: string) {
   const parsed = matter(source)
-  const { layout, ...meta } = parsed.data as PageMeta & { layout?: unknown }
+  const { meta, layout } = getMarkdownMeta(parsed.data)
   return {
     html: renderMarkdown(parsed.content),
-    meta: meta as PageMeta,
-    layout: getMarkdownLayoutName(layout)
+    meta,
+    layout,
   }
 }
