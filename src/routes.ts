@@ -1,8 +1,10 @@
 import site from './site.config'
-import { discoverPages } from './framework/discover'
 import { createRoutes } from './framework/router'
+import type { PageModule } from './framework/types'
 
-export const routes = createRoutes(discoverPages(), site)
-export const paths = [...routes.values()]
-  .filter((route) => route.status === 200)
-  .map((route) => route.path)
+const pages = import.meta.glob<PageModule>(
+  ['./pages/**/page.tsx', './pages/**/page.md'],
+  { eager: true },
+)
+
+export const routes = createRoutes(pages, site)

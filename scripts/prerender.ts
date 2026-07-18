@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { outputPath } from '../src/framework/paths'
 import type { RenderedPage } from '../src/framework/types'
 
 const root = path.resolve(import.meta.dirname, '..')
@@ -18,7 +17,7 @@ function document(page: RenderedPage) {
 }
 
 for (const routePath of paths) {
-  const file = path.join(clientDir, outputPath(routePath))
+  const file = path.join(clientDir, routePath === '/' ? 'index.html' : `${routePath.slice(1)}/index.html`)
   await fs.mkdir(path.dirname(file), { recursive: true })
   await fs.writeFile(file, document(render(routePath)))
   console.log(`prerendered ${routePath}`)

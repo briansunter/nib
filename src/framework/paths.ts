@@ -13,7 +13,3 @@ export function fileToRoute(file: string): string {
   if (!match[1]) return '/'
   return `/${match[1]}`.replace(/\/+/g, '/')
 }
-
-export function outputPath(routePath: string): string {
-  return routePath === '/' ? 'index.html' : `${routePath.slice(1)}/index.html`
-}

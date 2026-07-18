@@ -7,7 +7,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html'],
       include: [
-        'src/framework/markdown.tsx',
+        'src/framework/markdown.ts',
         'src/framework/meta.ts',
         'src/framework/paths.ts',
         'src/framework/router.ts'

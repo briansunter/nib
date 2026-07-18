@@ -76,6 +76,8 @@ Add a React layout under `src/layouts` and select it by name in a Markdown page'
 src/layouts/docs.tsx -> layout: docs
 ```
 
+Layout names are flat filenames under `src/layouts`; nested layout paths are intentionally unsupported.
+
 Layouts receive the rendered Markdown article as `children`:
 
 ```tsx

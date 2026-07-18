@@ -1,18 +1,10 @@
-import type { ComponentType, ReactNode } from 'react'
+import type { ComponentType } from 'react'
 
 export interface PageMeta {
   title?: string
   description?: string
-  lang?: string
   draft?: boolean
-  layout?: string
 }
-
-export interface MarkdownLayoutProps {
-  children: ReactNode
-}
-
-export type MarkdownLayout = ComponentType<MarkdownLayoutProps>
 
 export interface SiteConfig {
   title: string

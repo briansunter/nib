@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fileToRoute, normalizePath, outputPath } from '../src/framework/paths'
+import { fileToRoute, normalizePath } from '../src/framework/paths'
 
 describe('paths', () => {
   it('normalizes URLs and trailing slashes', () => {
@@ -12,8 +12,4 @@ describe('paths', () => {
     expect(fileToRoute('C:\\app\\pages\\about\\page.tsx')).toBe('/about')
   })
   it('rejects invalid files', () => expect(() => fileToRoute('about.tsx')).toThrow())
-  it('maps routes to clean output paths', () => {
-    expect(outputPath('/')).toBe('index.html')
-    expect(outputPath('/about')).toBe('about/index.html')
-  })
 })
