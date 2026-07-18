@@ -1,7 +1,7 @@
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { markdownToCompiledPage } from '../src/framework/markdown'
-import { miniStaticMarkdown } from '../src/framework/vite-plugin'
+import { nibMarkdown } from '../src/framework/vite-plugin'
 
 describe('markdown', () => {
   it('compiles GFM Markdown and frontmatter', () => {
@@ -25,7 +25,7 @@ describe('markdown', () => {
   })
 
   it('generates a Vite module that imports the named layout', async () => {
-    const plugin = miniStaticMarkdown()
+    const plugin = nibMarkdown()
     if (typeof plugin.load !== 'function') throw new Error('Markdown plugin has no load hook')
 
     const load = plugin.load as (id: string) => Promise<unknown>
