@@ -10,7 +10,8 @@ export default defineConfig({
         'src/framework/markdown.ts',
         'src/framework/meta.ts',
         'src/framework/paths.ts',
-        'src/framework/router.ts'
+        'src/framework/router.ts',
+        'src/framework/urls.ts'
       ],
       thresholds: {
         lines: 85,

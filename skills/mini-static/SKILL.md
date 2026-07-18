@@ -36,11 +36,13 @@ Use `bun run typecheck`, `bun run test`, and `bun run build` before handing off 
 - Use `bun run test` for Markdown, metadata, path, and routing regressions.
 - Use `bun run build` to verify client and server bundles plus prerendered HTML.
 - Inspect `dist/client` when a change affects routes, metadata, layouts, or generated HTML.
+- For internal links, use `siteHref` from `src/framework/urls.ts`; it includes the Vite base path.
 
 ### GitHub Pages
 
 - `.github/workflows/pages.yml` runs checks for pull requests and deploys `dist/client` from `master`.
 - Keep internal navigation going through the site's base-path helper; GitHub project pages are served below `/<repository>/`.
+- Client route matching must strip `import.meta.env.BASE_URL` from `window.location.pathname` before calling `getRoute`.
 - Use `SITE_BASE_PATH=/` for a user Pages site or custom domain.
 
 ## Constraints
