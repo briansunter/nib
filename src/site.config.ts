@@ -7,6 +7,6 @@ export default {
   navigation: [
     { label: 'Home', href: '/' },
     { label: 'About', href: '/about/' },
-    { label: 'Docs', href: '/docs/getting-started/' }
+    { label: 'Docs', href: '/docs/' }
   ]
 } satisfies SiteConfig

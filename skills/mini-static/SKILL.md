@@ -8,11 +8,11 @@ description: Build and maintain small React/Vite static sites with Mini Static, 
 ## Quick start
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
-Use `npm run typecheck`, `npm test`, and `npm run build` before handing off a change. Deploy the generated `dist/client` directory.
+Use `bun run typecheck`, `bun run test`, and `bun run build` before handing off a change. Deploy the generated `dist/client` directory.
 
 ## Workflows
 
@@ -32,10 +32,16 @@ Use `npm run typecheck`, `npm test`, and `npm run build` before handing off a ch
 
 ### Validate behavior
 
-- Use `npm run dev` for Vite Fast Refresh and SSR route checks.
-- Use `npm test` for Markdown, metadata, path, and routing regressions.
-- Use `npm run build` to verify client and server bundles plus prerendered HTML.
+- Use `bun run dev` for Vite Fast Refresh and SSR route checks.
+- Use `bun run test` for Markdown, metadata, path, and routing regressions.
+- Use `bun run build` to verify client and server bundles plus prerendered HTML.
 - Inspect `dist/client` when a change affects routes, metadata, layouts, or generated HTML.
+
+### GitHub Pages
+
+- `.github/workflows/pages.yml` runs checks for pull requests and deploys `dist/client` from `master`.
+- Keep internal navigation going through the site's base-path helper; GitHub project pages are served below `/<repository>/`.
+- Use `SITE_BASE_PATH=/` for a user Pages site or custom domain.
 
 ## Constraints
 

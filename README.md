@@ -7,22 +7,30 @@ The npm package contains the starter source and its AI skill. The generated site
 ## Quick start
 
 ```bash
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 Open <http://localhost:5173>. Vite serves the site with Fast Refresh while the small Express wrapper renders each request through the SSR entry point. Set `PORT` to use a different port.
 
+The example site documents itself at <http://localhost:5173/docs/> using the same Markdown, frontmatter, layout, and prerendering pipeline it provides to other sites.
+
 Run the production checks and preview the generated site with:
 
 ```bash
-npm run typecheck
-npm test
-npm run build
-npm run preview
+bun run typecheck
+bun run test
+bun run build
+bun run preview
 ```
 
-Deploy `dist/client` to any static host. `npm run build` also creates the server bundle used during prerendering, then emits clean `index.html` files for every route.
+Deploy `dist/client` to any static host. `bun run build` also creates the server bundle used during prerendering, then emits clean `index.html` files for every route.
+
+## GitHub Pages
+
+[`pages.yml`](.github/workflows/pages.yml) runs typecheck, tests, and the production build for pull requests and pushes to `master`. Pushes to `master` then deploy the generated `dist/client` artifact to GitHub Pages.
+
+Enable it once in the repository settings: **Settings → Pages → Build and deployment → Source → GitHub Actions**. The workflow derives the project-site base path from `GITHUB_REPOSITORY`, so assets and internal navigation work at `/<repository>/`. Local builds continue to use `/`; set `SITE_BASE_PATH=/` for a user Pages site or custom domain.
 
 ## Pages and routes
 
@@ -31,6 +39,7 @@ Routes come from `src/pages`:
 ```text
 src/pages/page.tsx                     -> /
 src/pages/about/page.tsx               -> /about/
+src/pages/docs/page.md                 -> /docs/
 src/pages/docs/getting-started/page.md -> /docs/getting-started/
 src/pages/404/page.tsx                 -> /404.html fallback
 ```
@@ -101,14 +110,15 @@ Pushes to `master` run `.github/workflows/release.yml`. Release Please opens or 
 
 Before the first release:
 
-1. Add a repository secret named `NPM_TOKEN` with permission to publish `mini-static`.
-2. Enable GitHub Actions to create and approve pull requests if the repository requires that setting.
-3. Keep the default branch named `master`, or update the workflow trigger and Release Please target branch together.
+1. Create the public `mini-static` package on npm. npm requires an existing package before its trusted publisher can be configured, so bootstrap this once from a maintainer machine with `npm publish --access public`.
+2. In npm package settings, add a GitHub Actions trusted publisher for owner `briansunter`, repository `nib`, and workflow filename `release.yml`.
+3. Enable GitHub Actions to create and approve pull requests if the repository requires that setting.
+4. Keep the default branch named `master`, or update the workflow trigger and Release Please target branch together.
 
 Inspect the package without publishing it:
 
 ```bash
-npm pack --dry-run
+bun pm pack --destination ./dist/package
 ```
 
 ## Deliberate constraints

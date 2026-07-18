@@ -1,12 +1,18 @@
 {
   "name": "mini-static",
   "version": "0.1.0",
+  "packageManager": "bun@1.3.3",
   "description": "A minimal React, Vite, Tailwind, and Markdown static-site starter.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/briansunter/nib.git"
+  },
   "files": [
     "src",
     "scripts",
     "skills",
     "CHANGELOG.md",
+    "bun.lock",
     "server.ts",
     "index.html",
     "vite.config.ts",
@@ -31,7 +37,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "npm run typecheck && npm run build:client && npm run build:server && npm run prerender",
+    "build": "bun run typecheck && bun run build:client && bun run build:server && bun run prerender",
     "build:client": "vite build --outDir dist/client",
     "build:server": "vite build --outDir dist/server --ssr src/entry-server.tsx",
     "prerender": "tsx scripts/prerender.ts",
