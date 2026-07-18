@@ -2,9 +2,9 @@ import fs from 'node:fs/promises'
 import type { Plugin } from 'vite'
 import { markdownToCompiledPage } from './markdown'
 
-export function miniStaticMarkdown(): Plugin {
+export function nibMarkdown(): Plugin {
   return {
-    name: 'mini-static-markdown',
+    name: 'nib-markdown',
     enforce: 'pre',
     async load(id) {
       const cleanId = id.split('?')[0]
