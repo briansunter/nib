@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/briansunter/nib/compare/v0.2.0...v0.3.0) (2026-07-18)
+
+
+### Features
+
+* harden static rendering and island architecture ([112b06f](https://github.com/briansunter/nib/commit/112b06f6e54aa9140861debbe85eec63ff526494))
+
 ## [0.2.0](https://github.com/briansunter/nib/compare/v0.1.0...v0.2.0) (2026-07-18)
 
 
