@@ -7,15 +7,9 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html'],
       include: [
-        'src/framework/document.ts',
-        'src/framework/island-paths.ts',
-        'src/framework/island-serialization.ts',
-        'src/framework/island-vite-plugin.ts',
-        'src/framework/islands.tsx',
         'src/framework/markdown.ts',
         'src/framework/meta.ts',
         'src/framework/paths.ts',
-        'src/framework/render-page.tsx',
         'src/framework/router.ts',
         'src/framework/urls.ts'
       ],

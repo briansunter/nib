@@ -2,7 +2,6 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import express from 'express'
 import { createServer as createViteServer } from 'vite'
-import { renderDocument } from './src/framework/document'
 
 const root = process.cwd()
 const port = Number(process.env.PORT ?? 5173)
@@ -16,11 +15,13 @@ app.use(async (request, response, next) => {
     template = await vite.transformIndexHtml(request.originalUrl, template)
     const { render } = await vite.ssrLoadModule('/src/entry-server.tsx')
     const page = render(request.originalUrl)
-    response.status(page.status).type('html').send(renderDocument(template, page))
+    response.status(page.status).type('html').send(
+      template.replace('<!--head-outlet-->', page.head).replace('<!--ssr-outlet-->', page.html),
+    )
   } catch (error) {
     vite.ssrFixStacktrace(error as Error)
     next(error)
   }
 })
 
-app.listen(port, () => console.log(`Nib: http://localhost:${port}`))
+app.listen(port, () => console.log(`Mini Static: http://localhost:${port}`))

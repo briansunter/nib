@@ -2,7 +2,7 @@ import type { PageMeta } from '../../framework/types'
 
 export const meta: PageMeta = {
   title: 'About',
-  description: 'How Nib works.'
+  description: 'How Mini Static works.'
 }
 
 export default function AboutPage() {

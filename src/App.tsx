@@ -30,7 +30,7 @@ export function App({ route, site }: AppProps) {
       </header>
       <main className="mx-auto max-w-5xl px-6 py-20"><Page /></main>
       <footer className="mx-auto max-w-5xl border-t border-white/10 px-6 py-8 text-sm text-slate-400">
-        Static React + interactive islands + Vite + TypeScript + Remark.
+        React + Vite + TypeScript + Remark.
       </footer>
     </div>
   )
