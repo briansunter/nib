@@ -4,7 +4,7 @@ Status: Implemented
 
 ## Summary
 
-Nib should use TSX as the universal HTML templating language while hydrating only explicitly interactive React subtrees, or "islands," in the browser.
+Nib should use TSX as its primary component-bearing templating language while hydrating only explicitly interactive React subtrees, or "islands," in the browser.
 
 Pages, layouts, and ordinary components remain server-rendered React. They produce complete static HTML and ship no page-level JavaScript. A component becomes interactive only when it is defined with `defineIsland` and placed under `src/islands`. Each island is server-rendered for useful initial HTML, emitted as an independent React root, and hydrated by a small client runtime according to an explicit strategy such as `load`, `idle`, or `visible`.
 
@@ -254,6 +254,8 @@ Generating Vite's SSR manifest is optional for the initial implementation. It ca
 `page.md` should remain static Markdown in the first release. A TSX layout may place islands before, after, or beside its `children`, so documentation and article pages can still have interactive controls.
 
 Arbitrary components inside Markdown should be a separate `page.mdx` feature if it becomes necessary. MDX can compile to the same React page tree and use the same `defineIsland` boundaries. Adding JSX-like syntax directly to the existing Remark HTML pipeline would create a second, less standard component compiler and should be avoided.
+
+A separate proposal evaluates [`page.html` with typed layout and island bindings](html-pages-layouts-and-islands.md). It keeps HTML declarative and moves React imports and props to a companion TypeScript file instead of inventing component imports inside HTML.
 
 ## State and composition rules
 
