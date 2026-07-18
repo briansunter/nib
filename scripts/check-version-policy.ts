@@ -11,7 +11,7 @@ const manifest = JSON.parse(
 const version = manifest.version ?? ''
 if (!/^0\.\d+\.\d+(?:[-+].*)?$/.test(version)) {
   throw new Error(
-    `Major releases are disabled for mini-static; expected a 0.x.y version, got ${version || 'missing version'}`,
+    `Major releases are disabled for Nib; expected a 0.x.y version, got ${version || 'missing version'}`,
   )
 }
 

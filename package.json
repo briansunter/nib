@@ -1,8 +1,8 @@
 {
-  "name": "mini-static",
+  "name": "@briansunter/nib",
   "version": "0.1.0",
   "packageManager": "bun@1.3.3",
-  "description": "A minimal React, Vite, Tailwind, and Markdown static-site starter.",
+  "description": "A minimal static-site starter with TSX templates, React islands, Vite, Tailwind, and Markdown.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/briansunter/nib.git"
@@ -11,6 +11,7 @@
     "src",
     "scripts",
     "skills",
+    "docs",
     "CHANGELOG.md",
     "bun.lock",
     "server.ts",
@@ -23,6 +24,7 @@
     "static-site",
     "vite",
     "react",
+    "islands",
     "markdown",
     "tailwind",
     "ssr"

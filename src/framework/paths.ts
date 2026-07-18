@@ -1,5 +1,5 @@
 export function normalizePath(url: string): string {
-  const pathname = new URL(url, 'http://mini-static.local').pathname
+  const pathname = new URL(url, 'http://nib.local').pathname
   if (pathname === '/') return '/'
   return pathname.replace(/\/+$/, '')
 }
