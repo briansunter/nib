@@ -28,9 +28,12 @@ describe('Nib documentation site', () => {
     expect(overview).toContain('<a class="skip-link" href="#content">Skip to content</a>')
     expect(home).toContain('<details class="mobile-nav">')
     expect(home).toContain('nib-mark.svg')
+    expect(home).toContain('<nav aria-label="Mobile documentation" class="mobile-nav__documentation">')
     expect(home).toContain('>Get started <span aria-hidden="true">→</span></a>')
     expect(home).toContain('Build the page.')
     expect(home).toContain('The file tree is the guide.')
+    expect(home).toContain('Initialize a site')
+    expect(home).toContain('npx @briansunter/nib init my-site')
     expect(home).toContain('src/pages/about/page.tsx')
     expect(home).toContain('TSX + Markdown')
     expect(home).toContain('src/islands/counter.tsx')
@@ -51,6 +54,7 @@ describe('Nib documentation site', () => {
       '/docs/releases/',
     ]) {
       expect(overview).toMatch(new RegExp(`href="[^"]*${href}"`))
+      expect(home).toMatch(new RegExp(`href="[^"]*${href}"`))
     }
     expect(overview).toContain('Static by default. Interactive by choice.')
     expect(overview).toContain('React, Markdown, and data pages, static by default.')

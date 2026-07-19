@@ -256,6 +256,54 @@ nib-island {
   color: var(--nib-teal);
 }
 
+.mobile-nav__documentation {
+  border-top: 1px solid var(--nib-line);
+  padding-top: 1.15rem;
+}
+
+.mobile-nav__documentation-title {
+  margin: 0 0 1rem;
+  color: var(--nib-paper);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.mobile-nav__documentation-section + .mobile-nav__documentation-section {
+  margin-top: 1rem;
+}
+
+.mobile-nav__documentation-label {
+  margin: 0 0 0.3rem;
+  color: var(--nib-teal);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.mobile-nav__documentation-list {
+  display: grid;
+  gap: 0.1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mobile-nav__documentation-list a {
+  display: block;
+  border-bottom: 1px solid rgba(171, 220, 211, 0.08);
+  padding: 0.45rem 0;
+  color: var(--nib-muted);
+  font-size: 0.88rem;
+}
+
+.mobile-nav__documentation-list a:hover,
+.mobile-nav__documentation-list a[aria-current="page"] {
+  color: var(--nib-teal);
+}
+
 .mobile-nav__note {
   max-width: 14rem;
   margin: 1rem 0 0;
@@ -501,7 +549,7 @@ nib-island {
 
 .home-page__example-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
   margin-top: 1.6rem;
 }
@@ -864,6 +912,12 @@ nib-island {
   display: block;
   overflow-x: auto;
   white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+  .home-page__example-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {

@@ -33,14 +33,22 @@ export default function HomePage() {
       </aside>
       <section className="home-page__example" aria-labelledby="home-example-title">
         <div className="home-page__example-intro">
-          <p className="home-page__eyebrow">A tiny example</p>
+          <p className="home-page__eyebrow">A small site, end to end</p>
           <h2 id="home-example-title">The file tree is the guide.</h2>
-          <p>Folders map to URLs. TSX and Markdown become static HTML. Islands add browser behavior only where you ask for it.</p>
+          <p>Initialize a site, turn files into routes, and add browser behavior only where you ask for it.</p>
         </div>
         <div className="home-page__example-grid">
           <article className="home-page__example-card">
             <header>
               <span>01</span>
+              <h3>Initialize a site</h3>
+            </header>
+            <pre><code>{'npx @briansunter/nib init my-site\ncd my-site\nnpm run dev'}</code></pre>
+            <p>Start with a ready-to-edit project.</p>
+          </article>
+          <article className="home-page__example-card">
+            <header>
+              <span>02</span>
               <h3>Folder routing</h3>
             </header>
             <pre><code>{'src/pages/about/page.tsx\n→ /about/'}</code></pre>
@@ -48,7 +56,7 @@ export default function HomePage() {
           </article>
           <article className="home-page__example-card">
             <header>
-              <span>02</span>
+              <span>03</span>
               <h3>TSX + Markdown</h3>
             </header>
             <pre><code>{'// page.tsx\nexport default () =>\n  <h1>Hi</h1>\n\n// page.md\n# Notes'}</code></pre>
@@ -56,7 +64,7 @@ export default function HomePage() {
           </article>
           <article className="home-page__example-card">
             <header>
-              <span>03</span>
+              <span>04</span>
               <h3>React islands</h3>
             </header>
             <pre><code>{'// src/islands/counter.tsx\n<Counter hydrate="load" />'}</code></pre>

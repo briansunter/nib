@@ -1,4 +1,5 @@
 import { siteHref, type SiteShellProps } from '@briansunter/nib'
+import { documentation } from './docs-navigation'
 
 function routePath(href: string): string {
   const withoutTrailingSlash = href.replace(/\/+$/, '')
@@ -6,11 +7,12 @@ function routePath(href: string): string {
 }
 
 export function SiteShell({ children, route, site }: SiteShellProps) {
-  const isDocsRoute = route.path === '/docs' || route.path.startsWith('/docs/')
+  const currentPath = routePath(route.path)
+  const isDocsRoute = currentPath === '/docs' || currentPath.startsWith('/docs/')
 
   const navigation = site.navigation?.map((item) => {
     const itemPath = routePath(item.href)
-    const active = itemPath === route.path || (itemPath === '/docs' && isDocsRoute)
+    const active = itemPath === currentPath || (itemPath === '/docs' && isDocsRoute)
     return { ...item, active }
   }) ?? []
 
@@ -39,6 +41,26 @@ export function SiteShell({ children, route, site }: SiteShellProps) {
                     {item.label}
                     <span aria-hidden="true">↗</span>
                   </a>
+                ))}
+              </nav>
+              <nav aria-label="Mobile documentation" className="mobile-nav__documentation">
+                <p className="mobile-nav__documentation-title">Documentation</p>
+                {documentation.map((section) => (
+                  <section className="mobile-nav__documentation-section" key={section.label}>
+                    <h2 className="mobile-nav__documentation-label">{section.label}</h2>
+                    <ul className="mobile-nav__documentation-list">
+                      {section.links.map((item) => (
+                        <li key={item.href}>
+                          <a
+                            aria-current={routePath(item.href) === currentPath ? 'page' : undefined}
+                            href={siteHref(item.href)}
+                          >
+                            {item.label}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 ))}
               </nav>
               <p className="mobile-nav__note">Static by default. Interactive by choice.</p>
