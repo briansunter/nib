@@ -1,3 +1,14 @@
 # Changelog
 
+## [0.2.0](https://github.com/briansunter/nib/compare/nib-images-v0.1.0...nib-images-v0.2.0) (2026-07-19)
+
+
+### Features
+
+* add extensible image optimization ([e3b6008](https://github.com/briansunter/nib/commit/e3b60081cd09cb4ef693b9a810f5d7ac4baeea16))
+* add high-performance image plugin ([a6714e6](https://github.com/briansunter/nib/commit/a6714e679b6455f53e79ab9516bf446f784df1e6))
+* deepen plugin and image architecture ([003da1e](https://github.com/briansunter/nib/commit/003da1e6763ea6aa2dea4c4635317f1a3efbf3b3))
+
+## Changelog
+
 Release Please maintains this file from Conventional Commits.
