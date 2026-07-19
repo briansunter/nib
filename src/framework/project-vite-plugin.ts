@@ -1,5 +1,6 @@
 import path from 'node:path'
 import type { Plugin } from 'vite'
+import type { NibCommand } from './plugin'
 
 export const NIB_CLIENT_ENTRY = 'virtual:nib/client-entry'
 export const NIB_SERVER_ENTRY = 'virtual:nib/server-entry'
@@ -11,6 +12,7 @@ export function nibProject(
   configPath: string,
   root = path.dirname(configPath),
   pageExtensions: readonly string[] = [],
+  command: NibCommand = 'build',
 ): Plugin {
   const configImport = JSON.stringify(path.resolve(configPath))
   const projectRoot = JSON.stringify(path.resolve(root))
@@ -56,6 +58,7 @@ export function nibProject(
         `  config,`,
         `  root: ${projectRoot},`,
         `  base: import.meta.env.BASE_URL,`,
+        `  command: ${JSON.stringify(command)},`,
         `  pages,`,
         `  folderLayouts,`,
         `  namedLayouts,`,
@@ -63,6 +66,7 @@ export function nibProject(
         `})`,
         `export const paths = renderer.paths`,
         `export const render = renderer.render`,
+        `export const finalize = renderer.finalize`,
       ].join('\n')
     },
   }

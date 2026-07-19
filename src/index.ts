@@ -7,6 +7,7 @@ export {
   glob,
 } from './framework/content'
 export { defineIsland } from './framework/islands'
+export { definePlugin } from './framework/plugin'
 export { siteHref } from './framework/urls'
 export { z } from 'zod'
 export type {
@@ -42,3 +43,13 @@ export type {
   SiteConfig,
   SiteShellProps,
 } from './framework/types'
+export type {
+  Awaitable,
+  NibCommand,
+  NibFinalizeContext,
+  NibPlugin,
+  NibRendererExtension,
+  NibRendererPluginContext,
+  NibRenderPageContext,
+  NibVitePluginContext,
+} from './framework/plugin'

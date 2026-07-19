@@ -66,6 +66,8 @@ describe('published package consumer', () => {
     expect(packedFiles).toContain('bin/nib.js')
     expect(packedFiles).toContain('dist/framework/index.js')
     expect(packedFiles).toContain('dist/framework/index.d.ts')
+    expect(packedFiles).toContain('dist/framework/plugin.js')
+    expect(packedFiles).toContain('dist/framework/plugin.d.ts')
     expect(packedFiles).toContain('templates/default/nib.config.ts')
     expect(packedFiles).toContain('templates/default/gitignore')
     expect(packedFiles.some((file) => file.startsWith('tests/'))).toBe(false)
@@ -145,4 +147,32 @@ describe('published package consumer', () => {
     expect(response.status).toBe(200)
     expect(await response.text()).toContain('About this Nib site')
   }, 120_000)
+
+  it('keeps Sharp and image implementation out of the core package tarball', async () => {
+    const packageDirectory = await temporaryDirectory('nib-images-package')
+    const packed = await execute(
+      'npm',
+      ['pack', '--json', '--pack-destination', packageDirectory],
+      { cwd: path.resolve('packages/nib-images') },
+    )
+    const result = JSON.parse(packed.stdout) as Array<{
+      filename: string
+      files: Array<{ path: string }>
+    }>
+    const files = result[0].files.map((file) => file.path)
+    expect(files).toContain('dist/index.js')
+    expect(files).toContain('dist/index.d.ts')
+    expect(files).toContain('dist/plugin.js')
+    expect(files).toContain('dist/nib-image.d.ts')
+    expect(files.some((file) => file.startsWith('src/'))).toBe(false)
+
+    const corePackage = JSON.parse(await fs.readFile('package.json', 'utf8')) as {
+      dependencies: Record<string, string>
+    }
+    const imagePackage = JSON.parse(await fs.readFile('packages/nib-images/package.json', 'utf8')) as {
+      dependencies: Record<string, string>
+    }
+    expect(corePackage.dependencies.sharp).toBeUndefined()
+    expect(imagePackage.dependencies.sharp).toBeDefined()
+  })
 })

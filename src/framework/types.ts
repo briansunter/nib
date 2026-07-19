@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from 'react'
+import type { NibPlugin } from './plugin'
 
 export interface PageMeta {
   title?: string
@@ -100,6 +101,7 @@ export interface SiteConfig {
 export interface NibConfig {
   base?: string
   site: SiteConfig
+  plugins?: readonly NibPlugin[]
   shell?: ComponentType<SiteShellProps<any>>
   markdown?: MarkdownDefinition<any>
   pageSources?: readonly PageSourceDefinition<any>[]

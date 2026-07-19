@@ -8,6 +8,8 @@ This document describes the current implementation. `page.html` is not a
 current route format; the forward-looking
 [HTML pages, layouts, and islands proposal](html-pages-layouts-and-islands.md)
 remains explicitly proposed.
+The [type-safe plugins and image optimization design](type-safe-plugins-and-image-optimization.md)
+documents the implemented plugin lifecycle and optional image package.
 
 ## Package and project seam
 
@@ -79,6 +81,31 @@ custom SSR document path so unused speculative dependency requests do not
 prevent clean server shutdown.
 
 `dist/server` is a build intermediate. Only `dist/client` is deployed.
+
+## Plugins and optional image optimization
+
+`plugins` in `nib.config.ts` accepts an ordered readonly list of `NibPlugin`
+objects. `@briansunter/nib/plugin` exposes the typed `vite`, `renderer`,
+per-page, and finalization contexts. Nib validates names and hook shapes before
+Vite starts, applies Vite contributions before its generated project adapters,
+and attributes hook errors to the plugin and route.
+
+Renderer extensions are instantiated once per server renderer. Their wrappers
+compose around the complete shell in configuration order, page transformations
+run in configuration order, and finalizers run once after every production
+route (including the generated 404) has rendered. Production collects rendered
+pages, awaits finalizers, then writes HTML with bounded concurrency; development
+does not run finalizers.
+
+`@briansunter/nib-images` is a separate workspace/package and the only package
+that depends on Sharp. Its `images()` plugin handles explicit local
+`?nib-image` imports and its static `Image` component registers transforms while
+rendering. Finalization writes content-addressed AVIF/WebP and JPEG/PNG fallback
+assets under `dist/client/assets/nib`, reusing `.nib/cache/images` across
+builds. Image-only routes remain static and have no island runtime. Development
+serves validated requests under `/@nib-images/`; remote URLs, Markdown image
+rewriting, SVG rasterization, and animated-image conversion are intentionally
+outside this first release.
 
 ## Virtual modules
 

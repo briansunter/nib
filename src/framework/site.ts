@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
@@ -21,6 +22,7 @@ import {
   nibProject,
 } from './project-vite-plugin'
 import { loadNibConfig, resolveBasePath } from './project-config'
+import { flattenVitePlugins, pluginError } from './plugin'
 import type { RenderedPage } from './types'
 import { nibDataPages, nibMarkdown } from './vite-plugin'
 
@@ -36,6 +38,25 @@ interface ManifestEntry {
 }
 
 type ViteManifest = Record<string, ManifestEntry>
+
+function htmlWriteConcurrency(): number {
+  return Math.max(1, Math.min(8, os.availableParallelism()))
+}
+
+async function mapWithConcurrency<Value>(
+  values: readonly Value[],
+  concurrency: number,
+  callback: (value: Value) => Promise<void>,
+): Promise<void> {
+  let next = 0
+  await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, async () => {
+    while (next < values.length) {
+      const index = next
+      next += 1
+      await callback(values[index]!)
+    }
+  }))
+}
 
 function baseHref(base: string, file: string): string {
   return `${base}${file.replace(/^\/+/, '')}`
@@ -83,6 +104,22 @@ async function siteViteConfig(
   const loaded = await loadNibConfig(root, command)
   const base = resolveBasePath(loaded.config)
   const extensions = pageSourceExtensions(loaded.config.pageSources)
+  const pluginContext = Object.freeze({
+    command,
+    mode: command === 'serve' ? 'development' as const : 'production' as const,
+    root,
+    base,
+    configPath: loaded.configPath,
+  })
+  const contributedPlugins = []
+  for (const plugin of loaded.config.plugins ?? []) {
+    if (!plugin.vite) continue
+    try {
+      contributedPlugins.push(...flattenVitePlugins(await plugin.vite(pluginContext), plugin))
+    } catch (error) {
+      throw pluginError(plugin, 'vite()', error)
+    }
+  }
   return {
     base,
     config: {
@@ -95,13 +132,14 @@ async function siteViteConfig(
       plugins: [
         nibMarkdown(loaded.configPath),
         nibDataPages(loaded.configPath, loaded.config.pageSources),
+        ...contributedPlugins,
         react(),
         tailwindcss(),
-        nibProject(loaded.configPath, root, extensions),
+        nibProject(loaded.configPath, root, extensions, command),
         nibIslandsEntry(),
       ],
       resolve: {
-        dedupe: ['react', 'react-dom'],
+        dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
       },
       root,
       ssr: {
@@ -178,16 +216,28 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
   const server = await import(`${pathToFileURL(serverEntry).href}?t=${Date.now()}`) as {
     paths: string[]
     render(url: string): RenderedPage
+    finalize(context: {
+      root: string
+      base: string
+      clientDirectory: string
+      renderedPaths: readonly string[]
+    }): Promise<void>
   }
-  for (const routePath of server.paths) {
-    const file = outputFile(clientDirectory, routePath)
+  const rendered = server.paths.map((routePath) => ({ routePath, page: server.render(routePath) }))
+  const notFound = { routePath: '/404', page: server.render('/404') }
+  await server.finalize({
+    root,
+    base,
+    clientDirectory,
+    renderedPaths: [...server.paths, '/404'],
+  })
+  await mapWithConcurrency([...rendered, notFound], htmlWriteConcurrency(), async ({ routePath, page }) => {
+    const file = routePath === '/404'
+      ? path.join(clientDirectory, '404.html')
+      : outputFile(clientDirectory, routePath)
     await fs.mkdir(path.dirname(file), { recursive: true })
-    await fs.writeFile(file, renderDocument(template, server.render(routePath)))
-  }
-  await fs.writeFile(
-    path.join(clientDirectory, '404.html'),
-    renderDocument(template, server.render('/404')),
-  )
+    await fs.writeFile(file, renderDocument(template, page))
+  })
 }
 
 export async function buildSite(options: SiteOperationOptions): Promise<void> {

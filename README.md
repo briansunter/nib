@@ -103,12 +103,49 @@ data loaders, React Server Components, or JSX inside Markdown.
 The [documentation site](https://briansunter.github.io/nib/docs/) covers setup,
 pages, Markdown, layouts, data sources, collections, islands, and GitHub Pages.
 
+## Optional optimized images
+
+Install the image package only in projects that need local image transformation:
+
+```bash
+npm install @briansunter/nib-images sharp
+```
+
+Configure it as a normal typed Nib plugin, then import local raster files with
+the explicit `?nib-image` query. `Image` emits static responsive `<picture>`
+markup with intrinsic dimensions, lazy loading by default, and no island runtime.
+
+```tsx
+import { Image, images } from '@briansunter/nib-images'
+import hero from './hero.jpg?nib-image'
+
+export default function Home() {
+  return <Image src={hero} alt="Mountain trail" layout="full" priority />
+}
+```
+
+```ts
+// nib.config.ts
+import { defineConfig } from '@briansunter/nib'
+import { images } from '@briansunter/nib-images'
+
+export default defineConfig({
+  site: { title: 'My site' },
+  plugins: [images()],
+})
+```
+
+See [image optimization](examples/docs/src/pages/docs/image-optimization/page.md)
+for layouts, cache behavior, and the current SVG/animated-image limits.
+
 For implementation details and design rationale:
 
 - [Architecture](docs/architecture.md)
 - [React islands](docs/interactive-react-islands.md)
 - [HTML pages proposal](docs/html-pages-layouts-and-islands.md) — proposed, not
   part of the current API
+- [Type-safe plugins and image optimization](docs/type-safe-plugins-and-image-optimization.md)
+  — implemented design, APIs, and validation matrix
 
 ## Contributing
 
