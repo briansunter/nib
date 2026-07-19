@@ -2,7 +2,7 @@ import { StrictMode, createElement, type ReactNode } from 'react'
 import type { HydrationStrategy } from './islands'
 import {
   IslandRenderContext,
-  nestedIslandRenderer,
+  composedIslandRenderer,
   validateIslandModule,
   type IslandModule,
 } from './islands'
@@ -52,7 +52,7 @@ export async function hydrateIsland(
     element,
     createElement(
       IslandRenderContext.Provider,
-      { value: nestedIslandRenderer(id) },
+      { value: composedIslandRenderer() },
       createElement(
         StrictMode,
         null,

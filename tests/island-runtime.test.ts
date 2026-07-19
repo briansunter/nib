@@ -1,3 +1,5 @@
+import { createElement } from 'react'
+import { renderToString } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import {
   hydrateIsland,
@@ -88,7 +90,12 @@ describe('island hydration runtime', () => {
   })
 
   it('loads, validates, parses, and hydrates an island module', async () => {
-    const Counter = defineIsland('counter', ({ count: _count }: { count: number }) => null)
+    const Label = defineIsland('label', ({ count }: { count: number }) => (
+      createElement('span', null, `Count: ${count}`)
+    ))
+    const Counter = defineIsland('counter', ({ count }: { count: number }) => (
+      createElement('div', null, createElement(Label, { count, hydrate: 'visible' }))
+    ))
     const hydrateRoot = vi.fn()
     const reportError = vi.fn()
     await hydrateIsland(
@@ -106,6 +113,8 @@ describe('island hydration runtime', () => {
     )
 
     expect(hydrateRoot).toHaveBeenCalledOnce()
+    expect(renderToString(hydrateRoot.mock.calls[0][1]))
+      .toContain('<div><span>Count: 2</span></div>')
     const options = hydrateRoot.mock.calls[0][2]
     expect(options.identifierPrefix).toBe('nib-0-')
     options.onRecoverableError(new Error('mismatch'))

@@ -163,8 +163,11 @@ The client runtime validates metadata and the loaded module before calling
 to the parent for text-only roots. Each element is marked before scheduling, so
 repeated bootstraps cannot hydrate it twice.
 
-Each island owns an independent React root and context tree. Islands cannot
-nest, and props must survive an exact JSON round trip. See the
+Each top-level island owns an independent React root and context tree. An island
+rendered inside another island is composed as an ordinary child component in
+the same root, so the outer hydration strategy controls the subtree. Island
+props must survive an exact JSON round trip; only top-level props are serialized
+into boundary metadata. See the
 [interactive island design](interactive-react-islands.md) for rationale and
 trade-offs.
 
@@ -195,8 +198,8 @@ packed-package consumer tests.
 ## Constraints
 
 Nib deliberately omits dynamic route parameters, client-side routing, server
-actions, runtime data loaders, React Server Components, nested islands, nested
-Markdown layout names, and inline JSX in Markdown.
+actions, runtime data loaders, React Server Components, independently hydrated
+nested island roots, nested Markdown layout names, and inline JSX in Markdown.
 
 These omissions keep the static route map deterministic and the package
 interface smaller than its implementation.

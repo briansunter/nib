@@ -28,7 +28,10 @@ describe('framework-owned development server', () => {
     const missing = await request('/journal/missing/')
 
     expect(home.status).toBe(200)
-    expect(await home.text()).toContain('Journal home')
+    const homeHtml = await home.text()
+    expect(homeHtml).toContain('Journal home')
+    expect(homeHtml).toContain('<link rel="stylesheet" href="/journal/src/style.css" />')
+    expect(homeHtml).toContain('src="/journal/@id/virtual:nib/client-entry"')
     expect(about.status).toBe(200)
     expect(await about.text()).toContain('About the journal')
     expect(missing.status).toBe(404)

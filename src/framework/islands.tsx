@@ -1,5 +1,6 @@
 import {
   createContext,
+  createElement,
   useContext,
   type ComponentClass,
   type ComponentType,
@@ -169,12 +170,10 @@ export function validateIslandModules(
   return definitions
 }
 
-export function nestedIslandRenderer(parentId: string): IslandRenderer {
+export function composedIslandRenderer(): IslandRenderer {
   return {
     render(request) {
-      throw new Error(
-        `Island ${request.definition.islandId} cannot be nested inside island ${parentId}`,
-      )
+      return createElement(request.definition.Component, request.props)
     },
   }
 }

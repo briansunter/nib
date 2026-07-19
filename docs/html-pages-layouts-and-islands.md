@@ -282,7 +282,8 @@ The HTML build should report the page path and source location for:
   `page.html`.
 
 Existing island checks continue to reject invalid module IDs, non-serializable
-props, nested islands, and non-deterministic renders.
+island props, independently hydrated nested roots, and non-deterministic renders.
+Child island definitions compose into the outer island root.
 
 ## Development and output behavior
 
@@ -362,8 +363,8 @@ uses a non-HTML component syntax.
   build with a source location.
 - Layout-owned and HTML-owned islands receive stable, unique instance prefixes.
 - Source markup outside substitutions is preserved.
-- Inline scripts, event handlers, nested islands, and parser-sensitive
-  placements fail clearly.
+- Inline scripts, event handlers, nested HTML island markers, and
+  parser-sensitive placements fail clearly.
 - Production output works at `/` and `SITE_BASE_PATH=/nib/`.
 - A static route contains no React runtime; an interactive route loads only its
   used island chunks.

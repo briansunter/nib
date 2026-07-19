@@ -3,9 +3,9 @@ import { renderToString } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import {
   IslandRenderContext,
+  composedIslandRenderer,
   defineIsland,
   isIslandDefinition,
-  nestedIslandRenderer,
   validateIslandModule,
   validateIslandModules,
 } from '../src/framework/islands'
@@ -46,7 +46,7 @@ describe('React islands', () => {
     const expectedIslandHtml = renderToString(
       createElement(
         IslandRenderContext.Provider,
-        { value: nestedIslandRenderer('field') },
+        { value: composedIslandRenderer() },
         createElement(StrictMode, null, createElement(Field.Component, { label: 'Name' })),
       ),
       { identifierPrefix: 'nib-0-' },
@@ -72,10 +72,17 @@ describe('React islands', () => {
     expect(rendered.html).toContain('data-instance="nib-1"')
   })
 
-  it('rejects nested islands and non-deterministic shell renders', () => {
-    const Inner = defineIsland('inner', () => <button>Inner</button>)
-    const Outer = defineIsland('outer', () => <section><Inner /></section>)
-    expect(() => renderReactPage(<Outer />)).toThrow('cannot be nested')
+  it('composes child islands into the parent root and rejects non-deterministic shell renders', () => {
+    const Inner = defineIsland('inner', ({ label }: { label: string }) => <button>{label}</button>)
+    const Outer = defineIsland('outer', () => (
+      <section><Inner label="Inner" hydrate="visible" /></section>
+    ))
+    const nested = renderReactPage(<Outer hydrate="idle" />)
+
+    expect(nested.islands).toEqual(['outer'])
+    expect(nested.html).toContain('data-island="outer"')
+    expect(nested.html).not.toContain('data-island="inner"')
+    expect(nested.html).toContain('<section><button>Inner</button></section>')
 
     const First = defineIsland('first', () => <button>First</button>)
     const Second = defineIsland('second', () => <button>Second</button>)

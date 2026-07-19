@@ -206,7 +206,7 @@ The container includes only the data needed by the runtime, including a stable p
 
 Both shell passes must be deterministic. This follows React's existing purity requirement and should be documented because side effects during render would otherwise run twice.
 
-Nested island boundaries throw a clear build-time or SSR error. If interactive pieces need shared state or context, they should be one larger island with ordinary child components.
+An island definition rendered inside another island is composed into the parent's React root instead of creating another boundary. This makes island components reusable without hydration-root conflicts. The outermost island's hydration strategy controls the whole subtree, and React state and context flow normally through it.
 
 ### Client runtime
 
@@ -305,7 +305,7 @@ An interim `hydrate = 'page'` module export is not recommended. It would require
 - A Markdown page renders without the island script unless its layout adds an island.
 - An island page contains useful SSR markup, props, strategy, and instance metadata.
 - Multiple instances hydrate independently and components using `useId` do not warn or mismatch.
-- A nested island fails with a clear error.
+- A child island composes into its parent root without emitting another boundary.
 
 ### Browser/build tests
 
@@ -341,7 +341,7 @@ Either could provide small isolated widgets, but it would introduce a second com
 
 ## Decision
 
-Nib implements static TSX pages with opt-in, SSR-rendered React islands. It uses an explicit `defineIsland` API, Vite's lazy glob imports, independent `hydrateRoot` calls, JSON-only props, and conditional inclusion of the client runtime. Markdown remains static for now; MDX is a later authoring extension that can reuse the same island mechanism.
+Nib implements static TSX pages with opt-in, SSR-rendered React islands. It uses an explicit `defineIsland` API, Vite's lazy glob imports, independent top-level `hydrateRoot` calls, automatic child-island composition, JSON-only island props, and conditional inclusion of the client runtime. Markdown remains static for now; MDX is a later authoring extension that can reuse the same island mechanism.
 
 ## References
 
