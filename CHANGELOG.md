@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/briansunter/nib/compare/v0.6.0...v0.7.0) (2026-07-19)
+
+
+### Features
+
+* add Nib brand assets to docs ([d880ac2](https://github.com/briansunter/nib/commit/d880ac292ee0996396568503212ce5645cdf2b1e))
+
 ## [0.6.0](https://github.com/briansunter/nib/compare/v0.5.0...v0.6.0) (2026-07-19)
 
 
