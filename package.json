@@ -68,7 +68,7 @@
     "test": "bun run build:framework && bun run build:images && bun run --cwd packages/nib-images test && vitest run --coverage --exclude tests/package-consumer.test.ts && vitest run tests/package-consumer.test.ts --no-coverage",
     "preview": "node bin/nib.js preview --root examples/docs",
     "test:watch": "vitest",
-    "typecheck": "bun run build:images && tsc --noEmit && bun run --cwd packages/nib-images typecheck",
+    "typecheck": "bun run build:framework && bun run build:images && tsc --noEmit && bun run --cwd packages/nib-images typecheck",
     "check:version-policy": "tsx scripts/check-version-policy.ts"
   },
   "dependencies": {
