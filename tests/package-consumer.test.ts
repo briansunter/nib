@@ -118,10 +118,17 @@ describe('published package consumer', () => {
 
     const home = await fs.readFile(path.join(site, 'dist/client/index.html'), 'utf8')
     const about = await fs.readFile(path.join(site, 'dist/client/about/index.html'), 'utf8')
+    const assetDirectory = path.join(site, 'dist/client/assets')
+    const clientJavaScript = (await Promise.all(
+      (await fs.readdir(assetDirectory))
+        .filter((file) => file.endsWith('.js'))
+        .map((file) => fs.readFile(path.join(assetDirectory, file), 'utf8')),
+    )).join('\n')
     expect(home).toContain('Make a site.')
     expect(home).toContain('data-island="counter"')
     expect(about).toContain('About this site')
     expect(about).not.toContain('data-nib-islands')
+    expect(clientJavaScript).not.toContain('__zod_globalConfig')
     await expect(fs.stat(path.join(site, 'src/framework'))).rejects.toMatchObject({
       code: 'ENOENT',
     })

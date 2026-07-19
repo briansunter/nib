@@ -63,6 +63,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "type": "module",
+  "sideEffects": false,
   "workspaces": [
     "packages/*"
   ],
