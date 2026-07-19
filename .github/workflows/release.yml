@@ -5,10 +5,26 @@ on:
     branches:
       - master
   workflow_dispatch:
+    inputs:
+      release_ref:
+        description: Published tag or release commit to publish
+        required: true
+        type: string
+      publish_root:
+        description: Publish @briansunter/nib from release_ref
+        required: true
+        default: false
+        type: boolean
+      publish_images:
+        description: Publish @briansunter/nib-images from release_ref
+        required: true
+        default: false
+        type: boolean
 
 jobs:
   release-please:
     name: Release Please
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -40,7 +56,11 @@ jobs:
   publish:
     name: Publish to npm
     needs: release-please
-    if: needs.release-please.outputs.releases_created == 'true'
+    if: >-
+      always() && (
+        (github.event_name == 'push' && needs.release-please.outputs.releases_created == 'true') ||
+        (github.event_name == 'workflow_dispatch' && (inputs.publish_root || inputs.publish_images))
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -50,7 +70,7 @@ jobs:
       - name: Check out released version
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.release-please.outputs.release_ref }}
+          ref: ${{ inputs.release_ref || needs.release-please.outputs.release_ref }}
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -83,10 +103,14 @@ jobs:
         run: npm install --global npm@11.5.1
 
       - name: Publish to npm with provenance
-        if: needs.release-please.outputs.release_created == 'true'
+        if: >-
+          (github.event_name == 'push' && needs.release-please.outputs.release_created == 'true') ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish_root)
         run: npm publish --provenance --access public
 
       - name: Publish @briansunter/nib-images to npm with provenance
-        if: needs.release-please.outputs.image_release_created == 'true'
+        if: >-
+          (github.event_name == 'push' && needs.release-please.outputs.image_release_created == 'true') ||
+          (github.event_name == 'workflow_dispatch' && inputs.publish_images)
         working-directory: packages/nib-images
         run: npm publish --provenance --access public
