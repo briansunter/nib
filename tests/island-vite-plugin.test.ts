@@ -19,12 +19,9 @@ describe('island Vite integration', () => {
   it('full-reloads static server-rendered modules but not island modules', () => {
     expect(needsStaticPageReload('/site/src/pages/about/page.tsx')).toBe(true)
     expect(needsStaticPageReload('C:\\site\\src\\layouts\\docs.tsx')).toBe(true)
-    expect(needsStaticPageReload('/site/src/App.tsx')).toBe(true)
-    expect(needsStaticPageReload('/site/src/site.config.ts')).toBe(true)
-    expect(needsStaticPageReload('/site/src/routes.ts')).toBe(true)
-    expect(needsStaticPageReload('/site/src/entry-server.tsx')).toBe(true)
-    expect(needsStaticPageReload('/site/src/framework/markdown.ts')).toBe(true)
-    expect(needsStaticPageReload('/site/src/entry-islands.tsx')).toBe(true)
+    expect(needsStaticPageReload('/site/src/site-shell.tsx')).toBe(true)
+    expect(needsStaticPageReload('/site/src/components/card.tsx')).toBe(true)
+    expect(needsStaticPageReload('/site/nib.config.ts')).toBe(true)
     expect(needsStaticPageReload('/site/src/islands/counter.tsx')).toBe(false)
 
     const send = vi.fn()

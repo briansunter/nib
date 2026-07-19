@@ -53,7 +53,7 @@ Static pages use ordinary TSX. Components can be split freely for organization, 
 ```tsx
 // src/pages/products/page.tsx
 import QuantityPicker from '../../islands/quantity-picker'
-import type { PageMeta } from '../../framework/types'
+import type { PageMeta } from '@briansunter/nib'
 
 export const meta: PageMeta = {
   title: 'Products',
@@ -76,7 +76,7 @@ Interactive components live under `src/islands` and use `defineIsland`:
 ```tsx
 // src/islands/quantity-picker.tsx
 import { useState } from 'react'
-import { defineIsland } from '../framework/islands'
+import { defineIsland } from '@briansunter/nib'
 
 interface QuantityPickerProps {
   initialQuantity: number
@@ -210,7 +210,7 @@ Nested island boundaries throw a clear build-time or SSR error. If interactive p
 
 ### Client runtime
 
-The current runtime replaces the whole-page `entry-client.tsx` behavior with a focused `entry-islands.tsx` runtime.
+The current runtime replaces the former whole-page `entry-client.tsx` behavior with the framework-owned `virtual:nib/client-entry` runtime.
 
 The runtime creates a lazy module registry with Vite glob imports (the current implementation uses a project-relative glob):
 
@@ -237,7 +237,7 @@ Each DOM node must be marked as scheduled before waiting for visibility or idle 
 
 ```html
 <link rel="stylesheet" href="/src/style.css" />
-<script data-nib-islands type="module" src="/src/entry-islands.tsx"></script>
+<script data-nib-islands type="module" src="/assets/islands-[hash].js"></script>
 ```
 
 `RenderedPage` reports whether the route contains islands. The development server and prerender step keep the marked script for island pages and remove it from pages without islands. The production template still lets Vite rewrite the entry to its hashed, base-aware asset URL before prerendering.
@@ -321,7 +321,7 @@ An interim `hydrate = 'page'` module export is not recommended. It would require
 
 ### Keep hydrating the entire page
 
-This is the smallest implementation and already works. It remains reasonable for an application where most of every route is interactive. It is not the best default for Nib because the project is positioned as a small static-site starter, and its content routes should not pay for every page module and a full-root hydration pass.
+This is the smallest implementation and already works. It remains reasonable for an application where most of every route is interactive. It is not the best default for Nib because the framework is static-first, and its content routes should not pay for every page module and a full-root hydration pass.
 
 ### Mount client-only components with `createRoot`
 

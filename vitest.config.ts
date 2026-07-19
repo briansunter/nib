@@ -16,9 +16,14 @@ export default defineConfig({
         'src/framework/markdown.ts',
         'src/framework/meta.ts',
         'src/framework/paths.ts',
+        'src/framework/project-config.ts',
+        'src/framework/project-vite-plugin.ts',
         'src/framework/render-page.tsx',
         'src/framework/router.ts',
-        'src/framework/urls.ts'
+        'src/framework/site.ts',
+        'src/framework/urls.ts',
+        'src/runtime/client.ts',
+        'src/scaffold.ts'
       ],
       thresholds: {
         lines: 85,

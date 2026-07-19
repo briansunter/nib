@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "outDir": "dist/framework",
+    "rootDir": "src"
+  },
+  "include": ["src"],
+  "exclude": ["src/App.tsx", "src/entry-islands.tsx", "src/entry-server.tsx", "src/routes.ts", "src/site.config.ts"]
+}

@@ -16,7 +16,11 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["vite/client", "node"]
+    "types": ["vite/client", "node"],
+    "baseUrl": ".",
+    "paths": {
+      "@briansunter/nib": ["./src/index.ts"]
+    }
   },
-  "include": ["src", "scripts", "server.ts", "vite.config.ts", "vitest.config.ts", "tests"]
+  "include": ["src", "scripts", "examples/docs", "vite.framework.config.ts", "vitest.config.ts", "tests"]
 }

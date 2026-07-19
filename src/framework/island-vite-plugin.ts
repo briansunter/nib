@@ -4,13 +4,8 @@ const MODULE_ENTRY_SCRIPT = /<!--nib-islands-entry-->\s*(<script\b(?=[^>]*\btype
 
 export function needsStaticPageReload(file: string): boolean {
   const normalized = file.replaceAll('\\', '/')
-  return /\/src\/(?:pages|layouts)\//.test(normalized)
-    || /\/src\/framework\//.test(normalized)
-    || normalized.endsWith('/src/App.tsx')
-    || normalized.endsWith('/src/site.config.ts')
-    || normalized.endsWith('/src/routes.ts')
-    || normalized.endsWith('/src/entry-server.tsx')
-    || normalized.endsWith('/src/entry-islands.tsx')
+  return normalized.endsWith('/nib.config.ts')
+    || (/\/src\//.test(normalized) && !/\/src\/islands\//.test(normalized))
 }
 
 export function nibIslandsEntry(): Plugin {
