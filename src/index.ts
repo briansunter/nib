@@ -32,6 +32,7 @@ export type {
   LoadedCollections,
   MarkdownDefinition,
   NibConfig,
+  NibViteConfig,
   PageLayoutProps,
   PageMeta,
   PageProps,

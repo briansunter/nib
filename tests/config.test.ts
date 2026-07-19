@@ -54,6 +54,10 @@ describe('Nib configuration', () => {
       site: { title: 'Site' },
     })).toThrow('React component')
     expect(() => validateNibConfig({
+      vite: true,
+      site: { title: 'Site' },
+    })).toThrow('must be a function that returns Vite plugins')
+    expect(() => validateNibConfig({
       markdown: { schema: {} },
       site: { title: 'Site' },
     })).toThrow('parse(value)')

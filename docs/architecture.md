@@ -8,6 +8,8 @@ This document describes the current implementation. `page.html` is not a
 current route format; the forward-looking
 [HTML pages, layouts, and islands proposal](html-pages-layouts-and-islands.md)
 remains explicitly proposed.
+The [type-safe plugins and image optimization design](type-safe-plugins-and-image-optimization.md)
+documents the implemented plugin lifecycle and optional image package.
 
 ## Package and project seam
 
@@ -15,7 +17,7 @@ The package owns:
 
 - the `nib init`, `dev`, `build`, and `preview` commands;
 - configuration loading and validation;
-- Vite and Tailwind integration;
+- Vite integration, with optional styling adapters contributed by the project;
 - virtual route and island entry modules;
 - Markdown compilation and layout resolution;
 - generic data-page discovery, validation, and collection loading;
@@ -39,9 +41,10 @@ public/                  optional
 ```
 
 `nib.config.ts` is the configuration seam. `defineConfig` types the site
-metadata, optional base path, and optional app-owned shell. Pages and islands
-import authoring interfaces from `@briansunter/nib`; package-internal exports
-are reserved for generated virtual modules.
+metadata, optional base path, optional app-owned Vite plugin contribution, and
+optional app-owned shell. Pages and islands import authoring interfaces from
+`@briansunter/nib`; package-internal exports are reserved for generated virtual
+modules.
 
 The repository’s `templates/default` directory is an initializer input, not
 framework source in a generated project. `examples/docs` is a consumer of the
@@ -79,6 +82,80 @@ custom SSR document path so unused speculative dependency requests do not
 prevent clean server shutdown.
 
 `dist/server` is a build intermediate. Only `dist/client` is deployed.
+
+## Plugins and optional image optimization
+
+`plugins` in `nib.config.ts` accepts an ordered readonly list of `NibPlugin`
+objects. `@briansunter/nib/plugin` exposes the typed `vite`, `renderer`,
+per-page, and finalization contexts. Nib validates names and hook shapes before
+Vite starts, applies Vite contributions before its generated project adapters,
+and attributes hook errors to the plugin and route. Production creates fresh
+plugin contributions for the client and server graphs and identifies the
+target in `NibVitePluginContext`; development identifies its combined
+multi-environment graph separately. This prevents plugin-local Vite state from
+leaking between builds.
+
+Renderer extensions are instantiated once per server renderer. Their wrappers
+compose around the complete shell in configuration order, page transformations
+run in configuration order, and finalizers run once after every production
+route (including the generated 404) has rendered. Production collects rendered
+pages, awaits finalizers, then writes HTML with bounded concurrency; development
+does not run finalizers.
+
+The plugin host owns contribution resolution, renderer-extension construction,
+ordering, hook error attribution, and finalization. Renderer plugins receive a
+stable route snapshot rather than page modules, layouts, or page data. They may
+change static status, head, and HTML, but Nib keeps the hydration metadata and
+rejects changes to rendered island markup.
+
+Tailwind is optional rather than a framework dependency. The initializer adds
+`@tailwindcss/vite` and opts in through the narrow app-owned `vite` field in
+`nib.config.ts` (`vite: () => tailwindcss()`). Sites that use plain CSS or
+another styling adapter omit it. This field can contribute only Vite plugins;
+Nib continues to own entries, SSR, base-path, and output configuration.
+
+`@briansunter/nib-images` is a separate workspace/package and the only package
+that depends on Sharp. Its `images()` plugin handles explicit local
+`?nib-image` imports and its static `Image` component registers transforms while
+rendering. Finalization writes content-addressed AVIF/WebP and JPEG/PNG fallback
+assets under `dist/client/assets/nib`, reusing checksum-validated entries in
+`.nib/cache/images` across builds. Cache reads and output links run in parallel
+while a separate global queue bounds active Sharp transforms. Image-only routes
+remain static and have no island runtime. The component entry does not import
+Sharp or Node APIs; build integration is exported from
+`@briansunter/nib-images/plugin`. Development serves validated, revalidatable
+requests under `/@nib-images/`. Imported sources are watched explicitly; HMR
+re-inspects changed content, byte-identical rewrites retain their cache key and
+ETag, and editor overwrite races are retried. Internal absolute paths are
+non-enumerable on source metadata. Remote URLs, Markdown image rewriting, SVG
+rasterization, and animated-image conversion are intentionally outside this
+release.
+
+Within the image package, a shared request module owns cache keys and the
+development URL grammar; a transform executor owns cache misses and bounded
+Sharp work; and a source catalog owns authorization, metadata inspection, and
+HMR refresh. The development Vite adapter and production registry are thin
+adapters over those modules, so they cannot silently diverge on request identity
+or cache behavior.
+
+The image package is separately versioned from the Bun workspace root. Release
+Please tracks the root package and `@briansunter/nib-images` independently; the
+release workflow publishes only the package(s) whose release output is true.
+It deliberately does not use Release Please's `node-workspace` plugin: that
+plugin follows development dependencies and would patch-release the root when
+only the optional image package changed. The entire `packages/` subtree and
+the root's shared `bun.lock` are excluded from root release detection, so an
+image-only dependency update does not turn into a framework release. CI,
+examples, tests, and release metadata are likewise excluded; root source and
+published documentation changes still release Nib. The image package declares the
+supported pre-1.0 Nib range explicitly. If a future Nib change makes that
+contract incompatible, update the image peer range in the same change so both
+packages receive their own intentional releases.
+Publishing uses npm Trusted Publishing (GitHub Actions OIDC), so each public
+npm package must have its own trusted-publisher entry for `.github/workflows/release.yml`
+before automated releases. npm requires a package to exist before its trusted
+publisher can be configured; bootstrap a brand-new package once with an
+interactive 2FA publish, then configure OIDC and remove any CI token.
 
 ## Virtual modules
 

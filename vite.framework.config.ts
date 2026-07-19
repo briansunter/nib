@@ -6,6 +6,7 @@ import { defineConfig } from 'vite'
 const entries = {
   cli: path.resolve('src/cli.ts'),
   index: path.resolve('src/index.ts'),
+  plugin: path.resolve('src/plugin.ts'),
   'internal/client': path.resolve('src/runtime/client.ts'),
   'internal/server': path.resolve('src/runtime/server.ts'),
 }

@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@briansunter/nib": ["../../dist/framework/index.d.ts"],
+      "@briansunter/nib/plugin": ["../../dist/framework/plugin.d.ts"]
+    }
+  },
+  "include": ["src"]
+}

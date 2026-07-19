@@ -1,0 +1,45 @@
+{
+  "name": "@briansunter/nib-images",
+  "version": "0.1.0",
+  "description": "Static, responsive image optimization for Nib.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/briansunter/nib.git"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./plugin": {
+      "types": "./dist/plugin.d.ts",
+      "import": "./dist/plugin.js"
+    }
+  },
+  "sideEffects": false,
+  "files": ["dist", "README.md", "CHANGELOG.md"],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "peerDependencies": {
+    "@briansunter/nib": ">=0.8.0 <1.0.0",
+    "react": "^19.2.0"
+  },
+  "dependencies": {
+    "sharp": "^0.35.0"
+  },
+  "devDependencies": {
+    "@briansunter/nib": "file:../.."
+  },
+  "scripts": {
+    "build": "vite build --config vite.config.ts && tsc --project tsconfig.build.json && node scripts/postbuild-types.mjs",
+    "benchmark": "bun scripts/benchmark.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  }
+}

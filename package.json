@@ -8,12 +8,16 @@
     "url": "git+https://github.com/briansunter/nib.git"
   },
   "bin": {
-    "nib": "./bin/nib.js"
+    "nib": "bin/nib.js"
   },
   "exports": {
     ".": {
       "types": "./dist/framework/index.d.ts",
       "import": "./dist/framework/index.js"
+    },
+    "./plugin": {
+      "types": "./dist/framework/plugin.d.ts",
+      "import": "./dist/framework/plugin.js"
     },
     "./internal/client": {
       "types": "./dist/framework/runtime/client.d.ts",
@@ -51,27 +55,29 @@
     "registry": "https://registry.npmjs.org/"
   },
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "bun run build:framework && node bin/nib.js dev --root examples/docs",
-    "build": "bun run build:framework && bun run build:docs",
+    "build": "bun run build:framework && bun run build:images && bun run build:docs",
     "build:docs": "node bin/nib.js build --root examples/docs",
+    "build:images": "bun run --cwd packages/nib-images build",
+    "benchmark:images": "bun run build:images && bun run --cwd packages/nib-images benchmark",
     "build:framework": "vite build --config vite.framework.config.ts && tsc --project tsconfig.build.json",
-    "test": "bun run build:framework && vitest run --coverage --exclude tests/package-consumer.test.ts && vitest run tests/package-consumer.test.ts --no-coverage",
+    "test": "bun run build:framework && bun run build:images && bun run --cwd packages/nib-images test && vitest run --coverage --exclude tests/package-consumer.test.ts && vitest run tests/package-consumer.test.ts --no-coverage",
     "preview": "node bin/nib.js preview --root examples/docs",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun run build:framework && bun run build:images && tsc --noEmit && bun run --cwd packages/nib-images typecheck",
     "check:version-policy": "tsx scripts/check-version-policy.ts"
   },
   "dependencies": {
-    "@tailwindcss/typography": "^0.5.19",
-    "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.0.3",
     "gray-matter": "^4.0.3",
     "rehype-stringify": "^10.0.1",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
-    "tailwindcss": "^4.3.3",
     "tinyglobby": "^0.2.17",
     "unified": "^11.0.5",
     "vite": "^8.1.5",
@@ -82,6 +88,9 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@briansunter/nib-images": "workspace:*",
+    "@tailwindcss/typography": "^0.5.19",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -89,6 +98,7 @@
     "csv-parse": "^7.0.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "tailwindcss": "^4.3.3",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18",

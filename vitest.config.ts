@@ -11,6 +11,7 @@ export default defineConfig({
         'src/cli.ts',
         'src/framework/types.ts',
         'src/runtime/server.ts',
+        'packages/**',
       ],
       thresholds: {
         lines: 85,

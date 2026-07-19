@@ -34,8 +34,11 @@ npm run dev
   routes.
 - Build-time collections for indexes, navigation, and related content.
 - React islands with `load`, `idle`, and `visible` hydration.
+- Optional Vite styling adapters; the starter opts into Tailwind without making
+  it a framework dependency.
 - Base-path support for GitHub Pages and other subpath deployments.
-- A single `nib.config.ts` configuration point for site metadata, content sources, collections, and an optional app-owned shell.
+- A single `nib.config.ts` configuration point for site metadata, content sources,
+  collections, an optional app-owned Vite adapter, and an optional shell.
 
 ## Authoring model
 
@@ -67,6 +70,26 @@ TSX pages may export typed metadata. Markdown pages support `title`,
 `description`, `draft`, and `layout` frontmatter by default; `defineMarkdown`
 can replace that schema. `definePageSource` handles custom page formats, while
 `defineCollection` loads typed data shared across routes.
+
+## Optional Vite adapters
+
+Nib owns Vite's entries, SSR, base path, and output settings. A project can add
+Vite plugins through the narrow `vite` factory in `nib.config.ts`; the factory
+runs separately for development, client, and server graphs. The starter uses it
+for Tailwind:
+
+```ts
+import { defineConfig } from '@briansunter/nib'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  site: { title: 'My site' },
+  vite: () => tailwindcss(),
+})
+```
+
+Use `plugins` instead for packages that need Nib lifecycle hooks in addition to
+Vite, such as the optional image optimizer below.
 
 ## React islands
 
@@ -103,12 +126,49 @@ data loaders, React Server Components, or JSX inside Markdown.
 The [documentation site](https://briansunter.github.io/nib/docs/) covers setup,
 pages, Markdown, layouts, data sources, collections, islands, and GitHub Pages.
 
+## Optional optimized images
+
+Install the image package only in projects that need local image transformation:
+
+```bash
+npm install @briansunter/nib-images
+```
+
+Configure it as a normal typed Nib plugin, then import local raster files with
+the explicit `?nib-image` query. `Image` emits static responsive `<picture>`
+markup with intrinsic dimensions, lazy loading by default, and no island runtime.
+
+```tsx
+import { Image } from '@briansunter/nib-images'
+import hero from './hero.jpg?nib-image'
+
+export default function Home() {
+  return <Image src={hero} alt="Mountain trail" layout="full" priority />
+}
+```
+
+```ts
+// nib.config.ts
+import { defineConfig } from '@briansunter/nib'
+import { images } from '@briansunter/nib-images/plugin'
+
+export default defineConfig({
+  site: { title: 'My site' },
+  plugins: [images()],
+})
+```
+
+See [image optimization](examples/docs/src/pages/docs/image-optimization/page.md)
+for layouts, cache behavior, and the current SVG/animated-image limits.
+
 For implementation details and design rationale:
 
 - [Architecture](docs/architecture.md)
 - [React islands](docs/interactive-react-islands.md)
 - [HTML pages proposal](docs/html-pages-layouts-and-islands.md) — proposed, not
   part of the current API
+- [Type-safe plugins and image optimization](docs/type-safe-plugins-and-image-optimization.md)
+  — implemented design, APIs, and validation matrix
 
 ## Contributing
 
@@ -121,4 +181,6 @@ bun run check:version-policy
 ```
 
 Framework source lives in `src`, the published initializer in
-`templates/default`, and the documentation site in `examples/docs`.
+`templates/default`, and the documentation site in `examples/docs`. Optional
+publishable packages live under `packages/*`; the image package can be built
+or tested directly with `bun run --cwd packages/nib-images <script>`.

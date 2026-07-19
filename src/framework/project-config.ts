@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { loadConfigFromFile, type ConfigEnv } from 'vite'
 import { pageSourceExtensions, validateDataDefinition } from './content'
+import type { NibPlugin } from './plugin'
 import type { NibConfig } from './types'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -27,6 +28,30 @@ export function validateNibConfig(value: unknown): NibConfig {
   }
   if (value.shell !== undefined && typeof value.shell !== 'function') {
     throw new Error('Nib shell must be a React component')
+  }
+  if (value.vite !== undefined && typeof value.vite !== 'function') {
+    throw new Error('Nib vite must be a function that returns Vite plugins')
+  }
+  if (value.plugins !== undefined) {
+    if (!Array.isArray(value.plugins)) throw new Error('Nib plugins must be an array')
+    const names = new Set<string>()
+    for (const plugin of value.plugins) {
+      if (
+        !isRecord(plugin)
+        || typeof plugin.name !== 'string'
+        || plugin.name.trim() === ''
+        || plugin.name !== plugin.name.trim()
+      ) {
+        throw new Error('Each Nib plugin must have a non-empty name')
+      }
+      if (names.has(plugin.name)) throw new Error(`Nib plugin name is duplicated: ${plugin.name}`)
+      names.add(plugin.name)
+      for (const hook of ['vite', 'renderer'] as const) {
+        if (plugin[hook] !== undefined && typeof plugin[hook] !== 'function') {
+          throw new Error(`Nib plugin ${plugin.name} ${hook} hook must be a function`)
+        }
+      }
+    }
   }
   if (value.markdown !== undefined) {
     validateDataDefinition(value.markdown, 'Nib markdown configuration')

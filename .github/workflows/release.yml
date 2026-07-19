@@ -16,8 +16,18 @@ jobs:
       issues: write
       pull-requests: write
     outputs:
+      releases_created: ${{ steps.release.outputs.releases_created }}
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
+      image_release_created: >-
+        ${{ steps.release.outputs['packages/nib-images--release_created'] }}
+      image_tag_name: >-
+        ${{ steps.release.outputs['packages/nib-images--tag_name'] }}
+      # Image-only changes do not create the root tag. Fall back to the image
+      # tag so the publish job always checks out the release commit.
+      release_ref: >-
+        ${{ steps.release.outputs.tag_name ||
+        steps.release.outputs['packages/nib-images--tag_name'] }}
     steps:
       - name: Run Release Please
         id: release
@@ -30,7 +40,7 @@ jobs:
   publish:
     name: Publish to npm
     needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    if: needs.release-please.outputs.releases_created == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -40,7 +50,7 @@ jobs:
       - name: Check out released version
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          ref: ${{ needs.release-please.outputs.release_ref }}
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -73,4 +83,10 @@ jobs:
         run: npm install --global npm@11.5.1
 
       - name: Publish to npm with provenance
+        if: needs.release-please.outputs.release_created == 'true'
+        run: npm publish --provenance --access public
+
+      - name: Publish @briansunter/nib-images to npm with provenance
+        if: needs.release-please.outputs.image_release_created == 'true'
+        working-directory: packages/nib-images
         run: npm publish --provenance --access public

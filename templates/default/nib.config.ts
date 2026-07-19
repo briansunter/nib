@@ -1,4 +1,5 @@
 import { defineConfig } from '@briansunter/nib'
+import tailwindcss from '@tailwindcss/vite'
 import { SiteShell } from './src/site-shell'
 
 export default defineConfig({
@@ -11,5 +12,6 @@ export default defineConfig({
       { label: 'About', href: '/about/' },
     ],
   },
+  vite: () => tailwindcss(),
   shell: SiteShell,
 })
