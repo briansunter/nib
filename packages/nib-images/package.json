@@ -1,6 +1,6 @@
 {
   "name": "@briansunter/nib-images",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Static, responsive image optimization for Nib.",
   "repository": {
     "type": "git",

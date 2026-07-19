@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.12.0](https://github.com/briansunter/nib/compare/v0.11.1...v0.12.0) (2026-07-19)
+
+### Features
+
+* deepen static publication, content sources, and image lifecycle ([ba656e3](https://github.com/briansunter/nib/commit/ba656e34b7006029cf4ea4cd867f9e035ccbd01b))
+
 ## [0.11.1](https://github.com/briansunter/nib/compare/v0.11.0...v0.11.1) (2026-07-19)
 
 
