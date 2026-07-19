@@ -92,7 +92,8 @@ export function SiteShell({ children, route, site }: SiteShellProps) {
       </header>
       <main className={`site-main${isDocsRoute ? ' site-main--docs' : ''}`} id="content">{children}</main>
       <footer className="site-footer">
-        React, Markdown, and data pages, static by default.
+        <span>React, Markdown, and data pages, static by default.</span>
+        <a href={siteHref('/docs/')}>Read the docs <span aria-hidden="true">↗</span></a>
       </footer>
     </div>
   )
