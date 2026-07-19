@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/briansunter/nib/compare/v0.9.0...v0.10.0) (2026-07-19)
+
+
+### Features
+
+* add extensible content routing ([9229d5d](https://github.com/briansunter/nib/commit/9229d5de197847e0855080575cfa24cf36c102d3))
+
 ## [0.9.0](https://github.com/briansunter/nib/compare/v0.8.0...v0.9.0) (2026-07-19)
 
 
