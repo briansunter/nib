@@ -1,6 +1,8 @@
 import { siteHref, type SiteShellProps } from '@briansunter/nib'
 import { documentation } from './docs-navigation'
 
+const repositoryUrl = 'https://github.com/briansunter/nib'
+
 function routePath(href: string): string {
   const withoutTrailingSlash = href.replace(/\/+$/, '')
   return withoutTrailingSlash || '/'
@@ -42,6 +44,15 @@ export function SiteShell({ children, route, site }: SiteShellProps) {
                     <span aria-hidden="true">↗</span>
                   </a>
                 ))}
+                <a
+                  className="mobile-nav__github"
+                  href={repositoryUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                  aria-label="GitHub repository (opens in a new tab)"
+                >
+                  GitHub <span aria-hidden="true">↗</span>
+                </a>
               </nav>
               <nav aria-label="Mobile documentation" className="mobile-nav__documentation">
                 <p className="mobile-nav__documentation-title">Documentation</p>
@@ -72,7 +83,7 @@ export function SiteShell({ children, route, site }: SiteShellProps) {
             </span>
             <span className="site-brand__words">
               <span className="site-brand__name">{site.title}</span>
-              <span className="site-brand__tagline">static sites, carefully composed</span>
+              <span className="site-brand__tagline">framework docs</span>
             </span>
           </a>
           <nav aria-label="Primary" className="site-primary-nav">
@@ -87,6 +98,15 @@ export function SiteShell({ children, route, site }: SiteShellProps) {
                 </a>
               )
             })}
+            <a
+              className="site-primary-nav__github"
+              href={repositoryUrl}
+              rel="noreferrer"
+              target="_blank"
+              aria-label="GitHub repository (opens in a new tab)"
+            >
+              GitHub <span aria-hidden="true">↗</span>
+            </a>
           </nav>
         </div>
       </header>

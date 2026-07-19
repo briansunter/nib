@@ -45,7 +45,7 @@ export default function HomePage() {
             <span className="home-page__eyebrow-dot" aria-hidden="true" />
             Static-site framework for React
           </p>
-          <h1>Build the page.<br /><em>Ship the HTML.</em></h1>
+          <h1>React pages.<br /><em>Static output.</em></h1>
           <p className="home-page__lede">
             Nib turns React, Markdown, and data into complete static pages.
             Add browser JavaScript only where interaction needs it.
