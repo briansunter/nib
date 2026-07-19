@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { normalizePath } from './paths'
 import type {
   CollectionDefinition,
+  PageSourceCollectionDefinition,
   CollectionEntry,
   CollectionLoaderContext,
   CollectionLoaderResult,
@@ -14,6 +15,7 @@ import type {
   PageMeta,
   PageSourceContext,
   PageSourceDefinition,
+  PageSourceRenderer,
   PageSourcePage,
 } from './types'
 
@@ -52,6 +54,31 @@ export function definePageSource(
   definition: PageSourceDefinition<any>,
 ): PageSourceDefinition<any> {
   return definition
+}
+
+/**
+ * Defers a data-page renderer. Prefer the module form for transformed imports:
+ * Nib emits that import only after Vite has installed the graph's adapters.
+ */
+export function pageRenderer<Data = any>(
+  load: NonNullable<PageSourceRenderer<Data>['load']>,
+): PageSourceRenderer<Data>
+export function pageRenderer<Data = any>(module: string, exportName?: string): PageSourceRenderer<Data>
+export function pageRenderer<Data = any>(
+  loadOrModule: NonNullable<PageSourceRenderer<Data>['load']> | string,
+  exportName?: string,
+): PageSourceRenderer<Data> {
+  if (typeof loadOrModule === 'string') {
+    return { module: loadOrModule, ...(exportName === undefined ? {} : { exportName }) }
+  }
+  return { load: loadOrModule }
+}
+
+/** Reuse the validated output of one page source as a typed collection. */
+export function fromPageSource<const Validator extends DataValidator>(
+  source: PageSourceDefinition<Validator>,
+): PageSourceCollectionDefinition<Validator> {
+  return { source }
 }
 
 export function defineCollection<Data>(
@@ -145,8 +172,33 @@ export function pageSourceExtensions(
     if (typeof definition.load !== 'function') {
       throw new Error(`Page source ${index} must define a load function`)
     }
-    if (typeof definition.component !== 'function') {
-      throw new Error(`Page source ${index} must define a React component`)
+    if (
+      typeof definition.component !== 'function'
+      && (
+        definition.component === null
+        || typeof definition.component !== 'object'
+        || (
+          typeof (definition.component as PageSourceRenderer).load !== 'function'
+          && typeof (definition.component as PageSourceRenderer).module !== 'string'
+        )
+      )
+    ) {
+      throw new Error(`Page source ${index} must define a React component or page renderer`)
+    }
+    if (typeof definition.component === 'object' && definition.component !== null) {
+      const renderer = definition.component as PageSourceRenderer
+      if (renderer.module !== undefined && (typeof renderer.module !== 'string' || renderer.module.trim() === '')) {
+        throw new Error(`Page source ${index} page renderer module must be a non-empty string`)
+      }
+      if (
+        renderer.exportName !== undefined
+        && (
+          typeof renderer.exportName !== 'string'
+          || !/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(renderer.exportName)
+        )
+      ) {
+        throw new Error(`Page source ${index} page renderer exportName must be a JavaScript identifier`)
+      }
     }
     if (definition.match !== undefined && typeof definition.match !== 'function') {
       throw new Error(`Page source ${index} match must be a function`)
@@ -157,6 +209,32 @@ export function pageSourceExtensions(
     }
   }
   return [...extensions]
+}
+
+const pageRendererLoads = new WeakMap<object, Promise<GeneratedPage['component']>>()
+
+async function pageSourceComponent<Validator extends DataValidator>(
+  definition: PageSourceDefinition<Validator>,
+  label: string,
+  importedComponent?: GeneratedPage['component'],
+): Promise<GeneratedPage['component']> {
+  if (importedComponent !== undefined) return importedComponent
+  if (typeof definition.component === 'function') return definition.component
+  const renderer = definition.component
+  if (typeof renderer.load !== 'function') {
+    throw new Error(`${label} page renderer module must be imported through Nib's Vite page-source module`)
+  }
+  const cached = pageRendererLoads.get(renderer)
+  if (cached !== undefined) return cached
+  const load = renderer.load().then((loaded) => {
+    const component = typeof loaded === 'function' ? loaded : loaded?.default
+    if (typeof component !== 'function') {
+      throw new Error(`${label} page renderer must resolve to a default React component`)
+    }
+    return component
+  })
+  pageRendererLoads.set(renderer, load)
+  return load
 }
 
 export function pageSourceIndex(
@@ -225,8 +303,10 @@ export async function compileDataPages<
 >(
   definition: PageSourceDefinition<Validator>,
   context: PageSourceContext,
+  importedComponent?: GeneratedPage['component'],
 ): Promise<GeneratedPage[]> {
   validateDataDefinition(definition, `Page source ${context.file}`)
+  const component = await pageSourceComponent(definition, `Page source ${context.file}`, importedComponent)
   const loaded = await definition.load(context)
   const pages = Array.isArray(loaded) ? loaded : [loaded]
 
@@ -244,12 +324,15 @@ export async function compileDataPages<
     })
     const meta = getPageMeta(page.meta, label)
     const layout = getLayoutName(page.layout, label)
+    const path = normalizePagePath(page.path ?? context.defaultPath, `${label} path`)
     return {
-      path: normalizePagePath(page.path ?? context.defaultPath, `${label} path`),
-      component: definition.component,
+      path,
+      component,
       data,
       ...(meta ? { meta } : {}),
       ...(layout ? { layout } : {}),
+      sourceDefinition: definition,
+      collectionId: page.collectionId ?? path.replace(/^\/+|\/+$/g, ''),
     }
   })
 }
@@ -275,10 +358,11 @@ async function safeProjectFile(root: string, file: string): Promise<string> {
 }
 
 export async function loadCollections<
-  const Definitions extends Record<string, CollectionDefinition<any>>,
+  const Definitions extends Record<string, CollectionDefinition<any> | PageSourceCollectionDefinition<any>>,
 >(
   definitions: Definitions | undefined,
   root: string,
+  pageSourceEntries: ReadonlyMap<PageSourceDefinition<any>, readonly CollectionEntry[]> = new Map(),
 ): Promise<LoadedCollectionDefinitions<Definitions>> {
   const collections: Record<string, CollectionEntry[]> = {}
   const context: CollectionLoaderContext = {
@@ -290,6 +374,16 @@ export async function loadCollections<
   }
 
   for (const [name, definition] of Object.entries(definitions ?? {})) {
+    if ('source' in definition) {
+      const entries = pageSourceEntries.get(definition.source) ?? []
+      const seen = new Set<string>()
+      collections[name] = entries.map((entry) => {
+        if (seen.has(entry.id)) throw new Error(`Duplicate collection entry ${name}/${entry.id}`)
+        seen.add(entry.id)
+        return { id: entry.id, data: entry.data }
+      })
+      continue
+    }
     validateDataDefinition(definition, `Collection ${name}`)
     if (typeof definition.loader !== 'function') {
       throw new Error(`Collection ${name} must define a loader function`)

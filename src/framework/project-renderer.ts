@@ -11,7 +11,11 @@ import {
   getRoute,
   type RouteLayouts,
 } from './router'
-import { stripBasePath } from './urls'
+import {
+  canonicalRequestRedirect,
+  publicRouteHref,
+  stripBasePath,
+} from './publication'
 import {
   createRendererPluginPipeline,
   inspectResolvedPluginRoutes,
@@ -22,8 +26,10 @@ import {
   type NibCommand,
 } from './plugin'
 import type {
+  CollectionEntry,
   NibConfig,
   PageModule,
+  PageSourceDefinition,
   RenderedOutput,
   ResolvedPageRoute,
   ResolvedRoute,
@@ -38,6 +44,21 @@ export interface ProjectRendererOptions {
   folderLayouts?: RouteLayouts['folders']
   namedLayouts?: RouteLayouts['named']
   islandModules: Record<string, IslandModule>
+}
+
+function pageSourceCollectionEntries(
+  modules: Record<string, PageModule>,
+): ReadonlyMap<PageSourceDefinition<any>, readonly CollectionEntry[]> {
+  const entries = new Map<PageSourceDefinition<any>, CollectionEntry[]>()
+  for (const module of Object.values(modules)) {
+    for (const page of module.pages ?? []) {
+      if (!page.sourceDefinition || page.collectionId === undefined) continue
+      const collection = entries.get(page.sourceDefinition) ?? []
+      collection.push({ id: page.collectionId, data: page.data })
+      entries.set(page.sourceDefinition, collection)
+    }
+  }
+  return entries
 }
 
 export interface ProjectRenderer {
@@ -86,35 +107,16 @@ function composePage(
   return createElement(Shell, { ...pageProps, children: content })
 }
 
-function routeHref(base: string, routePath: string): string {
-  if (routePath === '/') return base
-  return `${base}${routePath.replace(/^\/+/, '')}`
-}
-
 function publicRedirectDestination(base: string, destination: string): string {
   if (!destination.startsWith('/') || destination.startsWith('//')) return destination
   const parsed = new URL(destination, 'http://nib.local')
-  return `${routeHref(base, parsed.pathname)}${parsed.search}${parsed.hash}`
-}
-
-function canonicalRequestRedirect(
-  url: string,
-  base: string,
-  routePath: string,
-  policy: NibConfig['trailingSlash'],
-): string | undefined {
-  if (policy === undefined || policy === 'ignore' || routePath === '/') return undefined
-  const stripped = stripBasePath(url, base)
-  const parsed = new URL(stripped, 'http://nib.local')
-  if (parsed.pathname === routePath) return undefined
-  return `${routeHref(base, routePath)}${parsed.search}${parsed.hash}`
+  return `${publicRouteHref(base, parsed.pathname)}${parsed.search}${parsed.hash}`
 }
 
 export async function createProjectRenderer(
   options: ProjectRendererOptions,
 ): Promise<ProjectRenderer> {
   validateIslandModules(options.islandModules)
-  const collections = await loadCollections(options.config.collections, options.root)
   const layoutModules: RouteLayouts = {
     ...(options.folderLayouts === undefined ? {} : { folders: options.folderLayouts }),
     ...(options.namedLayouts === undefined ? {} : { named: options.namedLayouts }),
@@ -133,6 +135,11 @@ export async function createProjectRenderer(
     layoutModules,
     options.config.trailingSlash,
   ))
+  const collections = await loadCollections(
+    options.config.collections,
+    options.root,
+    pageSourceCollectionEntries(options.pages),
+  )
   addConfiguredRedirects(
     routes,
     options.config.redirects,

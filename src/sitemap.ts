@@ -1,8 +1,9 @@
 import { definePlugin, type NibResolvedPageRoute } from './framework/plugin'
+import { deployedOrigin, deployedRouteUrl } from './framework/deployed-url'
 
 export interface SitemapOptions {
-  /** Deployed site origin, for example https://example.com. Nib adds base. */
-  site: string | URL
+  /** Overrides site.origin. */
+  site?: string | URL
   /** Output route. Defaults to /sitemap.xml. */
   path?: string
   /** Optionally exclude page routes from the sitemap. */
@@ -18,23 +19,11 @@ function escapeXml(value: string): string {
     .replaceAll("'", '&apos;')
 }
 
-function deployedUrl(site: URL, base: string, routePath: string): string {
-  const basePath = base === '/' ? '/' : `/${base.replace(/^\/+|\/+$/g, '')}/`
-  const relative = routePath === '/' ? '' : routePath.replace(/^\/+/, '')
-  return new URL(`${basePath}${relative}`, site).href
-}
-
 export function sitemap(options: SitemapOptions) {
   if (options === null || typeof options !== 'object') {
     throw new Error('Nib sitemap requires an options object')
   }
-  const site = new URL(options.site)
-  if (!['http:', 'https:'].includes(site.protocol)) {
-    throw new Error('Nib sitemap site must use HTTP or HTTPS')
-  }
-  if (site.pathname !== '/' || site.search !== '' || site.hash !== '') {
-    throw new Error('Nib sitemap site must be an origin without a path, query, or hash')
-  }
+  if (options.site !== undefined) deployedOrigin(options.site, undefined, 'Nib sitemap site')
   const routePath = options.path ?? '/sitemap.xml'
   if (!routePath.startsWith('/')) {
     throw new Error('Nib sitemap path must be an absolute route path')
@@ -43,6 +32,7 @@ export function sitemap(options: SitemapOptions) {
   return definePlugin({
     name: '@briansunter/nib/sitemap',
     routes(context) {
+      const site = deployedOrigin(options.site, context.site.origin, 'Nib sitemap site')
       const entries = context.routes
         .filter((route): route is NibResolvedPageRoute => (
           route.kind === 'page'
@@ -50,7 +40,7 @@ export function sitemap(options: SitemapOptions) {
           && (options.filter?.(route) ?? true)
         ))
         .map((route) => (
-          `  <url><loc>${escapeXml(deployedUrl(site, context.base, route.path))}</loc></url>`
+          `  <url><loc>${escapeXml(deployedRouteUrl(site, context.base, route.path))}</loc></url>`
         ))
       return {
         kind: 'resource',

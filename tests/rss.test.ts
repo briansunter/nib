@@ -81,6 +81,24 @@ describe('RSS plugin', () => {
     expect(route.body).toContain('href="https://example.test/journal/feeds/journal.xml"')
   })
 
+  it('uses the configured site metadata when feed identity is not repeated', async () => {
+    const plugin = rss({ items: [{ title: 'Home', link: '/' }] })
+    if (!plugin.routes) throw new Error('RSS plugin has no route provider')
+    const route = await plugin.routes({
+      ...context,
+      site: {
+        title: 'Journal',
+        description: 'Entries',
+        origin: 'https://journal.example',
+      },
+    })
+    if (!route || Array.isArray(route) || route.kind !== 'resource') {
+      throw new Error('Expected an RSS resource route')
+    }
+    expect(route.body).toContain('<link>https://journal.example/journal/</link>')
+    expect(route.body).toContain('<description>Entries</description>')
+  })
+
   it('rejects invalid feed options and item data', async () => {
     expect(() => rss({
       site: 'ftp://example.test', title: 'Journal', description: 'Entries', items: [],

@@ -72,7 +72,12 @@ router or runtime route loader.
 TSX pages may export typed metadata. Markdown pages support `title`,
 `description`, `draft`, and `layout` frontmatter by default; `defineMarkdown`
 can replace that schema. `definePageSource` handles custom page formats, while
-`defineCollection` loads typed data shared across routes.
+`defineCollection` loads typed data shared across routes. Use
+`fromPageSource(source)` when an index should reuse the same validated entries
+that generated its data pages. If a page renderer imports a plugin-transformed
+module (for example `?nib-image`), declare it with
+`pageRenderer('./src/data-pages', 'ProjectPage')`; Nib imports that module from
+its configured Vite page-source graph rather than while loading `nib.config.ts`.
 
 ## Optional Vite adapters
 
@@ -86,7 +91,11 @@ import { defineConfig } from '@briansunter/nib'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  site: { title: 'My site' },
+  site: {
+    title: 'My site',
+    description: 'Recent writing from My site.',
+    origin: 'https://my-site.example',
+  },
   vite: () => tailwindcss(),
 })
 ```
@@ -98,7 +107,12 @@ Vite, such as the optional image optimizer below.
 
 Configured redirects emit safe redirect HTML in static builds and real HTTP
 redirects during development. `trailingSlash` controls canonical route paths
-and development matching:
+and matching across development, preview, and static output: `always` writes
+directory indexes, while `never` writes extensionless HTML files for leaf
+routes and indexes for route parents that contain child pages. Preview redirects
+an alternate spelling to the canonical URL. When deploying `never`, configure a
+host that serves extensionless page files as `text/html` and rewrites a
+parent's extensionless URL to its index artifact.
 
 ```ts
 import { defineConfig } from '@briansunter/nib'
@@ -116,11 +130,8 @@ export default defineConfig({
     },
   },
   plugins: [
-    sitemap({ site: 'https://my-site.example' }),
+    sitemap({}),
     rss({
-      site: 'https://my-site.example',
-      title: 'My site',
-      description: 'Recent writing from My site.',
       items: [
         { title: 'Hello', link: '/posts/hello/', pubDate: '2026-07-19' },
       ],
@@ -205,13 +216,15 @@ npm install @briansunter/nib-images
 Configure it as a normal typed Nib plugin, then import local raster files with
 the explicit `?nib-image` query. `Image` emits static responsive `<picture>`
 markup with intrinsic dimensions, lazy loading by default, and no island runtime.
+Set `maxWidth` to put a hard ceiling on emitted transforms when a full or
+constrained image will never be displayed at its source width.
 
 ```tsx
 import { Image } from '@briansunter/nib-images'
 import hero from './hero.jpg?nib-image'
 
 export default function Home() {
-  return <Image src={hero} alt="Mountain trail" layout="full" priority />
+  return <Image src={hero} alt="Mountain trail" layout="full" maxWidth={1280} priority />
 }
 ```
 

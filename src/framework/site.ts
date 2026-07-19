@@ -8,6 +8,7 @@ import {
   createServer as createViteServer,
   isRunnableDevEnvironment,
   preview as vitePreview,
+  type Plugin,
   type InlineConfig,
   type PreviewServer,
   type ViteDevServer,
@@ -21,12 +22,17 @@ import {
   nibProject,
 } from './project-vite-plugin'
 import { loadNibConfig, resolveBasePath } from './project-config'
-import { isFileRoute } from './paths'
+import {
+  normalizePath,
+  previewCanonicalRedirect,
+  previewExtensionlessPageArtifacts,
+  routeArtifacts,
+} from './publication'
 import {
   resolvePluginSetupContributions,
   resolveVitePluginContributions,
 } from './plugin'
-import type { RenderedOutput } from './types'
+import type { RenderedOutput, TrailingSlash } from './types'
 import { nibDataPages, nibMarkdown } from './vite-plugin'
 
 export interface SiteOperationOptions {
@@ -105,7 +111,7 @@ export async function siteViteConfig(
   root: string,
   command: 'build' | 'serve',
   target: 'client' | 'server' | 'development',
-): Promise<{ base: string; config: InlineConfig }> {
+): Promise<{ base: string; trailingSlash: TrailingSlash | undefined; config: InlineConfig }> {
   const loaded = await loadNibConfig(root, command)
   const base = resolveBasePath(loaded.config)
   const pluginContext = Object.freeze({
@@ -136,6 +142,7 @@ export async function siteViteConfig(
   )
   return {
     base,
+    trailingSlash: loaded.config.trailingSlash,
     config: {
       appType: 'custom',
       base,
@@ -180,13 +187,43 @@ async function readBuildTemplate(clientDirectory: string, base: string): Promise
   return htmlTemplate(base, islands.file, styles)
 }
 
-function outputFile(clientDirectory: string, routePath: string): string {
-  const normalized = routePath.replace(/^\/+|\/+$/g, '')
-  if (isFileRoute(routePath)) return path.join(clientDirectory, normalized)
-  return path.join(
-    clientDirectory,
-    routePath === '/' ? 'index.html' : `${routePath.replace(/^\/+/, '')}/index.html`,
-  )
+function publicationPreviewPlugin(
+  base: string,
+  trailingSlash: 'always' | 'never' | 'ignore' | undefined,
+  clientDirectory: string,
+): Plugin {
+  return {
+    name: 'nib-route-publication-preview',
+    configurePreviewServer(server) {
+      server.middlewares.use(async (request, response, next) => {
+        const redirect = request.url === undefined
+          ? undefined
+          : previewCanonicalRedirect(request.url, base, trailingSlash)
+        if (redirect !== undefined) {
+          response.statusCode = 301
+          response.setHeader('Location', redirect)
+          response.end()
+          return
+        }
+        const acceptsHtml = request.headers.accept?.includes('text/html') ?? false
+        const artifacts = request.url === undefined || !acceptsHtml
+          ? undefined
+          : previewExtensionlessPageArtifacts(request.url, base, trailingSlash)
+        for (const artifact of artifacts ?? []) {
+          try {
+            const body = await fs.readFile(path.join(clientDirectory, artifact))
+            response.statusCode = 200
+            response.setHeader('Content-Type', 'text/html; charset=utf-8')
+            response.end(body)
+            return
+          } catch {
+            // Try a parent route's index before delegating to Vite.
+          }
+        }
+        next()
+      })
+    },
+  }
 }
 
 async function buildSiteInProduction(options: SiteOperationOptions): Promise<void> {
@@ -198,7 +235,7 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
   const hasStyles = await fs.access(stylePath).then(() => true, () => false)
 
   await fs.rm(output, { recursive: true, force: true })
-  const { base, config: clientConfig } = await siteViteConfig(root, 'build', 'client')
+  const { base, trailingSlash, config: clientConfig } = await siteViteConfig(root, 'build', 'client')
   await viteBuild({
     ...clientConfig,
     build: {
@@ -241,20 +278,26 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
   }
   const rendered = server.paths.map((routePath) => ({ routePath, output: server.render(routePath) }))
   const notFound = { routePath: '/404', output: server.render('/404') }
+  const renderedRoutePaths = rendered.map(({ routePath }) => normalizePath(routePath))
   await server.finalize({
     clientDirectory,
   })
   await mapWithConcurrency([...rendered, notFound], htmlWriteConcurrency(), async ({ routePath, output }) => {
-    const file = routePath === '/404'
-      ? path.join(clientDirectory, '404.html')
-      : outputFile(clientDirectory, routePath)
-    await fs.mkdir(path.dirname(file), { recursive: true })
+    const artifacts = routePath === '/404'
+      ? { primary: '404.html' }
+      : routeArtifacts(
+          routePath,
+          trailingSlash,
+          renderedRoutePaths.some((candidate) => candidate.startsWith(`${normalizePath(routePath)}/`)),
+        )
+    const primaryFile = path.join(clientDirectory, artifacts.primary)
+    await fs.mkdir(path.dirname(primaryFile), { recursive: true })
     const body = output.kind === 'page'
       ? renderDocument(template, output.page)
       : output.kind === 'resource'
         ? output.body
         : renderRedirectDocument(output.destination)
-    await fs.writeFile(file, body)
+    await fs.writeFile(primaryFile, body)
   })
 }
 
@@ -329,10 +372,12 @@ export interface PreviewSiteOptions extends SiteOperationOptions {
 export async function previewSite(options: PreviewSiteOptions): Promise<PreviewServer> {
   const root = path.resolve(options.root)
   const loaded = await loadNibConfig(root, 'serve')
+  const base = resolveBasePath(loaded.config)
   return vitePreview({
-    base: resolveBasePath(loaded.config),
+    base,
     build: { outDir: path.join(root, 'dist/client') },
     configFile: false,
+    plugins: [publicationPreviewPlugin(base, loaded.config.trailingSlash, path.join(root, 'dist/client'))],
     preview: {
       ...(options.host === undefined ? {} : { host: options.host }),
       ...(options.port === undefined ? {} : { port: options.port }),

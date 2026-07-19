@@ -8,8 +8,10 @@ import {
   defineCollection,
   definePageSource,
   file,
+  fromPageSource,
   glob,
   loadCollections,
+  pageRenderer,
   pageSourceExtensions,
   pageSourceIndex,
 } from '../src/framework/content'
@@ -78,6 +80,34 @@ describe('generic content', () => {
     expect(page.data).toBe('HELLO')
   })
 
+  it('loads a deferred renderer once and reuses compiled entries as a collection', async () => {
+    let rendererLoads = 0
+    const source = definePageSource({
+      extensions: ['data'],
+      schema: itemSchema,
+      load: () => ({ data: { slug: 'one', count: 1 } }),
+      component: pageRenderer(async () => {
+        rendererLoads += 1
+        return { default: ItemPage }
+      }),
+    })
+    const context = {
+      file: 'src/pages/items/page.data',
+      source: 'one',
+      defaultPath: '/items/one',
+    }
+    const [first] = await compileDataPages(source, context)
+    const [second] = await compileDataPages(source, context)
+    expect(rendererLoads).toBe(1)
+    expect(first?.component).toBe(second?.component)
+    const collections = await loadCollections(
+      { items: fromPageSource(source) },
+      process.cwd(),
+      new Map([[source, [{ id: first!.collectionId!, data: first!.data }]]]),
+    )
+    expect(collections.items).toEqual([{ id: 'items/one', data: { slug: 'one', count: 1 } }])
+  })
+
   it('rejects ambiguous matches and unsafe page source configuration', () => {
     const overlapping = [
       {
@@ -101,6 +131,13 @@ describe('generic content', () => {
         component: ItemPage,
       },
     ])).toThrow('letters and numbers')
+    expect(() => pageSourceExtensions([
+      {
+        extensions: ['yaml'],
+        load: async () => ({ data: {} }),
+        component: pageRenderer('./src/data-pages', 'not-an-export!'),
+      },
+    ])).toThrow('exportName')
   })
 
   it('rejects ambiguous validators before loading content', async () => {
@@ -162,7 +199,7 @@ describe('generic content', () => {
       extensions: ['yaml'],
       schema: itemSchema,
       load: () => ({ data: { slug: 'one', count: 1 } }),
-      component: ItemPage,
+      component: pageRenderer('./src/data-pages', 'ItemPage'),
     })
     const plugin = nibDataPages('/site/nib.config.ts', [source])
     if (typeof plugin.load !== 'function') throw new Error('Data page plugin has no load hook')
@@ -173,6 +210,8 @@ describe('generic content', () => {
 
     expect(result).toContain('compileDataPages(pageSources[0]')
     expect(result).toContain('virtual:nib/page-sources')
+    expect(result).toContain('import { ItemPage as __nibPageRenderer } from "/site/src/data-pages"')
+    expect(result).toContain(', __nibPageRenderer)')
     expect(result).toContain('defaultPath: "/team"')
   })
 })

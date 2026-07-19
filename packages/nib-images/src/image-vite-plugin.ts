@@ -1,3 +1,4 @@
+import path from 'node:path'
 import type { Plugin } from 'vite'
 import type { NibViteTarget } from '@briansunter/nib/plugin'
 import { ImageTransformExecutor } from './image-executor'
@@ -69,7 +70,7 @@ export function imageVitePlugin(
       ) {
         throw staticOnlyError()
       }
-      const source = await sources.load(file)
+      const source = await sources.load(path.isAbsolute(file) ? file : path.resolve(options.root, file))
       this.addWatchFile(source.__nibFile)
       return imageSourceModule(source)
     },

@@ -7,6 +7,26 @@ export interface FixedImageCandidate {
   readonly density: number
 }
 
+export interface ImageCandidatePlan {
+  readonly fixed: boolean
+  readonly widths: readonly number[]
+  readonly sizes: string | undefined
+  readonly displayWidth: number
+  readonly displayHeight: number
+  readonly fixedCandidates: readonly FixedImageCandidate[] | undefined
+}
+
+export interface ImageCandidatePlanOptions {
+  readonly source: InternalImageSource
+  readonly layout: ImageLayout
+  readonly width: number | undefined
+  readonly maxWidth: number | undefined
+  readonly widths: readonly number[] | undefined
+  readonly densities: readonly number[] | undefined
+  readonly defaultWidths: readonly number[]
+  readonly sizes: string | undefined
+}
+
 const minimumWidthRatio = 1.1
 
 function removeNearDuplicates(
@@ -63,4 +83,85 @@ export function defaultSizes(layout: ImageLayout, width: number): string | undef
   if (layout === 'fixed') return undefined
   if (layout === 'full') return '100vw'
   return `(max-width: ${width}px) 100vw, ${width}px`
+}
+
+function positiveInteger(value: number, name: string): number {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`@briansunter/nib-images: ${name} must be a positive integer`)
+  }
+  return value
+}
+
+function normalizedWidths(values: readonly number[], name: string): number[] {
+  if (values.some((value) => !Number.isSafeInteger(value) || value <= 0)) {
+    throw new Error(`@briansunter/nib-images: ${name} must contain positive integers`)
+  }
+  return [...new Set(values)].sort((left, right) => left - right)
+}
+
+const allowedDensities = new Set([1, 1.5, 2, 3])
+
+function normalizedDensities(values: readonly number[]): number[] {
+  if (values.length === 0 || values.some((value) => !allowedDensities.has(value))) {
+    throw new Error('@briansunter/nib-images: densities may contain only 1, 1.5, 2, and 3')
+  }
+  return [...new Set(values)].sort((left, right) => left - right)
+}
+
+/**
+ * One source of truth for image layout dimensions and transform candidates.
+ * `maxWidth` is a hard cap; `widths` remains a responsive ladder.
+ */
+export function planImageCandidates(options: ImageCandidatePlanOptions): ImageCandidatePlan {
+  const requestedWidth = options.width === undefined
+    ? undefined
+    : positiveInteger(options.width, 'width')
+  const requestedMaximum = options.maxWidth === undefined
+    ? undefined
+    : positiveInteger(options.maxWidth, 'maxWidth')
+  const fixed = options.layout === 'fixed'
+  if (fixed && requestedWidth === undefined) {
+    throw new Error('@briansunter/nib-images: fixed images require width')
+  }
+  const naturalDisplayWidth = fixed
+    ? requestedWidth!
+    : options.layout === 'constrained'
+      ? Math.min(options.source.width, requestedWidth ?? options.source.width)
+      : options.source.width
+  const displayWidth = fixed
+    ? naturalDisplayWidth
+    : Math.min(naturalDisplayWidth, requestedMaximum ?? naturalDisplayWidth)
+  if (!fixed && requestedMaximum !== undefined && requestedMaximum < naturalDisplayWidth && options.layout === 'constrained') {
+    throw new Error('@briansunter/nib-images: maxWidth cannot be smaller than a constrained image width')
+  }
+  const displayHeight = Math.max(1, Math.round(displayWidth * options.source.height / options.source.width))
+  const fixedPlanCandidates = fixed
+    ? fixedCandidates(options.source, requestedWidth!, normalizedDensities(options.densities ?? [1, 2]))
+    : undefined
+  const candidateMaximum = fixed
+    ? undefined
+    : options.layout === 'constrained'
+      ? Math.min(options.source.width, naturalDisplayWidth * 2, requestedMaximum ?? Number.POSITIVE_INFINITY)
+      : displayWidth
+  const widths = fixed
+    ? fixedPlanCandidates!.map((candidate) => candidate.width)
+    : responsiveWidths(
+        options.source,
+        options.widths === undefined
+          ? options.defaultWidths
+          : normalizedWidths(options.widths, 'widths'),
+        candidateMaximum!,
+        [displayWidth],
+      )
+  if (widths.length === 0) {
+    throw new Error('@briansunter/nib-images: no usable image candidates were generated')
+  }
+  return {
+    fixed,
+    widths,
+    sizes: fixed ? undefined : options.sizes ?? defaultSizes(options.layout, displayWidth),
+    displayWidth,
+    displayHeight,
+    fixedCandidates: fixedPlanCandidates,
+  }
 }
