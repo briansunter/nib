@@ -44,4 +44,20 @@ describe('sitemap plugin', () => {
     expect(() => sitemap({ site: 'https://example.test', path: 'sitemap.xml' }))
       .toThrow('absolute route path')
   })
+
+  it('uses site.origin when no plugin-specific origin is supplied', async () => {
+    const plugin = sitemap({})
+    if (!plugin.routes) throw new Error('Sitemap plugin has no route provider')
+    const route = await plugin.routes({
+      ...context,
+      site: { title: 'Docs', origin: 'https://docs.example' },
+      routes: Object.freeze([
+        Object.freeze({ kind: 'page' as const, path: '/', source: 'page', status: 200, meta: {} }),
+      ]),
+    })
+    if (!route || Array.isArray(route) || route.kind !== 'resource') {
+      throw new Error('Expected a sitemap resource route')
+    }
+    expect(route.body).toContain('<loc>https://docs.example/docs/</loc>')
+  })
 })

@@ -4,7 +4,9 @@ export {
   defineMarkdown,
   definePageSource,
   file,
+  fromPageSource,
   glob,
+  pageRenderer,
 } from './framework/content'
 export { defineIsland } from './framework/islands'
 export { siteHref } from './framework/urls'
@@ -21,6 +23,7 @@ export type {
 } from './framework/islands'
 export type {
   CollectionDefinition,
+  PageSourceCollectionDefinition,
   CollectionEntry,
   CollectionLoaderContext,
   CollectionLoaderResult,
@@ -37,6 +40,7 @@ export type {
   PageMeta,
   PageProps,
   PageSourceContext,
+  PageSourceRenderer,
   PageSourceDefinition,
   PageSourcePage,
   RedirectDefinition,

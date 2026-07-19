@@ -1,0 +1,28 @@
+{
+  "name": "nib-personal-site-replica",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nib dev",
+    "build": "nib build",
+    "preview": "nib preview",
+    "typecheck": "tsc --noEmit",
+    "check:performance": "node scripts/check-performance.mjs",
+    "verify": "bun run typecheck && bun run build && bun run check:performance"
+  },
+  "dependencies": {
+    "@briansunter/nib": "link:@briansunter/nib",
+    "@briansunter/nib-images": "link:@briansunter/nib-images",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
+  }
+}

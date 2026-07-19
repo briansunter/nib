@@ -1,8 +1,6 @@
 import { createElement, type CSSProperties, type ImgHTMLAttributes } from 'react'
 import {
-  defaultSizes,
-  fixedCandidates,
-  responsiveWidths,
+  planImageCandidates,
   type ImageLayout,
 } from './candidates'
 import type {
@@ -42,6 +40,8 @@ interface CommonProps extends ImageCommonProps {
 interface ConstrainedImageLayout {
   layout?: 'constrained'
   width?: number
+  /** Hard cap for emitted transform widths without changing responsive markup. */
+  maxWidth?: number
   widths?: readonly number[]
   sizes?: string
   densities?: never
@@ -52,11 +52,14 @@ interface FixedImageLayout {
   width: number
   densities?: readonly (1 | 1.5 | 2 | 3)[]
   widths?: never
+  maxWidth?: never
   sizes?: never
 }
 
 interface FullImageLayout {
   layout: 'full'
+  /** Hard cap for emitted transform widths and intrinsic layout dimensions. */
+  maxWidth?: number
   widths?: readonly number[]
   sizes?: string
   width?: never
@@ -76,13 +79,6 @@ export type ImageProps = CommonProps
 
 const supportedLayouts = new Set<ImageLayout>(['constrained', 'fixed', 'full'])
 const qualityFormats = new Set<ImageQualityFormat>(['avif', 'webp', 'jpeg'])
-
-function positiveWidths(values: readonly number[], name: string): number[] {
-  if (values.some((value) => !Number.isSafeInteger(value) || value <= 0)) {
-    throw new Error(`@briansunter/nib-images: ${name} must contain positive integers`)
-  }
-  return [...new Set(values)].sort((left, right) => left - right)
-}
 
 function requestedQuality(
   quality: ImageProps['quality'],
@@ -115,25 +111,6 @@ function validateQualityOption(quality: ImageProps['quality']): void {
   }
 }
 
-function positiveWidth(value: number, name: string): number {
-  if (!Number.isSafeInteger(value) || value <= 0) {
-    throw new Error(`@briansunter/nib-images: ${name} must be a positive integer`)
-  }
-  return value
-}
-
-const allowedDensities = new Set([1, 1.5, 2, 3])
-
-function positiveDensities(values: readonly number[]): number[] {
-  if (
-    values.length === 0
-    || values.some((value) => !allowedDensities.has(value))
-  ) {
-    throw new Error('@briansunter/nib-images: densities may contain only 1, 1.5, 2, and 3')
-  }
-  return [...new Set(values)].sort((left, right) => left - right)
-}
-
 interface CandidateUrl {
   readonly url: string
   readonly width: number
@@ -148,19 +125,6 @@ function srcSet(entries: readonly CandidateUrl[], fixed: boolean): string {
   return entries
     .map(({ url, width, density }) => `${url} ${fixed ? `${formatDensity(density!)}x` : `${width}w`}`)
     .join(', ')
-}
-
-function displayDimensions(
-  source: InternalImageSource,
-  layout: ImageLayout,
-  maximum: number,
-  requestedWidth: number | undefined,
-): { width: number; height: number } {
-  const width = layout === 'fixed' ? requestedWidth! : layout === 'constrained' ? maximum : source.width
-  return {
-    width,
-    height: Math.max(1, Math.round(width * source.height / source.width)),
-  }
 }
 
 export function Image(props: ImageProps) {
@@ -181,29 +145,17 @@ export function Image(props: ImageProps) {
   validateQualityOption(props.quality)
   const defaults = registry.defaults()
   const layout: ImageLayout = props.layout ?? 'constrained'
-  const requestedWidth = props.width === undefined
-    ? undefined
-    : positiveWidth(props.width, 'width')
-  const maximum = layout === 'full'
-    ? source.width
-    : Math.min(source.width, requestedWidth ?? source.width)
-  const fixed = layout === 'fixed'
-  const fixedImageCandidates = fixed
-    ? fixedCandidates(source, requestedWidth!, positiveDensities(props.densities ?? [1, 2]))
-    : undefined
-  const widths = fixed
-    ? fixedImageCandidates!.map((candidate) => candidate.width)
-    : responsiveWidths(
-        source,
-        props.widths === undefined ? defaults.widths : positiveWidths(props.widths, 'widths'),
-        maximum * (layout === 'constrained' ? 2 : 1),
-        [maximum],
-      )
-  if (widths.length === 0) {
-    throw new Error('@briansunter/nib-images: no usable image candidates were generated')
-  }
-  const sizes = fixed ? undefined : props.sizes ?? defaultSizes(layout, maximum)
-  const dimensions = displayDimensions(source, layout, maximum, requestedWidth)
+  const plan = planImageCandidates({
+    source,
+    layout,
+    width: props.width,
+    maxWidth: props.maxWidth,
+    widths: props.widths,
+    densities: props.densities,
+    defaultWidths: defaults.widths,
+    sizes: props.sizes,
+  })
+  const { fixed, widths, sizes, fixedCandidates: fixedImageCandidates } = plan
   const fallback: ImageFormat = source.hasAlpha ? 'png' : 'jpeg'
   const formats = source.animated || source.format === 'svg' || props.unoptimized
     ? []
@@ -230,6 +182,7 @@ export function Image(props: ImageProps) {
     loading,
     fetchPriority,
     width: _width,
+    maxWidth: _maxWidth,
     sizes: _sizes,
     style: _style,
     ...attributes
@@ -248,8 +201,8 @@ export function Image(props: ImageProps) {
       ...attributes,
       src: url,
       alt,
-      width: dimensions.width,
-      height: dimensions.height,
+      width: plan.displayWidth,
+      height: plan.displayHeight,
       loading: priority ? 'eager' : loading ?? 'lazy',
       decoding: 'async',
       ...(priority ? { fetchPriority: 'high' } : fetchPriority === undefined ? {} : { fetchPriority }),
@@ -264,8 +217,8 @@ export function Image(props: ImageProps) {
     srcSet: srcSet(fallbackCandidates, fixed),
     ...(sizes === undefined ? {} : { sizes }),
     alt,
-    width: dimensions.width,
-    height: dimensions.height,
+    width: plan.displayWidth,
+    height: plan.displayHeight,
     loading: priority ? 'eager' : loading ?? 'lazy',
     decoding: 'async',
     ...(priority ? { fetchPriority: 'high' } : fetchPriority === undefined ? {} : { fetchPriority }),

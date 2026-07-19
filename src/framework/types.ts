@@ -35,10 +35,29 @@ export interface PageSourceContext {
 
 export interface PageSourcePage {
   path?: string
+  /** Stable collection identity when one input expands into multiple routes. */
+  collectionId?: string
   data: unknown
   meta?: PageMeta
   layout?: string
 }
+
+/** Defers a data-page renderer until the server Vite graph has loaded it. */
+export interface PageSourceRenderer<Data = any> {
+  /** A programmatic loader for renderers that do not need Vite transforms. */
+  readonly load?: () => Promise<
+    | ComponentType<DataPageProps<Data, any>>
+    | { default?: ComponentType<DataPageProps<Data, any>> }
+  >
+  /** Project-relative module, imported by Nib's Vite data-page module. */
+  readonly module?: string
+  /** Named export to use from `module`; defaults to `default`. */
+  readonly exportName?: string
+}
+
+export type PageSourceComponent<Data = any> =
+  | ComponentType<DataPageProps<Data, any>>
+  | PageSourceRenderer<Data>
 
 export interface PageSourceDefinition<
   Validator extends DataValidator = DataValidator,
@@ -52,7 +71,7 @@ export interface PageSourceDefinition<
   load: (
     context: PageSourceContext,
   ) => PageSourcePage | PageSourcePage[] | Promise<PageSourcePage | PageSourcePage[]>
-  component: ComponentType<DataPageProps<InferDataValidator<Validator>, any>>
+  component: PageSourceComponent<InferDataValidator<Validator>>
 }
 
 export interface CollectionEntry<Data = unknown> {
@@ -84,6 +103,17 @@ export interface CollectionDefinition<
       ) => InferDataValidator<Validator>
 }
 
+/** Reuses already compiled and validated data-page entries as a collection. */
+export interface PageSourceCollectionDefinition<
+  Validator extends DataValidator = DataValidator,
+> {
+  readonly source: PageSourceDefinition<Validator>
+}
+
+export type AnyCollectionDefinition<
+  Validator extends DataValidator = DataValidator,
+> = CollectionDefinition<Validator> | PageSourceCollectionDefinition<Validator>
+
 export interface MarkdownDefinition<
   Validator extends DataValidator = DataValidator,
 > {
@@ -99,6 +129,8 @@ export interface MarkdownDefinition<
 
 export interface SiteConfig {
   title: string
+  /** Canonical deployed origin, shared by feeds, sitemaps, and future document metadata. */
+  origin?: string
   description?: string
   titleTemplate?: string
   navigation?: Array<{ label: string; href: string }>
@@ -130,12 +162,14 @@ export interface NibConfig {
   shell?: ComponentType<SiteShellProps<any>>
   markdown?: MarkdownDefinition<any>
   pageSources?: readonly PageSourceDefinition<any>[]
-  collections?: Record<string, CollectionDefinition<any>>
+  collections?: Record<string, AnyCollectionDefinition<any>>
 }
 
 export type CollectionData<Definition> =
   Definition extends CollectionDefinition<infer Validator>
     ? InferDataValidator<Validator>
+    : Definition extends PageSourceCollectionDefinition<infer Validator>
+      ? InferDataValidator<Validator>
     : never
 
 export type LoadedCollections<Config extends NibConfig> =
@@ -145,7 +179,7 @@ export type LoadedCollections<Config extends NibConfig> =
 
 export type LoadedCollectionDefinitions<Definitions> = {
   [Name in keyof Definitions]:
-    Definitions[Name] extends CollectionDefinition<any>
+    Definitions[Name] extends AnyCollectionDefinition<any>
       ? Array<CollectionEntry<CollectionData<Definitions[Name]>>>
       : never
 }
@@ -193,6 +227,10 @@ export interface GeneratedPage {
   data: unknown
   meta?: PageMeta
   layout?: string
+  /** @internal Links compiled entries to fromPageSource() collections. */
+  sourceDefinition?: PageSourceDefinition<any>
+  /** @internal Defaults to the generated public path without leading slashes. */
+  collectionId?: string
 }
 
 export interface ResolvedPageRoute {

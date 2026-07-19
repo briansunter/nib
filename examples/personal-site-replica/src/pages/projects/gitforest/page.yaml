@@ -1,0 +1,12 @@
+slug: gitforest
+title: Gitforest
+description: A terminal UI for checking many Git repositories at once and seeing what needs attention.
+date: 2026-05-18
+tags:
+  - TypeScript
+  - Bun
+  - CLI
+  - Git
+featured: false
+cover: gitforest
+github: https://github.com/briansunter/gitforest

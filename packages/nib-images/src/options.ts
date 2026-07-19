@@ -13,6 +13,8 @@ export interface ImagesOptions {
 }
 
 export interface NormalizedImagesOptions {
+  /** Absolute Nib project root used to resolve Vite's project-relative ids. */
+  readonly root: string
   readonly formats: readonly ('avif' | 'webp')[]
   readonly widths: readonly number[]
   readonly quality: Readonly<Record<ImageFormat, number>>
@@ -111,19 +113,21 @@ export function validateImagesOptions(options: ImagesOptions = {}): void {
 
 export function normalizeImagesOptions(root: string, options: ImagesOptions = {}): NormalizedImagesOptions {
   validateImagesOptions(options)
+  const resolvedRoot = path.resolve(root)
   const formats = [...new Set<'avif' | 'webp'>(options.formats ?? ['avif', 'webp'])]
   const concurrency = options.concurrency === undefined || options.concurrency === 'auto'
     ? Math.max(1, Math.min(os.availableParallelism(), libuvParallelism()))
     : options.concurrency
   return {
+    root: resolvedRoot,
     formats,
     widths: normalizedPositiveIntegers(options.widths ?? defaultWidths, 'widths'),
     quality: normalizedQuality(options.quality),
-    cacheDirectory: path.resolve(root, options.cacheDirectory ?? '.nib/cache/images'),
+    cacheDirectory: path.resolve(resolvedRoot, options.cacheDirectory ?? '.nib/cache/images'),
     concurrency: options.memoryLimitMb === undefined
       ? concurrency
       : Math.max(1, Math.min(concurrency, Math.floor(options.memoryLimitMb / 192))),
-    allowedSourceRoots: (options.allowedSourceRoots ?? [root]).map((directory) => path.resolve(root, directory)),
+    allowedSourceRoots: (options.allowedSourceRoots ?? [resolvedRoot]).map((directory) => path.resolve(resolvedRoot, directory)),
   }
 }
 

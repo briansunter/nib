@@ -1,4 +1,9 @@
 import { definePlugin, type Awaitable, type NibRoutesPluginContext } from './framework/plugin'
+import {
+  deployedLinkUrl,
+  deployedOrigin,
+  deployedRouteUrl,
+} from './framework/deployed-url'
 
 /** A single item in an RSS 2.0 feed. Route paths are resolved against Nib's base. */
 export interface RssItem {
@@ -24,10 +29,12 @@ export type RssItemsContext = Readonly<Pick<
 >>
 
 export interface RssOptions {
-  /** Deployed site origin, for example https://example.com. Nib adds base. */
-  readonly site: string | URL
-  readonly title: string
-  readonly description: string
+  /** Overrides site.origin. */
+  readonly site?: string | URL
+  /** Defaults to site.title. */
+  readonly title?: string
+  /** Defaults to site.description. */
+  readonly description?: string
   /** Output route. Defaults to /rss.xml. */
   readonly path?: string
   readonly language?: string
@@ -65,48 +72,6 @@ function optionalText(value: unknown, name: string): string | undefined {
   return requiredText(value, name)
 }
 
-function parseOrigin(value: string | URL): URL {
-  const site = new URL(value)
-  if (!['http:', 'https:'].includes(site.protocol)) {
-    throw new Error('Nib RSS site must use HTTP or HTTPS')
-  }
-  if (site.pathname !== '/' || site.search !== '' || site.hash !== '') {
-    throw new Error('Nib RSS site must be an origin without a path, query, or hash')
-  }
-  return site
-}
-
-function basePath(base: string): string {
-  return base === '/' ? '/' : `/${base.replace(/^\/+|\/+$/g, '')}/`
-}
-
-function deployedUrl(site: URL, base: string, routePath: string): string {
-  const relative = routePath === '/' ? '' : routePath.replace(/^\/+/, '')
-  return new URL(`${basePath(base)}${relative}`, site).href
-}
-
-function linkUrl(value: string | URL, site: URL, base: string, name: string): string {
-  if (value instanceof URL) {
-    if (!['http:', 'https:'].includes(value.protocol)) {
-      throw new Error(`Nib RSS ${name} must use HTTP or HTTPS`)
-    }
-    return value.href
-  }
-  requiredText(value, name)
-  if (value.startsWith('/')) return deployedUrl(site, base, value)
-
-  let url: URL
-  try {
-    url = new URL(value)
-  } catch {
-    throw new Error(`Nib RSS ${name} must be an absolute URL or an absolute route path`)
-  }
-  if (!['http:', 'https:'].includes(url.protocol)) {
-    throw new Error(`Nib RSS ${name} must use HTTP or HTTPS`)
-  }
-  return url.href
-}
-
 function rfc822Date(value: string | Date, name: string): string {
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.valueOf())) throw new Error(`Nib RSS ${name} must be a valid date`)
@@ -126,7 +91,7 @@ function itemXml(item: RssItem, index: number, site: URL, base: string): string[
     throw new Error(`Nib RSS item ${index + 1} must be an object`)
   }
   const title = requiredText(item.title, `item ${index + 1} title`)
-  const link = linkUrl(item.link, site, base, `item ${index + 1} link`)
+  const link = deployedLinkUrl(item.link, site, base, `Nib RSS item ${index + 1} link`)
   const description = optionalText(item.description, `item ${index + 1} description`)
   const content = optionalText(item.content, `item ${index + 1} content`)
   const guid = optionalText(item.guid, `item ${index + 1} guid`)
@@ -159,7 +124,7 @@ function itemXml(item: RssItem, index: number, site: URL, base: string): string[
     pubDate === undefined ? undefined : `      <pubDate>${escapeXml(pubDate)}</pubDate>`,
     enclosure === undefined
       ? undefined
-      : `      <enclosure url="${escapeXml(linkUrl(enclosure.url, site, base, `item ${index + 1} enclosure URL`))}" type="${escapeXml(requiredText(enclosure.type, `item ${index + 1} enclosure type`))}"${enclosure.length === undefined ? '' : ` length="${enclosure.length}"`} />`,
+      : `      <enclosure url="${escapeXml(deployedLinkUrl(enclosure.url, site, base, `Nib RSS item ${index + 1} enclosure URL`))}" type="${escapeXml(requiredText(enclosure.type, `item ${index + 1} enclosure type`))}"${enclosure.length === undefined ? '' : ` length="${enclosure.length}"`} />`,
     '    </item>',
   ].filter((line): line is string => line !== undefined)
 }
@@ -169,9 +134,9 @@ export function rss(options: RssOptions) {
   if (options === null || typeof options !== 'object' || Array.isArray(options)) {
     throw new Error('Nib RSS requires an options object')
   }
-  const site = parseOrigin(options.site)
-  const title = requiredText(options.title, 'title')
-  const description = requiredText(options.description, 'description')
+  if (options.site !== undefined) deployedOrigin(options.site, undefined, 'Nib RSS site')
+  if (options.title !== undefined) requiredText(options.title, 'title')
+  if (options.description !== undefined) requiredText(options.description, 'description')
   const routePath = options.path ?? '/rss.xml'
   if (!routePath.startsWith('/')) throw new Error('Nib RSS path must be an absolute route path')
   if (!Array.isArray(options.items) && typeof options.items !== 'function') {
@@ -191,13 +156,16 @@ export function rss(options: RssOptions) {
   return definePlugin({
     name: '@briansunter/nib/rss',
     async routes(context) {
+      const site = deployedOrigin(options.site, context.site.origin, 'Nib RSS site')
+      const title = requiredText(options.title ?? context.site.title, 'title')
+      const description = requiredText(options.description ?? context.site.description, 'description')
       const items = typeof options.items === 'function'
         ? await options.items(context)
         : options.items
       if (!Array.isArray(items)) throw new Error('Nib RSS items provider must return an array')
 
-      const channelUrl = deployedUrl(site, context.base, '/')
-      const feedUrl = deployedUrl(site, context.base, routePath)
+      const channelUrl = deployedRouteUrl(site, context.base, '/')
+      const feedUrl = deployedRouteUrl(site, context.base, routePath)
       const itemEntries = items.flatMap((item, index) => itemXml(item, index, site, context.base))
       return {
         kind: 'resource',

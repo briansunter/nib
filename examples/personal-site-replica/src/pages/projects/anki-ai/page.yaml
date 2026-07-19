@@ -1,0 +1,12 @@
+slug: anki-ai
+title: Anki AI
+description: An MCP server that exposes Anki tools to Claude for generating cards, auditing decks, and analysing review history.
+date: 2025-09-03
+tags:
+  - TypeScript
+  - MCP
+  - AI
+featured: true
+cover: ankiAi
+projectUrl: https://www.npmjs.com/package/anki-ai
+github: https://github.com/briansunter/anki-ai

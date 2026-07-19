@@ -1,8 +1,9 @@
 import path from 'node:path'
 import { loadConfigFromFile, type ConfigEnv } from 'vite'
 import { pageSourceExtensions, validateDataDefinition } from './content'
+import { deployedOrigin } from './deployed-url'
 import type { NibPlugin } from './plugin'
-import type { NibConfig } from './types'
+import type { NibConfig, PageSourceDefinition } from './types'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -14,6 +15,10 @@ export function validateNibConfig(value: unknown): NibConfig {
   }
   if (typeof value.site.title !== 'string' || value.site.title.trim() === '') {
     throw new Error('Nib site title must be a non-empty string')
+  }
+  if (value.site.origin !== undefined) {
+    if (typeof value.site.origin !== 'string') throw new Error('Nib site.origin must be a string')
+    deployedOrigin(value.site.origin, undefined, 'Nib site.origin')
   }
   if (value.base !== undefined) {
     if (
@@ -104,7 +109,14 @@ export function validateNibConfig(value: unknown): NibConfig {
   if (value.collections !== undefined) {
     if (!isRecord(value.collections)) throw new Error('Nib collections must be an object')
     for (const [name, definition] of Object.entries(value.collections)) {
-      if (!isRecord(definition) || typeof definition.loader !== 'function') {
+      if (!isRecord(definition)) {
+        throw new Error(`Collection ${name} must define a loader function`)
+      }
+      if ('source' in definition) {
+        pageSourceExtensions([definition.source as PageSourceDefinition])
+        continue
+      }
+      if (typeof definition.loader !== 'function') {
         throw new Error(`Collection ${name} must define a loader function`)
       }
       validateDataDefinition(definition, `Collection ${name}`)

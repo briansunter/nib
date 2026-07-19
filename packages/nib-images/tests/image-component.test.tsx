@@ -127,6 +127,23 @@ describe('static Image component', () => {
     expect(metadata.__nibFile).toBe(await fs.realpath(file))
   })
 
+  it('resolves project-relative metadata imports from the configured site root', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-relative-'))
+    temporaryDirectories.push(root)
+    const assetDirectory = path.join(root, 'src', 'assets')
+    await fs.mkdir(assetDirectory, { recursive: true })
+    await sharp({
+      create: { width: 20, height: 10, channels: 3, background: '#336699' },
+    }).png().toFile(path.join(assetDirectory, 'hero.png'))
+    const plugin = imageVitePlugin(normalizeImagesOptions(root), 'server')
+    if (typeof plugin.load !== 'function') throw new Error('Image Vite plugin has no load hook')
+    const result = await plugin.load.call(
+      { environment: { name: 'ssr' }, addWatchFile() {} } as any,
+      'src/assets/hero.png?nib-image',
+    )
+    expect(result).toContain('"width":20')
+  })
+
   it('renders responsive static picture markup with lazy defaults', async () => {
     const root = temporaryDirectories[0] ?? await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-'))
     if (!temporaryDirectories.includes(root)) temporaryDirectories.push(root)
@@ -200,6 +217,45 @@ describe('static Image component', () => {
     expect(html).toContain(' 60w')
     expect(html).not.toContain(' 29w')
     expect(html).not.toContain(' 32w')
+  })
+
+  it('uses maxWidth as a hard responsive-transform cap', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-'))
+    temporaryDirectories.push(root)
+    const registry = new ImageBuildRegistry(
+      normalizeImagesOptions(root, { widths: [20, 40, 80] }), '/', 'production',
+    )
+    const source = await fixtureSource()
+    const html = renderToStaticMarkup(createElement(
+      ImageRegistryProvider,
+      {
+        registry,
+        children: createElement(Image, {
+          src: source,
+          alt: 'Capped fixture',
+          layout: 'full',
+          maxWidth: 40,
+          widths: [20, 40, 80],
+        }),
+      },
+    ))
+    expect(html).toContain('width="40"')
+    expect(html).toContain(' 40w')
+    expect(html).not.toContain(' 80w')
+    expect(registry.requests().every((request) => request.width <= 40)).toBe(true)
+    expect(() => renderToStaticMarkup(createElement(
+      ImageRegistryProvider,
+      {
+        registry,
+        children: createElement(Image, {
+          src: source,
+          alt: 'Invalid cap',
+          layout: 'constrained',
+          width: 60,
+          maxWidth: 40,
+        }),
+      },
+    ))).toThrow('maxWidth cannot be smaller')
   })
 
   it('validates numeric props at runtime and keeps pass-through layout dimensions', async () => {

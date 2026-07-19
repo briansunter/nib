@@ -1,0 +1,12 @@
+slug: arcfetch
+title: ArcFetch
+description: Fetch a URL and get clean Markdown back, with a browser fallback for JavaScript-heavy pages.
+date: 2025-12-25
+tags:
+  - TypeScript
+  - CLI
+  - MCP
+  - AI
+featured: true
+cover: arcFetch
+github: https://github.com/briansunter/arcfetch
