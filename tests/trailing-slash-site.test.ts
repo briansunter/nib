@@ -6,6 +6,11 @@ import { buildSite, previewSite } from '../src/framework/site'
 const neverRoot = path.resolve('tests/fixtures/trailing-never-site')
 const alwaysRoot = path.resolve('tests/fixtures/trailing-always-site')
 
+function publicPath(origin: string, route: string): string {
+  const url = new URL(route.replace(/^\/+/, ''), origin)
+  return `${url.pathname}${url.search}${url.hash}`
+}
+
 afterAll(async () => {
   await Promise.all([neverRoot, alwaysRoot].map((root) => fs.rm(path.join(root, 'dist'), {
     recursive: true,
@@ -24,16 +29,16 @@ describe('trailingSlash: never publication', () => {
     try {
       const origin = preview.resolvedUrls?.local[0]
       if (!origin) throw new Error('Preview server did not expose a local URL')
-      const canonical = await fetch(new URL('/about', origin), {
+      const canonical = await fetch(new URL('about', origin), {
         headers: { accept: 'text/html' },
         redirect: 'manual',
       })
-      const alternate = await fetch(new URL('/about/?source=test', origin), { redirect: 'manual' })
+      const alternate = await fetch(new URL('about/?source=test', origin), { redirect: 'manual' })
       expect(canonical.status).toBe(200)
       expect(canonical.headers.get('content-type')).toContain('text/html')
       expect(await canonical.text()).toContain('No slash about')
       expect(alternate.status).toBe(301)
-      expect(alternate.headers.get('location')).toBe('/about?source=test')
+      expect(alternate.headers.get('location')).toBe(publicPath(origin, 'about?source=test'))
     } finally {
       await preview.close()
     }
@@ -48,10 +53,10 @@ describe('trailingSlash: never publication', () => {
     try {
       const origin = preview.resolvedUrls?.local[0]
       if (!origin) throw new Error('Preview server did not expose a local URL')
-      const alternate = await fetch(new URL('/about?source=test', origin), { redirect: 'manual' })
-      const canonical = await fetch(new URL('/about/', origin), { redirect: 'manual' })
+      const alternate = await fetch(new URL('about?source=test', origin), { redirect: 'manual' })
+      const canonical = await fetch(new URL('about/', origin), { redirect: 'manual' })
       expect(alternate.status).toBe(301)
-      expect(alternate.headers.get('location')).toBe('/about/?source=test')
+      expect(alternate.headers.get('location')).toBe(publicPath(origin, 'about/?source=test'))
       expect(canonical.status).toBe(200)
       expect(await canonical.text()).toContain('Slash about')
     } finally {
