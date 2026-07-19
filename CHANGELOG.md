@@ -5,7 +5,6 @@
 
 ### Features
 
-* compose nested islands and redesign docs ([a73a0de](https://github.com/briansunter/nib/commit/a73a0de2b130bb01eb611df2036517e3131ef3d0))
 * compose nested islands and redesign docs ([a1c2061](https://github.com/briansunter/nib/commit/a1c2061d6be739179194c754f1a2b4afa92bc249))
 
 ## [0.4.0](https://github.com/briansunter/nib/compare/v0.3.0...v0.4.0) (2026-07-19)
