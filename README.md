@@ -94,7 +94,7 @@ export default defineConfig({
 Use `plugins` instead for packages that need Nib lifecycle hooks in addition to
 Vite, such as the optional image optimizer below.
 
-## Routes, redirects, and sitemap
+## Routes, redirects, sitemap, and RSS
 
 Configured redirects emit safe redirect HTML in static builds and real HTTP
 redirects during development. `trailingSlash` controls canonical route paths
@@ -102,6 +102,7 @@ and development matching:
 
 ```ts
 import { defineConfig } from '@briansunter/nib'
+import { rss } from '@briansunter/nib/rss'
 import { sitemap } from '@briansunter/nib/sitemap'
 
 export default defineConfig({
@@ -116,17 +117,28 @@ export default defineConfig({
   },
   plugins: [
     sitemap({ site: 'https://my-site.example' }),
+    rss({
+      site: 'https://my-site.example',
+      title: 'My site',
+      description: 'Recent writing from My site.',
+      items: [
+        { title: 'Hello', link: '/posts/hello/', pubDate: '2026-07-19' },
+      ],
+    }),
   ],
 })
 ```
 
 Plugins can also contribute typed page-source adapters, virtual React pages,
-static resources such as `rss.xml`, and redirects. RSS is therefore supported
-through the generic resource-route API today; `@briansunter/nib/sitemap` is a
-first-party helper, while a similarly opinionated RSS helper is not included
-yet. After registrations are merged, inspection hooks receive an immutable
-resolved-route manifest. Nib retains path normalization, collision detection,
-base paths, and output-file ownership.
+static resources, and redirects. `@briansunter/nib/rss` is a first-party RSS
+2.0 resource-route helper: item `link` values may be absolute URLs or Nib route
+paths, which are resolved with the configured `base`. Its `items` option can
+also be an async function receiving the immutable initial route manifest, so a
+feed can draw from any project-specific typed data source. The generic resource
+route API remains available for Atom, JSON Feed, or another custom format.
+After registrations are merged, inspection hooks receive an immutable resolved-
+route manifest. Nib retains path normalization, collision detection, base paths,
+and output-file ownership.
 
 ## Markdown extensions
 

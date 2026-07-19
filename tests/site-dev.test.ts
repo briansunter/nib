@@ -58,7 +58,7 @@ describe('framework-owned development server', () => {
     expect(sitemap.headers.get('content-type')).toBe('application/xml; charset=utf-8')
     expect(await sitemap.text()).toContain('<urlset ')
     expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
-    expect(await rss.text()).toContain('<rss version="2.0">')
+    expect(await rss.text()).toContain('<rss version="2.0"')
     expect(await settings.text()).toContain('TOML settings')
   }, 30_000)
 })

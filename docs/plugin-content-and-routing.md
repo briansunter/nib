@@ -10,8 +10,7 @@ The target examples are:
 
 - a TOML plugin contributing a typed `page.toml` source;
 - a sitemap plugin inspecting project routes and returning `sitemap.xml`;
-- an RSS plugin returning a typed XML resource route (supported through the
-  generic API; there is not yet a built-in RSS helper);
+- the first-party RSS plugin returning a typed `rss.xml` resource route;
 - a plugin observing the final route manifest for validation or reporting.
 
 Typed document/head mutation is outside this design.
@@ -47,10 +46,12 @@ Resource routes provide a static body and MIME content type. A dotted route such
 as `/rss.xml` is emitted as that exact file rather than
 `/rss.xml/index.html`.
 
-This is the mechanism for RSS today: a plugin registers a resource route with
-an XML body and `application/rss+xml` content type. Nib ships the separate
-`@briansunter/nib/sitemap` helper, but deliberately does not prescribe an RSS
-data model or feed helper yet.
+`@briansunter/nib/rss` is a first-party RSS 2.0 helper built on this mechanism.
+It accepts typed channel fields and items; internal item paths are resolved with
+Nib's `base`, while absolute HTTP(S) links remain unchanged. Its item provider
+can asynchronously read the immutable initial route manifest, but applications
+keep ownership of their content data model. The generic resource route remains
+the extension point for Atom, JSON Feed, or a custom XML/JSON output.
 
 Redirect routes provide a destination and one of `301`, `302`, `307`, or `308`.
 Development sends the status and `Location` header. Static output uses safe

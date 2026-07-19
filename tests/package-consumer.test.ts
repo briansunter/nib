@@ -70,6 +70,8 @@ describe('published package consumer', () => {
     expect(packedFiles).toContain('dist/framework/plugin.d.ts')
     expect(packedFiles).toContain('dist/framework/sitemap.js')
     expect(packedFiles).toContain('dist/framework/sitemap.d.ts')
+    expect(packedFiles).toContain('dist/framework/rss.js')
+    expect(packedFiles).toContain('dist/framework/rss.d.ts')
     expect(packedFiles).toContain('templates/default/nib.config.ts')
     expect(packedFiles).toContain('templates/default/gitignore')
     expect(packedFiles.some((file) => file.startsWith('tests/'))).toBe(false)
@@ -227,6 +229,7 @@ describe('published package consumer', () => {
     await fs.writeFile(path.join(consumer, 'nib.config.ts'), `
 import { defineConfig } from '@briansunter/nib'
 import { images } from '@briansunter/nib-images/plugin'
+import { rss } from '@briansunter/nib/rss'
 import { sitemap } from '@briansunter/nib/sitemap'
 
 export default defineConfig({
@@ -234,6 +237,12 @@ export default defineConfig({
   plugins: [
     images({ widths: [32, 64], formats: ['webp'] }),
     sitemap({ site: 'https://packed.example' }),
+    rss({
+      site: 'https://packed.example',
+      title: 'Packed feed',
+      description: 'A packed package consumer feed.',
+      items: [{ title: 'Home', link: '/' }],
+    }),
   ],
 })
 `)
@@ -267,6 +276,8 @@ export default function Page() {
     expect(packedHtml).not.toContain('data-nib-islands')
     expect(await fs.readFile(path.join(consumer, 'dist/client/sitemap.xml'), 'utf8'))
       .toContain('https://packed.example/')
+    expect(await fs.readFile(path.join(consumer, 'dist/client/rss.xml'), 'utf8'))
+      .toContain('<title>Packed feed</title>')
     expect(await fs.readdir(path.join(consumer, 'dist/client/assets/nib')))
       .toEqual(expect.arrayContaining([expect.stringMatching(/\.webp$/)]))
   }, 120_000)

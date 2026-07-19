@@ -55,9 +55,9 @@ export function virtualRoutes() {
         },
         {
           kind: 'resource',
-          path: '/rss.xml',
-          contentType: 'application/rss+xml; charset=utf-8',
-          body: '<?xml version="1.0"?><rss version="2.0"><channel><title>Journal</title></channel></rss>',
+          path: '/feed.xml',
+          contentType: 'application/xml; charset=utf-8',
+          body: '<?xml version="1.0"?><feed><title>Generic resource route</title></feed>',
         },
       ] as const
     },
@@ -65,7 +65,7 @@ export function virtualRoutes() {
       if (!Object.isFrozen(context.routes)) {
         throw new Error('Resolved routes must be immutable')
       }
-      for (const path of ['/legacy/', '/virtual/', '/sitemap.xml', '/rss.xml']) {
+      for (const path of ['/legacy/', '/virtual/', '/sitemap.xml', '/rss.xml', '/feed.xml']) {
         if (!context.routes.some((route) => route.path === path)) {
           throw new Error(`Missing resolved route ${path}`)
         }

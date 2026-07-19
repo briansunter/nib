@@ -1,6 +1,6 @@
 ---
 title: Plugin content and routing
-description: Add data formats, virtual routes, redirects, sitemap XML, and route inspection.
+description: Add data formats, virtual routes, redirects, sitemap and RSS XML, and route inspection.
 layout: docs
 ---
 
@@ -10,10 +10,11 @@ Nib plugins can contribute page-source adapters and virtual routes before the
 route map is frozen. This supports optional packages for TOML or another data
 format, virtual React pages, and static resources such as RSS XML.
 
-RSS uses the generic resource-route API: a plugin returns an XML body with an
-`application/rss+xml` content type at a path such as `/rss.xml`. Nib includes
-the separate `@briansunter/nib/sitemap` helper, but does not yet include a
-first-party RSS feed helper or impose an RSS data model.
+Nib includes the first-party `@briansunter/nib/rss` helper for RSS 2.0 feeds.
+It emits an `application/rss+xml` resource route, resolves internal item paths
+with `base`, and leaves each project in charge of its own content data model.
+The generic resource-route API remains available for Atom, JSON Feed, or a
+custom feed format.
 
 The `setup` hook returns typed page sources. The `routes` hook receives the
 immutable file, data-page, and configured-redirect routes and can return page,
@@ -42,6 +43,35 @@ export default defineConfig({
 
 It includes successful page routes, respects `base` and `trailingSlash`, and
 emits `sitemap.xml` without adding a browser runtime.
+
+## RSS
+
+Create an RSS 2.0 feed with a typed static item list or an async item provider:
+
+```ts
+import { defineConfig } from '@briansunter/nib'
+import { rss } from '@briansunter/nib/rss'
+
+export default defineConfig({
+  site: { title: 'Docs' },
+  plugins: [
+    rss({
+      site: 'https://docs.example.com',
+      title: 'Docs updates',
+      description: 'Recent updates to the documentation.',
+      items: [
+        { title: 'Plugin content and routing', link: '/docs/plugin-content-and-routing/' },
+      ],
+    }),
+  ],
+})
+```
+
+`link` can be an absolute HTTP(S) URL or an absolute Nib route path. Route paths
+receive the configured `base`, so the same config works under a project-site
+deployment. Item fields support descriptions, content, publication dates,
+authors, categories, GUIDs, and enclosures. `items` may instead be an async
+function that receives the immutable initial route manifest.
 
 ## Redirects and trailing slashes
 

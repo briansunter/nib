@@ -1,6 +1,7 @@
 import { defineConfig, definePageSource } from '@briansunter/nib'
 import { parse as parseCsv } from 'csv-parse/sync'
 import { parse as parseYaml } from 'yaml'
+import { rss } from '@briansunter/nib/rss'
 import { sitemap } from '@briansunter/nib/sitemap'
 import { markdown, posts } from './src/content'
 import {
@@ -27,6 +28,19 @@ export default defineConfig({
   plugins: [
     tomlPages(),
     sitemap({ site: 'https://example.test' }),
+    rss({
+      site: 'https://example.test',
+      title: 'Journal',
+      description: 'A test journal.',
+      items: [
+        {
+          title: 'About the journal',
+          link: '/about/',
+          description: 'How the test journal is made.',
+          pubDate: '2026-07-19T00:00:00Z',
+        },
+      ],
+    }),
     virtualRoutes(),
   ],
   markdown,

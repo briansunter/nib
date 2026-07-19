@@ -8,6 +8,7 @@ const entries = {
   index: path.resolve('src/index.ts'),
   plugin: path.resolve('src/plugin.ts'),
   sitemap: path.resolve('src/sitemap.ts'),
+  rss: path.resolve('src/rss.ts'),
   'internal/client': path.resolve('src/runtime/client.ts'),
   'internal/server': path.resolve('src/runtime/server.ts'),
 }

@@ -23,6 +23,10 @@
       "types": "./dist/framework/sitemap.d.ts",
       "import": "./dist/framework/sitemap.js"
     },
+    "./rss": {
+      "types": "./dist/framework/rss.d.ts",
+      "import": "./dist/framework/rss.js"
+    },
     "./internal/client": {
       "types": "./dist/framework/runtime/client.d.ts",
       "import": "./dist/framework/internal/client.js"
