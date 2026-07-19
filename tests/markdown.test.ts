@@ -40,7 +40,7 @@ describe('markdown', () => {
     if (typeof plugin.load !== 'function') throw new Error('Markdown plugin has no load hook')
 
     const load = plugin.load as (id: string) => Promise<unknown>
-    const result = await load(path.resolve('src/pages/docs/getting-started/page.md'))
+    const result = await load(path.resolve('examples/docs/src/pages/docs/getting-started/page.md'))
     if (typeof result !== 'string') throw new Error('Markdown plugin did not return module source')
 
     expect(result).toContain('import Layout from "/src/layouts/docs.tsx"')

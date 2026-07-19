@@ -1,80 +1,114 @@
 # Nib
 
-Nib is a small static-site starter for React, Markdown, and opt-in islands.
-Routes come from folders, every page is prerendered to HTML, and only explicit
-React islands ship browser JavaScript.
+Nib is a self-contained static-site framework for React, Markdown, and opt-in
+islands. It owns routing, Vite integration, development SSR, document
+generation, prerendering, and island hydration. Your project owns only its
+configuration, pages, layouts, islands, styles, and public files.
 
-Nib is a starter repository, not a framework dependency. Clone it, edit `src/`,
-and own the resulting site. Releases are also published as
-[`@briansunter/nib`](https://www.npmjs.com/package/@briansunter/nib) so the
-source has a versioned, provenance-backed artifact.
+Every known route becomes complete HTML. Ordinary TSX and Markdown stay static;
+only components declared with `defineIsland` ship browser JavaScript.
 
-## Quick start
+## Create a site
 
-You need [Bun](https://bun.sh/) and Git:
+Use Node 20.19 or newer:
 
 ```bash
-git clone https://github.com/briansunter/nib.git my-site
+npx @briansunter/nib init my-site
 cd my-site
-bun install
-bun run dev
+npm run dev
 ```
 
-Open <http://localhost:5173>. Start by changing
-[`src/site.config.ts`](src/site.config.ts), then replace the example pages under
-`src/pages`.
+The initializer creates the project and installs its dependencies. Use
+`--no-install` when another tool will install them, or run the same command with
+`bunx` or `pnpm dlx`.
 
-## The model
+There is no framework source to copy or maintain:
 
-| You add | Nib produces |
+```text
+my-site/
+├── nib.config.ts
+├── public/
+├── src/
+│   ├── islands/
+│   ├── layouts/
+│   ├── pages/
+│   ├── site-shell.tsx
+│   └── style.css
+├── package.json
+└── tsconfig.json
+```
+
+Upgrading `@briansunter/nib` upgrades the framework without replacing your site
+files.
+
+## Configure the site
+
+`nib.config.ts` is the framework interface:
+
+```tsx
+import { defineConfig } from '@briansunter/nib'
+import { SiteShell } from './src/site-shell'
+
+export default defineConfig({
+  site: {
+    title: 'My Site',
+    description: 'A short description of my site.',
+    titleTemplate: '%s | My Site',
+    navigation: [
+      { label: 'Home', href: '/' },
+      { label: 'Notes', href: '/notes/' },
+    ],
+  },
+  shell: SiteShell,
+})
+```
+
+Set `base: '/project/'` when the deployed site lives below a path. When `base`
+is omitted, Nib uses `SITE_BASE_PATH`, derives the repository path in GitHub
+Actions, or falls back to `/`.
+
+The optional shell receives `children`, the resolved `route`, and `site`
+configuration. Omit it for Nib’s minimal semantic shell or keep an app-owned
+shell for complete control over the page chrome.
+
+## Pages and routes
+
+| Source | Output |
 | --- | --- |
 | `src/pages/page.tsx` | `/index.html` |
 | `src/pages/about/page.tsx` | `/about/index.html` |
 | `src/pages/notes/page.md` | `/notes/index.html` |
 | `src/pages/404/page.tsx` | `/404.html` |
-| `src/islands/counter.tsx` | An independently hydrated React island |
 
-There are two page types:
+Each route folder contains one `page.tsx` or `page.md`, never both. Routes are
+static and discovered at build time.
 
-- A **TSX page** provides typed, custom React markup.
-- A **Markdown page** provides content with optional frontmatter and a TSX
-  layout.
-
-Both become static HTML. A **React island** is the only component boundary that
-hydrates in the browser.
-
-## Add a TSX page
-
-Create `src/pages/hello/page.tsx`:
+A TSX page can export typed metadata:
 
 ```tsx
-import type { PageMeta } from '../../framework/types'
+import type { PageMeta } from '@briansunter/nib'
 
-export const meta: PageMeta = {
+export const meta = {
   title: 'Hello',
   description: 'My first Nib page.',
-}
+} satisfies PageMeta
 
 export default function HelloPage() {
   return <h1>Hello from Nib</h1>
 }
 ```
 
-Open <http://localhost:5173/hello/>. Each route folder may contain one
-`page.tsx` or one `page.md`, never both.
-
-Use `siteHref` for internal links so they keep working when the site is hosted
-below a base path:
+Use `siteHref` for base-aware internal links:
 
 ```tsx
-import { siteHref } from '../../framework/urls'
+import { siteHref } from '@briansunter/nib'
 
-<a href={siteHref('/docs/')}>Read the docs</a>
+<a href={siteHref('/notes/')}>Notes</a>
 ```
 
-## Add a Markdown page
+## Markdown and layouts
 
-Create `src/pages/notes/page.md`:
+Markdown pages support GitHub-Flavored Markdown and validated frontmatter:
 
 ```md
 ---
@@ -88,33 +122,22 @@ layout: docs
 Write your content here.
 ```
 
-Markdown pages support GitHub-Flavored Markdown. Frontmatter accepts:
+Supported fields are `title`, `description`, `draft`, and `layout`. A flat
+`layout: docs` name selects `src/layouts/docs.tsx` and passes the rendered
+article as `children`.
 
-| Field | Meaning |
-| --- | --- |
-| `title` | Page title and document metadata |
-| `description` | Search and social description |
-| `draft` | Omit the route and output when `true` |
-| `layout` | A flat filename under `src/layouts` |
+## React islands
 
-For example, `layout: docs` selects `src/layouts/docs.tsx`. The layout receives
-the rendered Markdown article as `children`.
-
-## Add a React island
-
-Keep ordinary pages, layouts, and components static. Put state, effects, refs,
-and event handlers in `src/islands`.
+Keep state, effects, refs, and event handlers in `src/islands`:
 
 ```tsx
-// src/islands/counter.tsx
+import { defineIsland } from '@briansunter/nib'
 import { useState } from 'react'
-import { defineIsland } from '../framework/islands'
 
 function Counter({ initialCount }: { initialCount: number }) {
   const [count, setCount] = useState(initialCount)
-
   return (
-    <button type="button" onClick={() => setCount((value) => value + 1)}>
+    <button onClick={() => setCount((value) => value + 1)}>
       Count: {count}
     </button>
   )
@@ -123,127 +146,69 @@ function Counter({ initialCount }: { initialCount: number }) {
 export default defineIsland('counter', Counter)
 ```
 
-Use it from a TSX page or layout:
-
-```tsx
-import Counter from '../../islands/counter'
-
-export default function ExamplePage() {
-  return <Counter initialCount={0} hydrate="load" />
-}
-```
-
-The island ID must match its path below `src/islands`:
+The ID matches the path below `src/islands`:
 
 ```text
 src/islands/counter.tsx      -> counter
 src/islands/cart/summary.tsx -> cart/summary
 ```
 
-The `hydrate` prop accepts:
+Use the island from a page or Markdown layout:
 
-| Value | Timing |
-| --- | --- |
-| `load` | Hydrate immediately; this is the default |
-| `idle` | Wait for browser idle time |
-| `visible` | Wait until the island approaches the viewport |
+```tsx
+import Counter from '../../islands/counter'
 
-Props must be JSON-serializable. Islands cannot nest, and each island owns an
-independent React root and context tree. Routes without islands ship no React
-client entry.
-
-## Configure the site
-
-Site-wide metadata and header navigation live in `src/site.config.ts`:
-
-```ts
-export default {
-  title: 'My Site',
-  description: 'A short description of my site.',
-  titleTemplate: '%s | My Site',
-  navigation: [
-    { label: 'Home', href: '/' },
-    { label: 'Notes', href: '/notes/' },
-  ],
+export default function Page() {
+  return <Counter initialCount={0} hydrate="visible" />
 }
 ```
 
-Page metadata overrides these defaults.
-
-## Build and deploy
-
-```bash
-bun run typecheck
-bun run test
-bun run build
-bun run preview
-```
-
-`bun run build` typechecks, creates client and server bundles, and prerenders
-every route. Deploy `dist/client`; `dist/server` is only an intermediate
-prerendering bundle.
-
-The included [GitHub Pages workflow](.github/workflows/pages.yml) validates pull
-requests and deploys pushes to `master`. It derives the repository base path in
-GitHub Actions, so assets, `siteHref` links, and island chunks work under
-`/<repository>/`.
-
-## Documentation
-
-| Guide | Use it for |
-| --- | --- |
-| [Getting started](src/pages/docs/getting-started/page.md) | Build the example and add a first route |
-| [Pages and routes](src/pages/docs/pages-and-routes/page.md) | File routing, metadata, links, and 404 behavior |
-| [Markdown and layouts](src/pages/docs/markdown-and-layouts/page.md) | Frontmatter, content, and reusable wrappers |
-| [React islands](src/pages/docs/react-islands/page.md) | Hydration timing, props, and island boundaries |
-| [GitHub Pages](src/pages/docs/github-pages/page.md) | Base paths and static deployment |
-| [Architecture](docs/architecture.md) | Rendering pipeline and design constraints |
-| [Island design](docs/interactive-react-islands.md) | Rationale for independent SSR and hydration |
-| [HTML pages proposal](docs/html-pages-layouts-and-islands.md) | Proposed typed bindings for markup-first HTML |
-| [Releases](src/pages/docs/releases/page.md) | Version policy and npm publishing |
-
-The same user guides are rendered at
-[briansunter.github.io/nib/docs](https://briansunter.github.io/nib/docs/).
-
-## Project structure
-
-```text
-src/
-├── framework/       Nib routing, Markdown, rendering, and island internals
-├── islands/         Browser-interactive React components
-├── layouts/         Reusable Markdown page layouts
-├── pages/           File-routed TSX and Markdown pages
-├── App.tsx          Shared static page shell
-├── routes.ts        Build-time route discovery
-├── site.config.ts   Site metadata and navigation
-└── style.css        Global styles
-```
-
-Nib deliberately omits dynamic route parameters, a client router, server
-actions, runtime data loaders, nested islands, nested Markdown layout names, and
-inline JSX in Markdown.
+`hydrate` accepts `load` (default), `idle`, or `visible`. Props must be
+JSON-serializable. Islands cannot nest, and each owns an independent React
+root. Routes without islands contain no island client entry.
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
-| `bun run dev` | Start the SSR development server with Vite refresh |
-| `bun run typecheck` | Check TypeScript without emitting files |
-| `bun run test` | Run tests and enforce coverage |
-| `bun run build` | Build and prerender the production site |
-| `bun run preview` | Serve `dist/client` locally |
-| `bun run check:version-policy` | Reject versions outside `0.x.y` |
-| `bun pm pack --destination ./dist/package` | Inspect the npm package artifact |
+| `nib init [directory]` | Scaffold a site and install dependencies |
+| `nib dev` | Start development SSR with Vite refresh |
+| `nib build` | Bundle and prerender every route |
+| `nib preview` | Serve the generated static site |
 
-## Naming
+The scaffold exposes these through `npm run dev`, `npm run build`, and
+`npm run preview`. Deploy `dist/client`; `dist/server` is a build intermediate.
 
-Use these names consistently in code and documentation:
+## Documentation
 
-- **Nib** — product and repository
-- **`@briansunter/nib`** — npm package only
-- **TSX page** and **Markdown page** — the two page types
-- **React island** — an explicitly interactive, independently hydrated subtree
-- **prerender** — the build step that writes static HTML
+| Guide | Use it for |
+| --- | --- |
+| [Getting started](examples/docs/src/pages/docs/getting-started/page.md) | Scaffold a project and add a route |
+| [Pages and routes](examples/docs/src/pages/docs/pages-and-routes/page.md) | Routing, metadata, links, and 404 behavior |
+| [Markdown and layouts](examples/docs/src/pages/docs/markdown-and-layouts/page.md) | Content and reusable wrappers |
+| [React islands](examples/docs/src/pages/docs/react-islands/page.md) | Hydration, props, and island constraints |
+| [GitHub Pages](examples/docs/src/pages/docs/github-pages/page.md) | Base paths and static deployment |
+| [Architecture](docs/architecture.md) | Framework and consumer seams |
+| [Island design](docs/interactive-react-islands.md) | Independent SSR and hydration rationale |
+| [HTML pages proposal](docs/html-pages-layouts-and-islands.md) | A future markup-first route format |
 
-See [`skills/nib/SKILL.md`](skills/nib/SKILL.md) when asking an AI agent to
-maintain a Nib site.
+The rendered guides live at
+[briansunter.github.io/nib/docs](https://briansunter.github.io/nib/docs/).
+
+## Contributing to Nib
+
+The repository keeps framework source under `src`, the published initializer
+under `templates/default`, and the documentation site under `examples/docs`.
+
+```bash
+bun install --frozen-lockfile
+bun run typecheck
+bun run test
+bun run build
+bun run check:version-policy
+```
+
+`bun run test` builds the publishable framework first, then exercises unit,
+type, scaffold, production-build, development-server, and package-consumer
+behavior. Releases use Release Please and publish `@briansunter/nib` with npm
+provenance.

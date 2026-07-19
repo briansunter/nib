@@ -5,7 +5,7 @@ description: Build, change, debug, validate, and release Nib static sites. Use w
 
 # Maintain Nib
 
-Treat Nib as a starter repository with a static-first rendering model. Preserve
+Treat Nib as a framework dependency with a static-first rendering model. Preserve
 complete HTML for every route and add browser JavaScript only through explicit
 React islands.
 
@@ -14,7 +14,7 @@ React islands.
 - Read `README.md` for the user-facing model and commands.
 - Read `docs/architecture.md` before changing routing, rendering, Markdown,
   islands, document output, or base paths.
-- Read the relevant page under `src/pages/docs` when changing a documented
+- Read the relevant page under `examples/docs/src/pages/docs` when changing a documented
   behavior.
 - Inspect `package.json`, `.github/workflows`, and
   `scripts/check-version-policy.ts` before release work.
@@ -34,7 +34,7 @@ Keep these names exact:
 3. Use only `title`, `description`, `draft`, and `layout` in Markdown
    frontmatter.
 4. Put flat Markdown layouts at `src/layouts/<name>.tsx`.
-5. Update `src/site.config.ts` when navigation should expose a route.
+5. Update `nib.config.ts` when navigation should expose a route.
 6. Use `siteHref` for internal TSX links so configured base paths are retained.
 
 Do not add dynamic parameters, a client router, runtime data loaders, server
@@ -107,7 +107,7 @@ generated static site.
 When behavior or names change, update all affected layers:
 
 1. `README.md`;
-2. the relevant `src/pages/docs/**/page.md`;
+2. the relevant `examples/docs/src/pages/docs/**/page.md`;
 3. `docs/architecture.md` for implementation contracts;
 4. this skill;
 5. package metadata and customer-facing site copy.

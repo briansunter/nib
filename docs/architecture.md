@@ -1,209 +1,219 @@
 # Nib architecture
 
-Nib is a static-first React site starter. It uses TSX as its HTML templating
-language, Markdown for content, Vite for development and bundling, and explicit
-React islands for browser interaction.
+Nib is a static-first framework with a deliberately small authoring interface.
+Consumers install `@briansunter/nib`; they do not copy its routing, Vite, SSR,
+document, prerender, or hydration implementation.
 
-This document describes the current implementation and the constraints that
-keep it small.
+This document describes the current implementation. `page.html` is not a
+current route format; the forward-looking
+[HTML pages, layouts, and islands proposal](html-pages-layouts-and-islands.md)
+remains explicitly proposed.
 
-## Design goals
+## Package and project seam
 
-- Produce complete, crawlable HTML for every known route.
-- Keep TSX pages, Markdown pages, layouts, and ordinary components static.
-- Ship React to the browser only when a route contains a React island.
-- Load only the island modules used by the current route.
-- Keep route discovery and rendering deterministic at build time.
-- Work from `/` or a configured static-host base path.
-- Fail early for invalid routes, island IDs, or serialized props.
+The package owns:
 
-Nib does not provide dynamic route parameters, client-side routing, server
-actions, runtime data loaders, React Server Components, nested islands, or
-inline JSX in Markdown.
+- the `nib init`, `dev`, `build`, and `preview` commands;
+- configuration loading and validation;
+- Vite and Tailwind integration;
+- virtual route and island entry modules;
+- Markdown compilation and layout resolution;
+- development SSR and production prerendering;
+- document outlets, metadata, base paths, and 404 output;
+- island collection, serialization, client loading, and hydration.
 
-## Rendering pipeline
+A consumer project owns:
 
 ```text
+nib.config.ts
 src/pages/**/page.tsx or page.md
-                 |
-                 v
-          build-time route map
-                 |
-                 v
-         static page tree --collects--> React island definitions + props
-                 |                                  |
-                 |                                  v
-                 |                         independent island SSR roots
-                 v                                  |
-         complete page HTML <-----------------------+
-                 |
-                 +-- no islands: HTML + CSS
-                 |
-                 +-- islands: runtime + used island chunks
+src/layouts/*.tsx
+src/islands/**/*.tsx
+src/site-shell.tsx       optional
+src/style.css            optional
+public/                  optional
 ```
 
-The same renderer handles development requests and production prerendering:
+`nib.config.ts` is the configuration seam. `defineConfig` types the site
+metadata, optional base path, and optional app-owned shell. Pages and islands
+import authoring interfaces from `@briansunter/nib`; package-internal exports
+are reserved for generated virtual modules.
 
-1. `src/routes.ts` eagerly discovers `page.tsx` and `page.md` modules.
-2. `createRoutes` normalizes source paths, applies metadata, filters drafts, and
-   creates the static route map.
-3. `renderReactPage` renders the shared `App` shell and route component.
-4. A two-pass island renderer collects definitions and JSON props, renders each
-   island as an independent root, and inserts its SSR markup.
-5. `renderDocument` inserts metadata and page HTML into `index.html`.
-6. Static pages have the marked island entry removed.
-7. `scripts/prerender.ts` writes each route below `dist/client`.
+The repository’s `templates/default` directory is an initializer input, not
+framework source in a generated project. `examples/docs` is a consumer of the
+same published interface and doubles as the GitHub Pages site.
 
-The SSR entry strips Vite's configured base path before route matching. This
-keeps development requests and prerender calls on the same route interface.
+## Command pipeline
 
-`dist/server` exists only so the prerender step can execute the production SSR
-entry. It is not a deployment target.
+```text
+nib.config.ts + src/
+          |
+          v
+  Nib project adapter
+          |
+          +-- dev ----> Vite server + framework SSR middleware
+          |
+          +-- build --> client assets + server entry
+                              |
+                              v
+                         prerender routes
+                              |
+                              v
+                         dist/client
+```
+
+`src/framework/site.ts` is the deep module behind the command interface. It
+creates the Vite configuration, builds client and server environments,
+constructs the HTML template from the client manifest, executes the server
+entry, and writes route output. Consumer projects do not contain a Vite config,
+HTML entry, SSR entry, route registry, server, or prerender script.
+
+Development uses the same generated server entry as production. Vite’s
+runnable SSR environment evaluates it on requests, while production builds it
+to `dist/server/entry-server.js`. Client pre-transform is disabled for the
+custom SSR document path so unused speculative dependency requests do not
+prevent clean server shutdown.
+
+`dist/server` is a build intermediate. Only `dist/client` is deployed.
+
+## Virtual modules
+
+`src/framework/project-vite-plugin.ts` generates two modules:
+
+- `virtual:nib/server-entry` discovers pages and eagerly validates islands,
+  resolves the route, renders the shell and page, and returns document data.
+- `virtual:nib/client-entry` discovers island modules lazily and starts the
+  island runtime.
+
+Both use project-root `/src/...` globs. This keeps route and island discovery in
+the framework while ensuring Vite still sees literal glob patterns and can
+split island chunks.
+
+The server and client virtual modules use separate package-internal exports.
+That avoids loading browser hydration code during SSR and keeps the public
+authoring interface small.
 
 ## File routing
 
-Each folder below `src/pages` may contain exactly one page module:
+Each folder below `src/pages` may contain exactly one route module:
 
 ```text
-src/pages/page.tsx            -> /
-src/pages/about/page.tsx      -> /about/
+src/pages/page.tsx             -> /
+src/pages/about/page.tsx       -> /about/
 src/pages/guides/start/page.md -> /guides/start/
-src/pages/404/page.tsx        -> /404.html
+src/pages/404/page.tsx         -> /404.html
 ```
 
-Routes are discovered with `import.meta.glob` in `src/routes.ts`. The route map
-is therefore fixed when Vite builds the site. `src/framework/router.ts` owns
-route construction, while `src/framework/paths.ts` owns path normalization and
-source-to-route conversion.
+`createRoutes` normalizes file paths, filters drafts, rejects duplicate TSX and
+Markdown routes, resolves metadata, and creates a static route map. Unknown
+development requests use the custom `/404` route when present and otherwise a
+generated fallback.
+
+Dynamic parameters and a client router are intentionally absent.
 
 ## Page types
 
 ### TSX pages
 
 A TSX page default-exports a React component and may export `meta`. It can use
-ordinary React components for static composition. Hooks that depend on a
-browser lifecycle belong inside a React island.
+ordinary React components for static composition. Browser lifecycle behavior
+belongs in a React island.
 
 ### Markdown pages
 
-`src/framework/vite-plugin.ts` compiles `page.md` files before React sees them:
+The Markdown Vite adapter:
 
-1. `gray-matter` extracts frontmatter.
-2. Remark parses Markdown and GitHub-Flavored Markdown.
-3. Rehype serializes the content to HTML.
-4. The Vite plugin creates a Markdown page module.
-5. An optional flat layout module wraps the rendered article.
+1. extracts frontmatter with `gray-matter`;
+2. validates `title`, `description`, `draft`, and `layout`;
+3. parses Markdown and GitHub-Flavored Markdown;
+4. serializes HTML through Rehype;
+5. generates a React page module;
+6. optionally imports `src/layouts/<flat-name>.tsx`.
 
-The compiler validates supported frontmatter fields (`title`, `description`,
-`draft`, and `layout`) before generating the page module.
+Keeping parsing in `src/framework/markdown.ts` gives syntax and validation
+locality independent of Vite code generation. Inline JSX is not supported.
 
-Keeping Markdown parsing in `src/framework/markdown.ts` makes the syntax and
-frontmatter behavior independently testable. Inline JSX is intentionally not
-part of this pipeline.
+## Page shell and documents
 
-`page.html` is not a current route format. The forward-looking
-[HTML pages, layouts, and islands proposal](html-pages-layouts-and-islands.md)
-describes how Nib could accept standards-conforming HTML without weakening
-typed island bindings. Until that proposal is implemented, use TSX for
-component-heavy pages and Markdown for prose.
+The configured shell receives `children`, the resolved route, and site
+metadata. When omitted, Nib renders a small semantic header and main region.
+This gives consumers full visual control without making them own the framework
+renderer.
+
+Nib generates the HTML document template. `renderDocument` requires exactly
+one head outlet and one SSR outlet. It retains the marked island entry only on
+routes that contain islands and rejects missing or duplicate island entries.
+Static routes therefore contain HTML and CSS without the island runtime.
 
 ## React islands
 
-A React island is an explicit hydration boundary created with `defineIsland`.
-The boundary has a stable ID, JSON-serializable props, and one of three
-hydration strategies: `load`, `idle`, or `visible`.
+A React island is an explicit hydration seam created with `defineIsland`. It
+has a stable path-matching ID, JSON-serializable props, and a `load`, `idle`, or
+`visible` strategy.
 
-For the design rationale and migration trade-offs, see the
-[interactive island design record](interactive-react-islands.md). This file is
-the shorter source of truth for current implementation contracts.
-
-Island IDs match normalized module paths:
-
-```text
-src/islands/counter.tsx      -> counter
-src/islands/cart/summary.tsx -> cart/summary
-```
-
-That convention gives the server collector and browser module registry the same
-key without a compiler transform.
-
-During server rendering, each island becomes a `<nib-island>` custom element
-containing:
+During server rendering, each island becomes a `<nib-island>` element with:
 
 - server-rendered child markup;
-- the island ID and a stable instance ID;
-- the hydration strategy;
-- serialized props;
-- a React `identifierPrefix` for stable `useId` output.
+- stable island and instance IDs;
+- hydration strategy and serialized props;
+- an `identifierPrefix` for stable React `useId` output.
 
-The browser runtime in `src/entry-islands.tsx` discovers those elements and
-delegates loading, metadata validation, and `hydrateRoot` wiring to
-`src/framework/island-runtime.ts`. Visibility scheduling observes all element
-children and falls back to the island's parent for text-only roots. Each
-element is marked before scheduling so repeated bootstraps cannot hydrate it
-twice.
+The client runtime validates metadata and the loaded module before calling
+`hydrateRoot`. Visible hydration observes all element children and falls back
+to the parent for text-only roots. Each element is marked before scheduling, so
+repeated bootstraps cannot hydrate it twice.
 
-### Island constraints
-
-- Props must survive a JSON round trip.
-- Initial rendering must be deterministic on the server and browser.
-- Browser-only state is read in an effect or event handler.
-- Islands cannot nest.
-- Islands do not share a React context tree.
-- Frequently coordinated controls should be one island with static children.
-- Secrets must never be passed as props because props are present in HTML.
+Each island owns an independent React root and context tree. Islands cannot
+nest, and props must survive an exact JSON round trip. See the
+[interactive island design](interactive-react-islands.md) for rationale and
+trade-offs.
 
 ## Base paths
 
-`vite.config.ts` chooses its base path in this order:
+The base path is selected in this order:
 
-1. `SITE_BASE_PATH` when explicitly set;
-2. `/<repository>/` in GitHub Actions;
-3. `/` everywhere else.
+1. `base` in `nib.config.ts`;
+2. `SITE_BASE_PATH`;
+3. `/<repository>/` in GitHub Actions;
+4. `/`.
 
-Vite rewrites generated asset and dynamic-import URLs. Application links use
-`siteHref` from `src/framework/urls.ts` so they follow the same base path.
+Base values must start and end with `/`. Vite rewrites asset and lazy island
+chunk URLs. `siteHref` uses the same build-time constant for application links,
+and the SSR renderer strips the base before route matching.
 
-## Development behavior
+## Scaffolding
 
-`server.ts` runs Vite in middleware mode and renders requests through the same
-route and document pipeline used by the build.
+`nib init` copies `templates/default` only into a missing or empty directory,
+replaces the framework version placeholder with the running package version,
+and installs with the invoking npm-compatible package manager unless
+`--no-install` is present. It refuses to merge into a non-empty directory.
 
-The HTML template must contain exactly one head outlet, one SSR outlet, and at
-most one marked island entry block. Static pages remove that block; island
-pages fail early if it is missing.
+The generated project contains no `src/framework`, Vite config, HTML template,
+server entry, or prerender script. That absence is covered by scaffold and
+packed-package consumer tests.
 
-Static page, layout, shell, and site-config edits trigger a full reload because
-there is no persistent page-level React root. Island modules use React Fast
-Refresh when possible.
+## Constraints
 
-## Naming contract
+Nib deliberately omits dynamic route parameters, client-side routing, server
+actions, runtime data loaders, React Server Components, nested islands, nested
+Markdown layout names, and inline JSX in Markdown.
 
-- **Nib** is the product and repository name.
-- **`@briansunter/nib`** is the npm package name.
-- **TSX page** and **Markdown page** are the two page types.
-- **React island** is an interactive, independently hydrated subtree.
-- **prerender** is the build operation; **prerendered** describes its output.
-
-Internal functions may use the `nib` prefix when they integrate with Vite or
-emit framework markers, such as `nibMarkdown`, `nibIslandsEntry`, and
-`data-nib-islands`.
+These omissions keep the static route map deterministic and the package
+interface smaller than its implementation.
 
 ## Validation
 
-Run the full repository gate after framework or documentation changes:
+Framework changes run:
 
 ```bash
 bun run typecheck
 bun run test
 bun run build
-```
-
-When base-path behavior changes, also build with:
-
-```bash
 SITE_BASE_PATH=/nib/ bun run build
+bun run check:version-policy
 ```
 
-Inspect generated static and island routes under `dist/client` to confirm that
-only island routes retain the marked client entry.
+The complete gate includes unit and type tests, scaffold overwrite protection,
+production builds, base-path development requests, packed npm installation,
+generated-project typechecking/building, preview requests, island hydration in
+a browser, package-content inspection, and the documentation example build.

@@ -1,0 +1,23 @@
+{
+  "name": "__NIB_PROJECT_NAME__",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nib dev",
+    "build": "nib build",
+    "preview": "nib preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@briansunter/nib": "^__NIB_VERSION__",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
+  }
+}

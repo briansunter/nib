@@ -22,7 +22,7 @@ element:
 The companion TypeScript file imports the React values and supplies typed props:
 
 ```ts
-import { bindIsland, defineHtmlPage } from '../../framework/html-pages'
+import { bindIsland, defineHtmlPage } from '@briansunter/nib/html'
 import Counter from '../../islands/counter'
 import DocsLayout from '../../layouts/docs'
 
@@ -310,7 +310,7 @@ not needed for imported or generated content, Nib should stop here.
 
 This is concise but untyped. Adding runtime schemas would duplicate component
 types, while code generation would make the compiler and editor integration
-substantially larger. It is not a good trade for a small starter.
+substantially larger. It is not a good trade for a small static-first framework.
 
 ### Register React islands as Custom Elements
 

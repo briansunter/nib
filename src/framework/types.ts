@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 
 export interface PageMeta {
   title?: string
@@ -11,6 +11,18 @@ export interface SiteConfig {
   description?: string
   titleTemplate?: string
   navigation?: Array<{ label: string; href: string }>
+}
+
+export interface SiteShellProps {
+  children: ReactNode
+  route: ResolvedRoute
+  site: SiteConfig
+}
+
+export interface NibConfig {
+  base?: string
+  site: SiteConfig
+  shell?: ComponentType<SiteShellProps>
 }
 
 export interface PageModule {

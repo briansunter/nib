@@ -1,0 +1,15 @@
+import { defineConfig } from '@briansunter/nib'
+import { SiteShell } from './src/site-shell'
+
+export default defineConfig({
+  site: {
+    title: 'My Nib Site',
+    description: 'A static site built with Nib.',
+    titleTemplate: '%s | My Nib Site',
+    navigation: [
+      { label: 'Home', href: '/' },
+      { label: 'About', href: '/about/' },
+    ],
+  },
+  shell: SiteShell,
+})

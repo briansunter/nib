@@ -15,5 +15,10 @@ export function stripBasePath(path: string, basePath: string): string {
 }
 
 export function siteHref(path: string) {
-  return `${import.meta.env.BASE_URL}${path.replace(/^\/+/, '')}`
+  return `${configuredBasePath()}${path.replace(/^\/+/, '')}`
+}
+declare const __NIB_BASE_PATH__: string
+
+function configuredBasePath(): string {
+  return typeof __NIB_BASE_PATH__ === 'string' ? __NIB_BASE_PATH__ : '/'
 }
