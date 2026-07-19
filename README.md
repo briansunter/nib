@@ -1,5 +1,9 @@
 # Nib
 
+<p align="center">
+  <img src="docs/nib-wordmark.svg" alt="Nib" width="220" />
+</p>
+
 Nib is a self-contained static-site framework for React, Markdown, data pages,
 and opt-in islands. It owns routing, Vite integration, development SSR,
 document generation, prerendering, and island hydration. Your project owns only

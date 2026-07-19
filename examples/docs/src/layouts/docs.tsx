@@ -1,16 +1,15 @@
-import type { ReactNode } from 'react'
-import { siteHref } from '@briansunter/nib'
+import { siteHref, type PageLayoutProps } from '@briansunter/nib'
 
 const documentation = [
   {
-    label: 'Start here',
+    label: 'START HERE',
     links: [
       { label: 'Overview', href: '/docs/', description: 'What Nib is' },
       { label: 'Getting started', href: '/docs/getting-started/', description: 'Scaffold a site' },
     ],
   },
   {
-    label: 'Build',
+    label: 'BUILD',
     links: [
       { label: 'Pages and routes', href: '/docs/pages-and-routes/', description: 'Turn files into URLs' },
       { label: 'Markdown and layouts', href: '/docs/markdown-and-layouts/', description: 'Write content in context' },
@@ -19,7 +18,7 @@ const documentation = [
     ],
   },
   {
-    label: 'Ship',
+    label: 'SHIP',
     links: [
       { label: 'GitHub Pages', href: '/docs/github-pages/', description: 'Deploy static output' },
       { label: 'Releases', href: '/docs/releases/', description: 'Version and publish Nib' },
@@ -27,7 +26,12 @@ const documentation = [
   },
 ]
 
-export default function DocsLayout({ children }: { children: ReactNode }) {
+function routePath(href: string): string {
+  const withoutTrailingSlash = href.replace(/\/+$/, '')
+  return withoutTrailingSlash || '/'
+}
+
+export default function DocsLayout({ children, route }: Pick<PageLayoutProps, 'children' | 'route'>) {
   return (
     <div className="docs-layout">
       <aside className="docs-sidebar">
@@ -41,19 +45,23 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
           </summary>
           <nav aria-label="Documentation" className="docs-menu__nav">
             {documentation.map((section) => (
-              <div className="docs-menu__section" key={section.label}>
-                <p className="docs-menu__section-label">{section.label}</p>
+              <section className="docs-menu__section" key={section.label}>
+                <h2 className="docs-menu__section-label">{section.label}</h2>
                 <ul className="docs-menu__list">
                   {section.links.map((item) => (
                     <li key={item.href}>
-                      <a className="docs-menu__link" href={siteHref(item.href)}>
+                      <a
+                        aria-current={routePath(item.href) === routePath(route.path) ? 'page' : undefined}
+                        className="docs-menu__link"
+                        href={siteHref(item.href)}
+                      >
                         <span>{item.label}</span>
                         <span className="docs-menu__description">{item.description}</span>
                       </a>
                     </li>
                   ))}
                 </ul>
-              </div>
+              </section>
             ))}
           </nav>
           <div className="docs-menu__footer">

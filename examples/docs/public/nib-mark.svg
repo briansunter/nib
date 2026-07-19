@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title desc">
+  <title id="title">Nib logo mark</title>
+  <desc id="desc">A minimal geometric fountain pen nib with a circular breather hole and central slit.</desc>
+  <g fill="currentColor">
+    <rect x="74" y="27" width="108" height="18" rx="5"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M76 58 H180 Q183 58 184.5 61 L211 116 Q213.5 121 210.5 125 L133 226 Q128 232 123 226 L45.5 125 Q42.5 121 45 116 L71.5 61 Q73 58 76 58 Z M128 98 C136.284 98 143 104.716 143 113 C143 120.06 138.12 126.15 132 127.68 L132 228 L124 228 L124 127.68 C117.88 126.15 113 120.06 113 113 C113 104.716 119.716 98 128 98 Z"/>
+  </g>
+</svg>

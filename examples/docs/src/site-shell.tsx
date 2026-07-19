@@ -45,7 +45,9 @@ export function SiteShell({ children, route, site }: SiteShellProps) {
             </div>
           </details>
           <a className="site-brand" href={siteHref('/')} aria-label={`${site.title} home`}>
-            <span className="site-brand__mark" aria-hidden="true">n</span>
+            <span className="site-brand__mark" aria-hidden="true">
+              <img src={siteHref('/nib-mark.svg')} alt="" />
+            </span>
             <span className="site-brand__words">
               <span className="site-brand__name">{site.title}</span>
               <span className="site-brand__tagline">static sites, carefully composed</span>

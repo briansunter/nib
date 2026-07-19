@@ -272,20 +272,16 @@ nib-island {
 }
 
 .site-brand__mark {
-  display: grid;
   width: 2.25rem;
   height: 2.25rem;
   flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid rgba(124, 230, 211, 0.75);
-  border-radius: 0.65rem 0.65rem 0.65rem 0.2rem;
-  background: var(--nib-teal);
-  color: var(--nib-ink-950);
-  font-family: Georgia, serif;
-  font-size: 1.4rem;
-  font-weight: 700;
-  line-height: 1;
-  transform: rotate(-7deg);
+}
+
+.site-brand__mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: invert(86%) sepia(28%) saturate(700%) hue-rotate(113deg) brightness(105%) contrast(91%);
 }
 
 .site-brand__words {
@@ -448,19 +444,16 @@ nib-island {
 }
 
 .home-page__note-mark {
-  display: grid;
   width: 2.6rem;
   height: 2.6rem;
   margin-bottom: 1.2rem;
-  place-items: center;
-  border: 1px solid rgba(124, 230, 211, 0.75);
-  border-radius: 0.7rem 0.7rem 0.7rem 0.2rem;
-  background: var(--nib-teal);
-  color: var(--nib-ink-950);
-  font-family: Georgia, serif;
-  font-size: 1.5rem;
-  font-weight: 700;
-  transform: rotate(-7deg);
+}
+
+.home-page__note-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: invert(86%) sepia(28%) saturate(700%) hue-rotate(113deg) brightness(105%) contrast(91%);
 }
 
 .home-page__note-label {
@@ -477,42 +470,99 @@ nib-island {
   margin: 0;
 }
 
-.home-page__principles {
+.home-page__example {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  margin-top: clamp(2rem, 6vw, 5rem);
+  margin-top: clamp(2.5rem, 7vw, 5.5rem);
   padding-top: 1.2rem;
   border-top: 1px solid var(--nib-line);
 }
 
-.home-page__principles div {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 0.7rem;
-  align-items: baseline;
+.home-page__example-intro {
+  max-width: 38rem;
 }
 
-.home-page__principles strong,
-.about-page__number {
+.home-page__example h2 {
+  margin: 0.35rem 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.8rem, 3vw, 2.7rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.home-page__example-intro > p:last-child {
+  max-width: 34rem;
+  margin: 0.85rem 0 0;
+  color: var(--nib-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.home-page__example-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.6rem;
+}
+
+.home-page__example-card {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--nib-line);
+  border-radius: 0.65rem;
+  background: rgba(16, 32, 39, 0.58);
+}
+
+.home-page__example-card header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+}
+
+.home-page__example-card header span {
   color: var(--nib-amber);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.68rem;
   letter-spacing: 0.1em;
 }
 
-.home-page__principles span {
+.home-page__example-card h3 {
+  margin: 0;
   font-size: 0.95rem;
-  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-.home-page__principles p {
-  grid-column: 2;
-  margin: 0.25rem 0 0;
+.home-page__example-card pre {
+  min-height: 7rem;
+  overflow-x: auto;
+  margin: 1rem 0 0.85rem;
+  padding: 0.85rem;
+  border: 1px solid var(--nib-line);
+  border-radius: 0.45rem;
+  background: rgba(3, 10, 13, 0.78);
+  color: var(--nib-paper);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+.home-page__example-card p {
+  margin: 0;
   color: var(--nib-faint);
   font-size: 0.75rem;
   line-height: 1.45;
+}
+
+.home-page__example-card code {
+  font-family: inherit;
+}
+
+.about-page__number {
+  color: var(--nib-amber);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
 }
 
 .about-page {
@@ -669,7 +719,8 @@ nib-island {
   transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
 
-.docs-menu__link:hover {
+.docs-menu__link:hover,
+.docs-menu__link[aria-current="page"] {
   border-left-color: var(--nib-teal);
   background: var(--nib-teal-soft);
   color: var(--nib-paper);
@@ -681,7 +732,8 @@ nib-island {
   font-size: 0.7rem;
 }
 
-.docs-menu__link:hover .docs-menu__description {
+.docs-menu__link:hover .docs-menu__description,
+.docs-menu__link[aria-current="page"] .docs-menu__description {
   color: var(--nib-muted);
 }
 
@@ -859,13 +911,9 @@ nib-island {
     margin-top: 3.5rem;
   }
 
-  .home-page__principles,
+  .home-page__example-grid,
   .about-page__details {
     grid-template-columns: 1fr;
-  }
-
-  .home-page__principles {
-    gap: 1.2rem;
   }
 
   .about-page__details {
