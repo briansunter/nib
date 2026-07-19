@@ -112,9 +112,9 @@ describe('published package consumer', () => {
 
     const home = await fs.readFile(path.join(site, 'dist/client/index.html'), 'utf8')
     const about = await fs.readFile(path.join(site, 'dist/client/about/index.html'), 'utf8')
-    expect(home).toContain('Make this site yours')
+    expect(home).toContain('Make a site.')
     expect(home).toContain('data-island="counter"')
-    expect(about).toContain('Replace this page with your own content')
+    expect(about).toContain('About this site')
     expect(about).not.toContain('data-nib-islands')
     await expect(fs.stat(path.join(site, 'src/framework'))).rejects.toMatchObject({
       code: 'ENOENT',

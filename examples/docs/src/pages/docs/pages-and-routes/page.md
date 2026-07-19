@@ -16,7 +16,9 @@ Nib discovers page files under `src/pages` at build time. The final folder conta
 | `src/pages/docs/setup/page.md` | `/docs/setup/` |
 | `src/pages/404/page.tsx` | `404.html` fallback |
 
-Each route folder may contain `page.tsx` or `page.md`, but not both. Route names are static; Nib does not interpret `[id]` folders or add a client router.
+Each route folder may contain `page.tsx`, `page.md`, or one configured
+`page.<extension>` source, but not multiple page types. Route names are static;
+Nib does not interpret `[id]` folders or add a client router.
 
 ## TSX pages and metadata
 

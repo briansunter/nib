@@ -10,6 +10,6 @@ npm run build
 npm run preview
 ```
 
-Edit `nib.config.ts`, replace the pages under `src/pages`, and put interactive
-components under `src/islands`. The deployable static output is
-`dist/client`.
+Edit `nib.config.ts`, replace the pages under `src/pages`, add configured data
+page sources or collections when needed, and put interactive components under
+`src/islands`. The deployable static output is `dist/client`.

@@ -14,6 +14,7 @@ const documentation = [
     links: [
       { label: 'Pages and routes', href: '/docs/pages-and-routes/', description: 'Turn files into URLs' },
       { label: 'Markdown and layouts', href: '/docs/markdown-and-layouts/', description: 'Write content in context' },
+      { label: 'Data and collections', href: '/docs/data-pages-and-collections/', description: 'Generate typed pages and lists' },
       { label: 'React islands', href: '/docs/react-islands/', description: 'Add interaction selectively' },
     ],
   },

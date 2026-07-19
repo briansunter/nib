@@ -1,8 +1,13 @@
 import fs from 'node:fs/promises'
+import path from 'node:path'
 import type { Plugin } from 'vite'
-import { markdownToCompiledPage } from './markdown'
+import { pageSourceIndex } from './content'
+import { fileToRoute } from './paths'
+import type { PageSourceDefinition } from './types'
 
-export function nibMarkdown(): Plugin {
+export function nibMarkdown(configPath = 'nib.config.ts'): Plugin {
+  const configImport = JSON.stringify(path.resolve(configPath))
+
   return {
     name: 'nib-markdown',
     enforce: 'pre',
@@ -11,25 +16,56 @@ export function nibMarkdown(): Plugin {
       if (!cleanId.endsWith('/page.md')) return null
 
       const source = await fs.readFile(cleanId, 'utf8')
-      const { html, layout: layoutName, meta } = markdownToCompiledPage(source)
-      const layout = layoutName
-        ? `import Layout from ${JSON.stringify(`/src/layouts/${layoutName}.tsx`)}`
-        : ''
-      const pageExpression = layoutName ? 'createElement(Layout, null, content)' : 'content'
 
       return [
         `import { createElement } from 'react'`,
-        layout,
-        `export const meta = ${JSON.stringify(meta)}`,
-        `const html = ${JSON.stringify(html)}`,
+        `import config from ${configImport}`,
+        `import { markdownToCompiledPage } from '@briansunter/nib/internal/server'`,
+        `const compiled = markdownToCompiledPage(${JSON.stringify(source)}, config.markdown)`,
+        `export const meta = compiled.meta`,
+        `export const frontmatter = compiled.frontmatter`,
+        `export const layout = compiled.layout`,
         `const content = createElement('article', {`,
         `  className: 'prose prose-invert max-w-none prose-a:text-sky-300',`,
-        `  dangerouslySetInnerHTML: { __html: html }`,
+        `  dangerouslySetInnerHTML: { __html: compiled.html }`,
         `})`,
         `export default function MarkdownPage() {`,
-        `  return ${pageExpression}`,
+        `  return content`,
         `}`
-      ].filter(Boolean).join('\n')
+      ].join('\n')
     }
+  }
+}
+
+export function nibDataPages(
+  configPath: string,
+  definitions: ReadonlyArray<{
+    extensions: readonly string[]
+    match?: (file: string) => boolean
+  }> | undefined,
+): Plugin {
+  const configImport = JSON.stringify(path.resolve(configPath))
+
+  return {
+    name: 'nib-data-pages',
+    enforce: 'pre',
+    async load(id) {
+      const cleanId = id.split('?')[0]
+      const match = cleanId.match(/\/page(\.[A-Za-z0-9]+)$/)
+      if (!match || match[1] === '.md' || match[1] === '.tsx') return null
+      const index = pageSourceIndex(definitions, match[1], cleanId)
+      if (index === undefined) throw new Error(`No page source matches ${cleanId}`)
+
+      const source = await fs.readFile(cleanId, 'utf8')
+      return [
+        `import config from ${configImport}`,
+        `import { compileDataPages } from '@briansunter/nib/internal/server'`,
+        `export const pages = await compileDataPages(config.pageSources[${index}], {`,
+        `  file: ${JSON.stringify(cleanId)},`,
+        `  source: ${JSON.stringify(source)},`,
+        `  defaultPath: ${JSON.stringify(fileToRoute(cleanId))},`,
+        `})`,
+      ].join('\n')
+    },
   }
 }

@@ -1,5 +1,6 @@
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 import { markdownToCompiledPage } from '../src/framework/markdown'
 import { nibMarkdown } from '../src/framework/vite-plugin'
 
@@ -21,21 +22,33 @@ describe('markdown', () => {
     expect(() => markdownToCompiledPage('---\nlayout: ../docs\n---\n# World'))
       .toThrow('Markdown layout must be a flat name')
     expect(() => markdownToCompiledPage('---\nlayout: 42\n---\n# World'))
-      .toThrow('Markdown layout must be a non-empty string')
+      .toThrow('Markdown frontmatter')
   })
 
   it('validates Markdown frontmatter types at the compiler seam', () => {
     expect(() => markdownToCompiledPage('---\ntitle: 42\n---\n# World'))
-      .toThrow('Markdown title must be a string')
+      .toThrow('Markdown frontmatter')
     expect(() => markdownToCompiledPage('---\ndescription: [wrong]\n---\n# World'))
-      .toThrow('Markdown description must be a string')
+      .toThrow('Markdown frontmatter')
     expect(() => markdownToCompiledPage('---\ndraft: "false"\n---\n# World'))
-      .toThrow('Markdown draft must be a boolean')
-    expect(() => markdownToCompiledPage('---\nnavtitle: World\n---\n# World'))
-      .toThrow('Unsupported Markdown frontmatter field: navtitle')
+      .toThrow('Markdown frontmatter')
   })
 
-  it('generates a Vite module that imports the named layout', async () => {
+  it('supports custom typed frontmatter while retaining page metadata', () => {
+    const compiled = markdownToCompiledPage(
+      '---\ntitle: Hello\ntags: [nib, typed]\n---\n# World',
+      {
+        schema: z.object({
+          title: z.string(),
+          tags: z.array(z.string()),
+        }),
+      },
+    )
+    expect(compiled.frontmatter.tags).toEqual(['nib', 'typed'])
+    expect(compiled.meta.title).toBe('Hello')
+  })
+
+  it('generates a Vite module that exposes frontmatter for runtime layouts', async () => {
     const plugin = nibMarkdown()
     if (typeof plugin.load !== 'function') throw new Error('Markdown plugin has no load hook')
 
@@ -43,7 +56,8 @@ describe('markdown', () => {
     const result = await load(path.resolve('examples/docs/src/pages/docs/getting-started/page.md'))
     if (typeof result !== 'string') throw new Error('Markdown plugin did not return module source')
 
-    expect(result).toContain('import Layout from "/src/layouts/docs.tsx"')
-    expect(result).toContain('createElement(Layout, null, content)')
+    expect(result).toContain('markdownToCompiledPage')
+    expect(result).toContain('export const frontmatter = compiled.frontmatter')
+    expect(result).toContain('export const layout = compiled.layout')
   })
 })

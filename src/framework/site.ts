@@ -13,6 +13,7 @@ import {
   type ViteDevServer,
 } from 'vite'
 import { renderDocument } from './document'
+import { pageSourceExtensions } from './content'
 import { nibIslandsEntry } from './island-vite-plugin'
 import {
   NIB_CLIENT_ENTRY,
@@ -21,7 +22,7 @@ import {
 } from './project-vite-plugin'
 import { loadNibConfig, resolveBasePath } from './project-config'
 import type { RenderedPage } from './types'
-import { nibMarkdown } from './vite-plugin'
+import { nibDataPages, nibMarkdown } from './vite-plugin'
 
 export interface SiteOperationOptions {
   root: string
@@ -81,6 +82,7 @@ async function siteViteConfig(
 ): Promise<{ base: string; config: InlineConfig }> {
   const loaded = await loadNibConfig(root, command)
   const base = resolveBasePath(loaded.config)
+  const extensions = pageSourceExtensions(loaded.config.pageSources)
   return {
     base,
     config: {
@@ -91,10 +93,11 @@ async function siteViteConfig(
         __NIB_BASE_PATH__: JSON.stringify(base),
       },
       plugins: [
-        nibMarkdown(),
+        nibMarkdown(loaded.configPath),
+        nibDataPages(loaded.configPath, loaded.config.pageSources),
         react(),
         tailwindcss(),
-        nibProject(loaded.configPath),
+        nibProject(loaded.configPath, root, extensions),
         nibIslandsEntry(),
       ],
       resolve: {

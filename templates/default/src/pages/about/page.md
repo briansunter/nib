@@ -3,6 +3,6 @@ title: About
 description: About this Nib site.
 ---
 
-# About
+# About this site
 
-Replace this page with your own content.
+This is a starter page. Replace it with your story, your work, or the next page you want people to find.

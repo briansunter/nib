@@ -1,12 +1,13 @@
 # Nib
 
-Nib is a self-contained static-site framework for React, Markdown, and opt-in
-islands. It owns routing, Vite integration, development SSR, document
-generation, prerendering, and island hydration. Your project owns only its
-configuration, pages, layouts, islands, styles, and public files.
+Nib is a self-contained static-site framework for React, Markdown, data pages,
+and opt-in islands. It owns routing, Vite integration, development SSR,
+document generation, prerendering, and island hydration. Your project owns only
+its configuration, pages, layouts, islands, styles, and public files.
 
-Every known route becomes complete HTML. Ordinary TSX and Markdown stay static;
-only components declared with `defineIsland` ship browser JavaScript.
+Every known route becomes complete HTML. Ordinary TSX, Markdown, and configured
+data pages stay static; only components declared with `defineIsland` ship browser
+JavaScript.
 
 ## Create a site
 
@@ -32,6 +33,7 @@ my-site/
 │   ├── islands/
 │   ├── layouts/
 │   ├── pages/
+│   ├── content.ts
 │   ├── site-shell.tsx
 │   └── style.css
 ├── package.json
@@ -78,10 +80,12 @@ shell for complete control over the page chrome.
 | `src/pages/page.tsx` | `/index.html` |
 | `src/pages/about/page.tsx` | `/about/index.html` |
 | `src/pages/notes/page.md` | `/notes/index.html` |
+| `src/pages/team/page.yaml` | One or many configured routes |
 | `src/pages/404/page.tsx` | `/404.html` |
 
-Each route folder contains one `page.tsx` or `page.md`, never both. Routes are
-static and discovered at build time.
+Each route folder contains one `page.tsx`, `page.md`, or configured
+`page.<extension>` file, never multiple page types. Routes are static and
+discovered at build time.
 
 A TSX page can export typed metadata:
 
@@ -124,7 +128,92 @@ Write your content here.
 
 Supported fields are `title`, `description`, `draft`, and `layout`. A flat
 `layout: docs` name selects `src/layouts/docs.tsx` and passes the rendered
-article as `children`.
+article as `children`. Add `src/pages/layout.tsx` or a nested
+`src/pages/docs/layout.tsx` to wrap every page below that folder.
+
+Configure typed frontmatter with Zod (re-exported by Nib) and receive it in
+either kind of layout:
+
+```tsx
+import { defineMarkdown, z, type PageLayoutProps } from '@briansunter/nib'
+
+export const articleSchema = z.object({
+  title: z.string(),
+  description: z.string().optional(),
+  layout: z.string().optional(),
+  tags: z.array(z.string()),
+})
+
+export const markdown = defineMarkdown({ schema: articleSchema })
+
+export function ArticleLayout({
+  children,
+  frontmatter,
+}: PageLayoutProps<z.infer<typeof articleSchema>>) {
+  return <article data-tags={frontmatter?.tags.join(',')}>{children}</article>
+}
+```
+
+Set `markdown` in `nib.config.ts`. A parse-compatible schema or a custom
+`validate(value)` function can be used instead of Zod; choose one validation
+adapter per definition.
+
+## Data pages and collections
+
+`definePageSource` turns any `src/pages/**/page.<extension>` file into one or
+many static routes. Nib owns discovery and prerendering; your function owns the
+format:
+
+```tsx
+import { defineConfig, definePageSource, z } from '@briansunter/nib'
+import { parse } from 'csv-parse/sync'
+import { ProductPage, productSchema } from './src/products'
+
+export default defineConfig({
+  site: { title: 'Catalog' },
+  pageSources: [
+    definePageSource({
+      extensions: ['csv'],
+      schema: productSchema,
+      load: ({ source }) =>
+        parse(source, { columns: true }).map((data: { slug: string }) => ({
+          path: `/products/${data.slug}`,
+          data,
+          meta: { title: data.slug },
+        })),
+      component: ProductPage,
+    }),
+  ],
+})
+```
+
+Returning one descriptor uses its `path` or the containing folder route.
+Returning an array creates many pages from one file. Use `match(file)` when
+different files with the same extension need different handlers.
+
+Typed collections make build-time data available to TSX pages:
+
+```tsx
+import { defineCollection, glob, z } from '@briansunter/nib'
+import { parse as parseYaml } from 'yaml'
+
+export const posts = defineCollection({
+  loader: glob({
+    base: 'src/content/posts',
+    pattern: '**/*.yaml',
+    load: ({ source }) => parseYaml(source),
+  }),
+  schema: z.object({
+    title: z.string(),
+    published: z.coerce.date(),
+  }),
+})
+```
+
+Register it as `collections: { posts }`, then type a page with
+`PageProps<typeof config>`. `collections.posts` is inferred as a typed list of
+`{ id, data }` entries. The lower-level `file()` loader and arbitrary async
+loader functions cover single files, APIs, databases, and custom formats.
 
 ## React islands
 
@@ -188,9 +277,10 @@ The scaffold exposes these through `npm run dev`, `npm run build`, and
 | [Getting started](examples/docs/src/pages/docs/getting-started/page.md) | Scaffold a project and add a route |
 | [Pages and routes](examples/docs/src/pages/docs/pages-and-routes/page.md) | Routing, metadata, links, and 404 behavior |
 | [Markdown and layouts](examples/docs/src/pages/docs/markdown-and-layouts/page.md) | Content and reusable wrappers |
+| [Data pages and collections](examples/docs/src/pages/docs/data-pages-and-collections/page.md) | Custom formats, generated routes, and typed lists |
 | [React islands](examples/docs/src/pages/docs/react-islands/page.md) | Hydration, props, and island constraints |
 | [GitHub Pages](examples/docs/src/pages/docs/github-pages/page.md) | Base paths and static deployment |
-| [Architecture](docs/architecture.md) | Framework and consumer seams |
+| [Architecture](docs/architecture.md) | Framework, content, and consumer seams |
 | [Island design](docs/interactive-react-islands.md) | Independent SSR and hydration rationale |
 | [HTML pages proposal](docs/html-pages-layouts-and-islands.md) | A future markup-first route format |
 

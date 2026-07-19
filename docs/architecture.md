@@ -18,6 +18,7 @@ The package owns:
 - Vite and Tailwind integration;
 - virtual route and island entry modules;
 - Markdown compilation and layout resolution;
+- generic data-page discovery, validation, and collection loading;
 - development SSR and production prerendering;
 - document outlets, metadata, base paths, and 404 output;
 - island collection, serialization, client loading, and hydration.
@@ -27,7 +28,10 @@ A consumer project owns:
 ```text
 nib.config.ts
 src/pages/**/page.tsx or page.md
+src/pages/**/page.<configured extension>
+src/pages/**/layout.tsx
 src/layouts/*.tsx
+src/content/              optional collection inputs
 src/islands/**/*.tsx
 src/site-shell.tsx       optional
 src/style.css            optional
@@ -80,8 +84,9 @@ prevent clean server shutdown.
 
 `src/framework/project-vite-plugin.ts` generates two modules:
 
-- `virtual:nib/server-entry` discovers pages and eagerly validates islands,
-  resolves the route, renders the shell and page, and returns document data.
+- `virtual:nib/server-entry` discovers pages, layouts, and islands with literal
+  Vite globs, then delegates route setup and document rendering to the deep
+  `createProjectRenderer` module.
 - `virtual:nib/client-entry` discovers island modules lazily and starts the
   island runtime.
 
@@ -101,13 +106,15 @@ Each folder below `src/pages` may contain exactly one route module:
 src/pages/page.tsx             -> /
 src/pages/about/page.tsx       -> /about/
 src/pages/guides/start/page.md -> /guides/start/
+src/pages/catalog/page.csv     -> one or many configured routes
 src/pages/404/page.tsx         -> /404.html
 ```
 
-`createRoutes` normalizes file paths, filters drafts, rejects duplicate TSX and
-Markdown routes, resolves metadata, and creates a static route map. Unknown
-development requests use the custom `/404` route when present and otherwise a
-generated fallback.
+`createRoutes` normalizes file paths, expands generated data pages, filters
+drafts, rejects duplicates across every page type, resolves metadata and
+folder/named layouts, and creates a static route map. Unknown development
+requests use the custom `/404` route when present and otherwise a generated
+fallback.
 
 Dynamic parameters and a client router are intentionally absent.
 
@@ -124,14 +131,50 @@ belongs in a React island.
 The Markdown Vite adapter:
 
 1. extracts frontmatter with `gray-matter`;
-2. validates `title`, `description`, `draft`, and `layout`;
+2. validates frontmatter with the configured schema or Nib's Zod default;
 3. parses Markdown and GitHub-Flavored Markdown;
 4. serializes HTML through Rehype;
 5. generates a React page module;
-6. optionally imports `src/layouts/<flat-name>.tsx`.
+6. exposes the validated frontmatter and optional named layout to the route.
 
 Keeping parsing in `src/framework/markdown.ts` gives syntax and validation
 locality independent of Vite code generation. Inline JSX is not supported.
+
+### Generic data pages
+
+`definePageSource` registers one or more file extensions, an optional file
+matcher, a parser/loader function, a schema or validator, and a static React
+component. The Vite adapter turns matching `page.<extension>` files into page
+modules. A loader returns one page descriptor for the containing folder route,
+or an array of descriptors with explicit paths to fan one input file out into
+many routes.
+
+Nib re-exports Zod 4 as the default validation library but depends only on a
+`parse(value)` shape at the interface. A custom `validate(value, context)`
+function is the lower-level alternative; a definition must choose one. Parsed
+and transformed values are passed directly to the page as `data`.
+
+### Collections
+
+`defineCollection` pairs an async build-time loader with the same validation
+seam. Loaders return `{ id, data }` entries or an ID-keyed record. The built-in
+`glob()` and `file()` helpers cover recursive file collections and aggregate
+data files; arbitrary loader functions can use project-root `read()`.
+
+Collections load before the route map and are passed to TSX pages, generated
+page components, layouts, and the site shell. `PageProps<typeof config>` maps
+the config's collection definitions to inferred `{ id, data }` lists without a
+generated type file or global registry.
+
+## Layout composition
+
+`src/pages/layout.tsx` wraps every page and nested folder layouts wrap their
+subtree from root to leaf. An optional flat named layout from `src/layouts`
+wraps the page inside that folder stack. Layouts receive children, route and
+site information, collections, data-page `data`, and Markdown `frontmatter`.
+`PageLayoutProps` keeps its one-argument backwards-compatible form and accepts
+a third type argument when a layout needs different types for those two
+payloads.
 
 ## Page shell and documents
 
@@ -197,9 +240,10 @@ packed-package consumer tests.
 
 ## Constraints
 
-Nib deliberately omits dynamic route parameters, client-side routing, server
-actions, runtime data loaders, React Server Components, independently hydrated
-nested island roots, nested Markdown layout names, and inline JSX in Markdown.
+Nib deliberately omits runtime dynamic route parameters, client-side routing,
+server actions, runtime data loaders, React Server Components, independently
+hydrated nested island roots, nested named Markdown layouts, and inline JSX in
+Markdown.
 
 These omissions keep the static route map deterministic and the package
 interface smaller than its implementation.

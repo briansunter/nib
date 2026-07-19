@@ -8,7 +8,7 @@ import {
 
 describe('consumer project Vite adapter', () => {
   it('provides framework-owned virtual entries for consumer routes and islands', () => {
-    const plugin = nibProject('/site/nib.config.ts')
+    const plugin = nibProject('/site/nib.config.ts', '/site', ['.yaml'])
     if (typeof plugin.resolveId !== 'function' || typeof plugin.load !== 'function') {
       throw new Error('Nib project plugin is missing virtual module hooks')
     }
@@ -23,7 +23,11 @@ describe('consumer project Vite adapter', () => {
     expect(client).toContain("import.meta.glob('/src/islands/**/*.tsx')")
     expect(client).toContain('@briansunter/nib/internal/client')
     expect(server).toContain(path.resolve('/site/nib.config.ts'))
-    expect(server).toContain("'/src/pages/**/page.tsx'")
+    expect(server).toContain('"/src/pages/**/page.tsx"')
+    expect(server).toContain('"/src/pages/**/page.yaml"')
+    expect(server).toContain("import.meta.glob('/src/pages/**/layout.tsx'")
+    expect(server).toContain('createProjectRenderer')
+    expect(server).toContain('root: "/site"')
     expect(server).toContain('@briansunter/nib/internal/server')
     expect(resolve('other')).toBeNull()
     expect(load('other')).toBeNull()

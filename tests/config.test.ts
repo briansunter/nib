@@ -53,5 +53,38 @@ describe('Nib configuration', () => {
       shell: 'not a component',
       site: { title: 'Site' },
     })).toThrow('React component')
+    expect(() => validateNibConfig({
+      markdown: { schema: {} },
+      site: { title: 'Site' },
+    })).toThrow('parse(value)')
+    expect(() => validateNibConfig({
+      pageSources: {},
+      site: { title: 'Site' },
+    })).toThrow('pageSources must be an array')
+    expect(() => validateNibConfig({
+      collections: { posts: {} },
+      site: { title: 'Site' },
+    })).toThrow('loader function')
+  })
+
+  it('uses one unambiguous validation seam for all content definitions', () => {
+    const parse = (value: unknown) => value
+    expect(() => validateNibConfig({
+      markdown: { schema: { parse }, validate: parse },
+      site: { title: 'Site' },
+    })).toThrow('either schema or validate')
+    expect(() => validateNibConfig({
+      pageSources: [{
+        extensions: ['csv'],
+        schema: parse,
+        load: async () => ({ data: {} }),
+        component: () => null,
+      }],
+      site: { title: 'Site' },
+    })).toThrow('schema must provide parse(value)')
+    expect(() => validateNibConfig({
+      collections: { posts: { schema: parse, loader: async () => [] } },
+      site: { title: 'Site' },
+    })).toThrow('schema must provide parse(value)')
   })
 })

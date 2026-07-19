@@ -4,7 +4,7 @@ import { SiteShell } from './src/site-shell'
 export default defineConfig({
   site: {
     title: 'My Nib Site',
-    description: 'A static site built with Nib.',
+    description: 'A static site built with Nib for pages and data.',
     titleTemplate: '%s | My Nib Site',
     navigation: [
       { label: 'Home', href: '/' },

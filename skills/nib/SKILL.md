@@ -1,6 +1,6 @@
 ---
 name: nib
-description: Build, change, debug, validate, and release Nib static sites. Use when working in a Nib repository on file-routed TSX or Markdown pages, Markdown layouts, React islands, static prerendering, base paths, GitHub Pages deployment, or the @briansunter/nib release workflow.
+description: Build, change, debug, validate, and release Nib static sites. Use when working in a Nib repository on file-routed TSX, Markdown, or configured data pages, typed collections, folder layouts, React islands, static prerendering, base paths, GitHub Pages deployment, or the @briansunter/nib release workflow.
 ---
 
 # Maintain Nib
@@ -29,13 +29,16 @@ Keep these names exact:
 
 ## Make page changes
 
-1. Put a route at `src/pages/<route>/page.tsx` or `page.md`, never both.
+1. Put a route at `src/pages/<route>/page.tsx`, `page.md`, or a configured
+   `page.<extension>` file, never multiple page types in one folder.
 2. Export a default component from a TSX page; export typed `meta` when needed.
 3. Use only `title`, `description`, `draft`, and `layout` in Markdown
    frontmatter.
 4. Put flat Markdown layouts at `src/layouts/<name>.tsx`.
 5. Update `nib.config.ts` when navigation should expose a route.
 6. Use `siteHref` for internal TSX links so configured base paths are retained.
+7. Use `definePageSource` for one-to-one or one-to-many custom data routes and
+   `defineCollection` for typed build-time lists.
 
 Do not add dynamic parameters, a client router, runtime data loaders, server
 actions, nested layout names, or inline JSX in Markdown unless the task
