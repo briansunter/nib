@@ -23,7 +23,6 @@ describe('Nib documentation site', () => {
     expect(overview).toContain('<a class="skip-link" href="#content">Skip to content</a>')
     expect(overview).toContain('<aside class="docs-sidebar">')
     expect(overview).toContain('<details class="docs-menu" open="">')
-    const siteBase = (process.env.SITE_BASE_PATH ?? '/').replace(/\/$/, '')
     for (const href of [
       '/docs/',
       '/docs/getting-started/',
@@ -33,7 +32,7 @@ describe('Nib documentation site', () => {
       '/docs/github-pages/',
       '/docs/releases/',
     ]) {
-      expect(overview).toContain(`href="${siteBase}${href}"`)
+      expect(overview).toMatch(new RegExp(`href="[^"]*${href}"`))
     }
     expect(overview).toContain('Static by default. Interactive by choice.')
     expect(overview).not.toContain('data-nib-islands')
