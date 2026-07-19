@@ -16,6 +16,7 @@ describe('Nib documentation site', () => {
 
     const home = await fs.readFile(path.join(output, 'client/index.html'), 'utf8')
     const overview = await fs.readFile(path.join(output, 'client/docs/index.html'), 'utf8')
+    const sourceStyles = await fs.readFile(path.join(root, 'src/style.css'), 'utf8')
     const mark = await fs.readFile(path.join(output, 'client/nib-mark.svg'), 'utf8')
     const wordmark = await fs.readFile(path.join(output, 'client/nib-wordmark.svg'), 'utf8')
     const gettingStarted = await fs.readFile(
@@ -26,6 +27,7 @@ describe('Nib documentation site', () => {
     expect(mark).toContain('<svg')
     expect(wordmark).toContain('<svg')
     expect(overview).toContain('<a class="skip-link" href="#content">Skip to content</a>')
+    expect(sourceStyles).not.toMatch(/\.site-header\s*\{[^}]*overflow:\s*hidden;/)
     expect(home).toContain('<details class="mobile-nav">')
     expect(home).toContain('nib-mark.svg')
     expect(home).toContain('href="https://github.com/briansunter/nib"')

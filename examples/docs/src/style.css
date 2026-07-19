@@ -117,7 +117,6 @@ nib-island {
   position: sticky;
   z-index: 20;
   top: 0;
-  overflow: hidden;
   border-bottom: 1px solid var(--nib-line);
   background: rgba(8, 17, 20, 0.82);
   backdrop-filter: blur(18px);
