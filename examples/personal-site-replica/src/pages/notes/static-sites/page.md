@@ -9,8 +9,6 @@ tags:
 layout: article
 ---
 
-# Static Sites, With Room to Move
-
 A static site does not have to mean a frozen brochure. It can have a typed
 content pipeline, responsive images, RSS, search, and a few carefully chosen
 interactive controls while still shipping predictable files.

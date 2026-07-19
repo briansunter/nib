@@ -1,5 +1,6 @@
-import { type PageProps, siteHref } from '@briansunter/nib'
+import { type PageProps } from '@briansunter/nib'
 import type config from '../../../nib.config'
+import { tagSearchHref } from '../../data/tag-links'
 
 export const meta = {
   title: 'Tags',
@@ -17,9 +18,9 @@ export default function TagsPage({ collections }: PageProps<typeof config>) {
     <div className="content-column tag-page">
       <p className="eyebrow">Browse the archive</p>
       <h1>Tags</h1>
-      <p className="lead">A deliberately simple index. Dynamic tag pages are possible as generated routes, but this proof keeps the surface small.</p>
+      <p className="lead">Search the writing and project archive by topic.</p>
       <div className="tag-cloud">
-        {tags.map(([tag, count]) => <a className="tag tag--pill" href={siteHref(`/tags/${tag.toLowerCase()}`)} key={tag}>{tag} <span>{count}</span></a>)}
+        {tags.map(([tag, count]) => <a className="tag tag--pill" href={tagSearchHref(tag)} key={tag}>{tag} <span>{count}</span></a>)}
       </div>
     </div>
   )

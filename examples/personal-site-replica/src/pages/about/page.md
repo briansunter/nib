@@ -4,8 +4,6 @@ description: A short introduction to the person behind the projects.
 layout: article
 ---
 
-# A working notebook, made public
-
 I’m Brian, a software engineer and entrepreneur living in Honolulu. I like
 turning fuzzy ideas into tools that feel calm to use: a small command-line
 utility, a local-first app, a recipe parser, or a website that makes a long

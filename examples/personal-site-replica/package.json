@@ -12,8 +12,8 @@
     "verify": "bun run typecheck && bun run build && bun run check:performance"
   },
   "dependencies": {
-    "@briansunter/nib": "link:@briansunter/nib",
-    "@briansunter/nib-images": "link:@briansunter/nib-images",
+    "@briansunter/nib": "0.12.0",
+    "@briansunter/nib-images": "0.3.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "yaml": "^2.9.0",

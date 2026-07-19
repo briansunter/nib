@@ -1,5 +1,5 @@
 import { defineIsland } from '@briansunter/nib'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 export interface SearchEntry {
   title: string
@@ -11,6 +11,10 @@ export interface SearchEntry {
 
 function SearchComponent({ entries }: { entries: SearchEntry[] }) {
   const [query, setQuery] = useState('')
+  useEffect(() => {
+    const tag = new URLSearchParams(window.location.search).get('tag')
+    if (tag) setQuery(tag)
+  }, [])
   const normalized = query.trim().toLowerCase()
   const results = useMemo(() => (
     normalized === ''

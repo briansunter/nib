@@ -1,7 +1,8 @@
-import { type PageProps, siteHref } from '@briansunter/nib'
+import { type PageProps } from '@briansunter/nib'
 import type config from '../../../nib.config'
 import { ProjectCard } from '../../components/ProjectCard'
 import { SectionHeading } from '../../components/SectionHeading'
+import { tagSearchHref } from '../../data/tag-links'
 
 export const meta = {
   title: 'Projects',
@@ -25,7 +26,7 @@ export default function ProjectsPage({ collections }: PageProps<typeof config>) 
       <section className="content-column project-index">
         <div className="tag-rail" aria-label="Project tags">
           <span className="eyebrow">Browse by focus</span>
-          {tags.map((tag) => <a className="tag tag--pill" href={siteHref(`/tags/${tag.toLowerCase()}`)} key={tag}>{tag}</a>)}
+          {tags.map((tag) => <a className="tag tag--pill" href={tagSearchHref(tag)} key={tag}>{tag}</a>)}
         </div>
         {featured.length > 0 && (
           <>

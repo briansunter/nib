@@ -8,8 +8,6 @@ tags:
 layout: article
 ---
 
-# Daily Highlight Productivity Technique
-
 The most useful productivity technique I’ve found is also the simplest: pick
 one activity that would make the day feel meaningful if it were the only thing
 that got done.

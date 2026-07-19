@@ -1,7 +1,7 @@
 # Personal site shape, rebuilt with Nib
 
 This is a bounded proof of how much of `../personal-site` maps cleanly onto
-Nib. It deliberately uses the target site's Inter/Lora fonts, warm editorial
+the published Nib `0.12.0` framework and `0.3.0` image package. It deliberately uses the target site's Inter/Lora fonts, warm editorial
 palette, avatar, project artwork, and a small sample of its art and travel
 photos. It is not a second copy of the complete 648-image, 320-recipe site.
 
@@ -15,15 +15,8 @@ bun run verify
 bun run dev
 ```
 
-The example links to the checked-out Nib packages so it verifies the framework
-changes before they are released. Register them once, then link them here:
-
-```bash
-(cd ../.. && bun link)
-(cd ../../packages/nib-images && bun link)
-bun link @briansunter/nib
-bun link @briansunter/nib-images
-```
+The example consumes the published packages directly, so this verifies the
+release artifact rather than a checked-out workspace link.
 
 The deployable output is `dist/client`.
 The target Astro site uses no trailing slashes, and this proof now publishes
@@ -31,6 +24,21 @@ matching extensionless artifacts where the route is a leaf. Nib preview
 redirects slash-form requests to the canonical extensionless URL; deployments
 need a host that serves extensionless page files as HTML and rewrites a parent
 route to its directory index.
+
+## View the running proof
+
+The persistent local preview listens on loopback and is forwarded through
+Tailscale Serve:
+
+- This Mac: <http://127.0.0.1:5173/>
+- Any device on the tailnet: <https://macmini.taild80340.ts.net:8447/>
+
+Use the Tailscale URL from another device; `localhost` there refers to that
+device, not this Mac. The loopback-only listener is intentional, so the dev
+server is not exposed directly on the LAN. The configured LaunchAgent keeps it
+running as `com.briansunter.nib-personal-site`; inspect it with
+`launchctl print gui/$(id -u)/com.briansunter.nib-personal-site` and inspect the
+proxy with `tailscale serve status`.
 
 ## What is proved
 

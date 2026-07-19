@@ -10,10 +10,12 @@ interface ArticleFrontmatter {
 export default function ArticleLayout({
   children,
   frontmatter,
+  route,
 }: PageLayoutProps<ArticleFrontmatter>) {
+  const isWriting = route.path.startsWith('/notes/')
   return (
     <article className="article-page content-column">
-      <a className="back-link" href={siteHref('/notes')}>← All writing</a>
+      <a className="back-link" href={siteHref(isWriting ? '/notes' : '/')}>{isWriting ? '← All writing' : '← Home'}</a>
       <header className="article-header">
         {frontmatter?.date && (
           <p className="eyebrow">
