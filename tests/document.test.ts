@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { renderDocument } from '../src/framework/document'
+import { renderDocument, renderRedirectDocument } from '../src/framework/document'
 import type { RenderedPage } from '../src/framework/types'
 
 const template = `<!doctype html><head><!--head-outlet--><script type="module">refresh()</script><script data-nib-islands type="module" src="/assets/islands.js"></script></head><body><!--ssr-outlet--></body>`
@@ -48,5 +48,11 @@ describe('HTML documents', () => {
     const duplicate = `${template}<script data-nib-islands type="module"></script>`
     expect(() => renderDocument(duplicate, page([])))
       .toThrow('multiple island entry blocks')
+  })
+
+  it('escapes static redirect destinations', () => {
+    const html = renderRedirectDocument('/next?value="unsafe"&other=<tag>')
+    expect(html).toContain('url=/next?value=&quot;unsafe&quot;&amp;other=&lt;tag&gt;')
+    expect(html).not.toContain('<tag>')
   })
 })

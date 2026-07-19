@@ -13,15 +13,18 @@ import type {
   PageMeta,
 } from './types'
 
-function renderMarkdown(markdown: string): string {
-  return String(
-    unified()
-      .use(remarkParse)
-      .use(remarkGfm)
-      .use(remarkRehype)
-      .use(rehypeStringify)
-      .processSync(markdown),
-  )
+function renderMarkdown(
+  markdown: string,
+  definition?: MarkdownDefinition<any>,
+): string {
+  const processor = unified()
+    .use(remarkParse)
+    .use(remarkGfm)
+    .use([...(definition?.remarkPlugins ?? [])])
+    .use(remarkRehype)
+    .use([...(definition?.rehypePlugins ?? [])])
+    .use(rehypeStringify)
+  return String(processor.processSync(markdown))
 }
 
 function getMarkdownLayoutName(layout: unknown): string | undefined {
@@ -76,7 +79,7 @@ export function markdownToCompiledPage<
   })
   const { meta, layout } = getMarkdownMeta(values)
   return {
-    html: renderMarkdown(parsed.content),
+    html: renderMarkdown(parsed.content, definition),
     frontmatter,
     meta,
     layout,

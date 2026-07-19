@@ -1,6 +1,15 @@
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import type { Plugin, PluginOption } from 'vite'
-import type { RenderedPage, ResolvedRoute, SiteConfig } from './types'
+import type {
+  PageMeta,
+  PageSourceDefinition,
+  DataValidator,
+  RedirectStatus,
+  RenderedPage,
+  ResolvedPageRoute,
+  ResolvedRoute,
+  SiteConfig,
+} from './types'
 
 export type NibCommand = 'build' | 'serve'
 export type NibMode = 'development' | 'production'
@@ -17,10 +26,11 @@ export type NibPluginSiteConfig = Readonly<
 /** Stable route facts available to renderer plugins. Framework implementation
  * details such as the page module, layouts, and page data remain private. */
 export interface NibPluginRoute {
+  readonly kind: 'page'
   readonly path: string
   readonly source: string
   readonly status: number
-  readonly meta: Readonly<ResolvedRoute['meta']>
+  readonly meta: Readonly<ResolvedPageRoute['meta']>
 }
 
 /** A plugin may alter static output, but hydration ownership remains with Nib. */
@@ -57,6 +67,77 @@ export interface NibFinalizeContext extends NibRendererPluginContext {
   readonly renderedPaths: readonly string[]
 }
 
+export interface NibPluginSetupResult {
+  readonly pageSources?: readonly PageSourceDefinition<DataValidator<any>>[]
+}
+
+export interface NibResolvedPageRoute {
+  readonly kind: 'page'
+  readonly path: string
+  readonly source: string
+  readonly status: number
+  readonly meta: Readonly<PageMeta>
+}
+
+export interface NibResolvedResourceRoute {
+  readonly kind: 'resource'
+  readonly path: string
+  readonly source: string
+  readonly status: number
+  readonly contentType: string
+}
+
+export interface NibResolvedRedirectRoute {
+  readonly kind: 'redirect'
+  readonly path: string
+  readonly source: string
+  readonly status: RedirectStatus
+  readonly destination: string
+}
+
+export type NibResolvedRoute =
+  | NibResolvedPageRoute
+  | NibResolvedResourceRoute
+  | NibResolvedRedirectRoute
+
+export interface NibPageRouteRegistration {
+  readonly kind: 'page'
+  readonly path: string
+  readonly component: ComponentType<any>
+  readonly data?: unknown
+  readonly meta?: PageMeta
+}
+
+export interface NibResourceRouteRegistration {
+  readonly kind: 'resource'
+  readonly path: string
+  readonly body: string
+  readonly contentType: string
+  readonly status?: number
+}
+
+export interface NibRedirectRouteRegistration {
+  readonly kind: 'redirect'
+  readonly path: string
+  readonly destination: string
+  readonly status?: RedirectStatus
+}
+
+export type NibRouteRegistration =
+  | NibPageRouteRegistration
+  | NibResourceRouteRegistration
+  | NibRedirectRouteRegistration
+
+export interface NibRoutesPluginContext extends NibRendererPluginContext {
+  /** File, data-page, and configured redirect routes before plugin routes. */
+  readonly routes: readonly NibResolvedRoute[]
+}
+
+export interface NibRoutesResolvedPluginContext extends NibRendererPluginContext {
+  /** The final immutable route manifest. */
+  readonly routes: readonly NibResolvedRoute[]
+}
+
 export interface NibRendererExtension {
   wrapPage?(page: ReactNode, context: NibRenderPageContext): ReactNode
   transformPage?(page: NibRenderedPage, context: NibRenderPageContext): NibRenderedPage
@@ -65,7 +146,12 @@ export interface NibRendererExtension {
 
 export interface NibPlugin {
   readonly name: string
+  setup?(context: NibVitePluginContext): Awaitable<NibPluginSetupResult | void>
   vite?(context: NibVitePluginContext): Awaitable<PluginOption>
+  routes?(
+    context: NibRoutesPluginContext,
+  ): Awaitable<NibRouteRegistration | readonly NibRouteRegistration[] | void>
+  routesResolved?(context: NibRoutesResolvedPluginContext): Awaitable<void>
   renderer?(context: NibRendererPluginContext): Awaitable<NibRendererExtension | void>
 }
 
@@ -253,4 +339,110 @@ export async function resolveVitePluginContributions(
     }
   }
   return contributions
+}
+
+/** Resolves declarative content adapters before Vite page discovery. */
+export async function resolvePluginSetupContributions(
+  plugins: readonly NibPlugin[],
+  context: NibVitePluginContext,
+): Promise<NibPluginSetupResult> {
+  const pageSources: PageSourceDefinition<DataValidator<any>>[] = []
+  for (const plugin of plugins) {
+    if (!plugin.setup) continue
+    try {
+      const contribution = await plugin.setup(context)
+      if (contribution === undefined) continue
+      if (
+        contribution === null
+        || typeof contribution !== 'object'
+        || Array.isArray(contribution)
+        || (
+          contribution.pageSources !== undefined
+          && !Array.isArray(contribution.pageSources)
+        )
+      ) {
+        throw new Error('setup() must return an object with an optional pageSources array')
+      }
+      pageSources.push(...contribution.pageSources ?? [])
+    } catch (error) {
+      throw pluginError(plugin, 'setup()', error)
+    }
+  }
+  return { pageSources }
+}
+
+function readonlyResolvedRoute(route: ResolvedRoute): NibResolvedRoute {
+  if (route.kind === 'page') {
+    return Object.freeze({
+      kind: 'page',
+      path: route.path,
+      source: route.source,
+      status: route.status,
+      meta: Object.freeze({ ...route.meta }),
+    })
+  }
+  if (route.kind === 'resource') {
+    return Object.freeze({
+      kind: 'resource',
+      path: route.path,
+      source: route.source,
+      status: route.status,
+      contentType: route.contentType,
+    })
+  }
+  return Object.freeze({
+    kind: 'redirect',
+    path: route.path,
+    source: route.source,
+    status: route.status,
+    destination: route.destination,
+  })
+}
+
+export function resolvedRouteSnapshots(
+  routes: Iterable<ResolvedRoute>,
+): readonly NibResolvedRoute[] {
+  return Object.freeze([...routes].map(readonlyResolvedRoute))
+}
+
+export interface OwnedRouteRegistration {
+  readonly plugin: NibPlugin
+  readonly route: NibRouteRegistration
+}
+
+/** Invokes route providers against one shared immutable initial manifest. */
+export async function resolvePluginRouteContributions(
+  plugins: readonly NibPlugin[],
+  context: Omit<NibRoutesPluginContext, 'routes'>,
+  routes: readonly NibResolvedRoute[],
+): Promise<OwnedRouteRegistration[]> {
+  const contributions: OwnedRouteRegistration[] = []
+  for (const plugin of plugins) {
+    if (!plugin.routes) continue
+    try {
+      const result = await plugin.routes(Object.freeze({ ...context, routes }))
+      if (result === undefined) continue
+      const registered = Array.isArray(result) ? result : [result]
+      contributions.push(...registered.map((route) => ({ plugin, route })))
+    } catch (error) {
+      throw pluginError(plugin, 'routes()', error)
+    }
+  }
+  return contributions
+}
+
+/** Runs read-only final route inspection after all route providers resolve. */
+export async function inspectResolvedPluginRoutes(
+  plugins: readonly NibPlugin[],
+  context: Omit<NibRoutesResolvedPluginContext, 'routes'>,
+  routes: readonly NibResolvedRoute[],
+): Promise<void> {
+  for (const plugin of plugins) {
+    if (!plugin.routesResolved) continue
+    try {
+      await plugin.routesResolved(Object.freeze({ ...context, routes }))
+    } catch (error) {
+      throw pluginError(plugin, 'routesResolved()', error)
+    }
+  }
 }

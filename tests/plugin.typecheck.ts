@@ -7,11 +7,33 @@ nibAuthoring.definePlugin
 
 const plugin = definePlugin({
   name: 'typed-plugin',
+  setup(context) {
+    context.configPath
+    return { pageSources: [] }
+  },
   vite(context) {
     context.base
     const target: 'client' | 'server' | 'development' = context.target
     void target
     return { name: 'typed-vite-plugin' }
+  },
+  routes(context) {
+    const first = context.routes[0]
+    if (first?.kind === 'resource') first.contentType
+    // @ts-expect-error resolved routes do not expose page implementations.
+    first?.component
+    return {
+      kind: 'resource',
+      path: '/feed.xml',
+      body: '<feed />',
+      contentType: 'application/xml',
+    }
+  },
+  routesResolved(context) {
+    const paths: readonly string[] = context.routes.map((route) => route.path)
+    void paths
+    // @ts-expect-error the resolved route list is readonly.
+    context.routes.push()
   },
   renderer(context) {
     context.site.title
@@ -40,6 +62,10 @@ void tuple
 
 defineConfig({
   site: { title: 'Typed app Vite' },
+  trailingSlash: 'always',
+  redirects: {
+    '/old': { destination: '/new', status: 308 },
+  },
   vite(context) {
     const target: 'client' | 'server' | 'development' = context.target
     void target
@@ -57,3 +83,5 @@ defineConfig({
 definePlugin({ name: 'bad-renderer', renderer: true })
 // @ts-expect-error a Vite contribution must be a Vite PluginOption.
 definePlugin({ name: 'bad-vite', vite: () => 42 })
+// @ts-expect-error route registrations use a closed discriminated union.
+definePlugin({ name: 'bad-route', routes: () => ({ kind: 'unknown', path: '/' }) })

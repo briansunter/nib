@@ -12,6 +12,30 @@ function replaceSingleOutlet(template: string, outlet: string, value: string): s
   return template.replace(outlet, value)
 }
 
+function escapeAttribute(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+}
+
+export function renderRedirectDocument(destination: string): string {
+  const escaped = escapeAttribute(destination)
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content="0;url=${escaped}" />
+    <link rel="canonical" href="${escaped}" />
+    <title>Redirecting</title>
+  </head>
+  <body>
+    <p>Redirecting to <a href="${escaped}">${escaped}</a>.</p>
+  </body>
+</html>`
+}
+
 export function renderDocument(template: string, page: RenderedPage): string {
   let document = replaceSingleOutlet(template, HEAD_OUTLET, page.head)
   document = replaceSingleOutlet(document, SSR_OUTLET, page.html)

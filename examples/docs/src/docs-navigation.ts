@@ -12,6 +12,7 @@ export const documentation = [
       { label: 'Pages and routes', href: '/docs/pages-and-routes/', description: 'Turn files into URLs' },
       { label: 'Markdown and layouts', href: '/docs/markdown-and-layouts/', description: 'Write content in context' },
       { label: 'Data and collections', href: '/docs/data-pages-and-collections/', description: 'Generate typed pages and lists' },
+      { label: 'Plugin content and routing', href: '/docs/plugin-content-and-routing/', description: 'Extend formats and static routes' },
       { label: 'React islands', href: '/docs/react-islands/', description: 'Add interaction selectively' },
     ],
   },

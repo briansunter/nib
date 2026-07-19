@@ -48,6 +48,27 @@ describe('markdown', () => {
     expect(compiled.meta.title).toBe('Hello')
   })
 
+  it('applies configured remark and rehype plugins in pipeline order', () => {
+    const compiled = markdownToCompiledPage('# World', {
+      remarkPlugins: [
+        () => (tree: any) => {
+          tree.children.push({
+            type: 'paragraph',
+            children: [{ type: 'text', value: 'Added by remark' }],
+          })
+        },
+      ],
+      rehypePlugins: [
+        () => (tree: any) => {
+          const heading = tree.children.find((node: any) => node.tagName === 'h1')
+          heading.properties = { className: ['from-rehype'] }
+        },
+      ],
+    })
+    expect(compiled.html).toContain('<h1 class="from-rehype">World</h1>')
+    expect(compiled.html).toContain('<p>Added by remark</p>')
+  })
+
   it('generates a Vite module that exposes frontmatter for runtime layouts', async () => {
     const plugin = nibMarkdown()
     if (typeof plugin.load !== 'function') throw new Error('Markdown plugin has no load hook')

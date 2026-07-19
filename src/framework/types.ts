@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from 'react'
+import type { Pluggable } from 'unified'
 import type { PluginOption } from 'vite'
 import type { Awaitable, NibPlugin, NibVitePluginContext } from './plugin'
 
@@ -90,6 +91,10 @@ export interface MarkdownDefinition<
   validate?: Validator extends DataSchema<unknown>
     ? never
     : (value: unknown) => InferDataValidator<Validator>
+  /** Unified remark plugins, applied after Nib's GFM parser. */
+  remarkPlugins?: readonly Pluggable[]
+  /** Unified rehype plugins, applied before HTML serialization. */
+  rehypePlugins?: readonly Pluggable[]
 }
 
 export interface SiteConfig {
@@ -98,6 +103,16 @@ export interface SiteConfig {
   titleTemplate?: string
   navigation?: Array<{ label: string; href: string }>
 }
+
+export type TrailingSlash = 'always' | 'never' | 'ignore'
+export type RedirectStatus = 301 | 302 | 307 | 308
+
+export type RedirectDefinition =
+  | string
+  | {
+      destination: string
+      status?: RedirectStatus
+    }
 
 /** App-owned Vite contributions. Nib continues to own entries, SSR, base path,
  * and output settings. The factory runs separately for each Vite graph. */
@@ -108,6 +123,8 @@ export type NibViteConfig = (
 export interface NibConfig {
   base?: string
   site: SiteConfig
+  trailingSlash?: TrailingSlash
+  redirects?: Readonly<Record<string, RedirectDefinition>>
   vite?: NibViteConfig
   plugins?: readonly NibPlugin[]
   shell?: ComponentType<SiteShellProps<any>>
@@ -134,7 +151,7 @@ export type LoadedCollectionDefinitions<Definitions> = {
 }
 
 export interface PageProps<Config extends NibConfig = NibConfig> {
-  route: ResolvedRoute
+  route: ResolvedPageRoute
   site: SiteConfig
   collections: LoadedCollections<Config>
 }
@@ -178,7 +195,8 @@ export interface GeneratedPage {
   layout?: string
 }
 
-export interface ResolvedRoute {
+export interface ResolvedPageRoute {
+  kind: 'page'
   path: string
   component: ComponentType<any>
   meta: Required<Pick<PageMeta, 'title' | 'description'>> & PageMeta
@@ -189,9 +207,45 @@ export interface ResolvedRoute {
   layouts: ComponentType<any>[]
 }
 
+export interface ResolvedResourceRoute {
+  kind: 'resource'
+  path: string
+  source: string
+  status: number
+  body: string
+  contentType: string
+}
+
+export interface ResolvedRedirectRoute {
+  kind: 'redirect'
+  path: string
+  source: string
+  status: RedirectStatus
+  destination: string
+}
+
+export type ResolvedRoute =
+  | ResolvedPageRoute
+  | ResolvedResourceRoute
+  | ResolvedRedirectRoute
+
 export interface RenderedPage {
   status: number
   head: string
   html: string
   islands: string[]
 }
+
+export type RenderedOutput =
+  | { kind: 'page'; page: RenderedPage }
+  | {
+      kind: 'resource'
+      status: number
+      body: string
+      contentType: string
+    }
+  | {
+      kind: 'redirect'
+      status: RedirectStatus
+      destination: string
+    }

@@ -4,10 +4,19 @@ import { DefaultSiteShell } from './default-shell'
 import { renderHead } from './meta'
 import { renderReactPage } from './render-page'
 import { validateIslandModules, type IslandModule } from './islands'
-import { createRoutes, getRoute, type RouteLayouts } from './router'
+import {
+  addConfiguredRedirects,
+  addPluginRoutes,
+  createRoutes,
+  getRoute,
+  type RouteLayouts,
+} from './router'
 import { stripBasePath } from './urls'
 import {
   createRendererPluginPipeline,
+  inspectResolvedPluginRoutes,
+  resolvedRouteSnapshots,
+  resolvePluginRouteContributions,
   type NibFinalizeContext,
   type NibRenderPageContext,
   type NibCommand,
@@ -15,7 +24,9 @@ import {
 import type {
   NibConfig,
   PageModule,
-  RenderedPage,
+  RenderedOutput,
+  ResolvedPageRoute,
+  ResolvedRoute,
 } from './types'
 
 export interface ProjectRendererOptions {
@@ -31,7 +42,7 @@ export interface ProjectRendererOptions {
 
 export interface ProjectRenderer {
   readonly paths: readonly string[]
-  render(url: string): RenderedPage
+  render(url: string): RenderedOutput
   finalize(context: Pick<NibFinalizeContext, 'clientDirectory'>): Promise<void>
 }
 
@@ -49,7 +60,7 @@ function readonlySite(config: NibConfig): NibFinalizeContext['site'] {
 }
 
 function composePage(
-  route: ReturnType<typeof getRoute>,
+  route: ResolvedPageRoute,
   config: NibConfig,
   collections: unknown,
 ): ReactNode {
@@ -75,6 +86,30 @@ function composePage(
   return createElement(Shell, { ...pageProps, children: content })
 }
 
+function routeHref(base: string, routePath: string): string {
+  if (routePath === '/') return base
+  return `${base}${routePath.replace(/^\/+/, '')}`
+}
+
+function publicRedirectDestination(base: string, destination: string): string {
+  if (!destination.startsWith('/') || destination.startsWith('//')) return destination
+  const parsed = new URL(destination, 'http://nib.local')
+  return `${routeHref(base, parsed.pathname)}${parsed.search}${parsed.hash}`
+}
+
+function canonicalRequestRedirect(
+  url: string,
+  base: string,
+  routePath: string,
+  policy: NibConfig['trailingSlash'],
+): string | undefined {
+  if (policy === undefined || policy === 'ignore' || routePath === '/') return undefined
+  const stripped = stripBasePath(url, base)
+  const parsed = new URL(stripped, 'http://nib.local')
+  if (parsed.pathname === routePath) return undefined
+  return `${routeHref(base, routePath)}${parsed.search}${parsed.hash}`
+}
+
 export async function createProjectRenderer(
   options: ProjectRendererOptions,
 ): Promise<ProjectRenderer> {
@@ -84,7 +119,6 @@ export async function createProjectRenderer(
     ...(options.folderLayouts === undefined ? {} : { folders: options.folderLayouts }),
     ...(options.namedLayouts === undefined ? {} : { named: options.namedLayouts }),
   }
-  const routes = createRoutes(options.pages, options.config.site, layoutModules)
   const rendererContext = Object.freeze({
     command: options.command ?? 'build',
     mode: options.command === 'serve' ? 'development' as const : 'production' as const,
@@ -92,20 +126,80 @@ export async function createProjectRenderer(
     base: options.base,
     site: readonlySite(options.config),
   })
-  const plugins = await createRendererPluginPipeline(options.config.plugins ?? [], rendererContext)
+  const configuredPlugins = options.config.plugins ?? []
+  const routes: Map<string, ResolvedRoute> = new Map(createRoutes(
+    options.pages,
+    options.config.site,
+    layoutModules,
+    options.config.trailingSlash,
+  ))
+  addConfiguredRedirects(
+    routes,
+    options.config.redirects,
+    options.config.trailingSlash,
+  )
+  const initialRoutes = resolvedRouteSnapshots(routes.values())
+  const contributedRoutes = await resolvePluginRouteContributions(
+    configuredPlugins,
+    rendererContext,
+    initialRoutes,
+  )
+  addPluginRoutes(
+    routes,
+    contributedRoutes,
+    options.config.site,
+    options.config.trailingSlash,
+  )
+  const resolvedRoutes = resolvedRouteSnapshots(routes.values())
+  await inspectResolvedPluginRoutes(configuredPlugins, rendererContext, resolvedRoutes)
+  const plugins = await createRendererPluginPipeline(configuredPlugins, rendererContext)
   const renderedPaths = new Set<string>()
   let finalized = false
 
   return {
     paths: [...routes.values()]
-      .filter((route) => route.status === 200)
+      .filter((route) => route.status !== 404)
       .map((route) => route.path),
     render(url) {
       if (finalized) throw new Error('Nib project renderer cannot render after finalization')
       const route = getRoute(routes, stripBasePath(url, options.base))
+      const slashRedirect = route.source === 'generated' || route.status === 404
+        ? undefined
+        : canonicalRequestRedirect(
+            url,
+            options.base,
+            route.path,
+            options.config.trailingSlash,
+          )
+      if (slashRedirect !== undefined) {
+        renderedPaths.add(route.path)
+        return {
+          kind: 'redirect',
+          status: 301,
+          destination: slashRedirect,
+        }
+      }
+      if (route.kind === 'resource') {
+        renderedPaths.add(route.path)
+        return {
+          kind: 'resource',
+          status: route.status,
+          body: route.body,
+          contentType: route.contentType,
+        }
+      }
+      if (route.kind === 'redirect') {
+        renderedPaths.add(route.path)
+        return {
+          kind: 'redirect',
+          status: route.status,
+          destination: publicRedirectDestination(options.base, route.destination),
+        }
+      }
       const pageContext: NibRenderPageContext = Object.freeze({
         command: options.command ?? 'build',
         route: Object.freeze({
+          kind: 'page',
           path: route.path,
           source: route.source,
           status: route.status,
@@ -123,7 +217,10 @@ export async function createProjectRenderer(
         html: reactPage.html,
       }, pageContext)
       renderedPaths.add(route.path)
-      return { ...renderedPage, islands: reactPage.islands }
+      return {
+        kind: 'page',
+        page: { ...renderedPage, islands: reactPage.islands },
+      }
     },
     async finalize(context) {
       if (finalized) throw new Error('Nib project renderer can only finalize once')

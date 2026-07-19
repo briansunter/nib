@@ -23,9 +23,18 @@ describe('framework-owned development server', () => {
     const request = (pathname: string) => fetch(new URL(pathname, origin), {
       headers: { connection: 'close' },
     })
+    const requestWithoutFollowingRedirects = (pathname: string) => fetch(new URL(pathname, origin), {
+      headers: { connection: 'close' },
+      redirect: 'manual',
+    })
     const home = await request('/journal/')
     const about = await request('/journal/about/?source=test')
     const missing = await request('/journal/missing/')
+    const canonicalRedirect = await request('/journal/about')
+    const configuredRedirect = await request('/journal/legacy/')
+    const sitemap = await request('/journal/sitemap.xml')
+    const rss = await request('/journal/rss.xml')
+    const settings = await request('/journal/settings/')
 
     expect(home.status).toBe(200)
     const homeHtml = await home.text()
@@ -36,5 +45,20 @@ describe('framework-owned development server', () => {
     expect(await about.text()).toContain('About the journal')
     expect(missing.status).toBe(404)
     expect(await missing.text()).toContain('Journal not found')
+    expect(canonicalRedirect.status).toBe(200)
+    expect(canonicalRedirect.url.endsWith('/journal/about/')).toBe(true)
+    expect(configuredRedirect.status).toBe(200)
+    expect(configuredRedirect.url.endsWith('/journal/about/')).toBe(true)
+    const canonicalResponse = await requestWithoutFollowingRedirects('/journal/about')
+    const configuredResponse = await requestWithoutFollowingRedirects('/journal/legacy/')
+    expect(canonicalResponse.status).toBe(301)
+    expect(canonicalResponse.headers.get('location')).toBe('/journal/about/')
+    expect(configuredResponse.status).toBe(301)
+    expect(configuredResponse.headers.get('location')).toBe('/journal/about/')
+    expect(sitemap.headers.get('content-type')).toBe('application/xml; charset=utf-8')
+    expect(await sitemap.text()).toContain('<urlset ')
+    expect(rss.headers.get('content-type')).toBe('application/rss+xml; charset=utf-8')
+    expect(await rss.text()).toContain('<rss version="2.0">')
+    expect(await settings.text()).toContain('TOML settings')
   }, 30_000)
 })

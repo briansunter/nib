@@ -61,6 +61,7 @@ describe('Nib documentation site', () => {
       '/docs/pages-and-routes/',
       '/docs/markdown-and-layouts/',
       '/docs/data-pages-and-collections/',
+      '/docs/plugin-content-and-routing/',
       '/docs/react-islands/',
       '/docs/github-pages/',
       '/docs/releases/',

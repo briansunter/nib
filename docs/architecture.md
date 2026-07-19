@@ -108,6 +108,14 @@ stable route snapshot rather than page modules, layouts, or page data. They may
 change static status, head, and HTML, but Nib keeps the hydration metadata and
 rejects changes to rendered island markup.
 
+Plugins may also contribute typed page-source adapters and virtual page,
+resource, or redirect routes before rendering. The host validates and merges
+these registrations, then exposes one immutable resolved-route list to
+inspection hooks. See
+[Plugin content and routing](./plugin-content-and-routing.md) for ordering,
+collision, output, and trailing-slash rules. Typed document/head mutation is
+not exposed.
+
 Tailwind is optional rather than a framework dependency. The initializer adds
 `@tailwindcss/vite` and opts in through the narrow app-owned `vite` field in
 `nib.config.ts` (`vite: () => tailwindcss()`). Sites that use plain CSS or
@@ -210,9 +218,11 @@ The Markdown Vite adapter:
 1. extracts frontmatter with `gray-matter`;
 2. validates frontmatter with the configured schema or Nib's Zod default;
 3. parses Markdown and GitHub-Flavored Markdown;
-4. serializes HTML through Rehype;
-5. generates a React page module;
-6. exposes the validated frontmatter and optional named layout to the route.
+4. applies configured Unified `remarkPlugins`;
+5. converts the Markdown tree and applies configured `rehypePlugins`;
+6. serializes HTML through Rehype;
+7. generates a React page module;
+8. exposes the validated frontmatter and optional named layout to the route.
 
 Keeping parsing in `src/framework/markdown.ts` gives syntax and validation
 locality independent of Vite code generation. Inline JSX is not supported.

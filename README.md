@@ -32,6 +32,9 @@ npm run dev
 - Folder layouts for route trees and named layouts for Markdown.
 - Typed data pages that can turn YAML, CSV, or another format into one or many
   routes.
+- Plugin-contributed data formats and virtual page, XML, or text routes.
+- Configured redirects and `always`, `never`, or `ignore` trailing-slash policy.
+- Configurable Unified remark and rehype Markdown extensions.
 - Build-time collections for indexes, navigation, and related content.
 - React islands with `load`, `idle`, and `visible` hydration.
 - Optional Vite styling adapters; the starter opts into Tailwind without making
@@ -90,6 +93,59 @@ export default defineConfig({
 
 Use `plugins` instead for packages that need Nib lifecycle hooks in addition to
 Vite, such as the optional image optimizer below.
+
+## Routes, redirects, and sitemap
+
+Configured redirects emit safe redirect HTML in static builds and real HTTP
+redirects during development. `trailingSlash` controls canonical route paths
+and development matching:
+
+```ts
+import { defineConfig } from '@briansunter/nib'
+import { sitemap } from '@briansunter/nib/sitemap'
+
+export default defineConfig({
+  site: { title: 'My site' },
+  trailingSlash: 'always',
+  redirects: {
+    '/old': '/new',
+    '/external': {
+      destination: 'https://example.com/new',
+      status: 302,
+    },
+  },
+  plugins: [
+    sitemap({ site: 'https://my-site.example' }),
+  ],
+})
+```
+
+Plugins can also contribute typed page-source adapters, virtual React pages,
+static resources such as `rss.xml`, and redirects. RSS is therefore supported
+through the generic resource-route API today; `@briansunter/nib/sitemap` is a
+first-party helper, while a similarly opinionated RSS helper is not included
+yet. After registrations are merged, inspection hooks receive an immutable
+resolved-route manifest. Nib retains path normalization, collision detection,
+base paths, and output-file ownership.
+
+## Markdown extensions
+
+`markdown.remarkPlugins` run after Nib's GitHub-Flavored Markdown parser, and
+`markdown.rehypePlugins` run before HTML serialization:
+
+```ts
+import { defineConfig } from '@briansunter/nib'
+import remarkToc from 'remark-toc'
+import rehypeExternalLinks from 'rehype-external-links'
+
+export default defineConfig({
+  site: { title: 'My site' },
+  markdown: {
+    remarkPlugins: [[remarkToc, { heading: 'Contents' }]],
+    rehypePlugins: [[rehypeExternalLinks, { rel: ['nofollow'] }]],
+  },
+})
+```
 
 ## React islands
 

@@ -25,6 +25,23 @@ describe('framework-owned site builds', () => {
       path.join(output, 'client/products/notebook/index.html'),
       'utf8',
     )
+    const settings = await fs.readFile(
+      path.join(output, 'client/settings/index.html'),
+      'utf8',
+    )
+    const virtual = await fs.readFile(
+      path.join(output, 'client/virtual/index.html'),
+      'utf8',
+    )
+    const sitemap = await fs.readFile(
+      path.join(output, 'client/sitemap.xml'),
+      'utf8',
+    )
+    const rss = await fs.readFile(path.join(output, 'client/rss.xml'), 'utf8')
+    const redirect = await fs.readFile(
+      path.join(output, 'client/legacy/index.html'),
+      'utf8',
+    )
     const notFound = await fs.readFile(path.join(output, 'client/404.html'), 'utf8')
 
     expect(home).toContain('<title>Home | Journal</title>')
@@ -44,6 +61,13 @@ describe('framework-owned site builds', () => {
     expect(pencil).toContain('<p>$2</p>')
     expect(notebook).toContain('<h1>Notebook</h1>')
     expect(notebook).toContain('<p>$7</p>')
+    expect(settings).toContain('<h1>TOML settings: enabled</h1>')
+    expect(virtual).toContain('<h1>Plugin virtual page</h1>')
+    expect(sitemap).toContain('<loc>https://example.test/journal/about/</loc>')
+    expect(sitemap).not.toContain('sitemap.xml')
+    expect(rss).toContain('<rss version="2.0">')
+    expect(redirect).toContain('http-equiv="refresh"')
+    expect(redirect).toContain('url=/journal/about/')
     expect(notFound).toContain('Journal not found')
     await expect(fs.stat(path.join(root, 'src/framework'))).rejects.toMatchObject({
       code: 'ENOENT',

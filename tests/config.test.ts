@@ -58,9 +58,29 @@ describe('Nib configuration', () => {
       site: { title: 'Site' },
     })).toThrow('must be a function that returns Vite plugins')
     expect(() => validateNibConfig({
+      trailingSlash: 'sometimes',
+      site: { title: 'Site' },
+    })).toThrow('trailingSlash')
+    expect(() => validateNibConfig({
+      redirects: { old: '/new' },
+      site: { title: 'Site' },
+    })).toThrow('redirect source')
+    expect(() => validateNibConfig({
+      redirects: { '/old': 'javascript:alert(1)' },
+      site: { title: 'Site' },
+    })).toThrow('redirect destination')
+    expect(() => validateNibConfig({
+      redirects: { '/old': { destination: '/new', status: 305 } },
+      site: { title: 'Site' },
+    })).toThrow('unsupported status')
+    expect(() => validateNibConfig({
       markdown: { schema: {} },
       site: { title: 'Site' },
     })).toThrow('parse(value)')
+    expect(() => validateNibConfig({
+      markdown: { remarkPlugins: true },
+      site: { title: 'Site' },
+    })).toThrow('remarkPlugins must be an array')
     expect(() => validateNibConfig({
       pageSources: {},
       site: { title: 'Site' },

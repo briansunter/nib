@@ -1,6 +1,7 @@
 import { defineConfig, definePageSource } from '@briansunter/nib'
 import { parse as parseCsv } from 'csv-parse/sync'
 import { parse as parseYaml } from 'yaml'
+import { sitemap } from '@briansunter/nib/sitemap'
 import { markdown, posts } from './src/content'
 import {
   ProductPage,
@@ -9,15 +10,25 @@ import {
   teamMemberSchema,
 } from './src/data-pages'
 import { SiteShell } from './src/site-shell'
+import { tomlPages, virtualRoutes } from './src/plugins'
 
 export default defineConfig({
   base: '/journal/',
+  trailingSlash: 'always',
+  redirects: {
+    '/legacy': '/about',
+  },
   site: {
     title: 'Journal',
     description: 'A test journal.',
     titleTemplate: '%s | Journal',
   },
   shell: SiteShell,
+  plugins: [
+    tomlPages(),
+    sitemap({ site: 'https://example.test' }),
+    virtualRoutes(),
+  ],
   markdown,
   collections: { posts },
   pageSources: [

@@ -26,6 +26,41 @@ export function validateNibConfig(value: unknown): NibConfig {
       throw new Error('Nib base must start and end with "/" and contain no query or hash')
     }
   }
+  if (
+    value.trailingSlash !== undefined
+    && !['always', 'never', 'ignore'].includes(value.trailingSlash as string)
+  ) {
+    throw new Error('Nib trailingSlash must be "always", "never", or "ignore"')
+  }
+  if (value.redirects !== undefined) {
+    if (!isRecord(value.redirects)) throw new Error('Nib redirects must be an object')
+    for (const [source, redirect] of Object.entries(value.redirects)) {
+      if (!source.startsWith('/') || source.includes('?') || source.includes('#')) {
+        throw new Error(`Nib redirect source must be an absolute route path: ${source}`)
+      }
+      const destination = typeof redirect === 'string'
+        ? redirect
+        : isRecord(redirect) && typeof redirect.destination === 'string'
+          ? redirect.destination
+          : undefined
+      if (destination === undefined) {
+        throw new Error(`Nib redirect ${source} must define a destination`)
+      }
+      if (
+        !destination.startsWith('/')
+        && !/^https?:\/\//i.test(destination)
+      ) {
+        throw new Error(`Nib redirect destination must be an absolute path or HTTP(S) URL: ${destination}`)
+      }
+      if (
+        isRecord(redirect)
+        && redirect.status !== undefined
+        && ![301, 302, 307, 308].includes(redirect.status as number)
+      ) {
+        throw new Error(`Nib redirect ${source} has an unsupported status`)
+      }
+    }
+  }
   if (value.shell !== undefined && typeof value.shell !== 'function') {
     throw new Error('Nib shell must be a React component')
   }
@@ -46,7 +81,7 @@ export function validateNibConfig(value: unknown): NibConfig {
       }
       if (names.has(plugin.name)) throw new Error(`Nib plugin name is duplicated: ${plugin.name}`)
       names.add(plugin.name)
-      for (const hook of ['vite', 'renderer'] as const) {
+      for (const hook of ['setup', 'vite', 'routes', 'routesResolved', 'renderer'] as const) {
         if (plugin[hook] !== undefined && typeof plugin[hook] !== 'function') {
           throw new Error(`Nib plugin ${plugin.name} ${hook} hook must be a function`)
         }
@@ -55,6 +90,12 @@ export function validateNibConfig(value: unknown): NibConfig {
   }
   if (value.markdown !== undefined) {
     validateDataDefinition(value.markdown, 'Nib markdown configuration')
+    const markdown = value.markdown as Record<string, unknown>
+    for (const plugins of ['remarkPlugins', 'rehypePlugins'] as const) {
+      if (markdown[plugins] !== undefined && !Array.isArray(markdown[plugins])) {
+        throw new Error(`Nib markdown ${plugins} must be an array`)
+      }
+    }
   }
   if (value.pageSources !== undefined) {
     if (!Array.isArray(value.pageSources)) throw new Error('Nib pageSources must be an array')

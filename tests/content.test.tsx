@@ -171,7 +171,8 @@ describe('generic content', () => {
       'tests/fixtures/basic-site/src/pages/team/page.yaml',
     ))
 
-    expect(result).toContain('compileDataPages(config.pageSources[0]')
+    expect(result).toContain('compileDataPages(pageSources[0]')
+    expect(result).toContain('virtual:nib/page-sources')
     expect(result).toContain('defaultPath: "/team"')
   })
 })

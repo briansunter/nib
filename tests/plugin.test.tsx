@@ -33,6 +33,10 @@ describe('Nib plugins', () => {
     })).toThrow('renderer hook must be a function')
     expect(() => validateNibConfig({
       site: { title: 'Site' },
+      plugins: [{ name: 'invalid', routesResolved: true }],
+    })).toThrow('routesResolved hook must be a function')
+    expect(() => validateNibConfig({
+      site: { title: 'Site' },
       plugins: [{ name: ' padded ' }],
     })).toThrow('non-empty name')
   })
@@ -92,11 +96,12 @@ describe('Nib plugins', () => {
       islandModules: {},
     })
 
-    const page = renderer.render('/')
-    expect(page.html).toBe(
+    const output = renderer.render('/')
+    if (output.kind !== 'page') throw new Error('Expected a page output')
+    expect(output.page.html).toBe(
       '<div data-plugin="first"><section data-plugin="second"><header><a href="/">Site</a></header><main><h1>Home</h1></main></section></div><aside>transformed</aside>',
     )
-    expect(page.head).toContain('name="first"')
+    expect(output.page.head).toContain('name="first"')
     await renderer.finalize({
       clientDirectory: '/tmp/client',
     })
@@ -111,6 +116,79 @@ describe('Nib plugins', () => {
       clientDirectory: '/tmp/client',
     })).rejects.toThrow('only finalize once')
     expect(() => renderer.render('/')).toThrow('cannot render after finalization')
+  })
+
+  it('registers routes against one initial manifest and inspects the immutable result', async () => {
+    const inspected: string[][] = []
+    const first = definePlugin({
+      name: 'first-routes',
+      routes(context) {
+        expect(context.routes.map((route) => route.path)).toEqual(['/'])
+        return {
+          kind: 'resource',
+          path: '/first.xml',
+          body: '<first />',
+          contentType: 'application/xml',
+        }
+      },
+      routesResolved(context) {
+        expect(Object.isFrozen(context.routes)).toBe(true)
+        inspected.push(context.routes.map((route) => route.path))
+      },
+    })
+    const second = definePlugin({
+      name: 'second-routes',
+      routes(context) {
+        expect(context.routes.map((route) => route.path)).toEqual(['/'])
+        return {
+          kind: 'page',
+          path: '/virtual',
+          component: Page,
+        }
+      },
+    })
+    const renderer = await createProjectRenderer({
+      config: {
+        site: { title: 'Site' },
+        plugins: [first, second],
+      },
+      root: process.cwd(),
+      base: '/',
+      pages: { '/src/pages/page.tsx': { default: Page } },
+      islandModules: {},
+    })
+
+    expect(renderer.paths).toEqual(['/', '/first.xml', '/virtual'])
+    expect(renderer.render('/first.xml')).toEqual({
+      kind: 'resource',
+      status: 200,
+      body: '<first />',
+      contentType: 'application/xml',
+    })
+    expect(renderer.render('/virtual')).toMatchObject({ kind: 'page' })
+    expect(inspected).toEqual([['/', '/first.xml', '/virtual']])
+  })
+
+  it('rejects duplicate plugin routes with both owners', async () => {
+    const duplicate = (name: string) => definePlugin({
+      name,
+      routes: () => ({
+        kind: 'resource' as const,
+        path: '/same.xml',
+        body: '',
+        contentType: 'application/xml',
+      }),
+    })
+    await expect(createProjectRenderer({
+      config: {
+        site: { title: 'Site' },
+        plugins: [duplicate('one'), duplicate('two')],
+      },
+      root: process.cwd(),
+      base: '/',
+      pages: { '/src/pages/page.tsx': { default: Page } },
+      islandModules: {},
+    })).rejects.toThrow('Duplicate route /same.xml: one routes()[0] and two routes()[1]')
   })
 
   it('attributes render hook failures to the originating plugin and route', async () => {

@@ -7,6 +7,12 @@ plugin API and optional local-image optimizer. The non-goals remain deliberate:
 remote images, Markdown rewriting, SVG rasterization, and animated-image
 conversion are follow-up work.
 
+The plugin interface was subsequently extended with typed page-source setup,
+virtual route providers, and immutable resolved-route inspection. The additive
+contract and current ordering rules are documented in
+[Plugin content and routing](./plugin-content-and-routing.md); the original
+Vite/renderer design below remains the rationale for those hooks.
+
 ## Audit corrections
 
 The July 2026 implementation audit found and corrected several first-pass

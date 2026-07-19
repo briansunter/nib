@@ -39,7 +39,11 @@ export type {
   PageSourceContext,
   PageSourceDefinition,
   PageSourcePage,
+  RedirectDefinition,
+  RedirectStatus,
   ResolvedRoute,
+  ResolvedPageRoute,
   SiteConfig,
   SiteShellProps,
+  TrailingSlash,
 } from './framework/types'

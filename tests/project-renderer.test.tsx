@@ -15,10 +15,41 @@ describe('project renderer', () => {
 
     expect(renderer.paths).toEqual(['/'])
     expect(renderer.render('/')).toMatchObject({
-      status: 200,
-      head: '<title>Site</title>\n    <meta name="description" content="Description" />',
-      html: '<header><a href="/">Site</a></header><main><h1>Home</h1></main>',
-      islands: [],
+      kind: 'page',
+      page: {
+        status: 200,
+        head: '<title>Site</title>\n    <meta name="description" content="Description" />',
+        html: '<header><a href="/">Site</a></header><main><h1>Home</h1></main>',
+        islands: [],
+      },
+    })
+  })
+
+  it('enforces trailing slashes and configured redirects in development rendering', async () => {
+    const renderer = await createProjectRenderer({
+      config: {
+        site: { title: 'Site' },
+        trailingSlash: 'never',
+        redirects: {
+          '/old': { destination: '/about/', status: 302 },
+        },
+      },
+      root: process.cwd(),
+      base: '/base/',
+      pages: { '/src/pages/about/page.tsx': { default: Page } },
+      islandModules: {},
+      command: 'serve',
+    })
+
+    expect(renderer.render('/base/about/')).toEqual({
+      kind: 'redirect',
+      status: 301,
+      destination: '/base/about',
+    })
+    expect(renderer.render('/base/old')).toEqual({
+      kind: 'redirect',
+      status: 302,
+      destination: '/base/about',
     })
   })
 })

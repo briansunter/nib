@@ -12,7 +12,7 @@ import {
   type PreviewServer,
   type ViteDevServer,
 } from 'vite'
-import { renderDocument } from './document'
+import { renderDocument, renderRedirectDocument } from './document'
 import { pageSourceExtensions } from './content'
 import { nibIslandsEntry } from './island-vite-plugin'
 import {
@@ -21,8 +21,12 @@ import {
   nibProject,
 } from './project-vite-plugin'
 import { loadNibConfig, resolveBasePath } from './project-config'
-import { resolveVitePluginContributions } from './plugin'
-import type { RenderedPage } from './types'
+import { isFileRoute } from './paths'
+import {
+  resolvePluginSetupContributions,
+  resolveVitePluginContributions,
+} from './plugin'
+import type { RenderedOutput } from './types'
 import { nibDataPages, nibMarkdown } from './vite-plugin'
 
 export interface SiteOperationOptions {
@@ -104,7 +108,6 @@ export async function siteViteConfig(
 ): Promise<{ base: string; config: InlineConfig }> {
   const loaded = await loadNibConfig(root, command)
   const base = resolveBasePath(loaded.config)
-  const extensions = pageSourceExtensions(loaded.config.pageSources)
   const pluginContext = Object.freeze({
     command,
     mode: command === 'serve' ? 'development' as const : 'production' as const,
@@ -113,6 +116,15 @@ export async function siteViteConfig(
     base,
     configPath: loaded.configPath,
   })
+  const setup = await resolvePluginSetupContributions(
+    loaded.config.plugins ?? [],
+    pluginContext,
+  )
+  const pageSources = [
+    ...(loaded.config.pageSources ?? []),
+    ...(setup.pageSources ?? []),
+  ]
+  const extensions = pageSourceExtensions(pageSources)
   const appVitePlugins = loaded.config.vite === undefined
     ? []
     : await resolveVitePluginContributions([
@@ -130,10 +142,11 @@ export async function siteViteConfig(
       configFile: false,
       define: {
         __NIB_BASE_PATH__: JSON.stringify(base),
+        __NIB_TRAILING_SLASH__: JSON.stringify(loaded.config.trailingSlash ?? 'ignore'),
       },
       plugins: [
         nibMarkdown(loaded.configPath),
-        nibDataPages(loaded.configPath, loaded.config.pageSources),
+        nibDataPages(loaded.configPath, pageSources, pluginContext),
         ...appVitePlugins,
         ...contributedPlugins,
         react(),
@@ -168,6 +181,8 @@ async function readBuildTemplate(clientDirectory: string, base: string): Promise
 }
 
 function outputFile(clientDirectory: string, routePath: string): string {
+  const normalized = routePath.replace(/^\/+|\/+$/g, '')
+  if (isFileRoute(routePath)) return path.join(clientDirectory, normalized)
   return path.join(
     clientDirectory,
     routePath === '/' ? 'index.html' : `${routePath.replace(/^\/+/, '')}/index.html`,
@@ -221,20 +236,25 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
   const serverEntry = path.join(serverDirectory, 'entry-server.js')
   const server = await import(`${pathToFileURL(serverEntry).href}?t=${Date.now()}`) as {
     paths: readonly string[]
-    render(url: string): RenderedPage
+    render(url: string): RenderedOutput
     finalize(context: { clientDirectory: string }): Promise<void>
   }
-  const rendered = server.paths.map((routePath) => ({ routePath, page: server.render(routePath) }))
-  const notFound = { routePath: '/404', page: server.render('/404') }
+  const rendered = server.paths.map((routePath) => ({ routePath, output: server.render(routePath) }))
+  const notFound = { routePath: '/404', output: server.render('/404') }
   await server.finalize({
     clientDirectory,
   })
-  await mapWithConcurrency([...rendered, notFound], htmlWriteConcurrency(), async ({ routePath, page }) => {
+  await mapWithConcurrency([...rendered, notFound], htmlWriteConcurrency(), async ({ routePath, output }) => {
     const file = routePath === '/404'
       ? path.join(clientDirectory, '404.html')
       : outputFile(clientDirectory, routePath)
     await fs.mkdir(path.dirname(file), { recursive: true })
-    await fs.writeFile(file, renderDocument(template, page))
+    const body = output.kind === 'page'
+      ? renderDocument(template, output.page)
+      : output.kind === 'resource'
+        ? output.body
+        : renderRedirectDocument(output.destination)
+    await fs.writeFile(file, body)
   })
 }
 
@@ -275,12 +295,24 @@ export async function startDevSite(options: DevSiteOptions): Promise<ViteDevServ
         throw new Error('Nib requires a runnable Vite SSR environment')
       }
       const server = await environment.runner.import(NIB_SERVER_ENTRY) as {
-        render(url: string): RenderedPage
+        render(url: string): RenderedOutput
       }
-      const page = server.render(url)
-      response.statusCode = page.status
+      const output = server.render(url)
+      if (output.kind === 'redirect') {
+        response.statusCode = output.status
+        response.setHeader('Location', output.destination)
+        response.end()
+        return
+      }
+      if (output.kind === 'resource') {
+        response.statusCode = output.status
+        response.setHeader('Content-Type', output.contentType)
+        response.end(output.body)
+        return
+      }
+      response.statusCode = output.page.status
       response.setHeader('Content-Type', 'text/html; charset=utf-8')
-      response.end(renderDocument(transformed, page))
+      response.end(renderDocument(transformed, output.page))
     } catch (error) {
       next(error)
     }
