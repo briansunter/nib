@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/briansunter/nib/compare/v0.11.0...v0.11.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* tree-shake unused package exports ([6f66039](https://github.com/briansunter/nib/commit/6f66039d77aadd079611a382cb1c4929757adc85))
+
 ## [0.11.0](https://github.com/briansunter/nib/compare/v0.10.0...v0.11.0) (2026-07-19)
 
 
