@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/briansunter/nib/compare/v0.5.0...v0.6.0) (2026-07-19)
+
+
+### Features
+
+* simplify architecture and add data pages ([df4c48c](https://github.com/briansunter/nib/commit/df4c48c53731aaa694efffb8e4e664fa1665541d))
+
 ## [0.5.0](https://github.com/briansunter/nib/compare/v0.4.0...v0.5.0) (2026-07-19)
 
 
