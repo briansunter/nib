@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/briansunter/nib/compare/v0.10.0...v0.11.0) (2026-07-19)
+
+
+### Features
+
+* add RSS plugin ([290b7c5](https://github.com/briansunter/nib/commit/290b7c56643bc921394053d37a028f73c06baf59))
+
 ## [0.10.0](https://github.com/briansunter/nib/compare/v0.9.0...v0.10.0) (2026-07-19)
 
 
