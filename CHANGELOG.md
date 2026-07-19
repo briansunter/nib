@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.0](https://github.com/briansunter/nib/compare/v0.8.0...v0.9.0) (2026-07-19)
+
+
+### Features
+
+* add extensible image optimization ([e3b6008](https://github.com/briansunter/nib/commit/e3b60081cd09cb4ef693b9a810f5d7ac4baeea16))
+* add high-performance image plugin ([a6714e6](https://github.com/briansunter/nib/commit/a6714e679b6455f53e79ab9516bf446f784df1e6))
+* deepen plugin and image architecture ([003da1e](https://github.com/briansunter/nib/commit/003da1e6763ea6aa2dea4c4635317f1a3efbf3b3))
+
+
+### Bug Fixes
+
+* build framework before workspace typecheck ([82ecdc9](https://github.com/briansunter/nib/commit/82ecdc9e0d95c85e50eb269da06925f04589b693))
+* build image workspace before root typecheck ([db2cf75](https://github.com/briansunter/nib/commit/db2cf75059ccd156f8f1dbc94b13ebe48fdb1827))
+
 ## [0.8.0](https://github.com/briansunter/nib/compare/v0.7.0...v0.8.0) (2026-07-19)
 
 
