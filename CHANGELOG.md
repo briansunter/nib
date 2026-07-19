@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/briansunter/nib/compare/v0.7.0...v0.8.0) (2026-07-19)
+
+
+### Features
+
+* improve docs navigation and onboarding example ([dd19e8b](https://github.com/briansunter/nib/commit/dd19e8b6c43d6787a98e18969b584cb8e6c1426e))
+
 ## [0.7.0](https://github.com/briansunter/nib/compare/v0.6.0...v0.7.0) (2026-07-19)
 
 
