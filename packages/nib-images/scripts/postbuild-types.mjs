@@ -6,3 +6,4 @@ await fs.writeFile(
   'dist/index.d.ts',
   `/// <reference path="./nib-image.d.ts" />\n${declaration}`,
 )
+await fs.rm('dist/internal.d.ts', { force: true })

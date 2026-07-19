@@ -72,15 +72,12 @@
     "check:version-policy": "tsx scripts/check-version-policy.ts"
   },
   "dependencies": {
-    "@tailwindcss/typography": "^0.5.19",
-    "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^6.0.3",
     "gray-matter": "^4.0.3",
     "rehype-stringify": "^10.0.1",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
-    "tailwindcss": "^4.3.3",
     "tinyglobby": "^0.2.17",
     "unified": "^11.0.5",
     "vite": "^8.1.5",
@@ -92,6 +89,8 @@
   },
   "devDependencies": {
     "@briansunter/nib-images": "workspace:*",
+    "@tailwindcss/typography": "^0.5.19",
+    "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -99,6 +98,7 @@
     "csv-parse": "^7.0.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "tailwindcss": "^4.3.3",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18",

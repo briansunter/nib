@@ -31,6 +31,10 @@ a React island. Development watches imported sources and re-inspects changed
 bytes through HMR; unchanged content keeps its cache key and revalidates with
 `304` instead of being encoded again.
 
+`images()` validates options immediately, before Nib starts a Vite graph or
+creates a renderer. The build-only package entry is the only supported plugin
+authoring path; its internal benchmark utilities are not published as an import.
+
 `@briansunter/nib-images` is a separate Bun workspace package. It is built and
 tested from the repository root, but Release Please versions and publishes it
 independently from `@briansunter/nib` when files in this package change.

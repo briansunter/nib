@@ -2,7 +2,6 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import {
   build as viteBuild,
@@ -22,7 +21,7 @@ import {
   nibProject,
 } from './project-vite-plugin'
 import { loadNibConfig, resolveBasePath } from './project-config'
-import { flattenVitePlugins, pluginError } from './plugin'
+import { resolveVitePluginContributions } from './plugin'
 import type { RenderedPage } from './types'
 import { nibDataPages, nibMarkdown } from './vite-plugin'
 
@@ -114,15 +113,15 @@ export async function siteViteConfig(
     base,
     configPath: loaded.configPath,
   })
-  const contributedPlugins = []
-  for (const plugin of loaded.config.plugins ?? []) {
-    if (!plugin.vite) continue
-    try {
-      contributedPlugins.push(...await flattenVitePlugins(plugin.vite(pluginContext), plugin))
-    } catch (error) {
-      throw pluginError(plugin, 'vite()', error)
-    }
-  }
+  const appVitePlugins = loaded.config.vite === undefined
+    ? []
+    : await resolveVitePluginContributions([
+      { name: 'nib.config.ts', vite: loaded.config.vite },
+    ], pluginContext)
+  const contributedPlugins = await resolveVitePluginContributions(
+    loaded.config.plugins ?? [],
+    pluginContext,
+  )
   return {
     base,
     config: {
@@ -135,9 +134,9 @@ export async function siteViteConfig(
       plugins: [
         nibMarkdown(loaded.configPath),
         nibDataPages(loaded.configPath, loaded.config.pageSources),
+        ...appVitePlugins,
         ...contributedPlugins,
         react(),
-        tailwindcss(),
         nibProject(loaded.configPath, root, extensions, command),
         nibIslandsEntry(),
       ],

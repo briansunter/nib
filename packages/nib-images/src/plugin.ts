@@ -3,16 +3,13 @@ import { createElement } from 'react'
 import { ImageRegistryProvider } from './image-context'
 import { ImageBuildRegistry } from './image-registry'
 import { imageVitePlugin } from './image-vite-plugin'
-import { normalizeImagesOptions, type ImagesOptions } from './options'
+import { normalizeImagesOptions, validateImagesOptions, type ImagesOptions } from './options'
 
 export type { ImagesOptions } from './options'
 
-function defineImagesPlugin<const Plugin extends NibPlugin>(plugin: Plugin): Plugin {
-  return plugin
-}
-
 export function images<const Options extends ImagesOptions>(options?: Options) {
-  return defineImagesPlugin({
+  validateImagesOptions(options)
+  return {
     name: '@briansunter/nib-images',
     vite(context) {
       return imageVitePlugin(normalizeImagesOptions(context.root, options), context.target)
@@ -32,5 +29,5 @@ export function images<const Options extends ImagesOptions>(options?: Options) {
         },
       }
     },
-  })
+  } satisfies NibPlugin
 }

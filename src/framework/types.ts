@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from 'react'
-import type { NibPlugin } from './plugin'
+import type { PluginOption } from 'vite'
+import type { Awaitable, NibPlugin, NibVitePluginContext } from './plugin'
 
 export interface PageMeta {
   title?: string
@@ -98,9 +99,16 @@ export interface SiteConfig {
   navigation?: Array<{ label: string; href: string }>
 }
 
+/** App-owned Vite contributions. Nib continues to own entries, SSR, base path,
+ * and output settings. The factory runs separately for each Vite graph. */
+export type NibViteConfig = (
+  context: NibVitePluginContext,
+) => Awaitable<PluginOption>
+
 export interface NibConfig {
   base?: string
   site: SiteConfig
+  vite?: NibViteConfig
   plugins?: readonly NibPlugin[]
   shell?: ComponentType<SiteShellProps<any>>
   markdown?: MarkdownDefinition<any>

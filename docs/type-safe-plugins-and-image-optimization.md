@@ -156,8 +156,8 @@ Add an advanced plugin-author entry point:
 @briansunter/nib/internal/server
 ```
 
-The root entry continues to expose site-authoring APIs. The new `/plugin`
-entry exposes plugin contracts and `definePlugin`. Runtime implementation
+The root entry exposes site-authoring APIs only. The `/plugin` entry is the
+plugin-author seam: it exposes plugin contracts and `definePlugin`. Runtime implementation
 details remain under the existing internal entries.
 
 ### `@briansunter/nib-images`
@@ -313,6 +313,16 @@ export function sitemap<const Options extends SitemapOptions>(
 }
 ```
 
+Apps can add styling and other Vite-only adapters without creating a Nib plugin.
+The contribution factory runs once for each Vite graph, so adapters do not
+accidentally share client, server, and development state:
+
+```ts
+export type NibViteConfig = (
+  context: NibVitePluginContext,
+) => Awaitable<PluginOption>
+```
+
 Do not make `NibConfig` generic only to retain the plugin tuple. The existing
 const generic on `defineConfig` already preserves the concrete configuration:
 
@@ -320,17 +330,24 @@ const generic on `defineConfig` already preserves the concrete configuration:
 export interface NibConfig {
   base?: string
   site: SiteConfig
+  vite?: NibViteConfig
   plugins?: readonly NibPlugin[]
   // Existing fields remain unchanged.
 }
 ```
 
 This avoids disturbing `PageProps<typeof config>` and the current collection
-inference.
+inference. `NibConfig.vite` is deliberately narrower than a Vite `UserConfig`:
+it accepts only plugin contributions. Use it for application-owned integrations
+such as `vite: () => tailwindcss()`. Use `plugins` for package capabilities
+that also need Nib renderer or build lifecycle hooks, such as image processing.
 
 ### Hook rules
 
 - Plugin names must be non-empty and unique within a configuration.
+- `NibConfig.vite` is optional and, when present, must be a factory that
+  returns a Vite `PluginOption`; it receives the same immutable graph context
+  as package plugin Vite hooks.
 - `vite` and `renderer` are optional functions; other hook-shaped values fail
   configuration validation.
 - Vite contributions are resolved in config order. Vite's own `enforce`
@@ -345,9 +362,10 @@ inference.
 - `wrapPage` is synchronous. The first configured plugin is the outermost
   wrapper, making composition deterministic.
 - `transformPage` runs synchronously in config order after React rendering.
-- Transform inputs and island ID lists are readonly. A transform may change
-  status, head, or HTML, but cannot invent or remove hydration boundaries after
-  React rendering.
+- Transform inputs contain only status, head, and HTML. Nib retains hydration
+  ownership, and verifies that each plugin leaves every rendered island element
+  byte-for-byte intact. A transform may change ordinary static HTML but cannot
+  invent, remove, reorder, or alter hydration boundaries after React rendering.
 - `finalize` runs asynchronously in config order after every production route
   and the 404 page have rendered.
 - Arbitrary plugin finalizers are not run in parallel because ordering may be
@@ -380,17 +398,19 @@ images are handled by Vite middleware.
 1. load and validate `nib.config.ts`;
 2. resolve the base path;
 3. create a frozen `NibVitePluginContext`;
-4. await each configured plugin's `vite` hook;
-5. flatten valid Vite `PluginOption` values;
-6. insert them before the generated project and island-entry adapters;
-7. preserve plugin attribution if contribution creation fails.
+4. invoke the app-owned `vite` factory, when configured;
+5. await each configured package plugin's `vite` hook;
+6. flatten valid Vite `PluginOption` values;
+7. insert them before the generated project and island-entry adapters;
+8. preserve app or plugin attribution if contribution creation fails.
 
 The initial array order should be:
 
 ```text
 Nib Markdown and data-page adapters
-User plugin contributions
-React and Tailwind
+App Vite contribution (for example Tailwind)
+Package plugin contributions
+React
 Nib generated-project adapter
 Nib island-entry adapter
 ```
@@ -400,7 +420,7 @@ The fixed default order gives plugins a predictable seam without allowing them
 to replace the generated route or island entries.
 
 The image metadata import plugin uses normal Vite `resolveId`, `load`,
-`configureServer`, and `handleHotUpdate` hooks. It must not mutate Nib's
+`configureServer`, and `hotUpdate` hooks. It must not mutate Nib's
 internal plugin array or import Nib internals.
 
 ### Server renderer setup
@@ -413,7 +433,8 @@ internal plugin array or import Nib internals.
 4. retain the resulting extensions in config order;
 5. compose the page, layouts, and shell, then apply plugin wrappers before
    `renderReactPage`;
-6. apply synchronous `transformPage` hooks to the `RenderedPage`;
+6. apply synchronous `transformPage` hooks to the static page fields while Nib
+   retains the separately collected island metadata;
 7. track every successfully rendered canonical path;
 8. expose `finalize(context)` alongside `paths` and `render`.
 
@@ -1049,7 +1070,8 @@ Benchmark cold and warm builds before fixing defaults.
 - `defineConfig` preserves a readonly plugin tuple.
 - invalid hook return types fail typechecking.
 - duplicate or blank plugin names fail config validation.
-- Vite contributions appear in dev and both production builds.
+- app and package Vite contributions appear in dev and both production builds
+  with fresh instances per graph.
 - config order and wrap order are deterministic.
 - `transformPage` receives the correct route and base.
 - `finalize` sees all successful routes including 404.

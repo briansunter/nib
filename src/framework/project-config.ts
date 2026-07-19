@@ -29,6 +29,9 @@ export function validateNibConfig(value: unknown): NibConfig {
   if (value.shell !== undefined && typeof value.shell !== 'function') {
     throw new Error('Nib shell must be a React component')
   }
+  if (value.vite !== undefined && typeof value.vite !== 'function') {
+    throw new Error('Nib vite must be a function that returns Vite plugins')
+  }
   if (value.plugins !== undefined) {
     if (!Array.isArray(value.plugins)) throw new Error('Nib plugins must be an array')
     const names = new Set<string>()

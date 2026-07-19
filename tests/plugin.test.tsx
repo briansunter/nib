@@ -2,10 +2,13 @@ import { createElement, type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 import { definePlugin } from '../src/plugin'
 import { flattenVitePlugins } from '../src/framework/plugin'
+import { defineIsland } from '../src/framework/islands'
 import { validateNibConfig } from '../src/framework/project-config'
 import { createProjectRenderer } from '../src/framework/project-renderer'
 
 const Page = () => <h1>Home</h1>
+const Counter = defineIsland('counter', () => <button>Count</button>)
+const IslandPage = () => <Counter />
 
 describe('Nib plugins', () => {
   it('resolves recursive Vite plugin promises without changing order', async () => {
@@ -51,7 +54,6 @@ describe('Nib plugins', () => {
             events.push(`first-transform:${context.route.path}`)
             expect(context.command).toBe('build')
             expect(Object.isFrozen(page)).toBe(true)
-            expect(Object.isFrozen(page.islands)).toBe(true)
             return { ...page, head: `${page.head}\n<meta name="first" content="yes" />` }
           },
           async finalize(context) {
@@ -128,7 +130,7 @@ describe('Nib plugins', () => {
     expect(() => renderer.render('/')).toThrow('Nib plugin broken failed in wrapPage() for route /')
   })
 
-  it('rejects invalid status codes and post-render island mutations', async () => {
+  it('rejects invalid status codes and post-render island markup mutations', async () => {
     const invalidStatus = await createProjectRenderer({
       config: {
         site: { title: 'Site' },
@@ -165,15 +167,15 @@ describe('Nib plugins', () => {
         plugins: [definePlugin({
           name: 'invalid-islands',
           renderer: () => ({
-            transformPage: (page) => ({ ...page, islands: ['not-rendered'] }),
+            transformPage: (page) => ({ ...page, html: page.html.replace('<nib-island', '<removed-island') }),
           }),
         })],
       },
       root: process.cwd(),
       base: '/',
-      pages: { '/src/pages/page.tsx': { default: Page } },
-      islandModules: {},
+      pages: { '/src/pages/page.tsx': { default: IslandPage } },
+      islandModules: { '/src/islands/counter.tsx': { default: Counter } },
     })
-    expect(() => invalidIslands.render('/')).toThrow('cannot change React island IDs')
+    expect(() => invalidIslands.render('/')).toThrow('cannot change React island markup')
   })
 })

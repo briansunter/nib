@@ -17,7 +17,7 @@ The package owns:
 
 - the `nib init`, `dev`, `build`, and `preview` commands;
 - configuration loading and validation;
-- Vite and Tailwind integration;
+- Vite integration, with optional styling adapters contributed by the project;
 - virtual route and island entry modules;
 - Markdown compilation and layout resolution;
 - generic data-page discovery, validation, and collection loading;
@@ -41,9 +41,10 @@ public/                  optional
 ```
 
 `nib.config.ts` is the configuration seam. `defineConfig` types the site
-metadata, optional base path, and optional app-owned shell. Pages and islands
-import authoring interfaces from `@briansunter/nib`; package-internal exports
-are reserved for generated virtual modules.
+metadata, optional base path, optional app-owned Vite plugin contribution, and
+optional app-owned shell. Pages and islands import authoring interfaces from
+`@briansunter/nib`; package-internal exports are reserved for generated virtual
+modules.
 
 The repository’s `templates/default` directory is an initializer input, not
 framework source in a generated project. `examples/docs` is a consumer of the
@@ -101,6 +102,18 @@ route (including the generated 404) has rendered. Production collects rendered
 pages, awaits finalizers, then writes HTML with bounded concurrency; development
 does not run finalizers.
 
+The plugin host owns contribution resolution, renderer-extension construction,
+ordering, hook error attribution, and finalization. Renderer plugins receive a
+stable route snapshot rather than page modules, layouts, or page data. They may
+change static status, head, and HTML, but Nib keeps the hydration metadata and
+rejects changes to rendered island markup.
+
+Tailwind is optional rather than a framework dependency. The initializer adds
+`@tailwindcss/vite` and opts in through the narrow app-owned `vite` field in
+`nib.config.ts` (`vite: () => tailwindcss()`). Sites that use plain CSS or
+another styling adapter omit it. This field can contribute only Vite plugins;
+Nib continues to own entries, SSR, base-path, and output configuration.
+
 `@briansunter/nib-images` is a separate workspace/package and the only package
 that depends on Sharp. Its `images()` plugin handles explicit local
 `?nib-image` imports and its static `Image` component registers transforms while
@@ -117,6 +130,13 @@ ETag, and editor overwrite races are retried. Internal absolute paths are
 non-enumerable on source metadata. Remote URLs, Markdown image rewriting, SVG
 rasterization, and animated-image conversion are intentionally outside this
 release.
+
+Within the image package, a shared request module owns cache keys and the
+development URL grammar; a transform executor owns cache misses and bounded
+Sharp work; and a source catalog owns authorization, metadata inspection, and
+HMR refresh. The development Vite adapter and production registry are thin
+adapters over those modules, so they cannot silently diverge on request identity
+or cache behavior.
 
 The image package is separately versioned from the Bun workspace root. Release
 Please tracks the root package and `@briansunter/nib-images` independently; the

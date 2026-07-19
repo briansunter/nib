@@ -8,7 +8,7 @@ import {
   ImageBuildRegistry,
   createImageSource,
   normalizeImagesOptions,
-} from '../dist/internal.js'
+} from '../src/internal.ts'
 
 const resultMarker = 'NIB_IMAGE_BENCHMARK_RESULT '
 const workerIndex = process.argv.indexOf('--worker')

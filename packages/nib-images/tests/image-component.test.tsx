@@ -12,6 +12,12 @@ import { createImageSource } from '../src/image-source'
 import { imageVitePlugin } from '../src/image-vite-plugin'
 import { normalizeImagesOptions } from '../src/options'
 import { cachedBuffer } from '../src/cache'
+import { images } from '../src/plugin'
+import {
+  createImageTransformRequest,
+  developmentImageUrl,
+  parseDevelopmentImageRequest,
+} from '../src/image-request'
 
 const temporaryDirectories: string[] = []
 
@@ -53,6 +59,7 @@ describe('static Image component', () => {
     expect(() => normalizeImagesOptions(root, null as any)).toThrow('options must be an object')
     expect(() => normalizeImagesOptions(root, { quality: { png: 50 } } as any))
       .toThrow('quality does not support png')
+    expect(() => images({ widths: [] } as any)).toThrow('widths must contain positive integers')
   })
 
   it('rejects image metadata imports from client and island graphs', async () => {
@@ -253,6 +260,20 @@ describe('static Image component', () => {
     )
     expect(registry.register(source as any, 40, 'webp', 75))
       .toMatch(/^\/repository\/@nib-images\//)
+  })
+
+  it('uses one validated protocol for build and development image requests', async () => {
+    const source = await fixtureSource()
+    const request = createImageTransformRequest(source as any, 40, 'webp', 75)
+    const url = developmentImageUrl('/repository/', request)
+    expect(parseDevelopmentImageRequest(url)).toEqual({
+      sourceId: request.source.__nibSourceId,
+      width: 40,
+      quality: 75,
+      format: 'webp',
+    })
+    expect(() => createImageTransformRequest(source as any, 40, 'gif', 75))
+      .toThrow('cannot transform to gif')
   })
 
   it('deduplicates requests and never exceeds transform concurrency', async () => {

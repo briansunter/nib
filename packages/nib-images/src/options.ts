@@ -66,7 +66,8 @@ function normalizedQuality(quality: ImagesOptions['quality']): Record<ImageForma
   return result
 }
 
-export function normalizeImagesOptions(root: string, options: ImagesOptions = {}): NormalizedImagesOptions {
+/** Validate user-controlled option values before a plugin is returned to Nib. */
+export function validateImagesOptions(options: ImagesOptions = {}): void {
   if (options === null || typeof options !== 'object' || Array.isArray(options)) {
     throw new Error('@briansunter/nib-images: options must be an object')
   }
@@ -95,6 +96,8 @@ export function normalizeImagesOptions(root: string, options: ImagesOptions = {}
   if (formats.length === 0 || formats.some((format) => format !== 'avif' && format !== 'webp')) {
     throw new Error('@briansunter/nib-images: formats may contain only avif and webp')
   }
+  normalizedPositiveIntegers(options.widths ?? defaultWidths, 'widths')
+  normalizedQuality(options.quality)
   const concurrency = options.concurrency === undefined || options.concurrency === 'auto'
     ? Math.max(1, Math.min(os.availableParallelism(), libuvParallelism()))
     : options.concurrency
@@ -104,6 +107,14 @@ export function normalizeImagesOptions(root: string, options: ImagesOptions = {}
   if (options.memoryLimitMb !== undefined && (!Number.isFinite(options.memoryLimitMb) || options.memoryLimitMb <= 0)) {
     throw new Error('@briansunter/nib-images: memoryLimitMb must be positive')
   }
+}
+
+export function normalizeImagesOptions(root: string, options: ImagesOptions = {}): NormalizedImagesOptions {
+  validateImagesOptions(options)
+  const formats = [...new Set<'avif' | 'webp'>(options.formats ?? ['avif', 'webp'])]
+  const concurrency = options.concurrency === undefined || options.concurrency === 'auto'
+    ? Math.max(1, Math.min(os.availableParallelism(), libuvParallelism()))
+    : options.concurrency
   return {
     formats,
     widths: normalizedPositiveIntegers(options.widths ?? defaultWidths, 'widths'),

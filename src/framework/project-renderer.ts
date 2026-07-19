@@ -7,12 +7,9 @@ import { validateIslandModules, type IslandModule } from './islands'
 import { createRoutes, getRoute, type RouteLayouts } from './router'
 import { stripBasePath } from './urls'
 import {
-  pluginError,
-  validateRenderedPage,
-  validateRendererExtension,
+  createRendererPluginPipeline,
   type NibFinalizeContext,
   type NibRenderPageContext,
-  type NibRendererExtension,
   type NibCommand,
 } from './plugin'
 import type {
@@ -95,19 +92,7 @@ export async function createProjectRenderer(
     base: options.base,
     site: readonlySite(options.config),
   })
-  const extensions: Array<{ plugin: NonNullable<NibConfig['plugins']>[number]; extension: NibRendererExtension }> = []
-  for (const plugin of options.config.plugins ?? []) {
-    if (!plugin.renderer) continue
-    try {
-      const extension = await plugin.renderer(rendererContext)
-      if (extension !== undefined) extensions.push({
-        plugin,
-        extension: validateRendererExtension(extension, plugin),
-      })
-    } catch (error) {
-      throw pluginError(plugin, 'renderer()', error)
-    }
-  }
+  const plugins = await createRendererPluginPipeline(options.config.plugins ?? [], rendererContext)
   const renderedPaths = new Set<string>()
   let finalized = false
 
@@ -121,47 +106,24 @@ export async function createProjectRenderer(
       const pageContext: NibRenderPageContext = Object.freeze({
         command: options.command ?? 'build',
         route: Object.freeze({
-          ...route,
+          path: route.path,
+          source: route.source,
+          status: route.status,
           meta: Object.freeze({ ...route.meta }),
-          layouts: Object.freeze([...route.layouts]),
         }),
         root: options.root,
         base: options.base,
         mode: options.command === 'serve' ? 'development' : 'production',
       })
-      let content = composePage(route, options.config, collections)
-      for (const { plugin, extension } of [...extensions].reverse()) {
-        if (!extension.wrapPage) continue
-        try {
-          content = extension.wrapPage(content, pageContext)
-        } catch (error) {
-          throw pluginError(plugin, 'wrapPage()', error, route.path)
-        }
-      }
+      const content = plugins.wrapPage(composePage(route, options.config, collections), pageContext)
       const reactPage = renderReactPage(content)
-      let renderedPage: RenderedPage = {
+      const renderedPage = plugins.transformPage({
         status: route.status,
         head: renderHead(route.meta),
         html: reactPage.html,
-        islands: reactPage.islands,
-      }
-      for (const { plugin, extension } of extensions) {
-        if (!extension.transformPage) continue
-        try {
-          renderedPage = validateRenderedPage(
-            extension.transformPage(Object.freeze({
-              ...renderedPage,
-              islands: Object.freeze([...renderedPage.islands]),
-            }), pageContext),
-            plugin,
-            renderedPage.islands,
-          )
-        } catch (error) {
-          throw pluginError(plugin, 'transformPage()', error, route.path)
-        }
-      }
+      }, pageContext)
       renderedPaths.add(route.path)
-      return renderedPage
+      return { ...renderedPage, islands: reactPage.islands }
     },
     async finalize(context) {
       if (finalized) throw new Error('Nib project renderer can only finalize once')
@@ -171,14 +133,7 @@ export async function createProjectRenderer(
         clientDirectory: context.clientDirectory,
         renderedPaths: Object.freeze([...renderedPaths]),
       })
-      for (const { plugin, extension } of extensions) {
-        if (!extension.finalize) continue
-        try {
-          await extension.finalize(finalContext)
-        } catch (error) {
-          throw pluginError(plugin, 'finalize()', error)
-        }
-      }
+      await plugins.finalize(finalContext)
     },
   }
 }

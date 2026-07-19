@@ -40,7 +40,26 @@ export default defineConfig({
 
 The site config supplies default metadata and header navigation.
 
-## 3. Add a TSX page
+## 3. Add an optional Vite adapter
+
+Nib owns Vite’s entries, SSR, base path, and output settings. Add project-owned
+Vite plugins through the narrow `vite` factory; it creates a fresh adapter for
+each development, client, and server graph. The starter uses this for Tailwind:
+
+```ts
+import { defineConfig } from '@briansunter/nib'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  site: { title: 'My Site' },
+  vite: () => tailwindcss(),
+})
+```
+
+Use `plugins` only for packages that also need Nib build or rendering lifecycle
+hooks, such as the image optimizer.
+
+## 4. Add a TSX page
 
 Create `src/pages/hello/page.tsx`:
 
@@ -52,7 +71,7 @@ export default function HelloPage() {
 
 Visit <http://localhost:5173/hello/>. The folder name becomes the URL, and the file must be named `page.tsx`.
 
-## 4. Add a Markdown page
+## 5. Add a Markdown page
 
 Create `src/pages/notes/page.md`:
 
@@ -70,7 +89,7 @@ Write your content here.
 
 Visit <http://localhost:5173/notes/>. Use Markdown for content-heavy pages and a TSX page for custom static structure.
 
-## 5. Add interaction when needed
+## 6. Add interaction when needed
 
 Nib includes a counter island at `src/islands/counter.tsx`. Import it into the TSX page:
 
@@ -89,7 +108,7 @@ export default function HelloPage() {
 
 The rest of the page stays static HTML. Follow the [React islands guide](../react-islands/) to define your own typed island and choose when it hydrates.
 
-## 6. Check a production build
+## 7. Check a production build
 
 ```bash
 bun run typecheck

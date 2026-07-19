@@ -39,6 +39,20 @@ describe('optional image plugin', () => {
   it('creates isolated Vite plugin instances for client and server builds', async () => {
     const client = await siteViteConfig(root, 'build', 'client')
     const server = await siteViteConfig(root, 'build', 'server')
+    const clientAppPlugin = client.config.plugins?.find((plugin) => (
+      plugin !== null
+      && typeof plugin === 'object'
+      && !Array.isArray(plugin)
+      && 'name' in plugin
+      && plugin.name === 'image-site-app-vite-client'
+    ))
+    const serverAppPlugin = server.config.plugins?.find((plugin) => (
+      plugin !== null
+      && typeof plugin === 'object'
+      && !Array.isArray(plugin)
+      && 'name' in plugin
+      && plugin.name === 'image-site-app-vite-server'
+    ))
     const clientImagePlugin = client.config.plugins?.find((plugin) => (
       plugin !== null
       && typeof plugin === 'object'
@@ -53,9 +67,24 @@ describe('optional image plugin', () => {
       && 'name' in plugin
       && plugin.name === '@briansunter/nib-images'
     ))
+    expect(clientAppPlugin).toBeDefined()
+    expect(serverAppPlugin).toBeDefined()
+    expect(clientAppPlugin).not.toBe(serverAppPlugin)
     expect(clientImagePlugin).toBeDefined()
     expect(serverImagePlugin).toBeDefined()
     expect(clientImagePlugin).not.toBe(serverImagePlugin)
+    const clientPluginNames = client.config.plugins
+      ?.flatMap((plugin) => (
+        plugin !== null
+        && typeof plugin === 'object'
+        && !Array.isArray(plugin)
+        && 'name' in plugin
+        && typeof plugin.name === 'string'
+          ? [plugin.name]
+          : []
+      )) ?? []
+    expect(clientPluginNames.indexOf('image-site-app-vite-client'))
+      .toBeLessThan(clientPluginNames.indexOf('@briansunter/nib-images'))
   })
 
   it('serves validated optimized image requests in development', async () => {

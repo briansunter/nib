@@ -5,7 +5,6 @@ import { defineConfig } from 'vite'
 const entries = {
   index: path.resolve('src/index.ts'),
   plugin: path.resolve('src/plugin.ts'),
-  internal: path.resolve('src/internal.ts'),
 }
 const builtins = new Set([...builtinModules, ...builtinModules.map((name) => `node:${name}`)])
 

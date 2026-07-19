@@ -164,6 +164,8 @@ describe('published package consumer', () => {
     expect(files).toContain('dist/index.d.ts')
     expect(files).toContain('dist/plugin.js')
     expect(files).toContain('dist/nib-image.d.ts')
+    expect(files).not.toContain('dist/internal.js')
+    expect(files).not.toContain('dist/internal.d.ts')
     expect(files.some((file) => file.startsWith('src/'))).toBe(false)
     const componentEntry = await fs.readFile('packages/nib-images/dist/index.js', 'utf8')
     const componentImports = [
@@ -182,6 +184,8 @@ describe('published package consumer', () => {
       dependencies: Record<string, string>
     }
     expect(corePackage.dependencies.sharp).toBeUndefined()
+    expect(corePackage.dependencies.tailwindcss).toBeUndefined()
+    expect(corePackage.dependencies['@tailwindcss/vite']).toBeUndefined()
     expect(imagePackage.dependencies.sharp).toBeDefined()
 
     const corePacked = await execute(

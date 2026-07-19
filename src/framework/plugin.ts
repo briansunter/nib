@@ -14,18 +14,17 @@ export type NibPluginSiteConfig = Readonly<
   }
 >
 
-export type NibPluginRoute = Readonly<
-  Omit<ResolvedRoute, 'layouts' | 'meta'>
-  & {
-    readonly layouts: readonly ResolvedRoute['layouts'][number][]
-    readonly meta: Readonly<ResolvedRoute['meta']>
-  }
->
+/** Stable route facts available to renderer plugins. Framework implementation
+ * details such as the page module, layouts, and page data remain private. */
+export interface NibPluginRoute {
+  readonly path: string
+  readonly source: string
+  readonly status: number
+  readonly meta: Readonly<ResolvedRoute['meta']>
+}
 
-export type NibRenderedPage = Readonly<
-  Omit<RenderedPage, 'islands'>
-  & { readonly islands: readonly string[] }
->
+/** A plugin may alter static output, but hydration ownership remains with Nib. */
+export type NibRenderedPage = Readonly<Omit<RenderedPage, 'islands'>>
 
 export interface NibVitePluginContext {
   readonly command: NibCommand
@@ -128,8 +127,8 @@ export function validateRendererExtension(
 export function validateRenderedPage(
   value: unknown,
   plugin: NibPlugin,
-  expectedIslands?: readonly string[],
-): RenderedPage {
+  expectedIslandMarkup?: readonly string[],
+): NibRenderedPage {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`Nib plugin ${plugin.name} transformPage() must return a rendered page object`)
   }
@@ -141,24 +140,117 @@ export function validateRenderedPage(
     || page.status > 599
     || typeof page.head !== 'string'
     || typeof page.html !== 'string'
-    || !Array.isArray(page.islands)
-    || !page.islands.every((island) => typeof island === 'string')
   ) {
     throw new Error(`Nib plugin ${plugin.name} transformPage() returned an invalid rendered page`)
   }
-  if (
-    expectedIslands !== undefined
-    && (
-      page.islands.length !== expectedIslands.length
-      || page.islands.some((island, index) => island !== expectedIslands[index])
-    )
-  ) {
-    throw new Error(`Nib plugin ${plugin.name} transformPage() cannot change React island IDs`)
+  if (expectedIslandMarkup !== undefined) {
+    const actual = islandMarkup(page.html)
+    if (
+      actual.length !== expectedIslandMarkup.length
+      || actual.some((markup, index) => markup !== expectedIslandMarkup[index])
+    ) {
+      throw new Error(`Nib plugin ${plugin.name} transformPage() cannot change React island markup`)
+    }
   }
   return {
     status: page.status,
     head: page.head,
     html: page.html,
-    islands: [...page.islands],
-  } as RenderedPage
+  }
+}
+
+function islandMarkup(html: string): string[] {
+  const openings = html.match(/<nib-island\b/gi) ?? []
+  const markup = html.match(/<nib-island\b[^>]*>[\s\S]*?<\/nib-island\s*>/gi) ?? []
+  if (openings.length !== markup.length) return []
+  return markup
+}
+
+export interface NibRendererPipeline {
+  wrapPage(page: ReactNode, context: NibRenderPageContext): ReactNode
+  transformPage(page: NibRenderedPage, context: NibRenderPageContext): NibRenderedPage
+  finalize(context: NibFinalizeContext): Promise<void>
+}
+
+type RegisteredRendererExtension = {
+  plugin: NibPlugin
+  extension: NibRendererExtension
+}
+
+/** Owns renderer-plugin ordering, lifecycle state, and error attribution. */
+export async function createRendererPluginPipeline(
+  plugins: readonly NibPlugin[],
+  context: NibRendererPluginContext,
+): Promise<NibRendererPipeline> {
+  const extensions: RegisteredRendererExtension[] = []
+  for (const plugin of plugins) {
+    if (!plugin.renderer) continue
+    try {
+      const extension = await plugin.renderer(context)
+      if (extension !== undefined) {
+        extensions.push({ plugin, extension: validateRendererExtension(extension, plugin) })
+      }
+    } catch (error) {
+      throw pluginError(plugin, 'renderer()', error)
+    }
+  }
+
+  return {
+    wrapPage(page, pageContext) {
+      let wrapped = page
+      for (const { plugin, extension } of [...extensions].reverse()) {
+        if (!extension.wrapPage) continue
+        try {
+          wrapped = extension.wrapPage(wrapped, pageContext)
+        } catch (error) {
+          throw pluginError(plugin, 'wrapPage()', error, pageContext.route.path)
+        }
+      }
+      return wrapped
+    },
+    transformPage(page, pageContext) {
+      let transformed = page
+      const expectedIslandMarkup = islandMarkup(page.html)
+      for (const { plugin, extension } of extensions) {
+        if (!extension.transformPage) continue
+        try {
+          transformed = validateRenderedPage(
+            extension.transformPage(Object.freeze({ ...transformed }), pageContext),
+            plugin,
+            expectedIslandMarkup,
+          )
+        } catch (error) {
+          throw pluginError(plugin, 'transformPage()', error, pageContext.route.path)
+        }
+      }
+      return transformed
+    },
+    async finalize(finalizeContext) {
+      for (const { plugin, extension } of extensions) {
+        if (!extension.finalize) continue
+        try {
+          await extension.finalize(finalizeContext)
+        } catch (error) {
+          throw pluginError(plugin, 'finalize()', error)
+        }
+      }
+    },
+  }
+}
+
+/** Resolves fresh Vite adapters in configured order for one Vite graph. */
+export async function resolveVitePluginContributions(
+  plugins: readonly NibPlugin[],
+  context: NibVitePluginContext,
+): Promise<Plugin[]> {
+  const contributions: Plugin[] = []
+  for (const plugin of plugins) {
+    if (!plugin.vite) continue
+    try {
+      contributions.push(...await flattenVitePlugins(plugin.vite(context), plugin))
+    } catch (error) {
+      throw pluginError(plugin, 'vite()', error)
+    }
+  }
+  return contributions
 }
