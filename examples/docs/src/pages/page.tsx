@@ -92,6 +92,28 @@ export default function HomePage() {
         </aside>
       </div>
 
+      <section className="home-page__structure" aria-labelledby="home-structure-title">
+        <div className="home-page__structure-intro">
+          <p className="home-page__eyebrow">Start with the file tree</p>
+          <h2 id="home-structure-title">The source is the map.</h2>
+          <p>
+            Initialize a site, then let folders describe its routes. Keep content,
+            typed data, and browser behavior in the places they belong.
+          </p>
+        </div>
+        <div className="home-page__tree-card">
+          <div className="home-page__tree-head">
+            <span>my-site / src</span>
+            <span>project map</span>
+          </div>
+          <pre aria-label="Example Nib project structure"><code>{'my-site/\n├── nib.config.ts\n└── src/\n    ├── pages/\n    │   ├── page.tsx\n    │   ├── about/page.md\n    │   ├── posts/page.csv\n    │   └── layout.tsx\n    ├── content/posts/\n    └── islands/counter.tsx'}</code></pre>
+          <div className="home-page__tree-routes">
+            <code>about/page.md → /about/</code>
+            <code>counter.tsx → browser JS</code>
+          </div>
+        </div>
+      </section>
+
       <section className="home-page__modes" aria-labelledby="home-modes-title">
         <div className="home-page__modes-intro">
           <p className="home-page__eyebrow">One site, four ways to author</p>

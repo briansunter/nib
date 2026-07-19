@@ -759,6 +759,95 @@ nib-island {
   white-space: nowrap;
 }
 
+.home-page__structure {
+  display: grid;
+  grid-template-columns: minmax(16rem, 0.58fr) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(2.5rem, 7vw, 7rem);
+  padding-top: 1.35rem;
+  border-top: 1px solid var(--nib-line);
+}
+
+.home-page__structure-intro {
+  max-width: 30rem;
+}
+
+.home-page__structure h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.home-page__structure-intro > p:last-child {
+  max-width: 30rem;
+  margin: 1.2rem 0 0;
+  color: var(--nib-muted);
+  font-size: 0.93rem;
+  line-height: 1.65;
+}
+
+.home-page__tree-card {
+  min-width: 0;
+  border: 1px solid var(--nib-line);
+  border-radius: 0.35rem 1.2rem 0.35rem 0.35rem;
+  background: linear-gradient(145deg, rgba(19, 37, 43, 0.84), rgba(8, 19, 23, 0.98));
+  box-shadow: 1rem 1rem 0 rgba(123, 225, 209, 0.035);
+}
+
+.home-page__tree-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--nib-line);
+  padding: 0.8rem 1rem;
+  color: var(--nib-faint);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.home-page__tree-head span:first-child {
+  color: var(--nib-coral);
+}
+
+.home-page__tree-head span:last-child {
+  color: var(--nib-teal);
+}
+
+.home-page__tree-card pre {
+  overflow-x: auto;
+  margin: 0;
+  padding: 1.2rem;
+  color: var(--nib-paper);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  line-height: 1.7;
+  white-space: pre;
+}
+
+.home-page__tree-card code {
+  font-family: inherit;
+}
+
+.home-page__tree-routes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+  border-top: 1px solid var(--nib-line);
+  padding: 0.8rem 1rem;
+}
+
+.home-page__tree-routes code {
+  color: var(--nib-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.63rem;
+}
+
 .home-page__modes {
   display: grid;
   grid-template-columns: minmax(16rem, 0.58fr) minmax(0, 1fr);
@@ -1236,6 +1325,11 @@ nib-island {
     gap: 3rem;
   }
 
+  .home-page__structure {
+    grid-template-columns: minmax(14rem, 0.55fr) minmax(0, 1fr);
+    gap: 3rem;
+  }
+
   .home-page__mode {
     grid-template-columns: 1fr auto;
     gap: 0.6rem 1.2rem;
@@ -1318,6 +1412,11 @@ nib-island {
     gap: 2rem;
   }
 
+  .home-page__structure {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
   .home-page__modes-intro {
     position: static;
   }
@@ -1380,6 +1479,10 @@ nib-island {
   }
 
   .home-page__route-sheet-head span:last-child {
+    display: none;
+  }
+
+  .home-page__tree-head span:last-child {
     display: none;
   }
 
