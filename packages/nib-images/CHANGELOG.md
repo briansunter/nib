@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.0](https://github.com/briansunter/nib/compare/nib-images-v0.2.0...nib-images-v0.3.0) (2026-07-19)
+
+### Features
+
+* add hard responsive image width caps and project-root import resolution ([ba656e3](https://github.com/briansunter/nib/commit/ba656e34b7006029cf4ea4cd867f9e035ccbd01b))
+
 ## [0.2.0](https://github.com/briansunter/nib/compare/nib-images-v0.1.0...nib-images-v0.2.0) (2026-07-19)
 
 
