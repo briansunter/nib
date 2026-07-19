@@ -5,6 +5,37 @@ export const meta: PageMeta = {
   description: 'A static-site framework for React, Markdown, data pages, and opt-in islands.'
 }
 
+const authoringModes = [
+  {
+    file: 'page.tsx',
+    title: 'React pages',
+    description: 'Write custom page structure in TSX. Nib renders it to complete HTML.',
+    output: 'HTML',
+    href: '/docs/pages-and-routes/',
+  },
+  {
+    file: 'page.md',
+    title: 'Markdown',
+    description: 'Put content in Markdown and wrap it with a shared layout.',
+    output: 'HTML',
+    href: '/docs/markdown-and-layouts/',
+  },
+  {
+    file: 'page.csv',
+    title: 'Data pages',
+    description: 'Turn typed data into one route or an entire collection of pages.',
+    output: 'many routes',
+    href: '/docs/data-pages-and-collections/',
+  },
+  {
+    file: 'islands/*.tsx',
+    title: 'React islands',
+    description: 'Add state and events to one subtree without hydrating the whole page.',
+    output: 'opt-in JS',
+    href: '/docs/react-islands/',
+  },
+] as const
+
 export default function HomePage() {
   return (
     <section className="home-page">
@@ -12,130 +43,91 @@ export default function HomePage() {
         <div className="home-page__hero-copy">
           <p className="home-page__eyebrow">
             <span className="home-page__eyebrow-dot" aria-hidden="true" />
-            Nib / static-first web
+            Static-site framework for React
           </p>
           <h1>Build the page.<br /><em>Ship the HTML.</em></h1>
           <p className="home-page__lede">
-            A small React framework for sites that want the clarity of static files,
-            the comfort of Markdown, and interaction only where it earns its place.
+            Nib turns React, Markdown, and data into complete static pages.
+            Add browser JavaScript only where interaction needs it.
           </p>
           <div className="home-page__actions">
             <a className="button button--primary" href={siteHref('/docs/getting-started/')}>
               Get started <span aria-hidden="true">→</span>
             </a>
             <a className="button button--quiet" href={siteHref('/docs/')}>
-              Read the guide <span aria-hidden="true">↗</span>
+              Read the docs
             </a>
           </div>
-          <dl className="home-page__facts" aria-label="Nib at a glance">
-            <div>
-              <dt>default output</dt>
-              <dd>HTML</dd>
-            </div>
-            <div>
-              <dt>authoring</dt>
-              <dd>TSX + MD</dd>
-            </div>
-            <div>
-              <dt>browser code</dt>
-              <dd>opt-in</dd>
-            </div>
-          </dl>
+          <div className="home-page__command" aria-label="Create a new Nib site">
+            <span aria-hidden="true">$</span>
+            <code>npx @briansunter/nib init my-site</code>
+          </div>
         </div>
+
+        <aside className="home-page__route-sheet" aria-label="How Nib turns a route into HTML">
+          <div className="home-page__route-sheet-head">
+            <span>route / notes</span>
+            <span>static by default</span>
+          </div>
+          <div className="home-page__source-file">
+            <div className="home-page__file-tab">
+              <span aria-hidden="true">◆</span>
+              <code>src/pages/notes/page.md</code>
+            </div>
+            <pre><code>{'---\ntitle: Field notes\nlayout: docs\n---\n\n# Written clearly.\nPublished simply.'}</code></pre>
+          </div>
+          <div className="home-page__build-line" aria-hidden="true">
+            <span>Nib builds</span>
+          </div>
+          <div className="home-page__output-file">
+            <span className="home-page__output-mark" aria-hidden="true">
+              <img src={siteHref('/nib-mark.svg')} alt="" />
+            </span>
+            <div>
+              <span>output</span>
+              <strong>/notes/index.html</strong>
+              <small>Complete HTML · no client runtime</small>
+            </div>
+          </div>
+        </aside>
       </div>
-      <aside className="home-page__note home-page__assembly" aria-label="A Nib build at a glance">
-        <div className="home-page__assembly-topline">
-          <p className="home-page__note-label">The Nib loop</p>
-          <span className="home-page__assembly-status">
-            <span aria-hidden="true" /> ready to build
-          </span>
+
+      <section className="home-page__modes" aria-labelledby="home-modes-title">
+        <div className="home-page__modes-intro">
+          <p className="home-page__eyebrow">One site, four ways to author</p>
+          <h2 id="home-modes-title">Use the lightest tool for each page.</h2>
+          <p>
+            Routes follow the file tree. Pick TSX, Markdown, or data at build time,
+            then add an island when a small part needs to run in the browser.
+          </p>
         </div>
-        <div className="home-page__assembly-output">
-          <span className="home-page__note-mark" aria-hidden="true">
-            <img src={siteHref('/nib-mark.svg')} alt="" />
-          </span>
-          <div>
-            <span className="home-page__assembly-label">output / 001</span>
-            <strong>index.html</strong>
-            <span>complete HTML, ready to host</span>
-          </div>
+        <div className="home-page__mode-list">
+          {authoringModes.map((mode) => (
+            <a className="home-page__mode" href={siteHref(mode.href)} key={mode.file}>
+              <code>{mode.file}</code>
+              <div>
+                <strong>{mode.title}</strong>
+                <span>{mode.description}</span>
+              </div>
+              <span className="home-page__mode-output">
+                {mode.output} <span aria-hidden="true">↗</span>
+              </span>
+            </a>
+          ))}
         </div>
-        <ol className="home-page__assembly-steps" aria-label="Build sequence">
-          <li><span>01</span><code>src/pages</code><small>routes</small></li>
-          <li><span>02</span><code>page.md</code><small>content</small></li>
-          <li><span>03</span><code>nib build</code><small>output</small></li>
-        </ol>
-        <p>Folders become routes. Markdown becomes HTML. Islands add the small moments that need a browser.</p>
-      </aside>
-      <section className="home-page__example" aria-labelledby="home-example-title">
-        <div className="home-page__example-head">
-          <div className="home-page__example-intro">
-            <p className="home-page__eyebrow">A small site, end to end</p>
-            <h2 id="home-example-title">The file tree is the guide.</h2>
-            <p>Initialize a site, turn files into routes, and add browser behavior only where you ask for it.</p>
-          </div>
-          <a className="home-page__example-link" href={siteHref('/docs/getting-started/')}>
-            Start with a route <span aria-hidden="true">↗</span>
-          </a>
+      </section>
+
+      <section className="home-page__closing" aria-labelledby="home-closing-title">
+        <div>
+          <p className="home-page__eyebrow">From folder to host</p>
+          <h2 id="home-closing-title">No server required.</h2>
         </div>
-        <div className="home-page__example-grid">
-          <article className="home-page__example-card home-page__example-card--setup">
-            <header>
-              <span>01 / SETUP</span>
-              <h3>Initialize a site</h3>
-            </header>
-            <pre><code>{'npx @briansunter/nib init my-site\ncd my-site\nnpm run dev'}</code></pre>
-            <p>Scaffold the config, pages, styles, and an island example.</p>
-          </article>
-          <article className="home-page__example-card home-page__example-card--tree">
-            <header>
-              <span>02 / FILES</span>
-              <h3>Folders map to the site</h3>
-            </header>
-            <pre><code>{'my-site/\n├── nib.config.ts\n└── src/\n    ├── pages/\n    │   ├── page.tsx\n    │   ├── about/page.md\n    │   ├── posts/page.csv\n    │   └── layout.tsx\n    ├── content/posts/\n    └── islands/counter.tsx'}</code></pre>
-            <p>Page folders become URLs; data files can generate many routes.</p>
-          </article>
-          <article className="home-page__example-card">
-            <header>
-              <span>03 / PAGES</span>
-              <h3>Write a route in TSX</h3>
-            </header>
-            <pre><code>{'// src/pages/about/page.tsx\nexport default () =>\n  <h1>About</h1>\n\n// → /about/'}</code></pre>
-            <p>Use TSX when you need custom static structure.</p>
-          </article>
-          <article className="home-page__example-card">
-            <header>
-              <span>04 / CONTENT</span>
-              <h3>Add Markdown and layouts</h3>
-            </header>
-            <pre><code>{'---\ntitle: Notes\nlayout: docs\n---\n\n# Notes'}</code></pre>
-            <p>Use Markdown for content and layouts for shared framing.</p>
-          </article>
-          <article className="home-page__example-card">
-            <header>
-              <span>05 / DATA</span>
-              <h3>Build typed collections</h3>
-            </header>
-            <pre><code>{'defineCollection({\n  loader: glob({\n    base: \'src/content/posts\',\n    pattern: \'**/*.yaml\',\n    load: parseYaml,\n  }),\n  schema: postSchema,\n})'}</code></pre>
-            <p>Load build-time data for indexes and related lists.</p>
-          </article>
-          <article className="home-page__example-card">
-            <header>
-              <span>06 / INTERACTION</span>
-              <h3>Add one React island</h3>
-            </header>
-            <pre><code>{'// src/islands/counter.tsx\nexport default defineIsland(\n  \'counter\',\n  Counter,\n)\n\n<Counter\n  initialCount={0}\n  hydrate="load"\n/>'}</code></pre>
-            <p>Only the interactive subtree gets browser JavaScript.</p>
-          </article>
-          <article className="home-page__example-card home-page__example-card--ship">
-            <header>
-              <span>07 / SHIP</span>
-              <h3>Build static output</h3>
-            </header>
-            <pre><code>{'npm run build\nnpm run preview\n\n→ dist/client is ready to deploy'}</code></pre>
-            <p>Prerender the site, preview the result, and deploy the generated HTML.</p>
-          </article>
-        </div>
+        <p>
+          Build to <code>dist/client</code>, preview the result, and deploy it to any static host.
+        </p>
+        <a href={siteHref('/docs/github-pages/')}>
+          Deploy a Nib site <span aria-hidden="true">→</span>
+        </a>
       </section>
     </section>
   )
