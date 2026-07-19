@@ -8,7 +8,7 @@
     "url": "git+https://github.com/briansunter/nib.git"
   },
   "bin": {
-    "nib": "./bin/nib.js"
+    "nib": "bin/nib.js"
   },
   "exports": {
     ".": {

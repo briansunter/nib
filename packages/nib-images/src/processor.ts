@@ -1,6 +1,24 @@
 import fs from 'node:fs/promises'
-import sharp from 'sharp'
+import sharp, { type Sharp } from 'sharp'
 import type { ImageFormat, InternalImageSource, SourceImageFormat } from './image-source'
+
+export const IMAGE_PROCESSOR_ID = [
+  `sharp@${sharp.versions.sharp}`,
+  `vips@${sharp.versions.vips}`,
+  'avif-effort@2',
+  'webp-effort@4',
+  'jpeg-progressive',
+  'png-lossless-compression@8',
+].join(';')
+
+function encode(pipeline: Sharp, format: ImageFormat, quality: number): Promise<Buffer> {
+  if (format === 'avif') return pipeline.avif({ quality, effort: 2 }).toBuffer()
+  if (format === 'webp') return pipeline.webp({ quality, effort: 4 }).toBuffer()
+  if (format === 'png') {
+    return pipeline.png({ compressionLevel: 8 }).toBuffer()
+  }
+  return pipeline.jpeg({ quality, progressive: true }).toBuffer()
+}
 
 export async function transformImage(
   source: InternalImageSource,
@@ -13,10 +31,7 @@ export async function transformImage(
   const pipeline = sharp(source.__nibFile, { limitInputPixels: 100_000_000 })
     .rotate()
     .resize({ width, withoutEnlargement: true })
-  if (format === 'avif') return pipeline.avif({ quality }).toBuffer()
-  if (format === 'webp') return pipeline.webp({ quality }).toBuffer()
-  if (format === 'png') return pipeline.png({ quality, compressionLevel: 9 }).toBuffer()
-  return pipeline.jpeg({ quality, mozjpeg: true }).toBuffer()
+  return encode(pipeline, format, quality)
 }
 
 export function sourcePipeline(source: InternalImageSource) {
@@ -24,14 +39,11 @@ export function sourcePipeline(source: InternalImageSource) {
 }
 
 export async function transformFromPipeline(
-  pipeline: sharp.Sharp,
+  pipeline: Sharp,
   width: number,
   format: ImageFormat,
   quality: number,
 ): Promise<Buffer> {
   const resized = pipeline.resize({ width, withoutEnlargement: true })
-  if (format === 'avif') return resized.avif({ quality }).toBuffer()
-  if (format === 'webp') return resized.webp({ quality }).toBuffer()
-  if (format === 'png') return resized.png({ quality, compressionLevel: 9 }).toBuffer()
-  return resized.jpeg({ quality, mozjpeg: true }).toBuffer()
+  return encode(resized, format, quality)
 }

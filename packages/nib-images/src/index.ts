@@ -1,5 +1,8 @@
 export { Image } from './image-component'
-export { images } from './plugin'
 export type { ImageProps } from './image-component'
-export type { ImageFormat, ImageSource, SourceImageFormat } from './image-source'
-export type { ImagesOptions } from './options'
+export type {
+  ImageFormat,
+  ImageQualityFormat,
+  ImageSource,
+  SourceImageFormat,
+} from './image-source'

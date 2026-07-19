@@ -108,7 +108,7 @@ pages, Markdown, layouts, data sources, collections, islands, and GitHub Pages.
 Install the image package only in projects that need local image transformation:
 
 ```bash
-npm install @briansunter/nib-images sharp
+npm install @briansunter/nib-images
 ```
 
 Configure it as a normal typed Nib plugin, then import local raster files with
@@ -116,7 +116,7 @@ the explicit `?nib-image` query. `Image` emits static responsive `<picture>`
 markup with intrinsic dimensions, lazy loading by default, and no island runtime.
 
 ```tsx
-import { Image, images } from '@briansunter/nib-images'
+import { Image } from '@briansunter/nib-images'
 import hero from './hero.jpg?nib-image'
 
 export default function Home() {
@@ -127,7 +127,7 @@ export default function Home() {
 ```ts
 // nib.config.ts
 import { defineConfig } from '@briansunter/nib'
-import { images } from '@briansunter/nib-images'
+import { images } from '@briansunter/nib-images/plugin'
 
 export default defineConfig({
   site: { title: 'My site' },
@@ -158,4 +158,6 @@ bun run check:version-policy
 ```
 
 Framework source lives in `src`, the published initializer in
-`templates/default`, and the documentation site in `examples/docs`.
+`templates/default`, and the documentation site in `examples/docs`. Optional
+publishable packages live under `packages/*`; the image package can be built
+or tested directly with `bun run --cwd packages/nib-images <script>`.

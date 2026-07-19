@@ -11,11 +11,11 @@ function defineImagesPlugin<const Plugin extends NibPlugin>(plugin: Plugin): Plu
   return plugin
 }
 
-export function images<const Options extends ImagesOptions>(options?: Options): NibPlugin {
+export function images<const Options extends ImagesOptions>(options?: Options) {
   return defineImagesPlugin({
     name: '@briansunter/nib-images',
     vite(context) {
-      return imageVitePlugin(normalizeImagesOptions(context.root, options))
+      return imageVitePlugin(normalizeImagesOptions(context.root, options), context.target)
     },
     renderer(context) {
       const registry = new ImageBuildRegistry(

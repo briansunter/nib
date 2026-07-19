@@ -33,7 +33,12 @@ export function validateNibConfig(value: unknown): NibConfig {
     if (!Array.isArray(value.plugins)) throw new Error('Nib plugins must be an array')
     const names = new Set<string>()
     for (const plugin of value.plugins) {
-      if (!isRecord(plugin) || typeof plugin.name !== 'string' || plugin.name.trim() === '') {
+      if (
+        !isRecord(plugin)
+        || typeof plugin.name !== 'string'
+        || plugin.name.trim() === ''
+        || plugin.name !== plugin.name.trim()
+      ) {
         throw new Error('Each Nib plugin must have a non-empty name')
       }
       if (names.has(plugin.name)) throw new Error(`Nib plugin name is duplicated: ${plugin.name}`)

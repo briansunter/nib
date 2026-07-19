@@ -15,7 +15,9 @@ const source = createImageSource({
 })
 
 const valid: ImageProps = { src: source, alt: 'Fixture', layout: 'fixed', width: 50 }
+const validQuality: ImageProps = { src: source, alt: 'Fixture', quality: { avif: 45, jpeg: 80 } }
 void valid
+void validQuality
 void Image
 
 // @ts-expect-error alt is required.
@@ -30,9 +32,12 @@ const priorityLoading: ImageProps = { src: source, alt: 'Fixture', priority: tru
 const reservedSrcSet: ImageProps = { src: source, alt: 'Fixture', srcSet: 'bad 1w' }
 // @ts-expect-error static images do not accept event handlers.
 const eventHandler: ImageProps = { src: source, alt: 'Fixture', onClick: () => undefined }
+// @ts-expect-error PNG fallback is lossless and has no visual quality control.
+const pngQuality: ImageProps = { src: source, alt: 'Fixture', quality: { png: 50 } }
 void missingAlt
 void fixedSizes
 void fullWidth
 void priorityLoading
 void reservedSrcSet
 void eventHandler
+void pngQuality

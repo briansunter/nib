@@ -5,6 +5,24 @@
     ".": {
       "release-type": "node",
       "changelog-path": "CHANGELOG.md",
+      "exclude-paths": [
+        ".github",
+        ".release-please-manifest.json",
+        "bun.lock",
+        "examples",
+        "packages",
+        "release-please-config.json",
+        "scripts",
+        "tests"
+      ],
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": false
+    },
+    "packages/nib-images": {
+      "release-type": "node",
+      "component": "nib-images",
+      "include-component-in-tag": true,
+      "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": false
     }

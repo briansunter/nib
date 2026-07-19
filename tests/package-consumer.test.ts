@@ -148,7 +148,7 @@ describe('published package consumer', () => {
     expect(await response.text()).toContain('About this Nib site')
   }, 120_000)
 
-  it('keeps Sharp and image implementation out of the core package tarball', async () => {
+  it('keeps package boundaries clean and builds a packed image consumer', async () => {
     const packageDirectory = await temporaryDirectory('nib-images-package')
     const packed = await execute(
       'npm',
@@ -165,6 +165,15 @@ describe('published package consumer', () => {
     expect(files).toContain('dist/plugin.js')
     expect(files).toContain('dist/nib-image.d.ts')
     expect(files.some((file) => file.startsWith('src/'))).toBe(false)
+    const componentEntry = await fs.readFile('packages/nib-images/dist/index.js', 'utf8')
+    const componentImports = [
+      componentEntry,
+      ...await Promise.all(
+        [...componentEntry.matchAll(/from "(\.\/[^"]+)"/g)]
+          .map((match) => fs.readFile(path.join('packages/nib-images/dist', match[1]!), 'utf8')),
+      ),
+    ].join('\n')
+    expect(componentImports).not.toMatch(/(?:from "sharp"|from "node:)/)
 
     const corePackage = JSON.parse(await fs.readFile('package.json', 'utf8')) as {
       dependencies: Record<string, string>
@@ -174,5 +183,79 @@ describe('published package consumer', () => {
     }
     expect(corePackage.dependencies.sharp).toBeUndefined()
     expect(imagePackage.dependencies.sharp).toBeDefined()
-  })
+
+    const corePacked = await execute(
+      'npm',
+      ['pack', '--json', '--pack-destination', packageDirectory],
+      { cwd: path.resolve('.') },
+    )
+    const coreResult = JSON.parse(corePacked.stdout) as Array<{ filename: string }>
+    const consumer = await temporaryDirectory('nib-images-consumer')
+    await fs.mkdir(path.join(consumer, 'src/pages'), { recursive: true })
+    await fs.copyFile(
+      'tests/fixtures/image-site/src/hero.png',
+      path.join(consumer, 'src/hero.png'),
+    )
+    await fs.writeFile(path.join(consumer, 'package.json'), JSON.stringify({
+      private: true,
+      type: 'module',
+      scripts: {
+        build: 'nib build',
+        typecheck: 'tsc --noEmit',
+      },
+    }))
+    await fs.writeFile(path.join(consumer, 'tsconfig.json'), JSON.stringify({
+      compilerOptions: {
+        target: 'ES2022',
+        lib: ['ES2022', 'DOM'],
+        strict: true,
+        module: 'ESNext',
+        moduleResolution: 'Bundler',
+        jsx: 'react-jsx',
+        skipLibCheck: true,
+        noEmit: true,
+        types: ['node', 'vite/client'],
+      },
+      include: ['nib.config.ts', 'src'],
+    }))
+    await fs.writeFile(path.join(consumer, 'nib.config.ts'), `
+import { defineConfig } from '@briansunter/nib'
+import { images } from '@briansunter/nib-images/plugin'
+
+export default defineConfig({
+  site: { title: 'Packed images' },
+  plugins: [images({ widths: [32, 64], formats: ['webp'] })],
+})
+`)
+    await fs.writeFile(path.join(consumer, 'src/pages/page.tsx'), `
+import { Image } from '@briansunter/nib-images'
+import hero from '../hero.png?nib-image'
+
+export default function Page() {
+  return <Image src={hero} alt="Packed fixture" width={32} priority />
+}
+`)
+    const imageTarball = path.join(packageDirectory, result[0].filename)
+    const coreTarball = path.join(packageDirectory, coreResult[0].filename)
+    await execute('npm', [
+      'install',
+      '--no-audit',
+      '--no-fund',
+      coreTarball,
+      imageTarball,
+      'react@^19.2.0',
+      'react-dom@^19.2.0',
+      'typescript@^5.9.0',
+      '@types/node@^24.0.0',
+      '@types/react@^19.2.0',
+      '@types/react-dom@^19.2.0',
+    ], { cwd: consumer })
+    await execute('npm', ['run', 'typecheck'], { cwd: consumer })
+    await execute('npm', ['run', 'build'], { cwd: consumer })
+    const packedHtml = await fs.readFile(path.join(consumer, 'dist/client/index.html'), 'utf8')
+    expect(packedHtml).toContain('<picture>')
+    expect(packedHtml).not.toContain('data-nib-islands')
+    expect(await fs.readdir(path.join(consumer, 'dist/client/assets/nib')))
+      .toEqual(expect.arrayContaining([expect.stringMatching(/\.webp$/)]))
+  }, 120_000)
 })

@@ -1,12 +1,22 @@
 import { createElement, type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 import { definePlugin } from '../src/plugin'
+import { flattenVitePlugins } from '../src/framework/plugin'
 import { validateNibConfig } from '../src/framework/project-config'
 import { createProjectRenderer } from '../src/framework/project-renderer'
 
 const Page = () => <h1>Home</h1>
 
 describe('Nib plugins', () => {
+  it('resolves recursive Vite plugin promises without changing order', async () => {
+    const owner = definePlugin({ name: 'vite-owner' })
+    const plugins = await flattenVitePlugins([
+      Promise.resolve({ name: 'first-vite' }),
+      [false, Promise.resolve({ name: 'second-vite' })],
+    ], owner)
+    expect(plugins.map((plugin) => plugin.name)).toEqual(['first-vite', 'second-vite'])
+  })
+
   it('validates names and hook shapes before Vite starts', () => {
     expect(() => validateNibConfig({ site: { title: 'Site' }, plugins: [{}] }))
       .toThrow('non-empty name')
@@ -18,6 +28,10 @@ describe('Nib plugins', () => {
       site: { title: 'Site' },
       plugins: [{ name: 'invalid', renderer: true }],
     })).toThrow('renderer hook must be a function')
+    expect(() => validateNibConfig({
+      site: { title: 'Site' },
+      plugins: [{ name: ' padded ' }],
+    })).toThrow('non-empty name')
   })
 
   it('wraps, transforms, and finalizes pages in deterministic plugin order', async () => {
@@ -26,6 +40,8 @@ describe('Nib plugins', () => {
       name: 'first',
       renderer(context) {
         expect(context.mode).toBe('production')
+        expect(Object.isFrozen(context.site)).toBe(true)
+        expect(Object.isFrozen(context.site.navigation)).toBe(true)
         return {
           wrapPage(page) {
             events.push('first-wrap')
@@ -33,9 +49,16 @@ describe('Nib plugins', () => {
           },
           transformPage(page, context) {
             events.push(`first-transform:${context.route.path}`)
+            expect(context.command).toBe('build')
+            expect(Object.isFrozen(page)).toBe(true)
+            expect(Object.isFrozen(page.islands)).toBe(true)
             return { ...page, head: `${page.head}\n<meta name="first" content="yes" />` }
           },
           async finalize(context) {
+            expect(context.command).toBe('build')
+            expect(context.mode).toBe('production')
+            expect(context.site.title).toBe('Site')
+            expect(Object.isFrozen(context.renderedPaths)).toBe(true)
             events.push(`first-finalize:${context.renderedPaths.join(',')}`)
           },
         }
@@ -57,7 +80,10 @@ describe('Nib plugins', () => {
       },
     })
     const renderer = await createProjectRenderer({
-      config: { site: { title: 'Site' }, plugins: [first, second] },
+      config: {
+        site: { title: 'Site', navigation: [{ label: 'Home', href: '/' }] },
+        plugins: [first, second],
+      },
       root: process.cwd(),
       base: '/',
       pages: { '/src/pages/page.tsx': { default: Page } },
@@ -70,10 +96,7 @@ describe('Nib plugins', () => {
     )
     expect(page.head).toContain('name="first"')
     await renderer.finalize({
-      root: '/ignored',
-      base: '/ignored/',
       clientDirectory: '/tmp/client',
-      renderedPaths: [],
     })
     expect(events).toEqual([
       'second-wrap',
@@ -83,7 +106,7 @@ describe('Nib plugins', () => {
       'first-finalize:/',
     ])
     await expect(renderer.finalize({
-      root: process.cwd(), base: '/', clientDirectory: '/tmp/client', renderedPaths: [],
+      clientDirectory: '/tmp/client',
     })).rejects.toThrow('only finalize once')
     expect(() => renderer.render('/')).toThrow('cannot render after finalization')
   })
@@ -103,5 +126,54 @@ describe('Nib plugins', () => {
       islandModules: {},
     })
     expect(() => renderer.render('/')).toThrow('Nib plugin broken failed in wrapPage() for route /')
+  })
+
+  it('rejects invalid status codes and post-render island mutations', async () => {
+    const invalidStatus = await createProjectRenderer({
+      config: {
+        site: { title: 'Site' },
+        plugins: [definePlugin({
+          name: 'invalid-status',
+          renderer: () => ({ transformPage: (page) => ({ ...page, status: 999 }) }),
+        })],
+      },
+      root: process.cwd(),
+      base: '/',
+      pages: { '/src/pages/page.tsx': { default: Page } },
+      islandModules: {},
+    })
+    expect(() => invalidStatus.render('/')).toThrow('returned an invalid rendered page')
+
+    const informationalStatus = await createProjectRenderer({
+      config: {
+        site: { title: 'Site' },
+        plugins: [definePlugin({
+          name: 'informational-status',
+          renderer: () => ({ transformPage: (page) => ({ ...page, status: 199 }) }),
+        })],
+      },
+      root: process.cwd(),
+      base: '/',
+      pages: { '/src/pages/page.tsx': { default: Page } },
+      islandModules: {},
+    })
+    expect(() => informationalStatus.render('/')).toThrow('returned an invalid rendered page')
+
+    const invalidIslands = await createProjectRenderer({
+      config: {
+        site: { title: 'Site' },
+        plugins: [definePlugin({
+          name: 'invalid-islands',
+          renderer: () => ({
+            transformPage: (page) => ({ ...page, islands: ['not-rendered'] }),
+          }),
+        })],
+      },
+      root: process.cwd(),
+      base: '/',
+      pages: { '/src/pages/page.tsx': { default: Page } },
+      islandModules: {},
+    })
+    expect(() => invalidIslands.render('/')).toThrow('cannot change React island IDs')
   })
 })

@@ -97,9 +97,11 @@ function devHtmlTemplate(): string {
 </html>`
 }
 
-async function siteViteConfig(
+/** @internal Exported for framework contract tests, not from the package API. */
+export async function siteViteConfig(
   root: string,
   command: 'build' | 'serve',
+  target: 'client' | 'server' | 'development',
 ): Promise<{ base: string; config: InlineConfig }> {
   const loaded = await loadNibConfig(root, command)
   const base = resolveBasePath(loaded.config)
@@ -107,6 +109,7 @@ async function siteViteConfig(
   const pluginContext = Object.freeze({
     command,
     mode: command === 'serve' ? 'development' as const : 'production' as const,
+    target,
     root,
     base,
     configPath: loaded.configPath,
@@ -115,7 +118,7 @@ async function siteViteConfig(
   for (const plugin of loaded.config.plugins ?? []) {
     if (!plugin.vite) continue
     try {
-      contributedPlugins.push(...flattenVitePlugins(await plugin.vite(pluginContext), plugin))
+      contributedPlugins.push(...await flattenVitePlugins(plugin.vite(pluginContext), plugin))
     } catch (error) {
       throw pluginError(plugin, 'vite()', error)
     }
@@ -177,13 +180,13 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
   const output = path.join(root, 'dist')
   const clientDirectory = path.join(output, 'client')
   const serverDirectory = path.join(output, 'server')
-  const { base, config } = await siteViteConfig(root, 'build')
   const stylePath = path.join(root, 'src/style.css')
   const hasStyles = await fs.access(stylePath).then(() => true, () => false)
 
   await fs.rm(output, { recursive: true, force: true })
+  const { base, config: clientConfig } = await siteViteConfig(root, 'build', 'client')
   await viteBuild({
-    ...config,
+    ...clientConfig,
     build: {
       emptyOutDir: true,
       manifest: true,
@@ -196,8 +199,12 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
       },
     },
   })
+  const { base: serverBase, config: serverConfig } = await siteViteConfig(root, 'build', 'server')
+  if (serverBase !== base) {
+    throw new Error(`Nib base changed between client and server builds: ${base} !== ${serverBase}`)
+  }
   await viteBuild({
-    ...config,
+    ...serverConfig,
     build: {
       emptyOutDir: true,
       outDir: serverDirectory,
@@ -214,22 +221,14 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
   const template = await readBuildTemplate(clientDirectory, base)
   const serverEntry = path.join(serverDirectory, 'entry-server.js')
   const server = await import(`${pathToFileURL(serverEntry).href}?t=${Date.now()}`) as {
-    paths: string[]
+    paths: readonly string[]
     render(url: string): RenderedPage
-    finalize(context: {
-      root: string
-      base: string
-      clientDirectory: string
-      renderedPaths: readonly string[]
-    }): Promise<void>
+    finalize(context: { clientDirectory: string }): Promise<void>
   }
   const rendered = server.paths.map((routePath) => ({ routePath, page: server.render(routePath) }))
   const notFound = { routePath: '/404', page: server.render('/404') }
   await server.finalize({
-    root,
-    base,
     clientDirectory,
-    renderedPaths: [...server.paths, '/404'],
   })
   await mapWithConcurrency([...rendered, notFound], htmlWriteConcurrency(), async ({ routePath, page }) => {
     const file = routePath === '/404'
@@ -258,7 +257,7 @@ export interface DevSiteOptions extends SiteOperationOptions {
 
 export async function startDevSite(options: DevSiteOptions): Promise<ViteDevServer> {
   const root = path.resolve(options.root)
-  const { config } = await siteViteConfig(root, 'serve')
+  const { config } = await siteViteConfig(root, 'serve', 'development')
   const vite = await createViteServer({
     ...config,
     server: {

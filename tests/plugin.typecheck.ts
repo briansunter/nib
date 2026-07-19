@@ -5,6 +5,8 @@ const plugin = definePlugin({
   name: 'typed-plugin',
   vite(context) {
     context.base
+    const target: 'client' | 'server' | 'development' = context.target
+    void target
     return { name: 'typed-vite-plugin' }
   },
   renderer(context) {
@@ -15,6 +17,8 @@ const plugin = definePlugin({
         return page
       },
       transformPage(page) {
+        // @ts-expect-error transform inputs are readonly.
+        page.html = 'mutated'
         return page
       },
       async finalize(context) {

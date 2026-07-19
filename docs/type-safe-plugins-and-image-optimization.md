@@ -1,11 +1,31 @@
 # Type-safe plugins and image optimization
 
-Status: Implemented (first release)
+Status: Implemented and performance-audited
 
 This document is the design and implementation record for the current generic
 plugin API and optional local-image optimizer. The non-goals remain deliberate:
 remote images, Markdown rewriting, SVG rasterization, and animated-image
 conversion are follow-up work.
+
+## Audit corrections
+
+The July 2026 implementation audit found and corrected several first-pass
+inconsistencies:
+
+- the component entry pulled in the Sharp-backed plugin despite the documented
+  package boundary;
+- a one-source build launched every width/format transform at once, bypassing
+  configured concurrency;
+- fixed custom densities were labeled by array position and emitted `w`
+  descriptors instead of their real `x` density;
+- fixed and constrained `width` values did not control intrinsic layout
+  dimensions consistently;
+- plugin Vite instances were reused across client and server builds;
+- cache keys omitted the Sharp/libvips and encoder configuration, non-empty
+  corruption was trusted, and source-root checks allowed symlink escapes;
+- the public placeholder option was accepted but did nothing.
+
+The current implementation and validation matrix cover these cases directly.
 
 ## Decision
 
@@ -174,7 +194,7 @@ export interface ImagesOptions {
   readonly widths?: readonly number[]
   readonly quality?:
     | number
-    | Readonly<Partial<Record<'avif' | 'webp' | 'jpeg' | 'png', number>>>
+    | Readonly<Partial<Record<'avif' | 'webp' | 'jpeg', number>>>
   readonly cacheDirectory?: string
   readonly concurrency?: 'auto' | number
   readonly memoryLimitMb?: number
@@ -199,18 +219,15 @@ Put public contracts in a dedicated framework module and re-export them through
 ```ts
 import type { ReactNode } from 'react'
 import type { PluginOption } from 'vite'
-import type {
-  RenderedPage,
-  ResolvedRoute,
-  SiteConfig,
-} from './types'
 
 export type NibCommand = 'build' | 'serve'
+export type NibMode = 'development' | 'production'
 export type Awaitable<Value> = Value | Promise<Value>
 
 export interface NibVitePluginContext {
   readonly command: NibCommand
-  readonly mode: 'development' | 'production'
+  readonly mode: NibMode
+  readonly target: 'client' | 'server' | 'development'
   readonly root: string
   readonly base: string
   readonly configPath: string
@@ -218,22 +235,21 @@ export interface NibVitePluginContext {
 
 export interface NibRendererPluginContext {
   readonly command: NibCommand
-  readonly mode: 'development' | 'production'
+  readonly mode: NibMode
   readonly root: string
   readonly base: string
-  readonly site: SiteConfig
+  readonly site: NibPluginSiteConfig
 }
 
 export interface NibRenderPageContext {
-  readonly route: ResolvedRoute
+  readonly command: NibCommand
+  readonly route: NibPluginRoute
   readonly root: string
   readonly base: string
-  readonly mode: 'development' | 'production'
+  readonly mode: NibMode
 }
 
-export interface NibFinalizeContext {
-  readonly root: string
-  readonly base: string
+export interface NibFinalizeContext extends NibRendererPluginContext {
   readonly clientDirectory: string
   readonly renderedPaths: readonly string[]
 }
@@ -245,9 +261,9 @@ export interface NibRendererExtension {
   ): ReactNode
 
   transformPage?(
-    page: RenderedPage,
+    page: NibRenderedPage,
     context: NibRenderPageContext,
-  ): RenderedPage
+  ): NibRenderedPage
 
   finalize?(context: NibFinalizeContext): Promise<void>
 }
@@ -319,11 +335,19 @@ inference.
   configuration validation.
 - Vite contributions are resolved in config order. Vite's own `enforce`
   semantics still determine pre/post placement.
+- Client and server production builds receive fresh contributed plugin
+  instances, identified by `context.target`; development uses the
+  `development` target and Vite's environment-aware hook context.
+- Recursive Vite `PluginOption` arrays and promises are fully awaited without
+  changing their declared order.
 - Renderer extensions are created once, in config order, for each server
   renderer.
 - `wrapPage` is synchronous. The first configured plugin is the outermost
   wrapper, making composition deterministic.
 - `transformPage` runs synchronously in config order after React rendering.
+- Transform inputs and island ID lists are readonly. A transform may change
+  status, head, or HTML, but cannot invent or remove hydration boundaries after
+  React rendering.
 - `finalize` runs asynchronously in config order after every production route
   and the 404 page have rendered.
 - Arbitrary plugin finalizers are not run in parallel because ordering may be
@@ -332,8 +356,8 @@ inference.
   rendering.
 - Calling `finalize` twice, rendering after finalization, or returning a
   malformed page produces an attributed framework error.
-- Errors include the plugin name, hook name, route when applicable, and
-  original error cause.
+- Errors include the plugin name, hook name, route when applicable, original
+  message, and original error cause.
 
 ### Why render hooks stay synchronous
 
@@ -424,10 +448,7 @@ const notFound = {
 }
 
 await server.finalize({
-  root,
-  base,
   clientDirectory,
-  renderedPaths: [...server.paths, '/404'],
 })
 
 await mapWithConcurrency(
@@ -460,15 +481,20 @@ For images:
 2. the generated metadata module carries the source ID, content fingerprint,
    dimensions, orientation, and format;
 3. `Image` emits URLs under a reserved path such as
-   `/@nib-images/<request-key>.<format>`;
+   `/@nib-images/<opaque-source-id>/<width>-<quality>.<format>`;
 4. middleware validates the source ID and transformation request;
-5. it serves a memory/disk-cached transform and deduplicates concurrent
+5. it serves a disk-cached transform and deduplicates concurrent
    requests for the same key;
-6. source HMR clears only affected metadata and transform entries.
+6. Vite explicitly watches every imported source and HMR re-inspects only the
+   changed file, retrying across editor overwrite windows;
+7. changed bytes produce a new request key and ETag, while a timestamp-only or
+   byte-identical rewrite retains the existing artifact and returns `304`.
 
 Never encode an unrestricted absolute path in a browser URL. Reject unknown
 source IDs, path traversal, unsupported formats, unconfigured qualities,
 oversized dimensions, and files outside the allowed project roots.
+Server-only file paths and source IDs are non-enumerable on metadata objects so
+they cannot leak through unrelated object serialization.
 
 ## Image source imports
 
@@ -550,8 +576,7 @@ interface ImageCommonProps
   src: ImageSource
   alt: string
   formats?: readonly ImageFormat[]
-  quality?: number | Partial<Record<ImageFormat, number>>
-  placeholder?: 'none' | 'dominant-color'
+  quality?: number | Partial<Record<'avif' | 'webp' | 'jpeg', number>>
   unoptimized?: boolean
 }
 
@@ -611,6 +636,8 @@ Important type behavior:
 - `priority` cannot be combined with manual loading or fetch-priority hints.
 - `quality` values are validated at runtime even though TypeScript can only
   express `number`.
+- `quality` applies to AVIF, WebP, and JPEG. PNG fallback output remains
+  lossless with a fixed compression level.
 - `unoptimized` emits the imported source with intrinsic dimensions and normal
   loading attributes. It registers a content-hashed pass-through copy, but no
   resized or converted variants.
@@ -710,10 +737,9 @@ contract true:
 Merge user styles after the defaults so authors retain control, and document
 that overriding width behavior also requires an accurate explicit `sizes`.
 
-Do not generate a blur-up placeholder requiring client JavaScript. A
-`dominant-color` placeholder may be expressed as static wrapper styling, but it
-must be measured against no placeholder because extra inline markup and CSS can
-hurt more than it helps.
+The current API does not expose a placeholder option. A future static
+dominant-color placeholder must be measured against no placeholder before it is
+added; a blur-up implementation requiring client JavaScript is out of scope.
 
 ## Request registry
 
@@ -782,15 +808,15 @@ be added without changing `ImageProps`.
 
 Processing strategy:
 
-1. group missing cache entries by source fingerprint;
-2. read or stream each source once;
-3. create an auto-oriented shared Sharp pipeline;
-4. clone the pipeline for requested width/format combinations where that
-   actually shares decoding work;
-5. use a bounded source queue rather than unbounded `Promise.all`;
+1. read cache entries and create output links with bounded I/O parallelism;
+2. place every cache miss in one global transform queue;
+3. create one auto-oriented Sharp pipeline snapshot per source fingerprint;
+4. clone that snapshot for requested width/format combinations;
+5. enforce `concurrency` across all active transforms, including many variants
+   of one source;
 6. let Sharp/libvips parallelize within each active image;
-7. write each result to a temporary file in the cache directory;
-8. fsync when appropriate and atomically rename it to the cache key;
+7. write each result and checksum metadata to temporary cache files;
+8. atomically rename them to the cache key;
 9. hard-link the cached artifact into `dist/client` when the filesystem allows
    it, otherwise copy it;
 10. deduplicate concurrent promises for the same request key.
@@ -799,18 +825,20 @@ Default concurrency should use `os.availableParallelism()` and a conservative
 memory estimate:
 
 ```text
-active sources =
+active transforms =
   min(
     available parallelism,
     configured maximum,
-    floor(memory budget / estimated bytes per active source)
+    floor(memory budget / conservative bytes per active transform)
   )
 ```
 
 Do not assume that more JavaScript promises mean more throughput. Sharp uses a
 libuv thread pool, libvips uses threads within an image, and some AVIF encoders
-create additional threads. Add an explicit `concurrency` option for CI tuning,
-but select the default from measurements on representative fixtures.
+create additional threads. Automatic concurrency is capped by available
+parallelism and `UV_THREADPOOL_SIZE` (four when unset). `memoryLimitMb` applies a
+conservative 192 MB-per-active-transform estimate and never prevents the one
+transform required to make progress.
 
 ## Cache design
 
@@ -818,11 +846,12 @@ Default cache location:
 
 ```text
 .nib/cache/images/
-├── cache-version
 ├── ab/
-│   └── REQUEST_KEY.avif
+│   ├── REQUEST_KEY.avif
+│   └── REQUEST_KEY.avif.json
 └── cd/
-    └── REQUEST_KEY.webp
+    ├── REQUEST_KEY.webp
+    └── REQUEST_KEY.webp.json
 ```
 
 Requirements:
@@ -830,8 +859,11 @@ Requirements:
 - `dist` deletion must not remove the cache.
 - A source-content or normalized-option change must cause a miss.
 - A plugin/processor cache-schema change must cause a miss.
-- Corrupt or zero-byte entries are misses and are replaced atomically.
+- Corrupt, truncated, metadata-mismatched, or zero-byte entries are misses and
+  are replaced atomically.
 - A warm build must not decode or encode an unchanged cached transform.
+- File modification time is not part of the key: touching or byte-identically
+  rewriting a source must reuse its cached transforms.
 - The cache may be deleted safely at any time.
 - Cache pruning is initially manual; automatic LRU pruning can follow once real
   projects establish useful size and age defaults.
@@ -995,9 +1027,10 @@ Implement:
 - the reserved development URL;
 - strict request parsing and source-ID lookup;
 - in-flight request deduplication;
-- disk/memory cache lookup;
+- checksum-validated disk cache lookup;
 - correct content types and cache headers;
-- HMR invalidation for changed sources;
+- explicit source watching, HMR re-inspection, and editor overwrite retries;
+- changed-content ETags and byte-identical cache reuse;
 - friendly overlay errors for failed transforms.
 
 ### Phase 6: Documentation and performance calibration
@@ -1129,10 +1162,32 @@ Record:
 - total generated bytes by format;
 - total bytes selected at representative mobile and desktop viewports.
 
-Compare bounded source concurrency values and WebP-only versus AVIF plus WebP.
+Compare bounded global transform concurrency values and WebP-only versus AVIF
+plus WebP.
 Select defaults from throughput, memory, and transfer results together. The
 fastest encoder setting is not automatically the best site output, and the
 smallest output is not automatically worth a disproportionate build cost.
+
+### Current calibration
+
+On the 12-core Apple development machine used for the July 2026 audit, the
+repeatable 1 MP/2 MP alpha/4 MP/12 MP stress set produced:
+
+| Formats and concurrency | Cold | Warm | Transforms/s | Peak RSS | Output |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| AVIF + WebP + fallback, 1 | 3676 ms | 21 ms | 12.24 | 389 MB | 21.11 MB |
+| AVIF + WebP + fallback, 2 | 1827 ms | 23 ms | 24.63 | 485 MB | 21.11 MB |
+| AVIF + WebP + fallback, 4 | 1100 ms | 23 ms | 40.91 | 575 MB | 21.11 MB |
+| WebP + fallback, 4 | 710 ms | 17 ms | 42.25 | 346 MB | 18.94 MB |
+
+Four active transforms matched the default libuv task capacity and was the
+fastest tested setting. AVIF added build work and 2.28 MB of generated storage
+but its variants totaled 2.28 MB versus 4.42 MB for WebP on the same inputs.
+The processor therefore keeps AVIF plus WebP as the transfer-oriented default,
+uses AVIF effort 2, progressive JPEG, WebP effort 4, and exposes WebP-only plus
+lower concurrency for build-time or memory-constrained projects. Run
+`bun run benchmark:images` on deployment hardware rather than treating these
+machine-specific values as universal.
 
 ## External references
 

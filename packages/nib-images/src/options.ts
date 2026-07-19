@@ -1,11 +1,11 @@
 import os from 'node:os'
 import path from 'node:path'
-import type { ImageFormat } from './image-source'
+import type { ImageFormat, ImageQualityFormat } from './image-source'
 
 export interface ImagesOptions {
   readonly formats?: readonly Exclude<ImageFormat, 'jpeg' | 'png'>[]
   readonly widths?: readonly number[]
-  readonly quality?: number | Partial<Record<ImageFormat, number>>
+  readonly quality?: number | Partial<Record<ImageQualityFormat, number>>
   readonly cacheDirectory?: string
   readonly concurrency?: 'auto' | number
   readonly memoryLimitMb?: number
@@ -28,6 +28,12 @@ const defaultQuality: Record<ImageFormat, number> = {
   jpeg: 80,
   png: 90,
 }
+const lossyFormats = ['avif', 'webp', 'jpeg'] as const
+
+function libuvParallelism(): number {
+  const configured = Number(process.env.UV_THREADPOOL_SIZE ?? 4)
+  return Number.isSafeInteger(configured) && configured > 0 ? configured : 4
+}
 
 function normalizedPositiveIntegers(values: readonly number[], name: string): number[] {
   const normalized = [...new Set(values)].sort((left, right) => left - right)
@@ -40,9 +46,17 @@ function normalizedPositiveIntegers(values: readonly number[], name: string): nu
 function normalizedQuality(quality: ImagesOptions['quality']): Record<ImageFormat, number> {
   const result = { ...defaultQuality }
   if (typeof quality === 'number') {
-    for (const format of Object.keys(result) as ImageFormat[]) result[format] = quality
+    for (const format of lossyFormats) result[format] = quality
   } else if (quality !== undefined) {
-    Object.assign(result, quality)
+    if (quality === null || typeof quality !== 'object' || Array.isArray(quality)) {
+      throw new Error('@briansunter/nib-images: quality must be a number or format map')
+    }
+    for (const [format, value] of Object.entries(quality)) {
+      if (!lossyFormats.includes(format as ImageQualityFormat)) {
+        throw new Error(`@briansunter/nib-images: quality does not support ${format}`)
+      }
+      result[format as ImageQualityFormat] = value
+    }
   }
   for (const [format, value] of Object.entries(result)) {
     if (!Number.isSafeInteger(value) || value < 1 || value > 100) {
@@ -53,12 +67,36 @@ function normalizedQuality(quality: ImagesOptions['quality']): Record<ImageForma
 }
 
 export function normalizeImagesOptions(root: string, options: ImagesOptions = {}): NormalizedImagesOptions {
+  if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+    throw new Error('@briansunter/nib-images: options must be an object')
+  }
+  if (options.formats !== undefined && !Array.isArray(options.formats)) {
+    throw new Error('@briansunter/nib-images: formats must be an array')
+  }
+  if (options.widths !== undefined && !Array.isArray(options.widths)) {
+    throw new Error('@briansunter/nib-images: widths must be an array')
+  }
+  if (
+    options.allowedSourceRoots !== undefined
+    && (
+      !Array.isArray(options.allowedSourceRoots)
+      || options.allowedSourceRoots.some((directory) => typeof directory !== 'string' || directory === '')
+    )
+  ) {
+    throw new Error('@briansunter/nib-images: allowedSourceRoots must contain directory strings')
+  }
+  if (
+    options.cacheDirectory !== undefined
+    && (typeof options.cacheDirectory !== 'string' || options.cacheDirectory === '')
+  ) {
+    throw new Error('@briansunter/nib-images: cacheDirectory must be a non-empty string')
+  }
   const formats = [...new Set<'avif' | 'webp'>(options.formats ?? ['avif', 'webp'])]
   if (formats.length === 0 || formats.some((format) => format !== 'avif' && format !== 'webp')) {
     throw new Error('@briansunter/nib-images: formats may contain only avif and webp')
   }
   const concurrency = options.concurrency === undefined || options.concurrency === 'auto'
-    ? Math.max(1, Math.min(os.availableParallelism(), 4))
+    ? Math.max(1, Math.min(os.availableParallelism(), libuvParallelism()))
     : options.concurrency
   if (!Number.isSafeInteger(concurrency) || concurrency <= 0) {
     throw new Error('@briansunter/nib-images: concurrency must be a positive integer or "auto"')
@@ -73,7 +111,7 @@ export function normalizeImagesOptions(root: string, options: ImagesOptions = {}
     cacheDirectory: path.resolve(root, options.cacheDirectory ?? '.nib/cache/images'),
     concurrency: options.memoryLimitMb === undefined
       ? concurrency
-      : Math.max(1, Math.min(concurrency, Math.floor(options.memoryLimitMb / 64))),
+      : Math.max(1, Math.min(concurrency, Math.floor(options.memoryLimitMb / 192))),
     allowedSourceRoots: (options.allowedSourceRoots ?? [root]).map((directory) => path.resolve(root, directory)),
   }
 }

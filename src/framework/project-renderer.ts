@@ -33,9 +33,22 @@ export interface ProjectRendererOptions {
 }
 
 export interface ProjectRenderer {
-  paths: string[]
+  readonly paths: readonly string[]
   render(url: string): RenderedPage
-  finalize(context: NibFinalizeContext): Promise<void>
+  finalize(context: Pick<NibFinalizeContext, 'clientDirectory'>): Promise<void>
+}
+
+function readonlySite(config: NibConfig): NibFinalizeContext['site'] {
+  return Object.freeze({
+    ...config.site,
+    ...(config.site.navigation === undefined
+      ? {}
+      : {
+          navigation: Object.freeze(
+            config.site.navigation.map((item) => Object.freeze({ ...item })),
+          ),
+        }),
+  })
 }
 
 function composePage(
@@ -80,7 +93,7 @@ export async function createProjectRenderer(
     mode: options.command === 'serve' ? 'development' as const : 'production' as const,
     root: options.root,
     base: options.base,
-    site: options.config.site,
+    site: readonlySite(options.config),
   })
   const extensions: Array<{ plugin: NonNullable<NibConfig['plugins']>[number]; extension: NibRendererExtension }> = []
   for (const plugin of options.config.plugins ?? []) {
@@ -106,7 +119,12 @@ export async function createProjectRenderer(
       if (finalized) throw new Error('Nib project renderer cannot render after finalization')
       const route = getRoute(routes, stripBasePath(url, options.base))
       const pageContext: NibRenderPageContext = Object.freeze({
-        route,
+        command: options.command ?? 'build',
+        route: Object.freeze({
+          ...route,
+          meta: Object.freeze({ ...route.meta }),
+          layouts: Object.freeze([...route.layouts]),
+        }),
         root: options.root,
         base: options.base,
         mode: options.command === 'serve' ? 'development' : 'production',
@@ -131,8 +149,12 @@ export async function createProjectRenderer(
         if (!extension.transformPage) continue
         try {
           renderedPage = validateRenderedPage(
-            extension.transformPage(renderedPage, pageContext),
+            extension.transformPage(Object.freeze({
+              ...renderedPage,
+              islands: Object.freeze([...renderedPage.islands]),
+            }), pageContext),
             plugin,
+            renderedPage.islands,
           )
         } catch (error) {
           throw pluginError(plugin, 'transformPage()', error, route.path)
@@ -145,10 +167,9 @@ export async function createProjectRenderer(
       if (finalized) throw new Error('Nib project renderer can only finalize once')
       finalized = true
       const finalContext: NibFinalizeContext = Object.freeze({
-        ...context,
-        root: options.root,
-        base: options.base,
-        renderedPaths: [...renderedPaths],
+        ...rendererContext,
+        clientDirectory: context.clientDirectory,
+        renderedPaths: Object.freeze([...renderedPaths]),
       })
       for (const { plugin, extension } of extensions) {
         if (!extension.finalize) continue
