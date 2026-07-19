@@ -5,7 +5,6 @@
 
 ### Features
 
-* make Nib a self-contained framework ([e52843e](https://github.com/briansunter/nib/commit/e52843ebe1b0aeeaccaba9958c569027050ca5e5))
 * make Nib a self-contained framework ([d805ac7](https://github.com/briansunter/nib/commit/d805ac7023188e25cb656ccadff46f8a5cf1ace4))
 
 ## [0.3.0](https://github.com/briansunter/nib/compare/v0.2.0...v0.3.0) (2026-07-18)
