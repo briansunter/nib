@@ -6,26 +6,39 @@ function routePath(href: string): string {
 }
 
 export function SiteShell({ children, route, site }: SiteShellProps) {
+  const isDocsRoute = route.path === '/docs' || route.path.startsWith('/docs/')
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="border-b border-white/10">
-        <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-          <a className="font-semibold tracking-tight" href={siteHref('/')}>{site.title}</a>
-          <div className="flex gap-5 text-sm text-slate-300">
-            {site.navigation?.map((item) => (
-              <a
-                className={routePath(item.href) === route.path ? 'text-white' : 'transition hover:text-white'}
-                href={siteHref(item.href)}
-                key={item.href}
-              >
-                {item.label}
-              </a>
-            ))}
-          </div>
-        </nav>
+    <div className="site-frame">
+      <a className="skip-link" href="#content">Skip to content</a>
+      <header className="site-header">
+        <div className="site-header__inner">
+          <a className="site-brand" href={siteHref('/')} aria-label={`${site.title} home`}>
+            <span className="site-brand__mark" aria-hidden="true">n</span>
+            <span className="site-brand__words">
+              <span className="site-brand__name">{site.title}</span>
+              <span className="site-brand__tagline">static sites, carefully composed</span>
+            </span>
+          </a>
+          <nav aria-label="Primary" className="site-primary-nav">
+            {site.navigation?.map((item) => {
+              const itemPath = routePath(item.href)
+              const active = itemPath === route.path || (itemPath === '/docs' && isDocsRoute)
+              return (
+                <a
+                  aria-current={active ? 'page' : undefined}
+                  href={siteHref(item.href)}
+                  key={item.href}
+                >
+                  {item.label}
+                </a>
+              )
+            })}
+          </nav>
+        </div>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-20">{children}</main>
-      <footer className="mx-auto max-w-5xl border-t border-white/10 px-6 py-8 text-sm text-slate-400">
+      <main className={`site-main${isDocsRoute ? ' site-main--docs' : ''}`} id="content">{children}</main>
+      <footer className="site-footer">
         React and Markdown, static by default.
       </footer>
     </div>

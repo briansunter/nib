@@ -19,6 +19,7 @@ describe('framework-owned site builds', () => {
     const notFound = await fs.readFile(path.join(output, 'client/404.html'), 'utf8')
 
     expect(home).toContain('<title>Home | Journal</title>')
+    expect(home).toMatch(/<link rel="stylesheet" href="\/journal\/assets\/[^"]+\.css" \/>/)
     expect(home).toContain('data-site="Journal"')
     expect(home).toContain('data-island="counter"')
     expect(home).toContain('Count:')

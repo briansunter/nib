@@ -164,8 +164,10 @@ export default function Page() {
 ```
 
 `hydrate` accepts `load` (default), `idle`, or `visible`. Props must be
-JSON-serializable. Islands cannot nest, and each owns an independent React
-root. Routes without islands contain no island client entry.
+JSON-serializable. Each top-level island owns an independent React root. If an
+island renders another island definition, Nib composes that child into the same
+root; the top-level island's hydration strategy controls the whole subtree.
+Routes without islands contain no island client entry.
 
 ## Commands
 

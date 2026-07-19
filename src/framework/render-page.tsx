@@ -3,7 +3,7 @@ import { renderToStaticMarkup, renderToString } from 'react-dom/server'
 import { serializeIslandProps } from './island-serialization'
 import {
   IslandRenderContext,
-  nestedIslandRenderer,
+  composedIslandRenderer,
   type HydrationStrategy,
   type IslandDefinition,
   type IslandRenderRequest,
@@ -28,7 +28,7 @@ export interface RenderedReactPage {
 function islandTree(island: CollectedIsland): ReactNode {
   return createElement(
     IslandRenderContext.Provider,
-    { value: nestedIslandRenderer(island.definition.islandId) },
+    { value: composedIslandRenderer() },
     createElement(
       StrictMode,
       null,

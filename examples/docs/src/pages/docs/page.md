@@ -35,4 +35,4 @@ Maintainers can use [Releases](./releases/) for versioning and npm publishing. T
 5. Run your project’s typecheck and `nib build`.
 6. Preview or deploy `dist/client`.
 
-Nib deliberately omits dynamic route parameters, client-side routing, runtime data loaders, server actions, nested islands, and inline JSX in Markdown.
+Nib deliberately omits dynamic route parameters, client-side routing, runtime data loaders, server actions, independently hydrated nested roots, and inline JSX in Markdown.

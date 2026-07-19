@@ -53,8 +53,9 @@ explicitly changes Nib's scope.
 7. Read browser-only state in an effect or event handler so initial server and
    browser markup match.
 
-Do not nest islands. Combine frequently coordinated controls into one island
-with ordinary child components.
+Island definitions may render other island definitions. Nib composes them into
+one React root, so place `hydrate` on the outermost island; that strategy controls
+the whole subtree.
 
 `visible` observes all element children and uses the parent element for a
 text-only island root. Keep initial markup deterministic across SSR and the

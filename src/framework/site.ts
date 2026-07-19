@@ -116,7 +116,10 @@ async function readBuildTemplate(clientDirectory: string, base: string): Promise
   const islands = entries.find((entry) => entry.isEntry && entry.name === 'islands')
   if (!islands) throw new Error('Nib client build did not produce an island runtime entry')
   const styles = entries
-    .flatMap((entry) => entry.css ?? [])
+    .flatMap((entry) => [
+      ...(entry.css ?? []),
+      ...(entry.isEntry && entry.file.endsWith('.css') ? [entry.file] : []),
+    ])
     .filter((file, index, all) => all.indexOf(file) === index)
   return htmlTemplate(base, islands.file, styles)
 }

@@ -48,7 +48,7 @@ Every island is rendered into the generated HTML first. The browser then loads t
 
 Island props must be JSON-serializable. Strings, booleans, finite numbers, `null`, arrays, plain objects, and absent optional properties are supported. Functions, React nodes, class instances, dates, maps, sets, cycles, explicit `undefined`, and non-finite numbers fail type checking or the build.
 
-An island owns its own state and context tree. Keep the boundary as small as practical, but if two controls share React context or coordinate frequently, make them one larger island with ordinary child components. Islands cannot be nested.
+A top-level island owns its own state and context tree. An island may render another island definition; Nib composes the child into the same React root, and the outermost island's `hydrate` strategy controls the whole subtree. This lets interactive pieces share state and context through ordinary React composition without creating conflicting nested hydration roots.
 
 The component must produce the same initial markup on the server and in the browser. Read from `window`, storage, media queries, or other browser-only APIs in an event handler or `useEffect`, not while rendering. This preserves the static fallback and avoids hydration mismatches.
 
