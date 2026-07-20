@@ -19,8 +19,11 @@ The target examples are:
 For each Vite graph, Nib loads and validates the app configuration, asks plugins
 for page-source contributions, merges those contributions with app page
 sources, validates extension conflicts, and then constructs its Vite adapters.
-Contributions must be deterministic because client, server, and development
-graphs receive fresh plugin state.
+`setup(context)` is called in two explicit phases: `vite-config` discovers the
+extensions before Vite is constructed, and `page-source-module` recreates the
+definitions inside the generated server graph. Contributions must be
+deterministic because client, server, and development graphs receive fresh
+plugin state.
 
 Inside the server renderer, Nib:
 

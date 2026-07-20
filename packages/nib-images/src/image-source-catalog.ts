@@ -8,14 +8,23 @@ import { isAllowedSource, type NormalizedImagesOptions } from './options'
 
 const supportedExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif', '.svg'])
 
+function isSourceImageFormat(value: string): value is SourceImageFormat {
+  return value === 'jpeg'
+    || value === 'png'
+    || value === 'webp'
+    || value === 'avif'
+    || value === 'gif'
+    || value === 'svg'
+}
+
 function digest(value: string | Buffer): string {
   return crypto.createHash('sha256').update(value).digest('hex')
 }
 
 function imageFormat(format: string | undefined, file: string): SourceImageFormat {
   const normalized = format === 'jpg' ? 'jpeg' : format
-  if (normalized && ['jpeg', 'png', 'webp', 'avif', 'gif', 'svg'].includes(normalized)) {
-    return normalized as SourceImageFormat
+  if (normalized && isSourceImageFormat(normalized)) {
+    return normalized
   }
   throw new Error(`@briansunter/nib-images: unsupported image format: ${file}`)
 }

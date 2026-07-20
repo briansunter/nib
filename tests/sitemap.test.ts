@@ -19,9 +19,9 @@ describe('sitemap plugin', () => {
     const route = await plugin.routes({
       ...context,
       routes: Object.freeze([
-        Object.freeze({ kind: 'page' as const, path: '/', source: 'page', status: 200, meta: {} }),
-        Object.freeze({ kind: 'page' as const, path: '/private/', source: 'page', status: 200, meta: {} }),
-        Object.freeze({ kind: 'page' as const, path: '/404/', source: 'page', status: 404, meta: {} }),
+        Object.freeze({ kind: 'page' as const, path: '/', source: 'page', status: 200, meta: { title: 'Home', description: 'Home page' } }),
+        Object.freeze({ kind: 'page' as const, path: '/private/', source: 'page', status: 200, meta: { title: 'Private', description: 'Private page' } }),
+        Object.freeze({ kind: 'page' as const, path: '/404/', source: 'page', status: 404, meta: { title: 'Not found', description: 'Missing page' } }),
         Object.freeze({ kind: 'resource' as const, path: '/rss.xml', source: 'plugin', status: 200, contentType: 'application/xml' }),
       ]),
     })
@@ -52,7 +52,7 @@ describe('sitemap plugin', () => {
       ...context,
       site: { title: 'Docs', origin: 'https://docs.example' },
       routes: Object.freeze([
-        Object.freeze({ kind: 'page' as const, path: '/', source: 'page', status: 200, meta: {} }),
+        Object.freeze({ kind: 'page' as const, path: '/', source: 'page', status: 200, meta: { title: 'Home', description: 'Home page' } }),
       ]),
     })
     if (!route || Array.isArray(route) || route.kind !== 'resource') {

@@ -33,6 +33,7 @@ import type {
   RenderedOutput,
   ResolvedPageRoute,
   ResolvedRoute,
+  SiteShellProps,
 } from './types'
 
 export interface ProjectRendererOptions {
@@ -87,7 +88,7 @@ function composePage(
   config: NibConfig,
   collections: unknown,
 ): ReactNode {
-  const pageProps = { route, site: config.site, collections } as any
+  const pageProps = { route, site: config.site, collections }
   let content = createElement(route.component, {
     ...pageProps,
     ...(route.data === undefined ? {} : { data: route.data }),
@@ -106,7 +107,10 @@ function composePage(
   }
 
   const Shell = config.shell ?? DefaultSiteShell
-  return createElement(Shell, { ...pageProps, children: content })
+  // The config is loaded dynamically at runtime, so its concrete collection
+  // map is unavailable to this erased React module. Authoring helpers retain
+  // the concrete type for consumers; this is the single runtime handoff.
+  return createElement(Shell, { ...pageProps, children: content } as SiteShellProps<any>)
 }
 
 function publicRedirectDestination(base: string, destination: string): string {

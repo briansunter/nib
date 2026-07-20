@@ -8,7 +8,8 @@ import type {
   DataValidator,
   RedirectStatus,
   RenderedPage,
-  ResolvedPageRoute,
+  PageRoute,
+  RouteSnapshot,
   ResolvedRoute,
   SiteConfig,
 } from './types'
@@ -17,6 +18,8 @@ import { normalizeHeadContribution } from './meta'
 export type NibCommand = 'build' | 'serve'
 export type NibMode = 'development' | 'production'
 export type NibViteTarget = 'client' | 'server' | 'development'
+/** The two intentional setup calls made for a page-source graph. */
+export type NibPluginSetupPhase = 'vite-config' | 'page-source-module'
 export type Awaitable<Value> = Value | Promise<Value>
 
 export type NibPluginSiteConfig = Readonly<
@@ -26,15 +29,8 @@ export type NibPluginSiteConfig = Readonly<
   }
 >
 
-/** Stable route facts available to renderer plugins. Framework implementation
- * details such as the page module, layouts, and page data remain private. */
-export interface NibPluginRoute {
-  readonly kind: 'page'
-  readonly path: string
-  readonly source: string
-  readonly status: number
-  readonly meta: Readonly<ResolvedPageRoute['meta']>
-}
+/** Stable page facts available to renderer hooks. */
+export type NibPluginRoute = PageRoute
 
 /** A plugin may alter static output, but hydration ownership remains with Nib. */
 export type NibRenderedPage = Readonly<Omit<RenderedPage, 'islands'>>
@@ -47,6 +43,15 @@ export interface NibVitePluginContext {
   readonly root: string
   readonly base: string
   readonly configPath: string
+}
+
+export interface NibPluginSetupContext extends NibVitePluginContext {
+  /**
+   * `vite-config` discovers extensions before Vite is constructed;
+   * `page-source-module` recreates definitions inside the generated server
+   * graph. Setup must be deterministic across these phases.
+   */
+  readonly phase: NibPluginSetupPhase
 }
 
 export interface NibRendererPluginContext {
@@ -74,34 +79,11 @@ export interface NibPluginSetupResult {
   readonly pageSources?: readonly PageSourceDefinition<DataValidator<any>>[]
 }
 
-export interface NibResolvedPageRoute {
-  readonly kind: 'page'
-  readonly path: string
-  readonly source: string
-  readonly status: number
-  readonly meta: Readonly<PageMeta>
-}
-
-export interface NibResolvedResourceRoute {
-  readonly kind: 'resource'
-  readonly path: string
-  readonly source: string
-  readonly status: number
-  readonly contentType: string
-}
-
-export interface NibResolvedRedirectRoute {
-  readonly kind: 'redirect'
-  readonly path: string
-  readonly source: string
-  readonly status: RedirectStatus
-  readonly destination: string
-}
-
-export type NibResolvedRoute =
-  | NibResolvedPageRoute
-  | NibResolvedResourceRoute
-  | NibResolvedRedirectRoute
+/** Route snapshots exposed to route providers and inspection hooks. */
+export type NibResolvedPageRoute = PageRoute
+export type NibResolvedResourceRoute = Extract<RouteSnapshot, { kind: 'resource' }>
+export type NibResolvedRedirectRoute = Extract<RouteSnapshot, { kind: 'redirect' }>
+export type NibResolvedRoute = RouteSnapshot
 
 export interface NibPageRouteRegistration {
   readonly kind: 'page'
@@ -151,7 +133,7 @@ export interface NibRendererExtension {
 
 export interface NibPlugin {
   readonly name: string
-  setup?(context: NibVitePluginContext): Awaitable<NibPluginSetupResult | void>
+  setup?(context: NibPluginSetupContext): Awaitable<NibPluginSetupResult | void>
   vite?(context: NibVitePluginContext): Awaitable<PluginOption>
   routes?(
     context: NibRoutesPluginContext,
@@ -367,7 +349,7 @@ export async function resolveVitePluginContributions(
 /** Resolves declarative content adapters before Vite page discovery. */
 export async function resolvePluginSetupContributions(
   plugins: readonly NibPlugin[],
-  context: NibVitePluginContext,
+  context: NibPluginSetupContext,
 ): Promise<NibPluginSetupResult> {
   const pageSources: PageSourceDefinition<DataValidator<any>>[] = []
   for (const plugin of plugins) {

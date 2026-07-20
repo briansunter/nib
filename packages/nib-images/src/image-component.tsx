@@ -78,7 +78,13 @@ export type ImageProps = CommonProps
   & (PriorityImage | DeferredImage)
 
 const supportedLayouts = new Set<ImageLayout>(['constrained', 'fixed', 'full'])
-const qualityFormats = new Set<ImageQualityFormat>(['avif', 'webp', 'jpeg'])
+function isQualityFormat(value: string): value is ImageQualityFormat {
+  return value === 'avif' || value === 'webp' || value === 'jpeg'
+}
+
+function isImageFormat(value: string): value is ImageFormat {
+  return value === 'avif' || value === 'webp' || value === 'jpeg' || value === 'png'
+}
 
 function requestedQuality(
   quality: ImageProps['quality'],
@@ -104,10 +110,10 @@ function validateQualityOption(quality: ImageProps['quality']): void {
     throw new Error('@briansunter/nib-images: quality must be a number or format map')
   }
   for (const format of Object.keys(quality)) {
-    if (!qualityFormats.has(format as ImageQualityFormat)) {
+    if (!isQualityFormat(format)) {
       throw new Error(`@briansunter/nib-images: quality does not support ${format}`)
     }
-    requestedQuality(quality, format as ImageQualityFormat)
+    requestedQuality(quality, format)
   }
 }
 
@@ -132,7 +138,7 @@ export function Image(props: ImageProps) {
   if (!isImageSource(props.src)) {
     throw new Error('@briansunter/nib-images: <Image> src must come from a ?nib-image import')
   }
-  const source = props.src as InternalImageSource
+  const source: InternalImageSource = props.src
   if (typeof props.alt !== 'string') {
     throw new Error('@briansunter/nib-images: <Image> alt must be a string')
   }
@@ -160,7 +166,7 @@ export function Image(props: ImageProps) {
   const formats = source.animated || source.format === 'svg' || props.unoptimized
     ? []
     : [...new Set(props.formats ?? defaults.formats)]
-  if (formats.some((format) => !['avif', 'webp', 'jpeg', 'png'].includes(format))) {
+  if (formats.some((format) => !isImageFormat(format))) {
     throw new Error('@briansunter/nib-images: unsupported output format')
   }
   const userStyle = props.style

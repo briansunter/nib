@@ -241,6 +241,12 @@ export interface NibVitePluginContext {
   readonly configPath: string
 }
 
+export type NibPluginSetupPhase = 'vite-config' | 'page-source-module'
+
+export interface NibPluginSetupContext extends NibVitePluginContext {
+  readonly phase: NibPluginSetupPhase
+}
+
 export interface NibRendererPluginContext {
   readonly command: NibCommand
   readonly mode: NibMode
@@ -282,6 +288,10 @@ export interface NibRendererExtension {
 
 export interface NibPlugin {
   readonly name: string
+
+  setup?(
+    context: NibPluginSetupContext,
+  ): Awaitable<{ readonly pageSources?: readonly PageSourceDefinition[] } | void>
 
   vite?(
     context: NibVitePluginContext,

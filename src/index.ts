@@ -1,5 +1,10 @@
 export { defineConfig } from './framework/config'
 export {
+  defineDataPage,
+  defineLayout,
+  definePage,
+} from './framework/authoring'
+export {
   defineCollection,
   defineMarkdown,
   definePageSource,
@@ -42,6 +47,7 @@ export type {
   NibConfig,
   NibViteConfig,
   PageLayoutProps,
+  PageRoute,
   PageMeta,
   PageProps,
   PageSourceContext,
@@ -50,8 +56,10 @@ export type {
   PageSourcePage,
   RedirectDefinition,
   RedirectStatus,
-  ResolvedRoute,
-  ResolvedPageRoute,
+  RedirectRoute,
+  ResolvedPageMeta,
+  ResourceRoute,
+  RouteSnapshot,
   SiteConfig,
   SiteShellProps,
   TrailingSlash,

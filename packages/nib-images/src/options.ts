@@ -32,6 +32,10 @@ const defaultQuality: Record<ImageFormat, number> = {
 }
 const lossyFormats = ['avif', 'webp', 'jpeg'] as const
 
+function isLossyFormat(value: string): value is ImageQualityFormat {
+  return value === 'avif' || value === 'webp' || value === 'jpeg'
+}
+
 function libuvParallelism(): number {
   const configured = Number(process.env.UV_THREADPOOL_SIZE ?? 4)
   return Number.isSafeInteger(configured) && configured > 0 ? configured : 4
@@ -54,10 +58,10 @@ function normalizedQuality(quality: ImagesOptions['quality']): Record<ImageForma
       throw new Error('@briansunter/nib-images: quality must be a number or format map')
     }
     for (const [format, value] of Object.entries(quality)) {
-      if (!lossyFormats.includes(format as ImageQualityFormat)) {
+      if (!isLossyFormat(format)) {
         throw new Error(`@briansunter/nib-images: quality does not support ${format}`)
       }
-      result[format as ImageQualityFormat] = value
+      result[format] = value
     }
   }
   for (const [format, value] of Object.entries(result)) {

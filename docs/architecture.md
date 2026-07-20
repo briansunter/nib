@@ -47,6 +47,12 @@ optional app-owned shell. Pages and islands import authoring interfaces from
 `@briansunter/nib`; package-internal exports are reserved for generated virtual
 modules.
 
+`definePage`, `defineDataPage`, and `defineLayout` are identity helpers for
+components that consume Nib props. They preserve ordinary React components but
+make the route, collection, frontmatter, and layout-data contract explicit at
+the page module seam. Runtime route/module types remain behind the internal
+server entry; public page code sees immutable route snapshots instead.
+
 The repository’s `templates/default` directory is an initializer input, not
 framework source in a generated project. `examples/docs` is a consumer of the
 same published interface and doubles as the GitHub Pages site.

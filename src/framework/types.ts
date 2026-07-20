@@ -207,7 +207,8 @@ export type LoadedCollectionDefinitions<Definitions> = {
 }
 
 export interface PageProps<Config extends NibConfig = NibConfig> {
-  route: ResolvedPageRoute
+  /** Stable public facts about the route being rendered. */
+  route: PageRoute
   site: SiteConfig
   collections: LoadedCollections<Config>
 }
@@ -235,6 +236,38 @@ export interface SiteShellProps<
   children: ReactNode
 }
 
+/** Metadata after Nib has applied site defaults and title templates. */
+export type ResolvedPageMeta = Readonly<Required<Pick<PageMeta, 'title' | 'description'>> & PageMeta>
+
+/** The immutable route facts exposed to pages and plugins. */
+export interface PageRoute {
+  readonly kind: 'page'
+  readonly path: string
+  readonly source: string
+  readonly status: number
+  readonly meta: ResolvedPageMeta
+}
+
+/** Immutable facts for a generated static resource. */
+export interface ResourceRoute {
+  readonly kind: 'resource'
+  readonly path: string
+  readonly source: string
+  readonly status: number
+  readonly contentType: string
+}
+
+/** Immutable facts for a generated redirect. */
+export interface RedirectRoute {
+  readonly kind: 'redirect'
+  readonly path: string
+  readonly source: string
+  readonly status: RedirectStatus
+  readonly destination: string
+}
+
+export type RouteSnapshot = PageRoute | ResourceRoute | RedirectRoute
+
 export interface PageModule {
   default?: ComponentType<any>
   meta?: PageMeta
@@ -255,34 +288,18 @@ export interface GeneratedPage {
   collectionId?: string
 }
 
-export interface ResolvedPageRoute {
-  kind: 'page'
-  path: string
+export interface ResolvedPageRoute extends PageRoute {
   component: ComponentType<any>
-  meta: Required<Pick<PageMeta, 'title' | 'description'>> & PageMeta
-  source: string
-  status: number
   data?: unknown
   frontmatter?: unknown
   layouts: ComponentType<any>[]
 }
 
-export interface ResolvedResourceRoute {
-  kind: 'resource'
-  path: string
-  source: string
-  status: number
+export interface ResolvedResourceRoute extends ResourceRoute {
   body: string
-  contentType: string
 }
 
-export interface ResolvedRedirectRoute {
-  kind: 'redirect'
-  path: string
-  source: string
-  status: RedirectStatus
-  destination: string
-}
+export type ResolvedRedirectRoute = RedirectRoute
 
 export type ResolvedRoute =
   | ResolvedPageRoute

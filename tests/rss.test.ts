@@ -8,7 +8,13 @@ const context = {
   base: '/journal/',
   site: { title: 'Journal' },
   routes: Object.freeze([
-    Object.freeze({ kind: 'page' as const, path: '/', source: 'page', status: 200, meta: {} }),
+    Object.freeze({
+      kind: 'page' as const,
+      path: '/',
+      source: 'page',
+      status: 200,
+      meta: { title: 'Home', description: 'Home page' },
+    }),
   ]),
 }
 

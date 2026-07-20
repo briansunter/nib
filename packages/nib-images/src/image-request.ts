@@ -19,6 +19,15 @@ export interface DevelopmentImageRequest {
   readonly format: ImageFormat | 'gif' | 'svg'
 }
 
+function isDevelopmentFormat(value: string): value is DevelopmentImageRequest['format'] {
+  return value === 'avif'
+    || value === 'webp'
+    || value === 'jpeg'
+    || value === 'png'
+    || value === 'gif'
+    || value === 'svg'
+}
+
 function hash(value: string): string {
   return crypto.createHash('sha256').update(value).digest('hex')
 }
@@ -100,11 +109,13 @@ export function parseDevelopmentImageRequest(pathname: string): DevelopmentImage
   if (marker === -1) return undefined
   const match = pathname.slice(marker).match(/^\/\@nib-images\/([a-f0-9]{24})\/(\d+)-(\d+)\.(avif|webp|jpeg|png|gif|svg)$/)
   if (!match) return undefined
+  const format = match[4]
+  if (!isDevelopmentFormat(format)) return undefined
   return {
     sourceId: match[1]!,
     width: Number(match[2]),
     quality: Number(match[3]),
-    format: match[4]! as DevelopmentImageRequest['format'],
+    format,
   }
 }
 

@@ -9,6 +9,8 @@ const plugin = definePlugin({
   name: 'typed-plugin',
   setup(context) {
     context.configPath
+    const phase: 'vite-config' | 'page-source-module' = context.phase
+    void phase
     return { pageSources: [] }
   },
   vite(context) {

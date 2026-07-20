@@ -6,8 +6,11 @@ import type {
   SiteConfig,
 } from './types'
 
-const headTags = new Set<HeadElement['tag']>(['meta', 'link', 'script', 'style'])
 const attributeName = /^[A-Za-z_:][A-Za-z0-9:._-]*$/
+
+function isHeadTag(value: string): value is HeadElement['tag'] {
+  return value === 'meta' || value === 'link' || value === 'script' || value === 'style'
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -66,7 +69,7 @@ export function normalizeHeadContribution(
     const elementLabel = `${label}.elements[${index}]`
     if (!isRecord(element)) throw new Error(`${elementLabel} must be an object`)
     const tag = element.tag
-    if (typeof tag !== 'string' || !headTags.has(tag as HeadElement['tag'])) {
+    if (typeof tag !== 'string' || !isHeadTag(tag)) {
       throw new Error(`${elementLabel}.tag must be meta, link, script, or style`)
     }
     if (element.content !== undefined && typeof element.content !== 'string') {
@@ -80,7 +83,7 @@ export function normalizeHeadContribution(
       throw new Error(`${elementLabel} script elements cannot have both src and content`)
     }
     return Object.freeze({
-      tag: tag as HeadElement['tag'],
+      tag,
       ...(attributes === undefined ? {} : { attributes }),
       ...(element.content === undefined ? {} : { content: element.content }),
     })
