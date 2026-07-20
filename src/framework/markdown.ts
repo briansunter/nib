@@ -24,7 +24,9 @@ function renderMarkdown(
     .use(remarkParse)
     .use(remarkGfm)
     .use([...(definition?.remarkPlugins ?? [])])
-    .use(remarkRehype)
+    .use(remarkRehype, {
+      allowDangerousHtml: definition?.allowDangerousHtml ?? false,
+    })
     .use([...(definition?.rehypePlugins ?? [])])
     .use(rehypeStringify)
   return String(processor.processSync(

@@ -65,6 +65,7 @@ export interface NibRendererPluginContext {
 export interface NibRenderPageContext {
   readonly command: NibCommand
   readonly route: NibPluginRoute
+  readonly site: NibPluginSiteConfig
   readonly root: string
   readonly base: string
   readonly mode: NibMode

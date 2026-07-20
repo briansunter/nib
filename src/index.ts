@@ -14,6 +14,9 @@ export {
   pageRenderer,
 } from './framework/content'
 export { defineIsland } from './framework/islands'
+export { markdownMedia } from './framework/markdown-media'
+export { metadata } from './metadata'
+export { search } from './search'
 export { siteHref } from './framework/urls'
 export { z } from 'zod'
 export type {
@@ -45,6 +48,8 @@ export type {
   MarkdownDefinition,
   MarkdownSourceContext,
   NibConfig,
+  NibHostingAdapter,
+  NibHostingConfig,
   NibViteConfig,
   PageLayoutProps,
   PageRoute,
@@ -68,3 +73,6 @@ export type {
   PublicationManifest,
   PublicationManifestRoute,
 } from './framework/publication'
+export type { MetadataOptions } from './metadata'
+export type { MarkdownMediaOptions } from './framework/markdown-media'
+export type { SearchItem, SearchItems, SearchOptions } from './search'

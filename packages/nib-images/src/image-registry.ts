@@ -21,6 +21,15 @@ export interface ImageBuildStats {
   peakTransforms: number
 }
 
+export interface ContentImageFallback {
+  readonly sourceFile: string
+  readonly publicUrl: string
+}
+
+export interface FailedContentImageFallback extends ContentImageFallback {
+  readonly outputUrl: string
+}
+
 async function mapWithConcurrency<Value>(
   values: readonly Value[],
   concurrency: number,
@@ -39,6 +48,9 @@ async function mapWithConcurrency<Value>(
  * have rendered. */
 export class ImageBuildRegistry {
   readonly #requests = new Map<string, ImageTransformRequest>()
+  readonly #contentFallbacks = new Map<string, ContentImageFallback>()
+  readonly #failedContentFallbacks = new Map<string, ContentImageFallback>()
+  readonly #warnedContentFallbacks = new Set<string>()
   readonly #stats: ImageBuildStats = {
     coldTransforms: 0,
     cacheHits: 0,
@@ -72,6 +84,16 @@ export class ImageBuildRegistry {
     return `${this.base}assets/nib/${request.filename}`
   }
 
+  /** Associates authored content with a safe original-url fallback. */
+  registerContentFallback(source: InternalImageSource, fallback: ContentImageFallback): void {
+    if (this.#finalized) {
+      throw new Error('@briansunter/nib-images: registry cannot register after finalization')
+    }
+    if (!this.#contentFallbacks.has(source.__nibSourceId)) {
+      this.#contentFallbacks.set(source.__nibSourceId, fallback)
+    }
+  }
+
   requests(): readonly ImageTransformRequest[] {
     return [...this.#requests.values()]
   }
@@ -98,11 +120,22 @@ export class ImageBuildRegistry {
       },
     })
     await mapWithConcurrency(this.requests(), 32, async (request) => {
-      const cached = await executor.cachedFile(this.options.cacheDirectory, request)
-      if (cached.hit) this.#stats.cacheHits += 1
-      else this.#stats.coldTransforms += 1
-      this.#stats.bytesWritten += cached.bytes
-      await linkOrCopy(cached.file, path.join(clientDirectory, 'assets/nib', request.filename))
+      try {
+        const cached = await executor.cachedFile(this.options.cacheDirectory, request)
+        if (cached.hit) this.#stats.cacheHits += 1
+        else this.#stats.coldTransforms += 1
+        this.#stats.bytesWritten += cached.bytes
+        await linkOrCopy(cached.file, path.join(clientDirectory, 'assets/nib', request.filename))
+      } catch (error) {
+        const fallback = this.#contentFallbacks.get(request.source.__nibSourceId)
+        if (fallback === undefined) throw error
+        this.#failedContentFallbacks.set(request.key, fallback)
+        if (!this.#warnedContentFallbacks.has(request.source.__nibSourceId)) {
+          this.#warnedContentFallbacks.add(request.source.__nibSourceId)
+          const detail = error instanceof Error ? error.message : String(error)
+          console.warn(`nib-images: preserving ${fallback.publicUrl} after transform failure: ${detail}`)
+        }
+      }
     })
     if (this.#requests.size > 0) {
       const elapsed = Math.round(performance.now() - started)
@@ -110,5 +143,16 @@ export class ImageBuildRegistry {
         `nib-images: ${this.#stats.coldTransforms} transformed, ${this.#stats.cacheHits} cached, ${this.#stats.bytesWritten} bytes (${elapsed}ms)`,
       )
     }
+  }
+
+  failedContentImageFallbacks(): readonly FailedContentImageFallback[] {
+    return [...this.#failedContentFallbacks].flatMap(([key, fallback]) => {
+      const request = this.#requests.get(key)
+      if (request === undefined) return []
+      return [{
+        ...fallback,
+        outputUrl: `${this.base}assets/nib/${request.filename}`,
+      }]
+    })
   }
 }

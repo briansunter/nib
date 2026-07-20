@@ -100,10 +100,10 @@ export function nibDataPages(
         ].join('\n')
       }
       const cleanId = id.split('?')[0]
-      const match = cleanId.match(/\/page(\.[A-Za-z0-9]+)$/)
-      if (!match || match[1] === '.md' || match[1] === '.tsx') return null
-      const index = pageSourceIndex(definitions, match[1], cleanId)
-      if (index === undefined) throw new Error(`No page source matches ${cleanId}`)
+      const extension = path.extname(cleanId)
+      if (!extension || extension === '.md' || extension === '.tsx') return null
+      const index = pageSourceIndex(definitions, extension, cleanId)
+      if (index === undefined) return null
 
       const source = await fs.readFile(cleanId, 'utf8')
       const renderer = rendererImport(definitions?.[index], configPath)
@@ -114,7 +114,7 @@ export function nibDataPages(
         `export const pages = await compileDataPages(pageSources[${index}], {`,
         `  file: ${JSON.stringify(cleanId)},`,
         `  source: ${JSON.stringify(source)},`,
-        `  defaultPath: ${JSON.stringify(fileToRoute(cleanId))},`,
+        `  defaultPath: ${JSON.stringify(cleanId.includes('/pages/') ? fileToRoute(cleanId) : '/')},`,
         `}${renderer === undefined ? '' : `, ${renderer.local}`})`,
       ].join('\n')
     },

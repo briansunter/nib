@@ -211,6 +211,7 @@ export async function createProjectRenderer(
       }
       const pageContext: NibRenderPageContext = Object.freeze({
         command: options.command ?? 'build',
+        site: rendererContext.site,
         route: Object.freeze({
           kind: 'page',
           path: route.path,

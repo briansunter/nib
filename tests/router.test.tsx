@@ -76,4 +76,16 @@ describe('router', () => {
     expect(routes.get('/products/notebook')?.layouts)
       .toEqual([RootLayout, DocsLayout])
   })
+
+  it('accepts generated routes from non-page source files without folder layouts', () => {
+    const routes = createRoutes({
+      '/src/content/projects.json': {
+        pages: [{ path: '/projects/one', component: Page, data: { name: 'One' } }],
+      },
+    }, site, {
+      folders: { '../pages/layout.tsx': { default: RootLayout } },
+    })
+    expect(routes.get('/projects/one')?.data).toEqual({ name: 'One' })
+    expect(routes.get('/projects/one')?.layouts).toEqual([])
+  })
 })

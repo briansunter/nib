@@ -97,6 +97,14 @@ describe('Nib configuration', () => {
         },
       },
     })).toThrow('unsafe attribute name')
+    expect(validateNibConfig({
+      site: { title: 'Site' },
+      hosting: { adapters: ['netlify', 'vercel', 'cloudflare', 's3'] },
+    })).toMatchObject({ hosting: { adapters: ['netlify', 'vercel', 'cloudflare', 's3'] } })
+    expect(() => validateNibConfig({
+      site: { title: 'Site' },
+      hosting: { adapters: ['firebase'] },
+    })).toThrow('hosting adapters')
   })
 
   it('uses one unambiguous validation seam for all content definitions', () => {

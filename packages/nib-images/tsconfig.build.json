@@ -9,7 +9,7 @@
     "baseUrl": ".",
     "paths": {
       "@briansunter/nib": ["../../dist/framework/index.d.ts"],
-      "@briansunter/nib/plugin": ["../../dist/framework/plugin.d.ts"]
+      "@briansunter/nib/plugin": ["../../dist/framework/framework/plugin.d.ts"]
     }
   },
   "include": ["src"]

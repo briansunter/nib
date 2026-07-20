@@ -82,7 +82,27 @@ The root component entry is processor-free. Import `images()` from the
 cannot be imported into a React island; build and development report that
 mistake instead of shipping build paths or failing during hydration.
 
+For imported content or Markdown that already uses stable public image URLs,
+configure an opt-in source root. Nib copies the originals to that public prefix
+for lightboxes and fallbacks, then rewrites matching rendered `<img>` elements
+to the same responsive `<picture>` pipeline:
+
+```ts
+images({
+  content: [{
+    publicPath: '/site-assets/',
+    directory: 'src/assets/site-assets',
+    widths: [320, 640, 1280],
+    sizes: '(min-width: 900px) 860px, 100vw',
+  }],
+})
+```
+
+This is deliberately reference-driven rather than a scan of every file in the
+project. Animated, SVG, or unsupported/corrupt sources remain available at
+their original URL and do not abort the rest of the build.
+
 Only local JPEG, PNG, WebP, and AVIF sources are transformed in this release.
 SVG and animated sources are passed through without rasterization or animation
-conversion. Remote URLs and automatic Markdown image rewriting are not yet
-supported.
+conversion. Remote URLs and automatic relative-path Markdown image resolution
+are not yet supported.

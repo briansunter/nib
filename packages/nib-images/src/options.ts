@@ -10,6 +10,17 @@ export interface ImagesOptions {
   readonly concurrency?: 'auto' | number
   readonly memoryLimitMb?: number
   readonly allowedSourceRoots?: readonly string[]
+  /** Rewrite referenced static HTML images after prerendering. */
+  readonly content?: readonly ContentImageSource[]
+}
+
+export interface ContentImageSource {
+  /** Public URL prefix used by authored HTML, for example `/site-assets/`. */
+  readonly publicPath: string
+  /** Project-relative source directory containing the original files. */
+  readonly directory: string
+  readonly widths?: readonly number[]
+  readonly sizes?: string
 }
 
 export interface NormalizedImagesOptions {
@@ -21,6 +32,14 @@ export interface NormalizedImagesOptions {
   readonly cacheDirectory: string
   readonly concurrency: number
   readonly allowedSourceRoots: readonly string[]
+  readonly content: readonly NormalizedContentImageSource[]
+}
+
+export interface NormalizedContentImageSource {
+  readonly publicPath: string
+  readonly directory: string
+  readonly widths: readonly number[] | undefined
+  readonly sizes: string | undefined
 }
 
 const defaultWidths = [320, 480, 640, 768, 1024, 1280, 1536, 1920, 2560]
@@ -92,6 +111,36 @@ export function validateImagesOptions(options: ImagesOptions = {}): void {
   ) {
     throw new Error('@briansunter/nib-images: allowedSourceRoots must contain directory strings')
   }
+  if (options.content !== undefined) {
+    if (!Array.isArray(options.content)) {
+      throw new Error('@briansunter/nib-images: content must be an array')
+    }
+    for (const [index, source] of options.content.entries()) {
+      if (
+        source === null
+        || typeof source !== 'object'
+        || typeof source.publicPath !== 'string'
+        || !source.publicPath.startsWith('/')
+        || !source.publicPath.endsWith('/')
+        || source.publicPath.includes('?')
+        || source.publicPath.includes('#')
+      ) {
+        throw new Error(`@briansunter/nib-images: content[${index}].publicPath must start and end with "/"`)
+      }
+      if (
+        typeof source.directory !== 'string'
+        || source.directory.trim() === ''
+        || path.isAbsolute(source.directory)
+        || source.directory.split(/[\\/]+/).includes('..')
+      ) {
+        throw new Error(`@briansunter/nib-images: content[${index}].directory must be project-relative`)
+      }
+      if (source.widths !== undefined) normalizedPositiveIntegers(source.widths, `content[${index}].widths`)
+      if (source.sizes !== undefined && typeof source.sizes !== 'string') {
+        throw new Error(`@briansunter/nib-images: content[${index}].sizes must be a string`)
+      }
+    }
+  }
   if (
     options.cacheDirectory !== undefined
     && (typeof options.cacheDirectory !== 'string' || options.cacheDirectory === '')
@@ -132,6 +181,12 @@ export function normalizeImagesOptions(root: string, options: ImagesOptions = {}
       ? concurrency
       : Math.max(1, Math.min(concurrency, Math.floor(options.memoryLimitMb / 192))),
     allowedSourceRoots: (options.allowedSourceRoots ?? [resolvedRoot]).map((directory) => path.resolve(resolvedRoot, directory)),
+    content: (options.content ?? []).map((source) => ({
+      publicPath: source.publicPath,
+      directory: path.resolve(resolvedRoot, source.directory),
+      widths: source.widths === undefined ? undefined : normalizedPositiveIntegers(source.widths, 'content widths'),
+      sizes: source.sizes,
+    })),
   }
 }
 

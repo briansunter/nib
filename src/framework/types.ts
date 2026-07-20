@@ -84,6 +84,12 @@ export interface PageSourceDefinition<
   Validator extends DataValidator = DataValidator,
 > {
   extensions: readonly string[]
+  /**
+   * Vite glob patterns for content files that should be compiled as page
+   * sources. Without patterns, sources retain Nib's nested page-file
+   * convention (`src/pages/.../page.<extension>`).
+   */
+  patterns?: readonly string[]
   match?: (file: string) => boolean
   schema?: SchemaValidator<Validator>
   validate?: Validator extends DataSchema<unknown>
@@ -144,6 +150,11 @@ export interface MarkdownDefinition<
     : (value: unknown) => InferDataValidator<Validator>
   /** Unified remark plugins, applied after Nib's GFM parser. */
   remarkPlugins?: readonly Pluggable[]
+  /**
+   * Keep raw HTML nodes for trusted, application-owned content. The default
+   * remains false so Markdown cannot introduce arbitrary HTML by accident.
+   */
+  allowDangerousHtml?: boolean
   /** Unified rehype plugins, applied before HTML serialization. */
   rehypePlugins?: readonly Pluggable[]
 }
@@ -160,6 +171,13 @@ export interface SiteConfig {
 
 export type TrailingSlash = 'always' | 'never' | 'ignore'
 export type RedirectStatus = 301 | 302 | 307 | 308
+
+export type NibHostingAdapter = 'netlify' | 'vercel' | 'cloudflare' | 's3'
+
+export interface NibHostingConfig {
+  /** Generate deploy-specific companions from the publication manifest. */
+  readonly adapters?: readonly NibHostingAdapter[]
+}
 
 export type RedirectDefinition =
   | string
@@ -178,6 +196,7 @@ export interface NibConfig {
   base?: string
   site: SiteConfig
   trailingSlash?: TrailingSlash
+  hosting?: NibHostingConfig
   redirects?: Readonly<Record<string, RedirectDefinition>>
   vite?: NibViteConfig
   plugins?: readonly NibPlugin[]

@@ -14,7 +14,7 @@ import {
   type ViteDevServer,
 } from 'vite'
 import { renderDocument, renderRedirectDocument } from './document'
-import { pageSourceExtensions } from './content'
+import { pageSourceExtensions, pageSourcePatterns } from './content'
 import { nibIslandsEntry } from './island-vite-plugin'
 import {
   NIB_CLIENT_ENTRY,
@@ -33,6 +33,7 @@ import {
   resolvePluginSetupContributions,
   resolveVitePluginContributions,
 } from './plugin'
+import { writeHostingArtifacts } from './hosting-writer'
 import type { RenderedOutput, TrailingSlash } from './types'
 import { nibDataPages, nibMarkdown } from './vite-plugin'
 
@@ -122,7 +123,12 @@ export async function siteViteConfig(
   root: string,
   command: 'build' | 'serve',
   target: 'client' | 'server' | 'development',
-): Promise<{ base: string; trailingSlash: TrailingSlash | undefined; config: InlineConfig }> {
+): Promise<{
+  base: string
+  trailingSlash: TrailingSlash | undefined
+  hosting: import('./types').NibHostingConfig | undefined
+  config: InlineConfig
+}> {
   const loaded = await loadNibConfig(root, command)
   const base = resolveBasePath(loaded.config)
   const pluginContext = Object.freeze({
@@ -154,6 +160,7 @@ export async function siteViteConfig(
   return {
     base,
     trailingSlash: loaded.config.trailingSlash,
+    hosting: loaded.config.hosting,
     config: {
       appType: 'custom',
       base,
@@ -168,7 +175,13 @@ export async function siteViteConfig(
         ...appVitePlugins,
         ...contributedPlugins,
         react(),
-        nibProject(loaded.configPath, root, extensions, command),
+        nibProject(
+          loaded.configPath,
+          root,
+          extensions,
+          command,
+          pageSourcePatterns(pageSources),
+        ),
         nibIslandsEntry(),
       ],
       resolve: {
@@ -246,7 +259,7 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
   const hasStyles = await fs.access(stylePath).then(() => true, () => false)
 
   await fs.rm(output, { recursive: true, force: true })
-  const { base, trailingSlash, config: clientConfig } = await siteViteConfig(root, 'build', 'client')
+  const { base, trailingSlash, hosting, config: clientConfig } = await siteViteConfig(root, 'build', 'client')
   await viteBuild({
     ...clientConfig,
     build: {
@@ -302,9 +315,6 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
       ).primary,
   }))
   const publicationManifest = createPublicationManifest(base, trailingSlash, outputs)
-  await server.finalize({
-    clientDirectory,
-  })
   await mapWithConcurrency(outputs, htmlWriteConcurrency(), async ({ output, artifact }) => {
     const primaryFile = path.join(clientDirectory, artifact)
     await fs.mkdir(path.dirname(primaryFile), { recursive: true })
@@ -315,12 +325,18 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
         : renderRedirectDocument(output.destination)
     await fs.writeFile(primaryFile, body)
   })
+  // Finalizers can inspect and enrich the already-published HTML while still
+  // sharing the same output directory as framework-owned artifacts.
+  await server.finalize({
+    clientDirectory,
+  })
   const publicationDirectory = path.join(clientDirectory, '.nib')
   await fs.mkdir(publicationDirectory, { recursive: true })
   await fs.writeFile(
     path.join(publicationDirectory, 'publication.json'),
     `${JSON.stringify(publicationManifest, null, 2)}\n`,
   )
+  await writeHostingArtifacts(clientDirectory, publicationManifest, hosting)
 }
 
 export async function buildSite(options: SiteOperationOptions): Promise<void> {

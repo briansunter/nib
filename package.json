@@ -27,6 +27,14 @@
       "types": "./dist/framework/rss.d.ts",
       "import": "./dist/framework/rss.js"
     },
+    "./verify": {
+      "types": "./dist/framework/verify.d.ts",
+      "import": "./dist/framework/verify.js"
+    },
+    "./hosting": {
+      "types": "./dist/framework/hosting.d.ts",
+      "import": "./dist/framework/hosting.js"
+    },
     "./internal/client": {
       "types": "./dist/framework/runtime/client.d.ts",
       "import": "./dist/framework/internal/client.js"
