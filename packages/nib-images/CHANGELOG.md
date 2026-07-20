@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/briansunter/nib/compare/nib-images-v0.3.0...nib-images-v0.4.0) (2026-07-20)
+
+
+### Features
+
+* add publication and content integration seams ([1aa3fb6](https://github.com/briansunter/nib/commit/1aa3fb6dbdb2915e2b1dce8f44767f650df0e1e6))
+* deepen type-safe authoring seams ([f479e91](https://github.com/briansunter/nib/commit/f479e918d8972e1ef8712830e918d17c9108eb52))
+
 ## [0.3.0](https://github.com/briansunter/nib/compare/nib-images-v0.2.0...nib-images-v0.3.0) (2026-07-19)
 
 ### Features
