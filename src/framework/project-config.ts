@@ -39,6 +39,19 @@ export function validateNibConfig(value: unknown): NibConfig {
   ) {
     throw new Error('Nib trailingSlash must be "always", "never", or "ignore"')
   }
+  if (value.hosting !== undefined) {
+    if (!isRecord(value.hosting)) throw new Error('Nib hosting must be an object')
+    if (value.hosting.adapters !== undefined) {
+      if (
+        !Array.isArray(value.hosting.adapters)
+        || value.hosting.adapters.some((adapter) => (
+          !['netlify', 'vercel', 'cloudflare', 's3'].includes(adapter as string)
+        ))
+      ) {
+        throw new Error('Nib hosting adapters must be netlify, vercel, cloudflare, or s3')
+      }
+    }
+  }
   if (value.redirects !== undefined) {
     if (!isRecord(value.redirects)) throw new Error('Nib redirects must be an object')
     for (const [source, redirect] of Object.entries(value.redirects)) {

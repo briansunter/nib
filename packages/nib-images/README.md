@@ -35,6 +35,22 @@ bytes through HMR; unchanged content keeps its cache key and revalidates with
 creates a renderer. The build-only package entry is the only supported plugin
 authoring path; its internal benchmark utilities are not published as an import.
 
+Rendered content images can opt into the same optimizer without importing each
+file in a component. Configure a project-relative source directory and its
+public URL prefix; only matching `<img>` references in the completed HTML are
+rewritten, and the source catalog still owns metadata and cache identity.
+
+```ts
+images({
+  content: [{
+    publicPath: '/media/',
+    directory: 'src/assets/media',
+    widths: [320, 640, 1280],
+    sizes: '(min-width: 900px) 860px, 100vw',
+  }],
+})
+```
+
 `@briansunter/nib-images` is a separate Bun workspace package. It is built and
 tested from the repository root, but Release Please versions and publishes it
 independently from `@briansunter/nib` when files in this package change.

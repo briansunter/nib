@@ -105,9 +105,11 @@ leaking between builds.
 Renderer extensions are instantiated once per server renderer. Their structured
 head contributions, wrappers, and page transformations run in configuration
 order, while finalizers run once after every production route (including the
-generated 404) has rendered. Production collects rendered pages, awaits
-finalizers, then writes HTML with bounded concurrency and emits
-`.nib/publication.json`; development does not run finalizers.
+generated 404) has rendered. Production writes route HTML with bounded
+concurrency, then gives finalizers the completed `dist/client` directory so
+output-aware extensions can inspect or enrich rendered documents. It then
+emits `.nib/publication.json` and any configured hosting companions;
+development does not run finalizers.
 
 The plugin host owns contribution resolution, renderer-extension construction,
 ordering, hook error attribution, and finalization. Renderer plugins receive a
@@ -142,9 +144,23 @@ Sharp or Node APIs; build integration is exported from
 requests under `/@nib-images/`. Imported sources are watched explicitly; HMR
 re-inspects changed content, byte-identical rewrites retain their cache key and
 ETag, and editor overwrite races are retried. Internal absolute paths are
-non-enumerable on source metadata. Remote URLs, Markdown image rewriting, SVG
-rasterization, and animated-image conversion are intentionally outside this
-release.
+non-enumerable on source metadata. In addition to explicit `?nib-image`
+imports, a project may declare content image roots in `images({ content: [...] })`;
+the finalizer then rewrites only matching image references that survived
+rendering, preserving the source catalog and avoiding an all-assets scan.
+Remote URLs, SVG rasterization, and animated-image conversion are intentionally
+outside this release.
+
+Markdown media is an opt-in adapter (`markdownMedia`) rather than a parser
+special case. It can turn local video references and explicitly allow-listed
+iframe embeds into static elements; raw HTML remains disabled unless the site
+also opts into `markdown.allowDangerousHtml`.
+
+The framework also provides small publication seams for common site concerns:
+`metadata()` contributes canonical/Open Graph/Twitter/JSON-LD head elements,
+`search()` emits a deterministic JSON resource route, `hosting` emits adapter
+configuration from the publication manifest, and `nib check` validates the
+published route/artifact/link contract.
 
 Within the image package, a shared request module owns cache keys and the
 development URL grammar; a transform executor owns cache misses and bounded

@@ -214,6 +214,12 @@ canonical path, artifact, status, content type, and redirect destination when
 applicable. Static-host adapters can use it instead of reimplementing Nib's
 extensionless and directory-index rules.
 
+Run `nib check` after a build to validate publication artifacts, titles, image
+alt text, island-runtime ownership, and internal links. Node consumers that
+need the same report can import `verifySite` from
+`@briansunter/nib/verify`; the browser-facing package entry intentionally does
+not load the filesystem-based verifier.
+
 Development and preview bind to loopback by default. To expose a server through
 a known hostname such as a Tailscale name, bind explicitly and allow only that
 host; repeat the option for more than one hostname:

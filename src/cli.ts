@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { scaffoldSite } from './scaffold'
 import { buildSite, previewSite, startDevSite } from './framework/site'
+import { verifySite } from './framework/verify'
 
 interface PackageManifest {
   version: string
@@ -104,6 +105,8 @@ Usage:
   nib init [directory] [--no-install]
   nib dev [--root directory] [--host host] [--port port] [--allowed-host host]
   nib build [--root directory]
+  nib check [--root directory]
+  nib inspect [--root directory]
   nib preview [--root directory] [--host host] [--port port] [--allowed-host host]`
 }
 
@@ -149,6 +152,11 @@ export async function runCli(
   if (command === 'build') {
     await buildSite({ root })
     write(`Built ${path.join(root, 'dist/client')}`)
+    return 0
+  }
+  if (command === 'check' || command === 'inspect') {
+    const result = await verifySite({ root })
+    write(JSON.stringify(result, null, 2))
     return 0
   }
   if (command === 'dev') {

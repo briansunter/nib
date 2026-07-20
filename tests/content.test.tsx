@@ -14,6 +14,7 @@ import {
   pageRenderer,
   pageSourceExtensions,
   pageSourceIndex,
+  pageSourcePatterns,
 } from '../src/framework/content'
 import type { DataPageProps } from '../src/framework/types'
 import { nibDataPages } from '../src/framework/vite-plugin'
@@ -138,6 +139,18 @@ describe('generic content', () => {
         component: pageRenderer('./src/data-pages', 'not-an-export!'),
       },
     ])).toThrow('exportName')
+  })
+
+  it('collects explicit source patterns without changing nested page matching', () => {
+    const definitions = [{
+      extensions: ['json'],
+      patterns: ['/src/content/projects.json', '/src/content/projects.json'],
+      load: async () => ({ data: {} }),
+      component: ItemPage,
+    }]
+    expect(pageSourceExtensions(definitions)).toEqual(['.json'])
+    expect(pageSourcePatterns(definitions)).toEqual(['/src/content/projects.json'])
+    expect(pageSourceIndex(definitions, '.json', '/src/content/projects.json')).toBe(0)
   })
 
   it('rejects ambiguous validators before loading content', async () => {

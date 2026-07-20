@@ -4,8 +4,9 @@ Status: Implemented and performance-audited
 
 This document is the design and implementation record for the current generic
 plugin API and optional local-image optimizer. The non-goals remain deliberate:
-remote images, Markdown rewriting, SVG rasterization, and animated-image
-conversion are follow-up work.
+remote images, relative-path Markdown resolution, SVG rasterization, and
+animated-image conversion are follow-up work. Opt-in rewriting of rendered
+content images with stable public URLs is implemented by the image package.
 
 The plugin interface was subsequently extended with typed page-source setup,
 virtual route providers, immutable resolved-route inspection, and structured
@@ -485,8 +486,9 @@ shell. The first interface should not expose arbitrary template mutation.
 
 ### Production prerender
 
-Replace immediate route writes with an explicit collect, finalize, write
-sequence:
+Replace immediate route writes with an explicit collect, write, finalize
+sequence. Finalizers receive the completed deployable directory so they can
+rewrite rendered HTML as well as emit assets:
 
 ```ts
 const rendered = server.paths.map((routePath) => ({
@@ -499,10 +501,6 @@ const notFound = {
   page: server.render('/404'),
 }
 
-await server.finalize({
-  clientDirectory,
-})
-
 await mapWithConcurrency(
   [...rendered, notFound],
   writeConcurrency,
@@ -512,6 +510,10 @@ await mapWithConcurrency(
     await fs.writeFile(file, renderDocument(template, page))
   },
 )
+
+await server.finalize({
+  clientDirectory,
+})
 ```
 
 Holding rendered HTML in memory is acceptable for Nib's static-site scope and
@@ -965,12 +967,31 @@ Never derive a filesystem target by joining an unvalidated URL. The output
 writer starts from the fixed client directory and a plugin-controlled relative
 asset path.
 
-## Markdown integration
+## Markdown and rendered content integration
 
-Automatic Markdown image rewriting remains follow-up work. Markdown
-compilation now passes its source path to configured Unified plugins through the
-VFile context, but it does not expose an image registry or let plugins replace
-the whole compiler.
+The image package now supports an opt-in post-render content seam:
+
+```ts
+images({
+  content: [{
+    publicPath: '/media/',
+    directory: 'src/assets/media',
+    widths: [320, 640, 1280],
+    sizes: '100vw',
+  }],
+})
+```
+
+After Nib writes route HTML, the image finalizer copies source files to the
+configured public prefix and rewrites only matching local `<img>` references
+to the shared responsive registry. Originals remain available for links,
+lightboxes, animated/SVG pass-through, and per-source transform failures.
+This keeps the content adapter narrow and avoids enumerating unrelated assets.
+
+Automatic relative-path Markdown image rewriting remains follow-up work.
+Markdown compilation passes its source path to configured Unified plugins
+through the VFile context, but it does not resolve paths against source files or
+expose an image registry to arbitrary Markdown plugins.
 
 Remaining image-rewriting work should:
 

@@ -6,7 +6,11 @@ layout: docs
 
 # Data pages and collections
 
-Nib can discover any `src/pages/**/page.<extension>` file, validate its data, and prerender one route or many routes. The framework does not need to know what YAML, CSV, TOML, or your own format means. A page source supplies that small format-specific seam.
+Nib can discover any `src/pages/**/page.<extension>` file, or explicitly named
+glob patterns such as `/src/content/projects.json`, validate its data, and
+prerender one route or many routes. The framework does not need to know what
+YAML, CSV, TOML, JSON, or your own format means. A page source supplies that
+small format-specific seam.
 
 ## One file, one page
 
@@ -89,6 +93,23 @@ definePageSource({
   extensions: ['yaml'],
   match: (file) => file.includes('/src/pages/recipes/'),
   // schema, load, component
+})
+```
+
+For a source outside `src/pages`, add `patterns` and keep `match` as the final
+ownership check. The generated module receives the file contents through the
+same `PageSourceContext`:
+
+```tsx
+definePageSource({
+  extensions: ['json'],
+  patterns: ['/src/content/projects.json'],
+  match: (file) => file.endsWith('/src/content/projects.json'),
+  load: ({ source }) => JSON.parse(source).map((data) => ({
+    path: `/projects/${data.slug}`,
+    data,
+  })),
+  component: ProjectPage,
 })
 ```
 

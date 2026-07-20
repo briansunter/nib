@@ -72,10 +72,17 @@ describe('published package consumer', () => {
     expect(packedFiles).toContain('dist/framework/sitemap.d.ts')
     expect(packedFiles).toContain('dist/framework/rss.js')
     expect(packedFiles).toContain('dist/framework/rss.d.ts')
+    expect(packedFiles).toContain('dist/framework/verify.js')
+    expect(packedFiles).toContain('dist/framework/verify.d.ts')
+    expect(packedFiles).toContain('dist/framework/hosting.js')
+    expect(packedFiles).toContain('dist/framework/hosting.d.ts')
     expect(packedFiles).toContain('templates/default/nib.config.ts')
     expect(packedFiles).toContain('templates/default/gitignore')
     expect(packedFiles.some((file) => file.startsWith('tests/'))).toBe(false)
     expect(packedFiles.some((file) => file.startsWith('examples/'))).toBe(false)
+
+    const browserEntry = await fs.readFile('dist/framework/index.js', 'utf8')
+    expect(browserEntry).not.toMatch(/from ["']node:(?:fs|path)/)
 
     const consumerRoot = await temporaryDirectory('nib-consumer')
     const consumerEnvironment = {

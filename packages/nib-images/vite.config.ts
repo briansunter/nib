@@ -18,6 +18,7 @@ export default defineConfig({
         return builtins.has(id)
           || id === 'react'
           || id === 'react/jsx-runtime'
+          || id === 'react-dom/server'
           || id === '@briansunter/nib'
           || id === '@briansunter/nib/plugin'
           || id === 'sharp'

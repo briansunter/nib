@@ -42,7 +42,10 @@ async function inspectImage(file: string): Promise<InternalImageSource> {
       .on('end', () => resolve(hash.digest('hex')))
   })
   const [metadata, contentFingerprint] = await Promise.all([
-    sharp(file, { animated: true, limitInputPixels: 100_000_000 }).metadata(),
+    // Metadata inspection does not decode the full pixel buffer. Allow very
+    // tall animated assets to be classified so the renderer can preserve them
+    // as pass-through files; transform safety remains enforced by processor.
+    sharp(file, { animated: true, limitInputPixels: false }).metadata(),
     fingerprint,
   ])
   if (!metadata.width || !metadata.height) {

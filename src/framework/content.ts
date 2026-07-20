@@ -158,6 +158,7 @@ function normalizeExtension(extension: string): string {
 export function pageSourceExtensions(
   definitions: ReadonlyArray<{
     extensions: readonly string[]
+    patterns?: readonly string[]
     match?: (file: string) => boolean
     schema?: unknown
     validate?: unknown
@@ -170,6 +171,16 @@ export function pageSourceExtensions(
     validateDataDefinition(definition, `Page source ${index}`)
     if (!Array.isArray(definition.extensions) || definition.extensions.length === 0) {
       throw new Error(`Page source ${index} must define at least one extension`)
+    }
+    if (
+      definition.patterns !== undefined
+      && (
+        !Array.isArray(definition.patterns)
+        || definition.patterns.length === 0
+        || definition.patterns.some((pattern) => typeof pattern !== 'string' || pattern.trim() === '')
+      )
+    ) {
+      throw new Error(`Page source ${index} patterns must contain non-empty strings`)
     }
     if (typeof definition.load !== 'function') {
       throw new Error(`Page source ${index} must define a load function`)
@@ -211,6 +222,21 @@ export function pageSourceExtensions(
     }
   }
   return [...extensions]
+}
+
+/** Returns validated Vite glob patterns contributed by content sources. */
+export function pageSourcePatterns(
+  definitions: ReadonlyArray<{
+    patterns?: readonly string[]
+  }> | undefined,
+): string[] {
+  const patterns = new Set<string>()
+  for (const definition of definitions ?? []) {
+    for (const pattern of definition.patterns ?? []) {
+      patterns.add(pattern)
+    }
+  }
+  return [...patterns]
 }
 
 const pageRendererLoads = new WeakMap<object, Promise<GeneratedPage['component']>>()

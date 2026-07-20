@@ -13,6 +13,7 @@ export function nibProject(
   root = path.dirname(configPath),
   pageExtensions: readonly string[] = [],
   command: NibCommand = 'build',
+  pageSourcePatterns: readonly string[] = [],
 ): Plugin {
   const configImport = JSON.stringify(path.resolve(configPath))
   const projectRoot = JSON.stringify(path.resolve(root))
@@ -20,6 +21,7 @@ export function nibProject(
     '/src/pages/**/page.tsx',
     '/src/pages/**/page.md',
     ...pageExtensions.map((extension) => `/src/pages/**/page${extension}`),
+    ...pageSourcePatterns,
   ]
 
   return {
@@ -50,7 +52,9 @@ export function nibProject(
         `import {`,
         `  createProjectRenderer,`,
         `} from '@briansunter/nib/internal/server'`,
-        `const pages = import.meta.glob(${JSON.stringify(pagePatterns)}, { eager: true })`,
+        // Keep source modules behind a private query so Vite's built-in JSON
+        // loader does not parse a page-source adapter's generated JS as JSON.
+        `const pages = import.meta.glob(${JSON.stringify(pagePatterns)}, { eager: true, query: '?nib-page-source' })`,
         `const folderLayouts = import.meta.glob('/src/pages/**/layout.tsx', { eager: true })`,
         `const namedLayouts = import.meta.glob('/src/layouts/*.tsx', { eager: true })`,
         `const islandModules = import.meta.glob('/src/islands/**/*.tsx', { eager: true })`,

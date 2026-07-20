@@ -66,9 +66,11 @@ function routeLayouts(
   folders: Map<string, ComponentType<any>>,
   named: Map<string, ComponentType<any>>,
 ): ComponentType<any>[] {
-  const resolved = folderNames(file)
-    .map((name) => folders.get(name))
-    .filter((component): component is ComponentType<any> => component !== undefined)
+  const resolved = /(?:^|\/)pages\/.*page\.[A-Za-z0-9]+$/.test(file.replaceAll('\\', '/'))
+    ? folderNames(file)
+      .map((name) => folders.get(name))
+      .filter((component): component is ComponentType<any> => component !== undefined)
+    : []
   if (layout) {
     const component = named.get(layout)
     if (!component) throw new Error(`Unknown layout ${layout} for ${file}`)
