@@ -135,7 +135,7 @@ export async function siteViteConfig(
   })
   const setup = await resolvePluginSetupContributions(
     loaded.config.plugins ?? [],
-    pluginContext,
+    Object.freeze({ ...pluginContext, phase: 'vite-config' as const }),
   )
   const pageSources = [
     ...(loaded.config.pageSources ?? []),

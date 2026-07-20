@@ -213,5 +213,8 @@ describe('generic content', () => {
     expect(result).toContain('import { ItemPage as __nibPageRenderer } from "/site/src/data-pages"')
     expect(result).toContain(', __nibPageRenderer)')
     expect(result).toContain('defaultPath: "/team"')
+
+    const sourceModule = await load('\0virtual:nib/page-sources')
+    expect(sourceModule).toContain('"phase":"page-source-module"')
   })
 })

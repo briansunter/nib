@@ -8,6 +8,8 @@ export type {
   NibPageRouteRegistration,
   NibPlugin,
   NibPluginRoute,
+  NibPluginSetupContext,
+  NibPluginSetupPhase,
   NibPluginSetupResult,
   NibPluginSiteConfig,
   NibRedirectRouteRegistration,

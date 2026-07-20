@@ -80,6 +80,28 @@ module (for example `?nib-image`), declare it with
 `pageRenderer('./src/data-pages', 'ProjectPage')`; Nib imports that module from
 its configured Vite page-source graph rather than while loading `nib.config.ts`.
 
+For pages and layouts that consume route, collection, or layout data, use the
+identity helpers to make the prop contract explicit at the module seam:
+
+```tsx
+import { defineLayout, definePage, type PageLayoutProps, type PageProps } from '@briansunter/nib'
+import type config from '../../../nib.config'
+
+export default definePage<typeof config>(({ collections }: PageProps<typeof config>) => (
+  <ul>{collections.posts.map((post) => <li key={post.id}>{post.data.title}</li>)}</ul>
+))
+
+export const DocsLayout = defineLayout<{ title: string }, typeof config>(
+  ({ children, frontmatter }: PageLayoutProps<{ title: string }, typeof config>) => (
+    <article><h1>{frontmatter?.title}</h1>{children}</article>
+  ),
+)
+```
+
+`defineDataPage` provides the same check for a custom data-page component.
+These helpers return the original component and add no browser or build
+runtime code.
+
 ### Document head
 
 Site configuration and page metadata can add typed head elements without taking
@@ -309,6 +331,10 @@ For implementation details and design rationale:
   — implemented design, APIs, and validation matrix
 
 ## Contributing
+
+The repository test suite is run by Vitest through the package scripts. Use
+`bun run test` (or `bun run test:watch` while editing); invoking `bun test`
+directly uses Bun's separate test runner and is not supported for these files.
 
 ```bash
 bun install --frozen-lockfile

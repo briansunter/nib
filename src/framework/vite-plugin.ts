@@ -72,14 +72,20 @@ export function nibDataPages(
     },
     async load(id) {
       if (id === RESOLVED_PAGE_SOURCES) {
-        const setupContext = context ?? {
-          command: 'serve',
-          mode: 'development',
-          target: 'development',
-          root: path.dirname(path.resolve(configPath)),
-          base: '/',
-          configPath: path.resolve(configPath),
-        }
+        const setupContext = context === undefined
+          ? {
+              command: 'serve' as const,
+              mode: 'development' as const,
+              target: 'development' as const,
+              root: path.dirname(path.resolve(configPath)),
+              base: '/',
+              configPath: path.resolve(configPath),
+              phase: 'page-source-module' as const,
+            }
+          : {
+              ...context,
+              phase: 'page-source-module' as const,
+            }
         return [
           `import config from ${configImport}`,
           `import { resolvePluginSetupContributions } from '@briansunter/nib/internal/server'`,

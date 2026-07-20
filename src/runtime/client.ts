@@ -5,6 +5,10 @@ import type { HydrationStrategy, IslandModule } from '../framework/islands'
 
 export type IslandClientModules = Record<string, () => Promise<IslandModule>>
 
+function isHydrationStrategy(value: string | undefined): value is HydrationStrategy {
+  return value === 'load' || value === 'idle' || value === 'visible'
+}
+
 function reportIslandError(id: string, instance: string, error: unknown) {
   console.error(`Failed to hydrate island ${id} (${instance})`, error)
 }
@@ -23,8 +27,8 @@ export function startIslandRuntime(
   for (const element of documentRoot.querySelectorAll<HTMLElement>('nib-island[data-island]')) {
     if (element.dataset.scheduled === 'true') continue
     element.dataset.scheduled = 'true'
-    const strategy = element.dataset.hydrate as HydrationStrategy | undefined
-    if (strategy !== 'load' && strategy !== 'idle' && strategy !== 'visible') {
+    const strategy = element.dataset.hydrate
+    if (!isHydrationStrategy(strategy)) {
       reportIslandError(
         element.dataset.island ?? 'unknown',
         element.dataset.instance ?? 'unknown',

@@ -1,7 +1,10 @@
 import { createElement, type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 import { definePlugin } from '../src/plugin'
-import { flattenVitePlugins } from '../src/framework/plugin'
+import {
+  flattenVitePlugins,
+  resolvePluginSetupContributions,
+} from '../src/framework/plugin'
 import { defineIsland } from '../src/framework/islands'
 import { validateNibConfig } from '../src/framework/project-config'
 import { createProjectRenderer } from '../src/framework/project-renderer'
@@ -11,6 +14,33 @@ const Counter = defineIsland('counter', () => <button>Count</button>)
 const IslandPage = () => <Counter />
 
 describe('Nib plugins', () => {
+  it('labels the two deterministic page-source setup phases', async () => {
+    const phases: string[] = []
+    const plugin = definePlugin({
+      name: 'setup-phases',
+      setup(context) {
+        phases.push(context.phase)
+      },
+    })
+    const base = {
+      command: 'build' as const,
+      mode: 'production' as const,
+      target: 'server' as const,
+      root: '/site',
+      base: '/',
+      configPath: '/site/nib.config.ts',
+    }
+    await resolvePluginSetupContributions(
+      [plugin],
+      Object.freeze({ ...base, phase: 'vite-config' as const }),
+    )
+    await resolvePluginSetupContributions(
+      [plugin],
+      Object.freeze({ ...base, phase: 'page-source-module' as const }),
+    )
+    expect(phases).toEqual(['vite-config', 'page-source-module'])
+  })
+
   it('resolves recursive Vite plugin promises without changing order', async () => {
     const owner = definePlugin({ name: 'vite-owner' })
     const plugins = await flattenVitePlugins([

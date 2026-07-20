@@ -1,12 +1,12 @@
 import { Counter } from '../islands/counter'
-import { siteHref, type PageMeta } from '@briansunter/nib'
+import { definePage, siteHref, type PageMeta } from '@briansunter/nib'
 
 export const meta = {
   title: 'Home',
   description: 'A new Nib site.',
 } satisfies PageMeta
 
-export default function HomePage() {
+export default definePage(function HomePage() {
   return (
     <>
       <p className="eyebrow">Nib</p>
@@ -16,4 +16,4 @@ export default function HomePage() {
       <Counter initialCount={0} />
     </>
   )
-}
+})
