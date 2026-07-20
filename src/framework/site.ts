@@ -23,6 +23,7 @@ import {
 } from './project-vite-plugin'
 import { loadNibConfig, resolveBasePath } from './project-config'
 import {
+  createPublicationManifest,
   normalizePath,
   previewCanonicalRedirect,
   previewExtensionlessPageArtifacts,
@@ -50,6 +51,16 @@ type ViteManifest = Record<string, ManifestEntry>
 
 function htmlWriteConcurrency(): number {
   return Math.max(1, Math.min(8, os.availableParallelism()))
+}
+
+function normalizedAllowedHosts(
+  hosts: readonly string[] | undefined,
+): string[] | undefined {
+  if (hosts === undefined) return undefined
+  if (hosts.some((host) => typeof host !== 'string' || host.trim() === '')) {
+    throw new Error('Nib allowedHosts must contain non-empty host names')
+  }
+  return [...new Set(hosts.map((host) => host.trim()))]
 }
 
 async function mapWithConcurrency<Value>(
@@ -279,18 +290,23 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
   const rendered = server.paths.map((routePath) => ({ routePath, output: server.render(routePath) }))
   const notFound = { routePath: '/404', output: server.render('/404') }
   const renderedRoutePaths = rendered.map(({ routePath }) => normalizePath(routePath))
+  const outputs = [...rendered, notFound].map(({ routePath, output }) => ({
+    routePath,
+    output,
+    artifact: routePath === '/404'
+      ? '404.html'
+      : routeArtifacts(
+        routePath,
+        trailingSlash,
+        renderedRoutePaths.some((candidate) => candidate.startsWith(`${normalizePath(routePath)}/`)),
+      ).primary,
+  }))
+  const publicationManifest = createPublicationManifest(base, trailingSlash, outputs)
   await server.finalize({
     clientDirectory,
   })
-  await mapWithConcurrency([...rendered, notFound], htmlWriteConcurrency(), async ({ routePath, output }) => {
-    const artifacts = routePath === '/404'
-      ? { primary: '404.html' }
-      : routeArtifacts(
-          routePath,
-          trailingSlash,
-          renderedRoutePaths.some((candidate) => candidate.startsWith(`${normalizePath(routePath)}/`)),
-        )
-    const primaryFile = path.join(clientDirectory, artifacts.primary)
+  await mapWithConcurrency(outputs, htmlWriteConcurrency(), async ({ output, artifact }) => {
+    const primaryFile = path.join(clientDirectory, artifact)
     await fs.mkdir(path.dirname(primaryFile), { recursive: true })
     const body = output.kind === 'page'
       ? renderDocument(template, output.page)
@@ -299,6 +315,12 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
         : renderRedirectDocument(output.destination)
     await fs.writeFile(primaryFile, body)
   })
+  const publicationDirectory = path.join(clientDirectory, '.nib')
+  await fs.mkdir(publicationDirectory, { recursive: true })
+  await fs.writeFile(
+    path.join(publicationDirectory, 'publication.json'),
+    `${JSON.stringify(publicationManifest, null, 2)}\n`,
+  )
 }
 
 export async function buildSite(options: SiteOperationOptions): Promise<void> {
@@ -315,15 +337,19 @@ export async function buildSite(options: SiteOperationOptions): Promise<void> {
 export interface DevSiteOptions extends SiteOperationOptions {
   host?: string
   port?: number
+  /** Additional Host header values accepted by Vite; loopback remains default. */
+  allowedHosts?: readonly string[]
 }
 
 export async function startDevSite(options: DevSiteOptions): Promise<ViteDevServer> {
   const root = path.resolve(options.root)
+  const allowedHosts = normalizedAllowedHosts(options.allowedHosts)
   const { config } = await siteViteConfig(root, 'serve', 'development')
   const vite = await createViteServer({
     ...config,
     server: {
       ...(options.host === undefined ? {} : { host: options.host }),
+      ...(allowedHosts === undefined ? {} : { allowedHosts }),
       port: options.port ?? 5173,
       preTransformRequests: false,
     },
@@ -367,10 +393,13 @@ export async function startDevSite(options: DevSiteOptions): Promise<ViteDevServ
 export interface PreviewSiteOptions extends SiteOperationOptions {
   host?: string
   port?: number
+  /** Additional Host header values accepted by Vite preview. */
+  allowedHosts?: readonly string[]
 }
 
 export async function previewSite(options: PreviewSiteOptions): Promise<PreviewServer> {
   const root = path.resolve(options.root)
+  const allowedHosts = normalizedAllowedHosts(options.allowedHosts)
   const loaded = await loadNibConfig(root, 'serve')
   const base = resolveBasePath(loaded.config)
   return vitePreview({
@@ -381,6 +410,7 @@ export async function previewSite(options: PreviewSiteOptions): Promise<PreviewS
     preview: {
       ...(options.host === undefined ? {} : { host: options.host }),
       ...(options.port === undefined ? {} : { port: options.port }),
+      ...(allowedHosts === undefined ? {} : { allowedHosts }),
     },
     root,
   })

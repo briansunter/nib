@@ -1,6 +1,8 @@
 import type { ComponentType, ReactNode } from 'react'
 import type { Plugin, PluginOption } from 'vite'
 import type {
+  HeadContribution,
+  HeadElement,
   PageMeta,
   PageSourceDefinition,
   DataValidator,
@@ -10,6 +12,7 @@ import type {
   ResolvedRoute,
   SiteConfig,
 } from './types'
+import { normalizeHeadContribution } from './meta'
 
 export type NibCommand = 'build' | 'serve'
 export type NibMode = 'development' | 'production'
@@ -139,6 +142,8 @@ export interface NibRoutesResolvedPluginContext extends NibRendererPluginContext
 }
 
 export interface NibRendererExtension {
+  /** Contributes structured elements to the generated document head. */
+  head?(context: NibRenderPageContext): HeadContribution | void
   wrapPage?(page: ReactNode, context: NibRenderPageContext): ReactNode
   transformPage?(page: NibRenderedPage, context: NibRenderPageContext): NibRenderedPage
   finalize?(context: NibFinalizeContext): Promise<void>
@@ -202,7 +207,7 @@ export function validateRendererExtension(
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`Nib plugin ${plugin.name} renderer() must return an extension object or undefined`)
   }
-  for (const hook of ['wrapPage', 'transformPage', 'finalize'] as const) {
+  for (const hook of ['head', 'wrapPage', 'transformPage', 'finalize'] as const) {
     if (value[hook] !== undefined && typeof value[hook] !== 'function') {
       throw new Error(`Nib plugin ${plugin.name} renderer().${hook} must be a function`)
     }
@@ -253,6 +258,7 @@ function islandMarkup(html: string): string[] {
 }
 
 export interface NibRendererPipeline {
+  head(context: NibRenderPageContext): HeadContribution
   wrapPage(page: ReactNode, context: NibRenderPageContext): ReactNode
   transformPage(page: NibRenderedPage, context: NibRenderPageContext): NibRenderedPage
   finalize(context: NibFinalizeContext): Promise<void>
@@ -282,6 +288,23 @@ export async function createRendererPluginPipeline(
   }
 
   return {
+    head(pageContext) {
+      const elements: HeadElement[] = []
+      for (const { plugin, extension } of extensions) {
+        if (!extension.head) continue
+        try {
+          const contribution = extension.head(pageContext)
+          const normalized = normalizeHeadContribution(
+            contribution,
+            `Nib plugin ${plugin.name} renderer().head()`,
+          )
+          if (normalized?.elements) elements.push(...normalized.elements)
+        } catch (error) {
+          throw pluginError(plugin, 'renderer().head()', error, pageContext.route.path)
+        }
+      }
+      return Object.freeze({ elements: Object.freeze(elements) })
+    },
     wrapPage(page, pageContext) {
       let wrapped = page
       for (const { plugin, extension } of [...extensions].reverse()) {
@@ -373,12 +396,16 @@ export async function resolvePluginSetupContributions(
 
 function readonlyResolvedRoute(route: ResolvedRoute): NibResolvedRoute {
   if (route.kind === 'page') {
+    const head = normalizeHeadContribution(route.meta.head, `Route ${route.path} head`)
     return Object.freeze({
       kind: 'page',
       path: route.path,
       source: route.source,
       status: route.status,
-      meta: Object.freeze({ ...route.meta }),
+      meta: Object.freeze({
+        ...route.meta,
+        ...(head === undefined ? {} : { head }),
+      }),
     })
   }
   if (route.kind === 'resource') {

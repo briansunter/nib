@@ -118,6 +118,10 @@ describe('published package consumer', () => {
 
     const home = await fs.readFile(path.join(site, 'dist/client/index.html'), 'utf8')
     const about = await fs.readFile(path.join(site, 'dist/client/about/index.html'), 'utf8')
+    const publication = JSON.parse(await fs.readFile(
+      path.join(site, 'dist/client/.nib/publication.json'),
+      'utf8',
+    )) as { version: number; routes: Array<{ path: string; artifact: string }> }
     const assetDirectory = path.join(site, 'dist/client/assets')
     const clientJavaScript = (await Promise.all(
       (await fs.readdir(assetDirectory))
@@ -127,6 +131,10 @@ describe('published package consumer', () => {
     expect(home).toContain('Make a site.')
     expect(home).toContain('data-island="counter"')
     expect(about).toContain('About this site')
+    expect(publication).toMatchObject({ version: 1 })
+    expect(publication.routes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: '/about', artifact: 'about/index.html' }),
+    ]))
     expect(about).not.toContain('data-nib-islands')
     expect(clientJavaScript).not.toContain('__zod_globalConfig')
     await expect(fs.stat(path.join(site, 'src/framework'))).rejects.toMatchObject({

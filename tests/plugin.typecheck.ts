@@ -38,6 +38,15 @@ const plugin = definePlugin({
   renderer(context) {
     context.site.title
     return {
+      head(render) {
+        render.route.path
+        return {
+          elements: [{
+            tag: 'meta',
+            attributes: { name: 'test', content: 'yes' },
+          }],
+        }
+      },
       wrapPage(page, render) {
         render.route.path
         // @ts-expect-error plugin route facts do not expose the page implementation.

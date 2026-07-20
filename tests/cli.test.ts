@@ -13,6 +13,14 @@ afterEach(async () => {
 })
 
 describe('nib command', () => {
+  it('documents explicit repeatable host allowlists', async () => {
+    const messages: string[] = []
+
+    await expect(runCli(['help'], { write: (message) => messages.push(message) }))
+      .resolves.toBe(0)
+    expect(messages.join('\n')).toContain('--allowed-host host')
+  })
+
   it('initializes a project through the command users run', async () => {
     const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-cli-'))
     temporaryDirectories.push(cwd)

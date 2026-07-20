@@ -2,6 +2,7 @@ import path from 'node:path'
 import { loadConfigFromFile, type ConfigEnv } from 'vite'
 import { pageSourceExtensions, validateDataDefinition } from './content'
 import { deployedOrigin } from './deployed-url'
+import { normalizeHeadContribution } from './meta'
 import type { NibPlugin } from './plugin'
 import type { NibConfig, PageSourceDefinition } from './types'
 
@@ -20,6 +21,7 @@ export function validateNibConfig(value: unknown): NibConfig {
     if (typeof value.site.origin !== 'string') throw new Error('Nib site.origin must be a string')
     deployedOrigin(value.site.origin, undefined, 'Nib site.origin')
   }
+  normalizeHeadContribution(value.site.head, 'Nib site.head')
   if (value.base !== undefined) {
     if (
       typeof value.base !== 'string'

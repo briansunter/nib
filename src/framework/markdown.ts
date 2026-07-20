@@ -5,17 +5,20 @@ import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
 import { defaultMarkdownSchema, parseData } from './content'
+import { normalizeHeadContribution } from './meta'
 import type {
   DataSchema,
   DataValidator,
   InferDataValidator,
   MarkdownDefinition,
+  MarkdownSourceContext,
   PageMeta,
 } from './types'
 
 function renderMarkdown(
   markdown: string,
   definition?: MarkdownDefinition<any>,
+  context?: MarkdownSourceContext,
 ): string {
   const processor = unified()
     .use(remarkParse)
@@ -24,7 +27,11 @@ function renderMarkdown(
     .use(remarkRehype)
     .use([...(definition?.rehypePlugins ?? [])])
     .use(rehypeStringify)
-  return String(processor.processSync(markdown))
+  return String(processor.processSync(
+    context === undefined
+      ? markdown
+      : { value: markdown, path: context.file },
+  ))
 }
 
 function getMarkdownLayoutName(layout: unknown): string | undefined {
@@ -43,12 +50,14 @@ function getMarkdownLayoutName(layout: unknown): string | undefined {
 function getMarkdownMeta(
   values: Record<string, unknown>,
 ): { meta: PageMeta; layout: string | undefined } {
-  const { title, description, draft, layout } = values
+  const { title, description, draft, layout, head } = values
+  const normalizedHead = normalizeHeadContribution(head, 'Markdown page head')
   return {
     meta: {
       ...(title === undefined ? {} : { title: title as string }),
       ...(description === undefined ? {} : { description: description as string }),
       ...(draft === undefined ? {} : { draft: draft as boolean }),
+      ...(normalizedHead === undefined ? {} : { head: normalizedHead }),
     },
     layout: getMarkdownLayoutName(layout),
   }
@@ -59,6 +68,7 @@ export function markdownToCompiledPage<
 >(
   source: string,
   definition?: MarkdownDefinition<Validator>,
+  context?: MarkdownSourceContext,
 ) {
   const parsed = matter(source)
   const frontmatter = definition
@@ -79,7 +89,7 @@ export function markdownToCompiledPage<
   })
   const { meta, layout } = getMarkdownMeta(values)
   return {
-    html: renderMarkdown(parsed.content, definition),
+    html: renderMarkdown(parsed.content, definition, context),
     frontmatter,
     meta,
     layout,

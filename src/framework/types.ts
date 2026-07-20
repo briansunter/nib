@@ -7,6 +7,27 @@ export interface PageMeta {
   title?: string
   description?: string
   draft?: boolean
+  head?: HeadContribution
+}
+
+export type HeadTagName = 'meta' | 'link' | 'script' | 'style'
+export type HeadAttributeValue = string | number | boolean
+
+/** A structured document-head element rendered by Nib with escaped attributes. */
+export interface HeadElement {
+  readonly tag: HeadTagName
+  readonly attributes?: Readonly<Record<string, HeadAttributeValue>>
+  readonly content?: string
+}
+
+/** Site- or page-owned additions to the generated document head. */
+export interface HeadContribution {
+  readonly elements?: readonly HeadElement[]
+}
+
+export interface MarkdownSourceContext {
+  /** Absolute or project-relative source path exposed to Unified plugins. */
+  readonly file: string
 }
 
 export interface DataSchema<Data = unknown> {
@@ -134,6 +155,7 @@ export interface SiteConfig {
   description?: string
   titleTemplate?: string
   navigation?: Array<{ label: string; href: string }>
+  head?: HeadContribution
 }
 
 export type TrailingSlash = 'always' | 'never' | 'ignore'

@@ -34,6 +34,7 @@ npm run dev
   routes.
 - Plugin-contributed data formats and virtual page, XML, or text routes.
 - Configured redirects and `always`, `never`, or `ignore` trailing-slash policy.
+- Structured site, page, and renderer-plugin document-head contributions.
 - Configurable Unified remark and rehype Markdown extensions.
 - Build-time collections for indexes, navigation, and related content.
 - React islands with `load`, `idle`, and `visible` hydration.
@@ -78,6 +79,40 @@ that generated its data pages. If a page renderer imports a plugin-transformed
 module (for example `?nib-image`), declare it with
 `pageRenderer('./src/data-pages', 'ProjectPage')`; Nib imports that module from
 its configured Vite page-source graph rather than while loading `nib.config.ts`.
+
+### Document head
+
+Site configuration and page metadata can add typed head elements without taking
+ownership of Nib's document template. Attributes are escaped and event-handler
+attributes are rejected; script and style text is protected from closing its
+raw-text element.
+
+```ts
+import { defineConfig } from '@briansunter/nib'
+import type { PageMeta } from '@briansunter/nib'
+
+export default defineConfig({
+  site: {
+    title: 'My site',
+    head: {
+      elements: [{
+        tag: 'link',
+        attributes: { rel: 'alternate', type: 'application/rss+xml', href: '/rss.xml' },
+      }],
+    },
+  },
+})
+
+export const meta = {
+  head: {
+    elements: [{ tag: 'meta', attributes: { name: 'theme-color', content: '#0f172a' } }],
+  },
+} satisfies PageMeta
+```
+
+Renderer plugins can contribute the same `HeadContribution` shape from their
+typed `renderer().head(context)` hook. Nib emits site, page, then plugin
+contributions in that order.
 
 ## Optional Vite adapters
 
@@ -151,6 +186,24 @@ After registrations are merged, inspection hooks receive an immutable resolved-
 route manifest. Nib retains path normalization, collision detection, base paths,
 and output-file ownership.
 
+Builds also emit `dist/client/.nib/publication.json`. It records the manifest
+version, base path, trailing-slash policy, and each published route's kind,
+canonical path, artifact, status, content type, and redirect destination when
+applicable. Static-host adapters can use it instead of reimplementing Nib's
+extensionless and directory-index rules.
+
+Development and preview bind to loopback by default. To expose a server through
+a known hostname such as a Tailscale name, bind explicitly and allow only that
+host; repeat the option for more than one hostname:
+
+```bash
+npx @briansunter/nib dev --host 0.0.0.0 --allowed-host macmini.example.ts.net
+npx @briansunter/nib preview --host 0.0.0.0 --allowed-host macmini.example.ts.net
+```
+
+`--host` controls the network interface and `--allowed-host` controls accepted
+HTTP `Host` headers. Keep the allowlist explicit rather than opening every host.
+
 ## Markdown extensions
 
 `markdown.remarkPlugins` run after Nib's GitHub-Flavored Markdown parser, and
@@ -169,6 +222,10 @@ export default defineConfig({
   },
 })
 ```
+
+Configured Unified plugins receive a VFile whose `history` contains the
+Markdown source path. This makes source-relative diagnostics and asset
+resolution possible without changing the generated page API.
 
 ## React islands
 

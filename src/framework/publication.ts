@@ -1,4 +1,4 @@
-import type { TrailingSlash } from './types'
+import type { RenderedOutput, TrailingSlash } from './types'
 
 /** Public route identity, static artifact paths, and preview rewriting in one place. */
 export function normalizePath(url: string): string {
@@ -43,6 +43,71 @@ export function publicRouteHref(base: string, routePath: string): string {
 export interface RouteArtifacts {
   /** The static artifact served at the route's canonical public path. */
   readonly primary: string
+}
+
+export interface PublicationManifestRoute {
+  readonly kind: 'page' | 'resource' | 'redirect'
+  readonly path: string
+  readonly artifact: string
+  readonly status: number
+  readonly contentType: string
+  readonly destination?: string
+}
+
+export interface PublicationManifest {
+  readonly version: 1
+  readonly base: string
+  readonly trailingSlash: TrailingSlash
+  readonly routes: readonly PublicationManifestRoute[]
+}
+
+export interface PublicationManifestInput {
+  readonly routePath: string
+  readonly artifact: string
+  readonly output: RenderedOutput
+}
+
+/** Creates the deployable route-to-artifact contract for static hosts. */
+export function createPublicationManifest(
+  base: string,
+  trailingSlash: TrailingSlash | undefined,
+  entries: readonly PublicationManifestInput[],
+): PublicationManifest {
+  const routes = entries.map(({ routePath, artifact, output }): PublicationManifestRoute => {
+    if (output.kind === 'page') {
+      return {
+        kind: 'page',
+        path: routePath,
+        artifact,
+        status: output.page.status,
+        contentType: 'text/html; charset=utf-8',
+      }
+    }
+    if (output.kind === 'resource') {
+      return {
+        kind: 'resource',
+        path: routePath,
+        artifact,
+        status: output.status,
+        contentType: output.contentType,
+      }
+    }
+    return {
+      kind: 'redirect',
+      path: routePath,
+      artifact,
+      status: output.status,
+      contentType: 'text/html; charset=utf-8',
+      destination: output.destination,
+    }
+  }).sort((left, right) => left.path.localeCompare(right.path))
+
+  return Object.freeze({
+    version: 1,
+    base,
+    trailingSlash: trailingSlash ?? 'ignore',
+    routes: Object.freeze(routes.map((route) => Object.freeze(route))),
+  })
 }
 
 /**

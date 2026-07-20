@@ -43,6 +43,15 @@ describe('framework-owned site builds', () => {
       'utf8',
     )
     const notFound = await fs.readFile(path.join(output, 'client/404.html'), 'utf8')
+    const publication = JSON.parse(await fs.readFile(
+      path.join(output, 'client/.nib/publication.json'),
+      'utf8',
+    )) as {
+      version: number
+      base: string
+      trailingSlash: string
+      routes: Array<{ path: string; artifact: string; contentType: string }>
+    }
 
     expect(home).toContain('<title>Home | Journal</title>')
     expect(home).toMatch(/<link rel="stylesheet" href="\/journal\/assets\/[^"]+\.css" \/>/)
@@ -70,6 +79,25 @@ describe('framework-owned site builds', () => {
     expect(redirect).toContain('http-equiv="refresh"')
     expect(redirect).toContain('url=/journal/about/')
     expect(notFound).toContain('Journal not found')
+    expect(publication).toMatchObject({ version: 1, base: '/journal/', trailingSlash: 'always' })
+    expect(publication.routes).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        path: '/about/',
+        artifact: 'about/index.html',
+        contentType: 'text/html; charset=utf-8',
+      }),
+      expect.objectContaining({
+        path: '/rss.xml',
+        artifact: 'rss.xml',
+        contentType: 'application/rss+xml; charset=utf-8',
+      }),
+      expect.objectContaining({
+        path: '/legacy/',
+        artifact: 'legacy/index.html',
+        contentType: 'text/html; charset=utf-8',
+      }),
+      expect.objectContaining({ path: '/404', artifact: '404.html' }),
+    ]))
     await expect(fs.stat(path.join(root, 'src/framework'))).rejects.toMatchObject({
       code: 'ENOENT',
     })

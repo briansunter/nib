@@ -20,6 +20,20 @@ function option(args: string[], name: string): string | undefined {
   return index >= 0 ? args[index + 1] : undefined
 }
 
+function options(args: string[], name: string): string[] {
+  const values: string[] = []
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== name) continue
+    const value = args[index + 1]
+    if (value === undefined || value.startsWith('--')) {
+      throw new Error(`${name} requires a value`)
+    }
+    values.push(value)
+    index += 1
+  }
+  return values
+}
+
 function positional(args: string[]): string[] {
   const values: string[] = []
   for (let index = 0; index < args.length; index += 1) {
@@ -88,9 +102,9 @@ function help(): string {
 
 Usage:
   nib init [directory] [--no-install]
-  nib dev [--root directory] [--host host] [--port port]
+  nib dev [--root directory] [--host host] [--port port] [--allowed-host host]
   nib build [--root directory]
-  nib preview [--root directory] [--host host] [--port port]`
+  nib preview [--root directory] [--host host] [--port port] [--allowed-host host]`
 }
 
 export async function runCli(
@@ -140,10 +154,12 @@ export async function runCli(
   if (command === 'dev') {
     const host = option(commandArgs, '--host')
     const port = numericOption(commandArgs, '--port')
+    const allowedHosts = options(commandArgs, '--allowed-host')
     const server = await startDevSite({
       root,
       ...(host === undefined ? {} : { host }),
       ...(port === undefined ? {} : { port }),
+      ...(allowedHosts.length === 0 ? {} : { allowedHosts }),
     })
     server.printUrls()
     return 0
@@ -151,10 +167,12 @@ export async function runCli(
   if (command === 'preview') {
     const host = option(commandArgs, '--host')
     const port = numericOption(commandArgs, '--port')
+    const allowedHosts = options(commandArgs, '--allowed-host')
     const server = await previewSite({
       root,
       ...(host === undefined ? {} : { host }),
       ...(port === undefined ? {} : { port }),
+      ...(allowedHosts.length === 0 ? {} : { allowedHosts }),
     })
     server.printUrls()
     return 0

@@ -69,6 +69,18 @@ describe('markdown', () => {
     expect(compiled.html).toContain('<p>Added by remark</p>')
   })
 
+  it('passes the Markdown source path to Unified plugins', () => {
+    let sourcePath: string | undefined
+    markdownToCompiledPage('# World', {
+      remarkPlugins: [
+        () => (_tree: any, file: { history: string[] }) => {
+          sourcePath = file.history[0]
+        },
+      ],
+    }, { file: '/project/src/pages/world/page.md' })
+    expect(sourcePath).toBe('/project/src/pages/world/page.md')
+  })
+
   it('generates a Vite module that exposes frontmatter for runtime layouts', async () => {
     const plugin = nibMarkdown()
     if (typeof plugin.load !== 'function') throw new Error('Markdown plugin has no load hook')
@@ -78,6 +90,7 @@ describe('markdown', () => {
     if (typeof result !== 'string') throw new Error('Markdown plugin did not return module source')
 
     expect(result).toContain('markdownToCompiledPage')
+    expect(result).toContain('file:')
     expect(result).toContain('export const frontmatter = compiled.frontmatter')
     expect(result).toContain('export const layout = compiled.layout')
   })
