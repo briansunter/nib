@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { normalizeHeadContribution } from './meta'
 import { normalizePath } from './paths'
 import type {
   CollectionDefinition,
@@ -24,6 +25,7 @@ export const defaultMarkdownSchema = z.looseObject({
   description: z.string().optional(),
   draft: z.boolean().optional(),
   layout: z.string().min(1).optional(),
+  head: z.unknown().optional(),
 })
 
 export function defineMarkdown<Data>(
@@ -285,12 +287,15 @@ function getPageMeta(meta: unknown, label: string): PageMeta | undefined {
     title: z.string().optional(),
     description: z.string().optional(),
     draft: z.boolean().optional(),
+    head: z.unknown().optional(),
   }).safeParse(meta)
   if (!parsed.success) throw new Error(`${label} metadata: ${parsed.error.message}`)
+  const head = normalizeHeadContribution(parsed.data.head, `${label} head`)
   return {
     ...(parsed.data.title === undefined ? {} : { title: parsed.data.title }),
     ...(parsed.data.description === undefined ? {} : { description: parsed.data.description }),
     ...(parsed.data.draft === undefined ? {} : { draft: parsed.data.draft }),
+    ...(head === undefined ? {} : { head }),
   }
 }
 

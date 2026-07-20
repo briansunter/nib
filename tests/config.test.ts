@@ -89,6 +89,14 @@ describe('Nib configuration', () => {
       collections: { posts: {} },
       site: { title: 'Site' },
     })).toThrow('loader function')
+    expect(() => validateNibConfig({
+      site: {
+        title: 'Site',
+        head: {
+          elements: [{ tag: 'meta', attributes: { onclick: 'bad' } }],
+        },
+      },
+    })).toThrow('unsafe attribute name')
   })
 
   it('uses one unambiguous validation seam for all content definitions', () => {

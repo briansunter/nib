@@ -30,10 +30,15 @@ export type {
   DataPageProps,
   DataSchema,
   DataValidator,
+  HeadAttributeValue,
+  HeadContribution,
+  HeadElement,
+  HeadTagName,
   InferDataValidator,
   LoadedCollectionDefinitions,
   LoadedCollections,
   MarkdownDefinition,
+  MarkdownSourceContext,
   NibConfig,
   NibViteConfig,
   PageLayoutProps,
@@ -51,3 +56,7 @@ export type {
   SiteShellProps,
   TrailingSlash,
 } from './framework/types'
+export type {
+  PublicationManifest,
+  PublicationManifestRoute,
+} from './framework/publication'

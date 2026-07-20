@@ -25,7 +25,12 @@ describe('trailingSlash: never publication', () => {
     await expect(fs.readFile(path.join(neverRoot, 'dist/client/about'), 'utf8'))
       .resolves.toContain('No slash about')
 
-    const preview = await previewSite({ root: neverRoot, host: '127.0.0.1', port: 0 })
+    const preview = await previewSite({
+      root: neverRoot,
+      host: '127.0.0.1',
+      port: 0,
+      allowedHosts: ['tail.example.test'],
+    })
     try {
       const origin = preview.resolvedUrls?.local[0]
       if (!origin) throw new Error('Preview server did not expose a local URL')
@@ -39,6 +44,10 @@ describe('trailingSlash: never publication', () => {
       expect(await canonical.text()).toContain('No slash about')
       expect(alternate.status).toBe(301)
       expect(alternate.headers.get('location')).toBe(publicPath(origin, 'about?source=test'))
+      const remoteHost = await fetch(new URL('about', origin), {
+        headers: { host: 'tail.example.test', accept: 'text/html' },
+      })
+      expect(remoteHost.status).toBe(200)
     } finally {
       await preview.close()
     }

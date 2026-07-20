@@ -1,7 +1,7 @@
 import { createElement, type ReactNode } from 'react'
 import { loadCollections } from './content'
 import { DefaultSiteShell } from './default-shell'
-import { renderHead } from './meta'
+import { normalizeHeadContribution, renderHead } from './meta'
 import { renderReactPage } from './render-page'
 import { validateIslandModules, type IslandModule } from './islands'
 import {
@@ -68,6 +68,7 @@ export interface ProjectRenderer {
 }
 
 function readonlySite(config: NibConfig): NibFinalizeContext['site'] {
+  const head = normalizeHeadContribution(config.site.head, 'Nib site.head')
   return Object.freeze({
     ...config.site,
     ...(config.site.navigation === undefined
@@ -77,6 +78,7 @@ function readonlySite(config: NibConfig): NibFinalizeContext['site'] {
             config.site.navigation.map((item) => Object.freeze({ ...item })),
           ),
         }),
+    ...(head === undefined ? {} : { head }),
   })
 }
 
@@ -216,11 +218,12 @@ export async function createProjectRenderer(
         base: options.base,
         mode: options.command === 'serve' ? 'development' : 'production',
       })
+      const head = plugins.head(pageContext)
       const content = plugins.wrapPage(composePage(route, options.config, collections), pageContext)
       const reactPage = renderReactPage(content)
       const renderedPage = plugins.transformPage({
         status: route.status,
-        head: renderHead(route.meta),
+        head: renderHead(route.meta, options.config.site, head),
         html: reactPage.html,
       }, pageContext)
       renderedPaths.add(route.path)

@@ -23,6 +23,7 @@ The package owns:
 - generic data-page discovery, validation, and collection loading;
 - development SSR and production prerendering;
 - document outlets, metadata, base paths, and 404 output;
+- structured document-head contributions and publication manifests;
 - island collection, serialization, client loading, and hydration.
 
 A consumer project owns:
@@ -95,12 +96,12 @@ target in `NibVitePluginContext`; development identifies its combined
 multi-environment graph separately. This prevents plugin-local Vite state from
 leaking between builds.
 
-Renderer extensions are instantiated once per server renderer. Their wrappers
-compose around the complete shell in configuration order, page transformations
-run in configuration order, and finalizers run once after every production
-route (including the generated 404) has rendered. Production collects rendered
-pages, awaits finalizers, then writes HTML with bounded concurrency; development
-does not run finalizers.
+Renderer extensions are instantiated once per server renderer. Their structured
+head contributions, wrappers, and page transformations run in configuration
+order, while finalizers run once after every production route (including the
+generated 404) has rendered. Production collects rendered pages, awaits
+finalizers, then writes HTML with bounded concurrency and emits
+`.nib/publication.json`; development does not run finalizers.
 
 The plugin host owns contribution resolution, renderer-extension construction,
 ordering, hook error attribution, and finalization. Renderer plugins receive a
@@ -113,8 +114,8 @@ resource, or redirect routes before rendering. The host validates and merges
 these registrations, then exposes one immutable resolved-route list to
 inspection hooks. See
 [Plugin content and routing](./plugin-content-and-routing.md) for ordering,
-collision, output, and trailing-slash rules. Typed document/head mutation is
-not exposed.
+collision, output, head, and trailing-slash rules. Site and page metadata use
+the same structured head contract as renderer plugins.
 
 Tailwind is optional rather than a framework dependency. The initializer adds
 `@tailwindcss/vite` and opts in through the narrow app-owned `vite` field in
@@ -223,6 +224,10 @@ The Markdown Vite adapter:
 6. serializes HTML through Rehype;
 7. generates a React page module;
 8. exposes the validated frontmatter and optional named layout to the route.
+
+Unified plugins receive a VFile with the source path in `history`, allowing
+source-relative diagnostics and asset resolution while Nib retains ownership
+of module generation and route publication.
 
 Keeping parsing in `src/framework/markdown.ts` gives syntax and validation
 locality independent of Vite code generation. Inline JSX is not supported.

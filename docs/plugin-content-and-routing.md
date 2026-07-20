@@ -12,8 +12,7 @@ The target examples are:
 - a sitemap plugin inspecting project routes and returning `sitemap.xml`;
 - the first-party RSS plugin returning a typed `rss.xml` resource route;
 - a plugin observing the final route manifest for validation or reporting.
-
-Typed document/head mutation is outside this design.
+- a renderer plugin contributing typed document-head elements.
 
 ## Resolution order
 
@@ -58,6 +57,19 @@ Development sends the status and `Location` header. Static output uses safe
 HTML containing a canonical link and immediate meta refresh because a static
 file cannot select its HTTP status.
 
+## Document head
+
+Site configuration and page metadata accept a structured `HeadContribution` with
+`meta`, `link`, `script`, and `style` elements. Renderer plugins can return the
+same shape from `renderer().head(context)`. Nib emits site elements, page
+elements, and plugin elements in that order, then keeps the document template
+and island markers under framework ownership.
+
+Attributes are escaped, event-handler names are rejected, and script/style raw
+text is guarded against prematurely closing its element. The hook is synchronous
+because the renderer's page and transform pipeline is synchronous; asynchronous
+work belongs in plugin setup or finalization.
+
 ## Path policy
 
 Route identity ignores a trailing slash, so `/about` and `/about/` cannot be
@@ -70,9 +82,11 @@ public path exposed to pages and plugins:
 - resource paths ending in a filename extension are never given a trailing
   slash.
 
-Development redirects a successfully matched route to its canonical spelling
-for `always` and `never`. Static output remains directory-style, and deployment
-hosts remain responsible for enforcing request URL policy.
+Development and preview redirect a successfully matched route to its canonical
+spelling for `always` and `never`. Static output uses the same policy when it
+chooses directory indexes or extensionless leaf artifacts. The generated
+`dist/client/.nib/publication.json` records that route-to-artifact mapping for
+deployment hosts, which remain responsible for enforcing request URL policy.
 
 ## Ownership and errors
 

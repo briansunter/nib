@@ -8,8 +8,9 @@ remote images, Markdown rewriting, SVG rasterization, and animated-image
 conversion are follow-up work.
 
 The plugin interface was subsequently extended with typed page-source setup,
-virtual route providers, and immutable resolved-route inspection. The additive
-contract and current ordering rules are documented in
+virtual route providers, immutable resolved-route inspection, and structured
+document-head contributions. The additive contract and current ordering rules
+are documented in
 [Plugin content and routing](./plugin-content-and-routing.md); the original
 Vite/renderer design below remains the rationale for those hooks.
 
@@ -225,6 +226,7 @@ Put public contracts in a dedicated framework module and re-export them through
 ```ts
 import type { ReactNode } from 'react'
 import type { PluginOption } from 'vite'
+import type { HeadContribution } from '@briansunter/nib'
 
 export type NibCommand = 'build' | 'serve'
 export type NibMode = 'development' | 'production'
@@ -261,6 +263,10 @@ export interface NibFinalizeContext extends NibRendererPluginContext {
 }
 
 export interface NibRendererExtension {
+  head?(
+    context: NibRenderPageContext,
+  ): HeadContribution | void
+
   wrapPage?(
     page: ReactNode,
     context: NibRenderPageContext,
@@ -292,6 +298,11 @@ export function definePlugin<const Plugin extends NibPlugin>(
   return plugin
 }
 ```
+
+`HeadContribution` and `HeadElement` are exported from both the main package and
+`@briansunter/nib/plugin`. The `head` hook is synchronous and runs before page
+composition; Nib merges its result after site and page metadata, validates it,
+and escapes it into the generated document.
 
 `definePlugin` is an identity helper. Its purpose is contextual typing for hook
 parameters and preservation of a plugin factory's concrete return type. Plugin
@@ -365,6 +376,9 @@ that also need Nib renderer or build lifecycle hooks, such as image processing.
   changing their declared order.
 - Renderer extensions are created once, in config order, for each server
   renderer.
+- `head` runs in config order before page composition. It can add structured
+  `meta`, `link`, `script`, or `style` elements but cannot replace the document
+  template or island entry.
 - `wrapPage` is synchronous. The first configured plugin is the outermost
   wrapper, making composition deterministic.
 - `transformPage` runs synchronously in config order after React rendering.
@@ -437,12 +451,13 @@ internal plugin array or import Nib internals.
 2. create a frozen `NibRendererPluginContext`;
 3. await each configured plugin's `renderer` hook once;
 4. retain the resulting extensions in config order;
-5. compose the page, layouts, and shell, then apply plugin wrappers before
+5. collect structured renderer head contributions for each route;
+6. compose the page, layouts, and shell, then apply plugin wrappers before
    `renderReactPage`;
-6. apply synchronous `transformPage` hooks to the static page fields while Nib
+7. apply synchronous `transformPage` hooks to the static page fields while Nib
    retains the separately collected island metadata;
-7. track every successfully rendered canonical path;
-8. expose `finalize(context)` alongside `paths` and `render`.
+8. track every successfully rendered canonical path;
+9. expose `finalize(context)` alongside `paths` and `render`.
 
 Wrapping happens around the complete site shell so a provider can observe image
 components in the page, layouts, or shell:
@@ -942,21 +957,21 @@ asset path.
 
 ## Markdown integration
 
-Do not block the first release on automatic Markdown image rewriting. Current
-Markdown compilation produces an HTML string and does not expose a plugin
-transform context containing the source file and an image registry.
+Automatic Markdown image rewriting remains follow-up work. Markdown
+compilation now passes its source path to configured Unified plugins through the
+VFile context, but it does not expose an image registry or let plugins replace
+the whole compiler.
 
-Add Markdown support in a follow-up after the component pipeline is proven:
+Remaining image-rewriting work should:
 
-1. give Markdown compilation a source-file context;
-2. add a narrow typed Markdown AST extension seam rather than letting plugins
+1. add a narrow typed Markdown AST extension seam rather than letting plugins
    replace the whole compiler;
-3. resolve relative image URLs against the Markdown source;
-4. turn eligible local images into the same registry requests and static
+2. resolve relative image URLs against the Markdown source;
+3. turn eligible local images into the same registry requests and static
    `<picture>` markup;
-5. retain ordinary Markdown `img` output for remote, animated, SVG, or opted-out
+4. retain ordinary Markdown `img` output for remote, animated, SVG, or opted-out
    sources;
-6. test frontmatter layouts, base paths, and source-located errors.
+5. test frontmatter layouts, base paths, and source-located errors.
 
 This preserves the existing boundary between Markdown parsing and Vite code
 generation.

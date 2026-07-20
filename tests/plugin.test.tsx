@@ -118,6 +118,43 @@ describe('Nib plugins', () => {
     expect(() => renderer.render('/')).toThrow('cannot render after finalization')
   })
 
+  it('lets renderer plugins add structured head elements with route context', async () => {
+    const renderer = await createProjectRenderer({
+      config: {
+        site: {
+          title: 'Site',
+          head: {
+            elements: [{ tag: 'meta', attributes: { name: 'site', content: 'yes' } }],
+          },
+        },
+        plugins: [definePlugin({
+          name: 'head-plugin',
+          renderer() {
+            return {
+              head(context) {
+                expect(context.route.path).toBe('/')
+                return {
+                  elements: [{
+                    tag: 'link',
+                    attributes: { rel: 'canonical', href: 'https://example.test/' },
+                  }],
+                }
+              },
+            }
+          },
+        })],
+      },
+      root: process.cwd(),
+      base: '/',
+      pages: { '/src/pages/page.tsx': { default: Page } },
+      islandModules: {},
+    })
+    const output = renderer.render('/')
+    if (output.kind !== 'page') throw new Error('Expected a page output')
+    expect(output.page.head).toContain('name="site"')
+    expect(output.page.head).toContain('rel="canonical"')
+  })
+
   it('registers routes against one initial manifest and inspects the immutable result', async () => {
     const inspected: string[][] = []
     const first = definePlugin({

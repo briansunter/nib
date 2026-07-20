@@ -61,4 +61,22 @@ describe('framework-owned development server', () => {
     expect(await rss.text()).toContain('<rss version="2.0"')
     expect(await settings.text()).toContain('TOML settings')
   }, 30_000)
+
+  it('accepts an explicit remote Host allowlist without opening every host', async () => {
+    const server = await startDevSite({
+      root: path.resolve('tests/fixtures/basic-site'),
+      host: '127.0.0.1',
+      port: 0,
+      allowedHosts: ['tail.example.test'],
+    })
+    servers.push(server)
+    const origin = server.resolvedUrls?.local[0]
+    if (!origin) throw new Error('Development server did not expose a local URL')
+
+    const allowed = await fetch(new URL('/journal/', origin), {
+      headers: { host: 'tail.example.test', connection: 'close' },
+    })
+    expect(allowed.status).toBe(200)
+    expect(server.config.server.allowedHosts).toContain('tail.example.test')
+  }, 30_000)
 })
