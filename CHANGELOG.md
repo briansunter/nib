@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/briansunter/nib/compare/v0.12.0...v0.13.0) (2026-07-19)
+
+### Features
+
+* strengthen framework publication seams ([0a7ba23](https://github.com/briansunter/nib/commit/0a7ba23194ddde4f3ca1e973a8c0f4d315afb808))
+* validate personal site against published nib ([70cf06b](https://github.com/briansunter/nib/commit/70cf06bf257795415257c31125b6353efd6bad58))
+
 ## [0.12.0](https://github.com/briansunter/nib/compare/v0.11.1...v0.12.0) (2026-07-19)
 
 ### Features
