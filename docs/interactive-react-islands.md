@@ -267,6 +267,10 @@ A separate proposal evaluates [`page.html` with typed layout and island bindings
 - Secrets must never be passed as island props.
 - Browser state such as `localStorage`, media queries, or element measurements is read in effects so the initial client render matches the server HTML.
 
+### SSR augmentation
+
+For large, mostly-static lists, render the complete accessible list on the server and put the small normalized values needed for filtering or sorting in `data-*` attributes. Hydrate one island with only control metadata such as category/tag names and a list id; let its effects toggle `hidden` and reorder the existing DOM nodes. When a detail modal and list controls share state, keep them in that same island so filtering, keyboard navigation, and focus restoration cannot drift apart. This preserves useful HTML with JavaScript disabled and avoids serializing the full collection into island props.
+
 ## Development experience
 
 - Vite continues to transform TSX and provide React Fast Refresh for island modules.

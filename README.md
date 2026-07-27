@@ -71,8 +71,9 @@ Each route folder contains one `page.tsx`, `page.md`, or configured
 router or runtime route loader.
 
 TSX pages may export typed metadata. Markdown pages support `title`,
-`description`, `draft`, and `layout` frontmatter by default; `defineMarkdown`
-can replace that schema. `definePageSource` handles custom page formats, while
+`description`, `draft`, `layout`, and social preview fields (`image`, `type`,
+and `twitterCard`) by default; `defineMarkdown` can replace that schema.
+`definePageSource` handles custom page formats, while
 `defineCollection` loads typed data shared across routes. Use
 `fromPageSource(source)` when an index should reuse the same validated entries
 that generated its data pages. If a page renderer imports a plugin-transformed
@@ -134,7 +135,10 @@ export const meta = {
 
 Renderer plugins can contribute the same `HeadContribution` shape from their
 typed `renderer().head(context)` hook. Nib emits site, page, then plugin
-contributions in that order.
+contributions in that order. When the `metadata()` plugin is enabled, a page's
+`image`, `type`, and `twitterCard` metadata override the plugin defaults
+independently, so article pages can use their own social preview without
+duplicating or replacing unrelated site-wide defaults.
 
 ## Optional Vite adapters
 

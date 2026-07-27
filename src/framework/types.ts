@@ -8,6 +8,12 @@ export interface PageMeta {
   description?: string
   draft?: boolean
   head?: HeadContribution
+  /** Route-level social preview image; overrides the metadata plugin default. */
+  image?: string
+  /** Open Graph object type; overrides the metadata plugin default. */
+  type?: 'website' | 'article'
+  /** Twitter card style; overrides the metadata plugin default. */
+  twitterCard?: 'summary' | 'summary_large_image'
 }
 
 export type HeadTagName = 'meta' | 'link' | 'script' | 'style'
@@ -148,6 +154,8 @@ export interface MarkdownDefinition<
   validate?: Validator extends DataSchema<unknown>
     ? never
     : (value: unknown) => InferDataValidator<Validator>
+  /** Disable Nib's built-in GFM pass when a site supplies its own variant. */
+  gfm?: boolean
   /** Unified remark plugins, applied after Nib's GFM parser. */
   remarkPlugins?: readonly Pluggable[]
   /**

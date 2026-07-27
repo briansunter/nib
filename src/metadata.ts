@@ -21,6 +21,12 @@ function contribution(
   context: NibRenderPageContext,
   options: Required<Pick<MetadataOptions, 'type' | 'twitterCard' | 'structuredData'>> & MetadataOptions,
 ): HeadContribution {
+  const routeMeta = context.route.meta
+  // Each social field falls back independently: a route override wins over the
+  // plugin default without emitting the default value alongside it.
+  const type = routeMeta.type ?? options.type
+  const twitterCard = routeMeta.twitterCard ?? options.twitterCard
+  const image = routeMeta.image ?? options.image
   const elements: NonNullable<HeadContribution['elements']>[number][] = []
   let url: string | undefined
   if (context.site.origin !== undefined) {
@@ -36,15 +42,15 @@ function contribution(
   }
   addMeta({ property: 'og:title', content: context.route.meta.title })
   addMeta({ property: 'og:description', content: context.route.meta.description })
-  addMeta({ property: 'og:type', content: options.type })
+  addMeta({ property: 'og:type', content: type })
   if (url !== undefined) addMeta({ property: 'og:url', content: url })
   if (options.siteName !== undefined) addMeta({ property: 'og:site_name', content: options.siteName })
-  addMeta({ name: 'twitter:card', content: options.twitterCard })
+  addMeta({ name: 'twitter:card', content: twitterCard })
   addMeta({ name: 'twitter:title', content: context.route.meta.title })
   addMeta({ name: 'twitter:description', content: context.route.meta.description })
-  if (options.image !== undefined) {
-    addMeta({ property: 'og:image', content: absoluteUrl(options.image, context) })
-    addMeta({ name: 'twitter:image', content: absoluteUrl(options.image, context) })
+  if (image !== undefined) {
+    addMeta({ property: 'og:image', content: absoluteUrl(image, context) })
+    addMeta({ name: 'twitter:image', content: absoluteUrl(image, context) })
   }
   if (options.structuredData && url !== undefined) {
     elements.push({
@@ -52,7 +58,7 @@ function contribution(
       attributes: { type: 'application/ld+json' },
       content: JSON.stringify({
         '@context': 'https://schema.org',
-        '@type': options.type === 'article' ? 'Article' : 'WebPage',
+        '@type': type === 'article' ? 'Article' : 'WebPage',
         name: context.route.meta.title,
         description: context.route.meta.description,
         url,

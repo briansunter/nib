@@ -14,6 +14,8 @@ export interface RssItem {
   readonly pubDate?: string | Date
   readonly guid?: string
   readonly author?: string
+  /** Dublin Core creator; emitted as <dc:creator> when provided. */
+  readonly creator?: string
   readonly categories?: readonly string[]
   readonly enclosure?: {
     readonly url: string | URL
@@ -43,6 +45,8 @@ export interface RssOptions {
   readonly webMaster?: string
   readonly ttl?: number
   readonly lastBuildDate?: string | Date
+  /** Path to an XSL stylesheet, emitted as an xml-stylesheet processing instruction. */
+  readonly stylesheet?: string
   /** Static items or an async provider using the immutable initial route manifest. */
   readonly items: readonly RssItem[] | ((context: RssItemsContext) => Awaitable<readonly RssItem[]>)
 }
@@ -96,6 +100,7 @@ function itemXml(item: RssItem, index: number, site: URL, base: string): string[
   const content = optionalText(item.content, `item ${index + 1} content`)
   const guid = optionalText(item.guid, `item ${index + 1} guid`)
   const author = optionalText(item.author, `item ${index + 1} author`)
+  const creator = optionalText(item.creator, `item ${index + 1} creator`)
   const pubDate = item.pubDate === undefined
     ? undefined
     : rfc822Date(item.pubDate, `item ${index + 1} pubDate`)
@@ -120,6 +125,7 @@ function itemXml(item: RssItem, index: number, site: URL, base: string): string[
     content === undefined ? undefined : `      <content:encoded>${cdata(content)}</content:encoded>`,
     guid === undefined ? undefined : `      <guid>${escapeXml(guid)}</guid>`,
     author === undefined ? undefined : `      <author>${escapeXml(author)}</author>`,
+    creator === undefined ? undefined : `      <dc:creator>${cdata(creator)}</dc:creator>`,
     ...categories.map((category) => `      <category>${escapeXml(category)}</category>`),
     pubDate === undefined ? undefined : `      <pubDate>${escapeXml(pubDate)}</pubDate>`,
     enclosure === undefined
@@ -144,6 +150,9 @@ export function rss(options: RssOptions) {
   }
   if (options.ttl !== undefined && (!Number.isInteger(options.ttl) || options.ttl < 0)) {
     throw new Error('Nib RSS ttl must be a non-negative integer')
+  }
+  if (options.stylesheet !== undefined && (typeof options.stylesheet !== 'string' || options.stylesheet.trim() === '')) {
+    throw new Error('Nib RSS stylesheet must be a non-empty string')
   }
   const language = optionalText(options.language, 'language')
   const copyright = optionalText(options.copyright, 'copyright')
@@ -173,7 +182,10 @@ export function rss(options: RssOptions) {
         contentType: 'application/rss+xml; charset=utf-8',
         body: [
           '<?xml version="1.0" encoding="UTF-8"?>',
-          '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">',
+          options.stylesheet === undefined
+            ? undefined
+            : `<?xml-stylesheet type="text/xsl" href="${escapeXml(options.stylesheet)}"?>`,
+          '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">',
           '  <channel>',
           `    <title>${escapeXml(title)}</title>`,
           `    <link>${escapeXml(channelUrl)}</link>`,

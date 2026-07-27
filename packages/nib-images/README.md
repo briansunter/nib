@@ -39,6 +39,16 @@ Rendered content images can opt into the same optimizer without importing each
 file in a component. Configure a project-relative source directory and its
 public URL prefix; only matching `<img>` references in the completed HTML are
 rewritten, and the source catalog still owns metadata and cache identity.
+In development, the same configured image roots are served at their authored
+public paths (including a configured base path), so content-image pages do not
+fall back to broken source URLs before the production rewrite runs. Symlinks
+that escape the configured directory are rejected.
+
+Use `data-nib-width` when the image's layout slot is smaller than its source
+file. It controls the emitted intrinsic `width`/`height`; `data-nib-widths`
+remains the responsive candidate ladder and is capped at roughly 2x the
+display width. If `data-nib-width` is omitted, the existing behavior uses the
+largest `data-nib-widths` value for both.
 
 ```ts
 images({
@@ -49,6 +59,17 @@ images({
     sizes: '(min-width: 900px) 860px, 100vw',
   }],
 })
+```
+
+```html
+<img
+  src="/media/photo.jpg"
+  alt="A small gallery photo"
+  width="504"
+  data-nib-width="504"
+  data-nib-widths="240, 320, 480, 640, 960"
+  sizes="(min-width: 1072px) 31.5rem, (min-width: 640px) calc(50vw - 2rem), calc(50vw - 1.25rem)"
+>
 ```
 
 `@briansunter/nib-images` is a separate Bun workspace package. It is built and

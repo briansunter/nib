@@ -20,15 +20,19 @@ function renderMarkdown(
   definition?: MarkdownDefinition<any>,
   context?: MarkdownSourceContext,
 ): string {
-  const processor = unified()
-    .use(remarkParse)
-    .use(remarkGfm)
+  const processor = unified().use(remarkParse)
+  // Applications can opt out and install a compatible GFM variant in the
+  // authored plugin order (for example, GFM without bare-URL autolinking).
+  if (definition?.gfm !== false) processor.use(remarkGfm)
+  processor
     .use([...(definition?.remarkPlugins ?? [])])
     .use(remarkRehype, {
       allowDangerousHtml: definition?.allowDangerousHtml ?? false,
     })
     .use([...(definition?.rehypePlugins ?? [])])
-    .use(rehypeStringify)
+    .use(rehypeStringify, {
+      allowDangerousHtml: definition?.allowDangerousHtml ?? false,
+    })
   return String(processor.processSync(
     context === undefined
       ? markdown
@@ -52,7 +56,7 @@ function getMarkdownLayoutName(layout: unknown): string | undefined {
 function getMarkdownMeta(
   values: Record<string, unknown>,
 ): { meta: PageMeta; layout: string | undefined } {
-  const { title, description, draft, layout, head } = values
+  const { title, description, draft, layout, head, image, type, twitterCard } = values
   const normalizedHead = normalizeHeadContribution(head, 'Markdown page head')
   return {
     meta: {
@@ -60,6 +64,9 @@ function getMarkdownMeta(
       ...(description === undefined ? {} : { description: description as string }),
       ...(draft === undefined ? {} : { draft: draft as boolean }),
       ...(normalizedHead === undefined ? {} : { head: normalizedHead }),
+      ...(image === undefined ? {} : { image: image as string }),
+      ...(type === undefined ? {} : { type: type as 'website' | 'article' }),
+      ...(twitterCard === undefined ? {} : { twitterCard: twitterCard as 'summary' | 'summary_large_image' }),
     },
     layout: getMarkdownLayoutName(layout),
   }

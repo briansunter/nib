@@ -157,7 +157,9 @@ iframe embeds into static elements; raw HTML remains disabled unless the site
 also opts into `markdown.allowDangerousHtml`.
 
 The framework also provides small publication seams for common site concerns:
-`metadata()` contributes canonical/Open Graph/Twitter/JSON-LD head elements,
+`metadata()` contributes canonical/Open Graph/Twitter/JSON-LD head elements;
+route-level `image`, `type`, and `twitterCard` metadata override its defaults
+independently,
 `search()` emits a deterministic JSON resource route, `hosting` emits adapter
 configuration from the publication manifest, and `nib check` validates the
 published route/artifact/link contract.

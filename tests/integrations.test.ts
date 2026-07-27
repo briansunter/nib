@@ -106,6 +106,59 @@ describe('publication integrations', () => {
     })).toThrow('site.origin')
   })
 
+  it('applies route-level image, type, and twitter card overrides independently', async () => {
+    const plugin = metadata({
+      image: '/default-social.png',
+      type: 'website',
+      twitterCard: 'summary',
+      siteName: 'Nib',
+      structuredData: true,
+    })
+    const extension = await plugin.renderer?.({
+      command: 'build', mode: 'production', root: '/site', base: '/',
+      site: { title: 'Nib', origin: 'https://example.test' },
+    })
+
+    // Full override: every route value wins and structured data follows the route type.
+    const overriddenHead = extension?.head?.({
+      command: 'build', mode: 'production', root: '/site', base: '/',
+      site: { title: 'Nib', origin: 'https://example.test' },
+      route: {
+        kind: 'page', path: '/article/', source: 'test', status: 200,
+        meta: {
+          title: 'Route Override', description: 'Override body',
+          image: '/route-social.png',
+          type: 'article',
+          twitterCard: 'summary_large_image',
+        },
+      },
+    })
+    const overridden = JSON.stringify(overriddenHead)
+    expect(overridden).toContain('{"property":"og:image","content":"https://example.test/route-social.png"}')
+    expect(overridden).not.toContain('default-social.png')
+    expect(overridden).toContain('{"property":"og:type","content":"article"}')
+    expect(overridden).not.toContain('{"property":"og:type","content":"website"}')
+    expect(overridden).toContain('{"name":"twitter:card","content":"summary_large_image"}')
+    expect(overridden).not.toContain('{"name":"twitter:card","content":"summary"}')
+    const overriddenStructured = JSON.parse(
+      (overriddenHead?.elements ?? []).find((element) => element.tag === 'script')?.content ?? '{}',
+    )
+    expect(overriddenStructured['@type']).toBe('Article')
+
+    // Independent fallback: an unset field keeps its plugin default.
+    const partial = JSON.stringify(extension?.head?.({
+      command: 'build', mode: 'production', root: '/site', base: '/',
+      site: { title: 'Nib', origin: 'https://example.test' },
+      route: {
+        kind: 'page', path: '/page/', source: 'test', status: 200,
+        meta: { title: 'Plain Page', description: 'Plain body', type: 'article' },
+      },
+    }))
+    expect(partial).toContain('{"property":"og:type","content":"article"}')
+    expect(partial).toContain('{"property":"og:image","content":"https://example.test/default-social.png"}')
+    expect(partial).toContain('{"name":"twitter:card","content":"summary"}')
+  })
+
   it('emits deterministic search resources from page fallbacks and custom items', async () => {
     const context = {
       command: 'build' as const,
