@@ -26,6 +26,9 @@ export const defaultMarkdownSchema = z.looseObject({
   draft: z.boolean().optional(),
   layout: z.string().min(1).optional(),
   head: z.unknown().optional(),
+  image: z.string().optional(),
+  type: z.enum(['website', 'article']).optional(),
+  twitterCard: z.enum(['summary', 'summary_large_image']).optional(),
 })
 
 export function defineMarkdown<Data>(
@@ -314,6 +317,9 @@ function getPageMeta(meta: unknown, label: string): PageMeta | undefined {
     description: z.string().optional(),
     draft: z.boolean().optional(),
     head: z.unknown().optional(),
+    image: z.string().optional(),
+    type: z.enum(['website', 'article']).optional(),
+    twitterCard: z.enum(['summary', 'summary_large_image']).optional(),
   }).safeParse(meta)
   if (!parsed.success) throw new Error(`${label} metadata: ${parsed.error.message}`)
   const head = normalizeHeadContribution(parsed.data.head, `${label} head`)
@@ -322,6 +328,9 @@ function getPageMeta(meta: unknown, label: string): PageMeta | undefined {
     ...(parsed.data.description === undefined ? {} : { description: parsed.data.description }),
     ...(parsed.data.draft === undefined ? {} : { draft: parsed.data.draft }),
     ...(head === undefined ? {} : { head }),
+    ...(parsed.data.image === undefined ? {} : { image: parsed.data.image }),
+    ...(parsed.data.type === undefined ? {} : { type: parsed.data.type }),
+    ...(parsed.data.twitterCard === undefined ? {} : { twitterCard: parsed.data.twitterCard }),
   }
 }
 

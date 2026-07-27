@@ -1,0 +1,358 @@
+[
+  {
+    "name": "Studio",
+    "description": "Urban sketches, watercolors, and field drawings from San Francisco, Hawaii, and beyond.",
+    "default": true,
+    "medium": "Mixed media",
+    "tags": [
+      "urban-sketching",
+      "watercolor",
+      "field-drawing"
+    ],
+    "cover": "/site-assets/art/queens-beach.jpg",
+    "artworks": [
+      {
+        "title": "Baby Tern",
+        "description": "A baby Manu-o-Kū aka White Fairy Tern looking out between the branches of a tree behind my apartment.",
+        "medium": "Watercolor",
+        "dimensions": "9 x 12 in",
+        "date": "2024-05-14",
+        "tags": [
+          "bird",
+          "watercolor",
+          "field-sketch",
+          "Hawaii"
+        ],
+        "image": "/site-assets/art/baby-tern.jpg"
+      },
+      {
+        "title": "Campfire Grill",
+        "description": "Grilling at our campsite north of San Francisco",
+        "medium": "Pen and ink",
+        "dimensions": "9 x 12 in",
+        "date": "2022-06-30",
+        "tags": [
+          "landscape",
+          "pen-and-ink",
+          "watercolor",
+          "SF"
+        ],
+        "image": "/site-assets/art/camping-grillaf.jpg"
+      },
+      {
+        "title": "Clover",
+        "description": "Bees buzzing in a field of clover at mission bay park",
+        "medium": "Watercolor",
+        "dimensions": "9 x 12 in",
+        "date": "2022-02-12",
+        "tags": [
+          "nature",
+          "watercolor",
+          "botanical",
+          "SF"
+        ],
+        "image": "/site-assets/art/clover.jpg"
+      },
+      {
+        "title": "Conservatory",
+        "description": "Hanging out at the Conservatory of Flowers in Golden Gate Park.",
+        "medium": "Watercolor",
+        "dimensions": "14 x 9 in",
+        "date": "2022-08-30",
+        "tags": [
+          "landscape",
+          "watercolor",
+          "san-francisco",
+          "architecture"
+        ],
+        "image": "/site-assets/art/conservatory.jpg"
+      },
+      {
+        "title": "Waimanolo Hammocks",
+        "description": "Sketching Manana island and reading in Waimanolo",
+        "medium": "Watercolor",
+        "dimensions": "14 x 9 in",
+        "date": "2024-08-14",
+        "tags": [
+          "landscape",
+          "watercolor",
+          "hawaii"
+        ],
+        "image": "/site-assets/art/hammocks.jpg"
+      },
+      {
+        "title": "Hard Knox",
+        "description": "Food from Hard Knox Cafe in the Dogpatch.",
+        "medium": "Pen and ink",
+        "dimensions": "9 x 14 in",
+        "date": "2022-05-29",
+        "tags": [
+          "food",
+          "pen-and-ink",
+          "san-francisco"
+        ],
+        "image": "/site-assets/art/hard-knox.jpg"
+      },
+      {
+        "title": "Heron's Head",
+        "description": "Looking south from Heron's Head Park toward the industrial waterfront.",
+        "medium": "Watercolor",
+        "dimensions": "14 x 9 in",
+        "date": "2022-05-28",
+        "tags": [
+          "landscape",
+          "watercolor",
+          "san-francisco",
+          "waterfront"
+        ],
+        "image": "/site-assets/art/herons-head.jpg"
+      },
+      {
+        "title": "Homa People",
+        "description": "Drawing people at the homa cafe during the sketch and chat book club.",
+        "medium": "Pen and ink",
+        "dimensions": "9 x 12 in",
+        "date": "2024-03-03",
+        "tags": [
+          "figures",
+          "pen-and-ink",
+          "interior",
+          "hawaii"
+        ],
+        "image": "/site-assets/art/homa-people2.jpg"
+      },
+      {
+        "title": "Homa Plant",
+        "description": "Large potted plant in the Homa cafe.",
+        "medium": "Watercolor",
+        "dimensions": "9 x 12 in",
+        "date": "2024-03-03",
+        "tags": [
+          "botanical",
+          "watercolor",
+          "interior",
+          "hawaii"
+        ],
+        "image": "/site-assets/art/homa-plant.jpg"
+      },
+      {
+        "title": "Just For You",
+        "description": "Brunch at just For You Cafe in the Dogpatch",
+        "medium": "Pen and ink",
+        "dimensions": "9 x 14 in",
+        "date": "2022-01-23",
+        "tags": [
+          "interior",
+          "pen-and-ink",
+          "san-francisco"
+        ],
+        "image": "/site-assets/art/just-for-you.jpg"
+      },
+      {
+        "title": "Maka Lei",
+        "description": "Maka lei beach",
+        "medium": "Watercolor",
+        "dimensions": "14 x 9 in",
+        "date": "2025-07-27",
+        "tags": [
+          "landscape",
+          "watercolor",
+          "hawaii"
+        ],
+        "image": "/site-assets/art/maka-lei.jpg"
+      },
+      {
+        "title": "Mission Bay",
+        "description": "Weeping willow at Mission Bay park",
+        "medium": "Watercolor",
+        "dimensions": "14 x 9 in",
+        "date": "2022-06-30",
+        "tags": [
+          "landscape",
+          "watercolor",
+          "san-francisco",
+          "waterfront"
+        ],
+        "image": "/site-assets/art/mission-bay.jpg"
+      },
+      {
+        "title": "Morning Brew",
+        "description": "Long coffee date at Morning Brew in Kaka'ako.",
+        "medium": "Watercolor",
+        "dimensions": "9 x 9 in",
+        "date": "2024-03-10",
+        "tags": [
+          "still-life",
+          "watercolor"
+        ],
+        "image": "/site-assets/art/morning-brew.jpg"
+      },
+      {
+        "title": "Pokai Beach",
+        "description": "Pokai Bay on the west shore of Oahu, a local beach with few tourists.",
+        "medium": "Watercolor",
+        "dimensions": "14 x 9 in",
+        "date": "2024-01-01",
+        "tags": [
+          "landscape",
+          "watercolor",
+          "hawaii",
+          "beach"
+        ],
+        "image": "/site-assets/art/pokai-beach.jpg"
+      },
+      {
+        "title": "Potrero Park",
+        "description": "Scenes from a park at Potrero Hill park on a clear day.",
+        "medium": "Watercolor",
+        "dimensions": "14 x 9 in",
+        "date": "2022-06-22",
+        "tags": [
+          "landscape",
+          "watercolor",
+          "san-francisco"
+        ],
+        "image": "/site-assets/art/potrero-park.jpg"
+      },
+      {
+        "title": "Queen's Beach people",
+        "description": "Quick sketches of people at Queen's Beach Waikiki.",
+        "medium": "Watercolor",
+        "dimensions": "14 x 9 in",
+        "date": "2025-01-18",
+        "tags": [
+          "landscape",
+          "watercolor",
+          "hawaii",
+          "beach",
+          "figures"
+        ],
+        "image": "/site-assets/art/queens-beach-people.jpg"
+      },
+      {
+        "title": "Queen's Beach Volleyball",
+        "description": "Volleyball game at Queen's",
+        "medium": "Watercolor",
+        "dimensions": "14 x 9 in",
+        "date": "2024-01-01",
+        "tags": [
+          "landscape",
+          "watercolor",
+          "hawaii",
+          "beach"
+        ],
+        "image": "/site-assets/art/queens-beach.jpg"
+      },
+      {
+        "title": "Sari",
+        "description": "A girl trying on her sari at a park in San Francisco",
+        "medium": "Watercolor",
+        "dimensions": "9 x 12 in",
+        "date": "2024-01-01",
+        "tags": [
+          "figure",
+          "watercolor",
+          "drapery",
+          "san-francisco"
+        ],
+        "image": "/site-assets/art/sari.jpg"
+      },
+      {
+        "title": "SF Cargo",
+        "description": "One of the piers on the embarcadero",
+        "medium": "Watercolor",
+        "dimensions": "14 x 9 in",
+        "date": "2022-01-16",
+        "tags": [
+          "landscape",
+          "watercolor",
+          "san-francisco",
+          "waterfront",
+          "urban"
+        ],
+        "image": "/site-assets/art/sf-cargo.jpg"
+      },
+      {
+        "title": "Shay Drawing",
+        "description": "Shay sketching at the table, at the Homa Sketch and Chat meetup.",
+        "medium": "Pen and ink, watercolor",
+        "dimensions": "9 x 12 in",
+        "date": "2024-04-14",
+        "tags": [
+          "figure",
+          "pen-and-ink"
+        ],
+        "image": "/site-assets/art/shay-draw.jpg"
+      },
+      {
+        "title": "Shay and Fries",
+        "description": "McDonald's in the apartment courtyard.",
+        "medium": "Pen and ink",
+        "dimensions": "9 x 12 in",
+        "date": "2024-03-04",
+        "tags": [
+          "figure",
+          "pen-and-ink",
+          "portrait",
+          "hawaii"
+        ],
+        "image": "/site-assets/art/shay-fries.jpg"
+      },
+      {
+        "title": "Epic Snack Run",
+        "description": "A day of eating amazing snacks around town",
+        "medium": "Pen and ink",
+        "dimensions": "9 x 12 in",
+        "date": "2025-03-28",
+        "tags": [
+          "still-life",
+          "pen-and-ink",
+          "hawaii"
+        ],
+        "image": "/site-assets/art/snack-run.jpg"
+      },
+      {
+        "title": "Succulents",
+        "description": "One of the many succulents of Potrero Hill",
+        "medium": "Watercolor",
+        "dimensions": "9 x 12 in",
+        "date": "2022-01-24",
+        "tags": [
+          "botanical",
+          "watercolor",
+          "still-life",
+          "san-francisco"
+        ],
+        "image": "/site-assets/art/succulents.jpg"
+      },
+      {
+        "title": "Waikiki Banyan",
+        "description": "The big banyan tree by the Waikiki Duke statue",
+        "medium": "Watercolor",
+        "dimensions": "14 x 9 in",
+        "date": "2023-02-01",
+        "tags": [
+          "landscape",
+          "watercolor",
+          "hawaii",
+          "tree",
+          "hawaii"
+        ],
+        "image": "/site-assets/art/waikiki-banyan.jpg"
+      },
+      {
+        "title": "Waikiki Outrigger",
+        "description": "Outrigger canoes by the Ala Wai.",
+        "medium": "Watercolor",
+        "dimensions": "14 x 9 in",
+        "date": "2024-01-01",
+        "tags": [
+          "landscape",
+          "watercolor",
+          "hawaii"
+        ],
+        "image": "/site-assets/art/waikiki-outrigger.jpg"
+      }
+    ]
+  }
+]

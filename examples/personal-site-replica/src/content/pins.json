@@ -1,0 +1,2134 @@
+{
+  "name": "Pin Collection",
+  "description": "My lapel pin collection of enamel pins, badges, and collectibles gathered from travels, events, and online finds.",
+  "pins": [
+    {
+      "id": "ohia-lehua",
+      "name": "'Ohi'a Lehua",
+      "description": "Hard enamel pin of the 'Ohi'a Lehua from Volcanoes National park",
+      "image": "/site-assets/pin-collection/pins/pohutukawa-flower.png",
+      "acquiredAt": "Hawaiʻi Volcanoes National Park, Big Island, Hawaii",
+      "category": "Nature",
+      "tags": [
+        "hawaii"
+      ],
+      "maker": "Jahier Studio",
+      "favorite": false
+    },
+    {
+      "id": "iolani-palace",
+      "name": "Iolani Palace",
+      "description": "Pin from a tour of Iolani Palace in Honolulu, Hawaii. The only royal palace in the United States",
+      "image": "/site-assets/pin-collection/pins/iolani-palace.png",
+      "acquiredAt": "Iolani Palace Gift Shop, Honolulu, Hawaii",
+      "category": "Landmarks",
+      "tags": [
+        "hawaii",
+        "palace",
+        "honolulu",
+        "architecture",
+        "history"
+      ],
+      "maker": "The Friends of Iolani Palace",
+      "favorite": false
+    },
+    {
+      "id": "aloha-gotta-share",
+      "name": "Aloha Gotta Share",
+      "description": "Pokemon themed pin from a local artist.",
+      "image": "/site-assets/pin-collection/pins/aloha-gotta-share.png",
+      "acquiredAt": "Made in Hawaii Festival, Oahu",
+      "category": "Hawaii",
+      "tags": [
+        "hawaii"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "uss-arizona-memorial",
+      "name": "USS Arizona Memorial",
+      "description": "Enamel pin of the USS Arizona Memorial at Pearl Harbor, Honolulu.",
+      "image": "/site-assets/pin-collection/pins/uss-arizona-memorial.png",
+      "acquiredAt": "Pearl Harbor, Hawaii",
+      "category": "Landmarks",
+      "tags": [
+        "hawaii"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "homa",
+      "name": "HoMA",
+      "description": "Honolulu Museum of Art enamel pin.",
+      "image": "/site-assets/pin-collection/pins/homa.png",
+      "acquiredAt": "Honolulu, Hawaii",
+      "category": "Museums",
+      "tags": [
+        "hawaii"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "small-kine",
+      "name": "Small Kine",
+      "description": "Hawaiian pidgin parody swoosh pin from a local shop.",
+      "image": "/site-assets/pin-collection/pins/small-kine.png",
+      "acquiredAt": "Small Kine Gifts, Kaimuki, Oahu, Hawaii",
+      "category": "Hawaii",
+      "tags": [
+        "hawaii"
+      ],
+      "maker": "Small Kine Gifts",
+      "favorite": false
+    },
+    {
+      "id": "air-and-space-museum",
+      "name": "Air and Space Museum",
+      "description": "Smithsonian Air and Space Museum on the National Mall.",
+      "image": "/site-assets/pin-collection/pins/air-and-space-museum.png",
+      "acquiredAt": "Smithsonian Air and Space Museum, Washington, DC",
+      "category": "Museums",
+      "tags": [
+        "museum"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "alaska-crab-fishing",
+      "name": "Alaska Crab Fishing",
+      "description": "Crab boat pin from Ketchikan.",
+      "image": "/site-assets/pin-collection/pins/alaska-crab-fishing.png",
+      "acquiredAt": "Ketchikan, Alaska",
+      "category": "Travel",
+      "tags": [
+        "alaska",
+        "travel"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "alaska-eagle",
+      "name": "Alaska Bald Eagle",
+      "description": "Bald eagle in flight, picked up in Juneau.",
+      "image": "/site-assets/pin-collection/pins/alaska-eagle.png",
+      "acquiredAt": "Juneau, Alaska",
+      "category": "Nature",
+      "tags": [
+        "alaska",
+        "bird"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "alaska-eagle-2",
+      "name": "Alaska Bald Eagle (variant)",
+      "description": "Second eagle pin from the same trip, perched-eagle design.",
+      "image": "/site-assets/pin-collection/pins/alaska-eagle-2.png",
+      "acquiredAt": "Skagway, Alaska",
+      "category": "Nature",
+      "tags": [
+        "wildlife"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "alaska",
+      "name": "Alaska",
+      "description": "State pin with the Big Dipper and North Star from the Alaska flag.",
+      "image": "/site-assets/pin-collection/pins/alaska.png",
+      "acquiredAt": "Juneau, Alaska",
+      "category": "Travel",
+      "tags": [
+        "alaska"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "alcatraz",
+      "name": "Alcatraz",
+      "description": "Picked up after the cellhouse audio tour.",
+      "image": "/site-assets/pin-collection/pins/alcatraz.png",
+      "acquiredAt": "Alcatraz Island, San Francisco, California",
+      "category": "Landmarks",
+      "tags": [
+        "california"
+      ],
+      "maker": "Golden Gate National Parks Conservancy",
+      "favorite": false
+    },
+    {
+      "id": "aleks",
+      "name": "Aleks",
+      "description": "Personalized name button. Gift from a friend.",
+      "image": "/site-assets/pin-collection/pins/aleks.png",
+      "acquiredAt": "Melbourne, Florida",
+      "category": "Other",
+      "tags": [],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "american-flag",
+      "name": "American Flag",
+      "description": "Standard flag lapel pin.",
+      "image": "/site-assets/pin-collection/pins/american-flag.png",
+      "acquiredAt": "Melbourne, Florida",
+      "category": "Other",
+      "tags": [
+        "usa",
+        "flag"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "angels-landing",
+      "name": "Angels Landing",
+      "description": "From the Zion summit hike, the chained scramble up the spine.",
+      "image": "/site-assets/pin-collection/pins/angels-landing.png",
+      "acquiredAt": "Zion National Park, Utah",
+      "category": "Nature",
+      "tags": [
+        "national-park"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "animal-kingdom",
+      "name": "Animal Kingdom",
+      "description": "Disney's Animal Kingdom park pin with the Tree of Life.",
+      "image": "/site-assets/pin-collection/pins/animal-kingdom.png",
+      "acquiredAt": "Disney's Animal Kingdom, Walt Disney World, Florida",
+      "category": "Disney",
+      "tags": [
+        "theme-park",
+        "florida",
+        "disney"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "aulani",
+      "name": "Aulani",
+      "description": "Disney's Aulani Resort in Ko Olina on Oahu's leeward side.",
+      "image": "/site-assets/pin-collection/pins/aulani.png",
+      "acquiredAt": "Aulani Resort, Ko Olina, Oahu, Hawaii",
+      "category": "Disney",
+      "tags": [
+        "disney",
+        "hawaii"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "barcelona-dragon",
+      "name": "Barcelona Dragon",
+      "description": "Mosaic dragon (el Drac) from the Park Güell entrance staircase.",
+      "image": "/site-assets/pin-collection/pins/barcelona-dragon.png",
+      "acquiredAt": "Park Güell, Barcelona, Spain",
+      "category": "Travel",
+      "tags": [
+        "europe",
+        "spain"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "barracuda",
+      "name": "Barracuda",
+      "description": "Barracuda fish pin from a Florida Keys snorkeling trip.",
+      "image": "/site-assets/pin-collection/pins/barracuda.png",
+      "acquiredAt": "Florida Keys",
+      "category": "Nature",
+      "tags": [
+        "florida"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "beaver-creek",
+      "name": "Beaver Creek",
+      "description": "Ski resort pin from Colorado's Vail Valley.",
+      "image": "/site-assets/pin-collection/pins/beaver-creek.png",
+      "acquiredAt": "Beaver Creek Resort, Avon, Colorado",
+      "category": "Travel",
+      "tags": [],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "bitcoin",
+      "name": "Bitcoin",
+      "description": "Bitcoin logo, the orange disc with the slanted B.",
+      "image": "/site-assets/pin-collection/pins/bitcoin.png",
+      "acquiredAt": "San Francisco, California",
+      "category": "Brands",
+      "tags": [
+        "bitcoin",
+        "crypto",
+        "logo",
+        "orange"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "blue-bottle",
+      "name": "Blue Bottle Coffee",
+      "description": "Blue Bottle Coffee logo pin.",
+      "image": "/site-assets/pin-collection/pins/blue-bottle.png",
+      "acquiredAt": "Blue Bottle Coffee, San Francisco, California",
+      "category": "Brands",
+      "tags": [
+        "coffee",
+        "brand",
+        "logo",
+        "blue-bottle",
+        "bay-area"
+      ],
+      "maker": "Blue Bottle Coffee",
+      "favorite": false
+    },
+    {
+      "id": "blue-bottle-2",
+      "name": "Blue Bottle Coffee (variant)",
+      "description": "Second Blue Bottle pin, limited cafe pop-up design.",
+      "image": "/site-assets/pin-collection/pins/blue-bottle-2.png",
+      "acquiredAt": "Blue Bottle Coffee, Oakland, California",
+      "category": "Brands",
+      "tags": [
+        "coffee",
+        "brand",
+        "logo",
+        "blue-bottle",
+        "bay-area"
+      ],
+      "maker": "Blue Bottle Coffee",
+      "favorite": false
+    },
+    {
+      "id": "blue-spring",
+      "name": "Blue Spring",
+      "description": "Blue Spring State Park, the manatee winter refuge on the St. Johns River.",
+      "image": "/site-assets/pin-collection/pins/blue-spring.png",
+      "acquiredAt": "Blue Spring State Park, Orange City, Florida",
+      "category": "Nature",
+      "tags": [
+        "florida",
+        "state-park",
+        "manatee",
+        "springs"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "breast-cancer",
+      "name": "Breast Cancer Awareness",
+      "description": "Pink ribbon from a Race for the Cure walk.",
+      "image": "/site-assets/pin-collection/pins/breast-cancer.png",
+      "acquiredAt": "San Francisco, California",
+      "category": "Other",
+      "tags": [
+        "awareness",
+        "ribbon",
+        "charity",
+        "pink",
+        "health"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "brevard-zoo",
+      "name": "Brevard Zoo",
+      "description": "Community-built zoo on Florida's Space Coast.",
+      "image": "/site-assets/pin-collection/pins/brevard-zoo.png",
+      "acquiredAt": "Brevard Zoo, Melbourne, Florida",
+      "category": "Nature",
+      "tags": [
+        "zoo",
+        "florida",
+        "brevard",
+        "space-coast"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "bryce-canyon",
+      "name": "Bryce Canyon",
+      "description": "Bryce Canyon hoodoos in southern Utah.",
+      "image": "/site-assets/pin-collection/pins/bryce-canyon.png",
+      "acquiredAt": "Bryce Canyon National Park, Utah",
+      "category": "Nature",
+      "tags": [
+        "utah",
+        "national-park",
+        "hoodoos",
+        "canyon"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "byodo-in",
+      "name": "Byodo-In Temple",
+      "description": "Byodo-In on Oahu's windward side, a non-denominational replica of the 950-year-old Byōdō-in in Uji.",
+      "image": "/site-assets/pin-collection/pins/byodo-inn.png",
+      "acquiredAt": "Byodo-In Temple, Kāneʻohe, Oahu, Hawaii",
+      "category": "Hawaii",
+      "tags": [
+        "hawaii",
+        "oahu",
+        "temple",
+        "buddhist",
+        "japanese"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "cafe-du-monde",
+      "name": "Café du Monde",
+      "description": "The 24-hour beignet stand in the French Quarter.",
+      "image": "/site-assets/pin-collection/pins/cafe-du-monde.png",
+      "acquiredAt": "Café du Monde, French Quarter, New Orleans, Louisiana",
+      "category": "Brands",
+      "tags": [
+        "new-orleans",
+        "coffee",
+        "beignet",
+        "cafe",
+        "french-quarter"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "cafe-du-monde-2",
+      "name": "Café du Monde (variant)",
+      "description": "Second Café du Monde pin with the green-and-white awning.",
+      "image": "/site-assets/pin-collection/pins/cafe-du-monde-2.png",
+      "acquiredAt": "Café du Monde, French Quarter, New Orleans, Louisiana",
+      "category": "Brands",
+      "tags": [
+        "new-orleans",
+        "coffee",
+        "beignet",
+        "cafe",
+        "french-quarter"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "cheyenne",
+      "name": "Cheyenne",
+      "description": "Cheyenne, Wyoming. Stop on a high-plains road trip.",
+      "image": "/site-assets/pin-collection/pins/cheyenne.png",
+      "acquiredAt": "Cheyenne, Wyoming",
+      "category": "Travel",
+      "tags": [
+        "wyoming",
+        "cheyenne",
+        "west",
+        "road-trip"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "chicago",
+      "name": "Chicago",
+      "description": "Long weekend in the Loop.",
+      "image": "/site-assets/pin-collection/pins/chicago.png",
+      "acquiredAt": "Chicago, Illinois",
+      "category": "Travel",
+      "tags": [
+        "chicago",
+        "illinois",
+        "city",
+        "midwest"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "christmas",
+      "name": "Christmas",
+      "description": "Holiday gift add-on.",
+      "image": "/site-assets/pin-collection/pins/christmas.png",
+      "acquiredAt": "Melbourne, Florida",
+      "category": "Other",
+      "tags": [
+        "christmas",
+        "holiday",
+        "seasonal"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "cia",
+      "name": "CIA",
+      "description": "CIA seal pin.",
+      "image": "/site-assets/pin-collection/pins/cia.png",
+      "acquiredAt": "Gainesville, Florida",
+      "category": "Landmarks",
+      "tags": [
+        "cia",
+        "government",
+        "agency",
+        "intelligence"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "colosseum",
+      "name": "Colosseum",
+      "description": "Colosseum, Rome. Largest standing amphitheater in the world.",
+      "image": "/site-assets/pin-collection/pins/colleseum.png",
+      "acquiredAt": "Colosseum, Rome, Italy",
+      "category": "Travel",
+      "tags": [
+        "rome",
+        "italy",
+        "colosseum",
+        "ancient",
+        "landmark"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "coors",
+      "name": "Coors",
+      "description": "From the free Coors Brewery tour in Golden.",
+      "image": "/site-assets/pin-collection/pins/coors.png",
+      "acquiredAt": "Coors Brewery, Golden, Colorado",
+      "category": "Brands",
+      "tags": [
+        "coors",
+        "beer",
+        "brewery",
+        "colorado"
+      ],
+      "maker": "Molson Coors",
+      "favorite": false
+    },
+    {
+      "id": "covid",
+      "name": "COVID",
+      "description": "COVID-19 vaccination record pin.",
+      "image": "/site-assets/pin-collection/pins/covid.png",
+      "acquiredAt": "San Francisco, California",
+      "category": "Other",
+      "tags": [
+        "covid",
+        "pandemic",
+        "commemorative",
+        "2020"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "cross",
+      "name": "Cross",
+      "description": "Plain enamel cross. Confirmation keepsake.",
+      "image": "/site-assets/pin-collection/pins/cross.png",
+      "acquiredAt": "Melbourne, Florida",
+      "category": "Religious",
+      "tags": [
+        "cross",
+        "religious",
+        "christian",
+        "faith",
+        "catholic"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "cross-2",
+      "name": "Cross (variant)",
+      "description": "Second cross, slightly different style.",
+      "image": "/site-assets/pin-collection/pins/cross2.png",
+      "acquiredAt": "Melbourne, Florida",
+      "category": "Religious",
+      "tags": [
+        "cross",
+        "religious",
+        "christian",
+        "faith",
+        "catholic"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "cross-3",
+      "name": "Cross (variant 3)",
+      "description": "Third cross, smaller lapel-sized version.",
+      "image": "/site-assets/pin-collection/pins/cross-3.png",
+      "acquiredAt": "Melbourne, Florida",
+      "category": "Religious",
+      "tags": [
+        "cross",
+        "religious",
+        "christian",
+        "faith",
+        "catholic"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "dali",
+      "name": "Dalí",
+      "description": "From the Dalí Museum in St. Petersburg, Florida. Largest collection of Dalí outside Spain.",
+      "image": "/site-assets/pin-collection/pins/dali.png",
+      "acquiredAt": "The Dalí Museum, St. Petersburg, Florida",
+      "category": "Museums",
+      "tags": [
+        "dali",
+        "art",
+        "surrealism",
+        "museum",
+        "florida"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "david-statue",
+      "name": "David",
+      "description": "Michelangelo's David from the Galleria dell'Accademia in Florence.",
+      "image": "/site-assets/pin-collection/pins/david-statue.png",
+      "acquiredAt": "Galleria dell'Accademia, Florence, Italy",
+      "category": "Travel",
+      "tags": [
+        "florence",
+        "italy",
+        "michelangelo",
+        "sculpture",
+        "renaissance"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "deer-valley",
+      "name": "Deer Valley",
+      "description": "Park City ski resort. No snowboards allowed.",
+      "image": "/site-assets/pin-collection/pins/deer-valley.png",
+      "acquiredAt": "Deer Valley Resort, Park City, Utah",
+      "category": "Travel",
+      "tags": [
+        "utah",
+        "skiing",
+        "resort",
+        "deer-valley",
+        "park-city"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "delta",
+      "name": "Delta",
+      "description": "Delta Air Lines pilot wings. Picked up on a transcon flight.",
+      "image": "/site-assets/pin-collection/pins/delta.png",
+      "acquiredAt": "Orlando International Airport, Orlando, Florida",
+      "category": "Brands",
+      "tags": [
+        "delta",
+        "airline",
+        "logo",
+        "aviation",
+        "wings"
+      ],
+      "maker": "Delta Air Lines",
+      "favorite": false
+    },
+    {
+      "id": "denmark",
+      "name": "Denmark",
+      "description": "Dannebrog flag pin from Copenhagen.",
+      "image": "/site-assets/pin-collection/pins/denmark.png",
+      "acquiredAt": "Copenhagen, Denmark",
+      "category": "Travel",
+      "tags": [
+        "denmark",
+        "scandinavia",
+        "europe",
+        "flag",
+        "copenhagen"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "dien-bien-phu",
+      "name": "Điện Biên Phủ",
+      "description": "Điện Biên Phủ from northwest Vietnam, where the 1954 battle ended French colonial rule.",
+      "image": "/site-assets/pin-collection/pins/dien-bien-2.png",
+      "acquiredAt": "Hanoi, Vietnam",
+      "category": "Travel",
+      "tags": [
+        "vietnam",
+        "dien-bien-phu",
+        "history",
+        "military",
+        "indochina"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "disney-brian",
+      "name": "Disney Brian",
+      "description": "Personalized 'Brian' name pin in the Disney font. Kid keepsake.",
+      "image": "/site-assets/pin-collection/pins/disney-brian.png",
+      "acquiredAt": "Walt Disney World, Orlando, Florida",
+      "category": "Disney",
+      "tags": [
+        "disney",
+        "name",
+        "brian",
+        "personalized"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "disney-christmas",
+      "name": "Disney Christmas",
+      "description": "Mickey-eared wreath ornament from Walt Disney World's holiday season.",
+      "image": "/site-assets/pin-collection/pins/disney-christmas.png",
+      "acquiredAt": "Walt Disney World, Orlando, Florida",
+      "category": "Disney",
+      "tags": [
+        "disney",
+        "christmas",
+        "holiday",
+        "seasonal",
+        "mickey"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "disney-cruise-line",
+      "name": "Disney Cruise Line",
+      "description": "DCL wordmark with the ship-and-Mickey funnel.",
+      "image": "/site-assets/pin-collection/pins/disney-cruise-line.png",
+      "acquiredAt": "Nassau, Bahamas",
+      "category": "Disney",
+      "tags": [
+        "disney",
+        "cruise",
+        "ship",
+        "logo",
+        "dcl"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "disney-cruise",
+      "name": "Disney Cruise",
+      "description": "Silhouetted DCL ship at sea.",
+      "image": "/site-assets/pin-collection/pins/disney-cruise.png",
+      "acquiredAt": "Mediterranean Sea",
+      "category": "Disney",
+      "tags": [
+        "disney",
+        "cruise",
+        "ship",
+        "vacation"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "dueling-dragons",
+      "name": "Dueling Dragons",
+      "description": "Universal Islands of Adventure's twin coaster. Closed in 2017 to make way for Hagrid's Motorbike Adventure.",
+      "image": "/site-assets/pin-collection/pins/dueling-dragons.png",
+      "acquiredAt": "Universal Islands of Adventure, Orlando, Florida",
+      "category": "Other",
+      "tags": [
+        "universal",
+        "theme-park",
+        "roller-coaster",
+        "dragon",
+        "orlando"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "eucharist",
+      "name": "Eucharist",
+      "description": "Chalice and host. First Communion keepsake.",
+      "image": "/site-assets/pin-collection/pins/eucharist.png",
+      "acquiredAt": "Indian Harbor Beach, Florida",
+      "category": "Religious",
+      "tags": [
+        "eucharist",
+        "catholic",
+        "religious",
+        "first-communion",
+        "faith"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "flag",
+      "name": "Flag",
+      "description": "Flag pin, possibly from Laos, though the colors don't seem to match the Laos flag.",
+      "image": "/site-assets/pin-collection/pins/flag.png",
+      "acquiredAt": "Laos",
+      "category": "Other",
+      "tags": [
+        "flag",
+        "patriotic",
+        "parade"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "florida-state",
+      "name": "Florida State",
+      "description": "Florida State Seminoles. Spear and garnet.",
+      "image": "/site-assets/pin-collection/pins/florida-state.png",
+      "acquiredAt": "Tallahassee, Florida",
+      "category": "Sports",
+      "tags": [
+        "florida-state",
+        "college",
+        "seminoles",
+        "sports",
+        "ncaa"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "gator",
+      "name": "Gator",
+      "description": "Florida Gators. Albert with the orange-and-blue script F.",
+      "image": "/site-assets/pin-collection/pins/gator.png",
+      "acquiredAt": "Gainesville, Florida",
+      "category": "Sports",
+      "tags": [
+        "florida",
+        "gators",
+        "alligator",
+        "college",
+        "gainesville"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "gator-2",
+      "name": "Gator (variant)",
+      "description": "Second Gators pin, different illustration style.",
+      "image": "/site-assets/pin-collection/pins/gator2.png",
+      "acquiredAt": "Gainesville, Florida",
+      "category": "Sports",
+      "tags": [
+        "florida",
+        "gators",
+        "alligator",
+        "college",
+        "gainesville"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "gator-3",
+      "name": "Gator (variant 3)",
+      "description": "Third Gators pin in the collection.",
+      "image": "/site-assets/pin-collection/pins/gator3.png",
+      "acquiredAt": "Gainesville, Florida",
+      "category": "Sports",
+      "tags": [
+        "florida",
+        "gators",
+        "alligator",
+        "college",
+        "gainesville"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "gdansk",
+      "name": "Gdańsk",
+      "description": "Gdańsk on Poland's Baltic coast. Old Hanseatic port and birthplace of Solidarity.",
+      "image": "/site-assets/pin-collection/pins/gdansk.png",
+      "acquiredAt": "Gdańsk, Poland",
+      "category": "Travel",
+      "tags": [
+        "poland",
+        "gdansk",
+        "europe",
+        "baltic",
+        "hanseatic"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "gibraltar",
+      "name": "Gibraltar",
+      "description": "The Rock. British Overseas Territory at the southern tip of Iberia, home to the Barbary macaques.",
+      "image": "/site-assets/pin-collection/pins/gibralter.png",
+      "acquiredAt": "The Rock of Gibraltar",
+      "category": "Travel",
+      "tags": [
+        "gibraltar",
+        "rock",
+        "uk",
+        "mediterranean",
+        "macaques"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "gold-turtle",
+      "name": "Gold Turtle",
+      "description": "Gold sea turtle silhouette.",
+      "image": "/site-assets/pin-collection/pins/gold-turtle.png",
+      "acquiredAt": "Satellite Beach, Florida",
+      "category": "Nature",
+      "tags": [
+        "turtle",
+        "honu",
+        "gold",
+        "sea-turtle",
+        "hawaii"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "golden-gate",
+      "name": "Golden Gate",
+      "description": "Golden Gate Bridge in International Orange. Finished 1937.",
+      "image": "/site-assets/pin-collection/pins/golden-gate.png",
+      "acquiredAt": "Golden Gate Bridge Welcome Center, San Francisco, California",
+      "category": "Landmarks",
+      "tags": [
+        "san-francisco",
+        "bridge",
+        "california",
+        "art-deco",
+        "landmark"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "grand-canyon",
+      "name": "Grand Canyon",
+      "description": "South Rim. 277 miles long, a mile deep.",
+      "image": "/site-assets/pin-collection/pins/grand-canyon.png",
+      "acquiredAt": "Grand Canyon National Park, Arizona",
+      "category": "Nature",
+      "tags": [
+        "arizona",
+        "national-park",
+        "canyon",
+        "south-rim",
+        "southwest"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "gundam",
+      "name": "Gundam",
+      "description": "Mailed in by Bandai after I built one of their Gundam model kits.",
+      "image": "/site-assets/pin-collection/pins/gundam.png",
+      "acquiredAt": "Satellite Beach, Florida",
+      "category": "Other",
+      "tags": [
+        "gundam",
+        "anime",
+        "mecha",
+        "japan",
+        "tokyo"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "hack",
+      "name": "Hack",
+      "description": "Hackathon swag.",
+      "image": "/site-assets/pin-collection/pins/hack.png",
+      "acquiredAt": "San Francisco, California",
+      "category": "Other",
+      "tags": [
+        "hack",
+        "tech",
+        "hackathon",
+        "swag"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "half-moon-bay",
+      "name": "Half Moon Bay",
+      "description": "Coastal town south of SF. Pumpkins, Mavericks, and Highway 1.",
+      "image": "/site-assets/pin-collection/pins/half-moon-bay.png",
+      "acquiredAt": "Half Moon Bay, California",
+      "category": "Travel",
+      "tags": [
+        "california",
+        "half-moon-bay",
+        "coast",
+        "bay-area",
+        "pumpkins"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "helsinki",
+      "name": "Helsinki",
+      "description": "Helsinki, across the Gulf from Tallinn.",
+      "image": "/site-assets/pin-collection/pins/helsinki2.png",
+      "acquiredAt": "Helsinki, Finland",
+      "category": "Travel",
+      "tags": [
+        "helsinki",
+        "finland",
+        "scandinavia",
+        "europe",
+        "baltic"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "i-heart-ny",
+      "name": "I ❤ NY",
+      "description": "Milton Glaser's 1977 logo, picked up in Times Square.",
+      "image": "/site-assets/pin-collection/pins/i-heart-ny.png",
+      "acquiredAt": "Times Square, New York, NY",
+      "category": "Travel",
+      "tags": [
+        "new-york",
+        "nyc",
+        "heart",
+        "glaser",
+        "souvenir"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "i-heart-sf",
+      "name": "I ❤ SF",
+      "description": "SF riff on the Glaser NYC original.",
+      "image": "/site-assets/pin-collection/pins/i-heart-sf.png",
+      "acquiredAt": "Pier 39, San Francisco, California",
+      "category": "Travel",
+      "tags": [
+        "san-francisco",
+        "heart",
+        "california",
+        "souvenir"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "pikes-place-pig",
+      "name": "Pikes Place Pig",
+      "description": "Famed Pike Place Market mascot.",
+      "image": "/site-assets/pin-collection/pins/italy-pig.png",
+      "acquiredAt": "Pike Place Market, Seattle, Washington",
+      "category": "Travel",
+      "tags": [
+        "seattle",
+        "pig",
+        "food",
+        "pike-place"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "jaguar",
+      "name": "Jaguar",
+      "description": "Jaguar pin.",
+      "image": "/site-assets/pin-collection/pins/jaguar.png",
+      "acquiredAt": "Melbourne, Florida",
+      "category": "Nature",
+      "tags": [
+        "jaguar",
+        "big-cat",
+        "animal",
+        "wildlife",
+        "zoo"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "kennedy",
+      "name": "Kennedy Space Center",
+      "description": "Kennedy Space Center on Merritt Island. Every crewed US spaceflight since 1968 launched from here.",
+      "image": "/site-assets/pin-collection/pins/kennedy.png",
+      "acquiredAt": "Kennedy Space Center Visitor Complex, Merritt Island, Florida",
+      "category": "Landmarks",
+      "tags": [
+        "kennedy",
+        "space",
+        "florida",
+        "nasa",
+        "ksc"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "koala",
+      "name": "Koala",
+      "description": "Souvenir from someone else's Australia trip.",
+      "image": "/site-assets/pin-collection/pins/koala.png",
+      "acquiredAt": "Australia",
+      "category": "Nature",
+      "tags": [
+        "koala",
+        "australia",
+        "animal",
+        "marsupial",
+        "wildlife"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "kolea",
+      "name": "Kōlea",
+      "description": "Pacific Golden Plover. Flies non-stop from Alaska to winter in Hawaii every year, often coming back to the same patch of lawn.",
+      "image": "/site-assets/pin-collection/pins/kolea.png",
+      "acquiredAt": "Hawaii",
+      "category": "Hawaii",
+      "tags": [
+        "hawaii",
+        "bird",
+        "kolea",
+        "migratory",
+        "shorebird"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "la-fingers",
+      "name": "LA Fingers",
+      "description": "Hand sign spelling out LA.",
+      "image": "/site-assets/pin-collection/pins/la-fingers.png",
+      "acquiredAt": "Los Angeles, California",
+      "category": "Travel",
+      "tags": [
+        "los-angeles",
+        "california",
+        "hands",
+        "la",
+        "hip-hop"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "lady-of-sorrows",
+      "name": "Our Lady of Sorrows",
+      "description": "Sorrowful Mary devotional with the seven swords.",
+      "image": "/site-assets/pin-collection/pins/lady-sorrow.png",
+      "acquiredAt": "Melbourne, Florida",
+      "category": "Religious",
+      "tags": [
+        "catholic",
+        "mary",
+        "religious",
+        "marian",
+        "faith"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "lager",
+      "name": "Ballast Point Lager",
+      "description": "Ballast Point Brewing Company lager can pin. San Diego craft brewery founded in 1996.",
+      "image": "/site-assets/pin-collection/pins/lager.png",
+      "acquiredAt": "Ballast Point Brewing Company, San Diego, California",
+      "category": "Brands",
+      "tags": [
+        "beer",
+        "lager",
+        "brewing",
+        "craft",
+        "san-diego"
+      ],
+      "maker": "Ballast Point Brewing Company",
+      "favorite": false
+    },
+    {
+      "id": "launch-pin",
+      "name": "Launch",
+      "description": "Rocket launch silhouette.",
+      "image": "/site-assets/pin-collection/pins/launch-pin.png",
+      "acquiredAt": "San Francisco, California",
+      "category": "Other",
+      "tags": [
+        "rocket",
+        "launch",
+        "space",
+        "nasa",
+        "ksc"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "lenin",
+      "name": "Lenin",
+      "description": "Soviet znachok of Lenin. Mass-produced for decades, now flea market kitsch.",
+      "image": "/site-assets/pin-collection/pins/lenin.png",
+      "acquiredAt": "Gdańsk, Poland",
+      "category": "Travel",
+      "tags": [
+        "lenin",
+        "soviet",
+        "russia",
+        "history",
+        "znachok"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "lisboa",
+      "name": "Lisboa",
+      "description": "Lisbon. Yellow Tram 28 design.",
+      "image": "/site-assets/pin-collection/pins/lisboa.png",
+      "acquiredAt": "Lisbon, Portugal",
+      "category": "Travel",
+      "tags": [
+        "lisbon",
+        "portugal",
+        "europe",
+        "tram",
+        "azulejo"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "london",
+      "name": "London",
+      "description": "Red telephone box.",
+      "image": "/site-assets/pin-collection/pins/london.png",
+      "acquiredAt": "London, United Kingdom",
+      "category": "Travel",
+      "tags": [
+        "london",
+        "england",
+        "uk",
+        "europe",
+        "big-ben"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "louis-armstrong",
+      "name": "Louis Armstrong",
+      "description": "Satchmo with his trumpet. From Louis Armstrong Park in New Orleans.",
+      "image": "/site-assets/pin-collection/pins/louis-armstrong.png",
+      "acquiredAt": "Louis Armstrong Park, New Orleans, Louisiana",
+      "category": "Other",
+      "tags": [
+        "louis-armstrong",
+        "jazz",
+        "new-orleans",
+        "music",
+        "satchmo"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "malta",
+      "name": "Malta",
+      "description": "Maltese cross. The Knights Hospitaller ruled the island from 1530 to 1798.",
+      "image": "/site-assets/pin-collection/pins/malta.png",
+      "acquiredAt": "Valletta, Malta",
+      "category": "Travel",
+      "tags": [
+        "malta",
+        "mediterranean",
+        "europe",
+        "knights",
+        "valletta"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "marthas-vineyard",
+      "name": "Martha's Vineyard",
+      "description": "Edgartown, Martha's Vineyard.",
+      "image": "/site-assets/pin-collection/pins/marthas-vineyard.png",
+      "acquiredAt": "Edgartown, Martha's Vineyard, Massachusetts",
+      "category": "Travel",
+      "tags": [
+        "massachusetts",
+        "marthas-vineyard",
+        "island",
+        "new-england",
+        "cape"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "matsumotos",
+      "name": "Matsumoto Shave Ice",
+      "description": "Family-run shave ice in Haleʻiwa on the North Shore. Open since 1951.",
+      "image": "/site-assets/pin-collection/pins/matsumotos.png",
+      "acquiredAt": "Matsumoto Shave Ice, Haleʻiwa, Oahu, Hawaii",
+      "category": "Hawaii",
+      "tags": [
+        "hawaii",
+        "oahu",
+        "shave-ice",
+        "north-shore",
+        "haleiwa"
+      ],
+      "maker": "Matsumoto Shave Ice Co.",
+      "favorite": false
+    },
+    {
+      "id": "medieval-times",
+      "name": "Medieval Times",
+      "description": "Picked up at the Orlando castle after a jousting show.",
+      "image": "/site-assets/pin-collection/pins/medieval-times.png",
+      "acquiredAt": "Medieval Times, Orlando, Florida",
+      "category": "Other",
+      "tags": [
+        "medieval-times",
+        "dinner-show",
+        "knights",
+        "jousting",
+        "entertainment"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "mendenhall-glacier",
+      "name": "Mendenhall Glacier",
+      "description": "13-mile glacier in the Tongass outside Juneau. Retreating fast.",
+      "image": "/site-assets/pin-collection/pins/mendenhall-glacier.png",
+      "acquiredAt": "Mendenhall Glacier Visitor Center, Juneau, Alaska",
+      "category": "Nature",
+      "tags": [
+        "alaska",
+        "glacier",
+        "juneau",
+        "tongass",
+        "climate"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "merritt-island",
+      "name": "Merritt Island",
+      "description": "Florida Space Coast. The wildlife refuge surrounds Kennedy Space Center.",
+      "image": "/site-assets/pin-collection/pins/merrit-island.png",
+      "acquiredAt": "Merritt Island, Florida",
+      "category": "Travel",
+      "tags": [
+        "florida",
+        "merritt-island",
+        "space-coast",
+        "wildlife-refuge"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "mexico",
+      "name": "Mexico",
+      "description": "Puerto Vallarta, Mexico.",
+      "image": "/site-assets/pin-collection/pins/mexico.png",
+      "acquiredAt": "Puerto Vallarta, Mexico",
+      "category": "Travel",
+      "tags": [
+        "mexico",
+        "latin-america",
+        "cozumel",
+        "flag"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "morning-bell",
+      "name": "Morningbell",
+      "description": "Morningbell band pin. Indie band from Gainesville, Florida. Logo is a piranha.",
+      "image": "/site-assets/pin-collection/pins/morning-bell.png",
+      "acquiredAt": "Gainesville, Florida",
+      "category": "Other",
+      "tags": [
+        "morningbell",
+        "music",
+        "band",
+        "gainesville"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "muir-woods",
+      "name": "Muir Woods",
+      "description": "Old-growth coast redwoods just north of SF. Named for John Muir in 1908.",
+      "image": "/site-assets/pin-collection/pins/muir-woods.png",
+      "acquiredAt": "Muir Woods National Monument, Mill Valley, California",
+      "category": "Nature",
+      "tags": [
+        "california",
+        "muir-woods",
+        "redwoods",
+        "national-monument",
+        "marin"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "nene",
+      "name": "Nēnē",
+      "description": "Hawaiian goose. Down to ~30 wild birds in the 1950s, now back to ~3,000.",
+      "image": "/site-assets/pin-collection/pins/nene.png",
+      "acquiredAt": "Hawaii Volcanoes National Park, Big Island, Hawaii",
+      "category": "Hawaii",
+      "tags": [
+        "hawaii",
+        "bird",
+        "nene",
+        "native",
+        "state-bird"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "odyssey-of-the-mind",
+      "name": "Odyssey of the Mind",
+      "description": "2006 Florida Odyssey of the Mind state tournament pin.",
+      "image": "/site-assets/pin-collection/pins/odyssey-mind.png",
+      "acquiredAt": "Melbourne, Florida",
+      "category": "Other",
+      "tags": [
+        "odyssey",
+        "competition",
+        "school",
+        "creative",
+        "stem"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "open-books",
+      "name": "Open Books",
+      "description": "City Lights Booksellers & Publishers in North Beach, San Francisco. Founded by Lawrence Ferlinghetti in 1953, the first US paperback-only bookstore.",
+      "image": "/site-assets/pin-collection/pins/open-books.png",
+      "acquiredAt": "City Lights Bookstore, San Francisco, California",
+      "category": "Other",
+      "tags": [
+        "books",
+        "reading",
+        "city-lights",
+        "san-francisco",
+        "north-beach"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "panda",
+      "name": "Panda",
+      "description": "Giant panda from the Smithsonian National Zoo.",
+      "image": "/site-assets/pin-collection/pins/panda.png",
+      "acquiredAt": "Smithsonian National Zoo, Washington, DC",
+      "category": "Nature",
+      "tags": [
+        "panda",
+        "china",
+        "animal",
+        "wildlife",
+        "zoo"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "peabody",
+      "name": "Peabody Ducks",
+      "description": "Peabody Hotel in Memphis. The mallards parade through the lobby twice a day, a tradition since the 1930s.",
+      "image": "/site-assets/pin-collection/pins/peabody.png",
+      "acquiredAt": "The Peabody Hotel, Memphis, Tennessee",
+      "category": "Travel",
+      "tags": [
+        "peabody",
+        "memphis",
+        "hotel",
+        "ducks",
+        "tennessee"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "pike-place",
+      "name": "Pike Place",
+      "description": "Seattle's public market. Open since 1907 and home to the original Starbucks.",
+      "image": "/site-assets/pin-collection/pins/pikes-place.png",
+      "acquiredAt": "Pike Place Market, Seattle, Washington",
+      "category": "Travel",
+      "tags": [
+        "seattle",
+        "pike-place",
+        "market",
+        "washington",
+        "fish-throwing"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "pisa",
+      "name": "Pisa",
+      "description": "Leaning Tower of Pisa, the bell tower of the cathedral.",
+      "image": "/site-assets/pin-collection/pins/pisa.png",
+      "acquiredAt": "Piazza dei Miracoli, Pisa, Italy",
+      "category": "Travel",
+      "tags": [
+        "pisa",
+        "italy",
+        "tower",
+        "leaning",
+        "landmark"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "point-cabrillo-lighthouse",
+      "name": "Point Cabrillo Lighthouse",
+      "description": "1909 lighthouse on the Mendocino headlands.",
+      "image": "/site-assets/pin-collection/pins/point-cabrillo-lighthouse.png",
+      "acquiredAt": "Point Cabrillo Light Station, Mendocino, California",
+      "category": "Landmarks",
+      "tags": [
+        "california",
+        "lighthouse",
+        "mendocino",
+        "coast",
+        "fresnel"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "pride-heart",
+      "name": "Pride Heart",
+      "description": "Rainbow heart from SF Pride.",
+      "image": "/site-assets/pin-collection/pins/pride-heart.png",
+      "acquiredAt": "San Francisco Pride, San Francisco, California",
+      "category": "Other",
+      "tags": [
+        "pride",
+        "lgbtq",
+        "rainbow",
+        "heart",
+        "san-francisco"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "sagrada-familia",
+      "name": "Sagrada Família",
+      "description": "Gaudí's still-unfinished basilica in Barcelona. Construction started in 1882, slated to wrap in 2026.",
+      "image": "/site-assets/pin-collection/pins/sagrada-familia.png",
+      "acquiredAt": "Sagrada Família, Barcelona, Spain",
+      "category": "Travel",
+      "tags": [
+        "barcelona",
+        "spain",
+        "gaudi",
+        "basilica",
+        "modernisme"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "san-francisco-powell",
+      "name": "San Francisco Powell",
+      "description": "Powell-Hyde cable car, the most photographed line.",
+      "image": "/site-assets/pin-collection/pins/san-francisco-powell.png",
+      "acquiredAt": "Powell Street, San Francisco, California",
+      "category": "Travel",
+      "tags": [
+        "san-francisco",
+        "cable-car",
+        "powell-street",
+        "california",
+        "muni"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "sea-world",
+      "name": "SeaWorld",
+      "description": "SeaWorld Orlando. Picked up as a kid before Blackfish.",
+      "image": "/site-assets/pin-collection/pins/sea-world.png",
+      "acquiredAt": "SeaWorld Orlando, Florida",
+      "category": "Other",
+      "tags": [
+        "sea-world",
+        "theme-park",
+        "marine",
+        "orlando",
+        "florida"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "seattle-2",
+      "name": "Seattle",
+      "description": "Generic Seattle pin from the same trip as the Space Needle and Pike Place ones.",
+      "image": "/site-assets/pin-collection/pins/seattle-2.png",
+      "acquiredAt": "Seattle, Washington",
+      "category": "Travel",
+      "tags": [
+        "seattle",
+        "washington",
+        "city",
+        "pacific-northwest"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "seattle-underground-tour",
+      "name": "Seattle Underground Tour",
+      "description": "Walking tour through buried storefronts in Pioneer Square, sealed below ground when the city was raised in the 1890s.",
+      "image": "/site-assets/pin-collection/pins/seattle-underground-tour.png",
+      "acquiredAt": "Bill Speidel's Underground Tour, Pioneer Square, Seattle, Washington",
+      "category": "Travel",
+      "tags": [
+        "seattle",
+        "underground",
+        "tour",
+        "pioneer-square",
+        "history"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "shapes",
+      "name": "Shapes",
+      "description": "Geometric abstract enamel pin.",
+      "image": "/site-assets/pin-collection/pins/shapes.png",
+      "acquiredAt": "San Francisco, California",
+      "category": "Other",
+      "tags": [
+        "shapes",
+        "geometric",
+        "abstract",
+        "design"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "skagway-alaska",
+      "name": "Skagway Alaska",
+      "description": "Alaska Inside Passage town. Boomed in the 1898 Klondike Gold Rush.",
+      "image": "/site-assets/pin-collection/pins/skagway-alaska.png",
+      "acquiredAt": "Skagway, Alaska",
+      "category": "Travel",
+      "tags": [
+        "alaska",
+        "skagway",
+        "gold-rush",
+        "klondike",
+        "inside-passage"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "snoqualmie",
+      "name": "Snoqualmie Falls",
+      "description": "268-foot waterfall east of Seattle. The Twin Peaks opening shot.",
+      "image": "/site-assets/pin-collection/pins/snoqualmie.png",
+      "acquiredAt": "Snoqualmie Falls, Washington",
+      "category": "Nature",
+      "tags": [
+        "washington",
+        "snoqualmie",
+        "waterfall",
+        "twin-peaks",
+        "pacific-northwest"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "space-needle",
+      "name": "Space Needle",
+      "description": "605-foot Seattle landmark from the 1962 World's Fair.",
+      "image": "/site-assets/pin-collection/pins/space-needle2.png",
+      "acquiredAt": "Space Needle, Seattle, Washington",
+      "category": "Landmarks",
+      "tags": [
+        "seattle",
+        "space-needle",
+        "washington",
+        "landmark",
+        "worlds-fair"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "space-pin",
+      "name": "STS-99 Mission Patch",
+      "description": "NASA STS-99 mission patch pin (Space Shuttle Endeavour, Feb 2000, the Shuttle Radar Topography Mission). Crew: Kregel, Gorie, Kavandi, Voss, Mohri, Thiele.",
+      "image": "/site-assets/pin-collection/pins/space-pin.png",
+      "acquiredAt": "Kennedy Space Center Visitor Complex, Merritt Island, Florida",
+      "category": "Landmarks",
+      "tags": [
+        "space",
+        "nasa",
+        "shuttle",
+        "sts-99",
+        "ksc"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "spro",
+      "name": "Spro",
+      "description": "Bay Area roaster known for high-end espresso.",
+      "image": "/site-assets/pin-collection/pins/spro.png",
+      "acquiredAt": "Spro Coffee, Oakland, California",
+      "category": "Brands",
+      "tags": [
+        "coffee",
+        "brand",
+        "logo",
+        "spro",
+        "bay-area"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "stagecoach-green",
+      "name": "Stagecoach Green",
+      "description": "Stagecoach Greens mini-golf in Mission Bay.",
+      "image": "/site-assets/pin-collection/pins/stagecoach-green.png",
+      "acquiredAt": "Stagecoach Greens, San Francisco, California",
+      "category": "Other",
+      "tags": [
+        "stagecoach",
+        "mini-golf",
+        "san-francisco",
+        "mission-bay"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "stagecoach-green-2",
+      "name": "Stagecoach Green (variant)",
+      "description": "Second Stagecoach Greens pin, different hole.",
+      "image": "/site-assets/pin-collection/pins/stagecoach-green-2.png",
+      "acquiredAt": "Stagecoach Greens, San Francisco, California",
+      "category": "Other",
+      "tags": [
+        "stagecoach",
+        "mini-golf",
+        "san-francisco",
+        "mission-bay"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "stanford",
+      "name": "Stanford",
+      "description": "Stanford University. Cardinal red S.",
+      "image": "/site-assets/pin-collection/pins/stanford.png",
+      "acquiredAt": "Stanford University, Stanford, California",
+      "category": "Sports",
+      "tags": [
+        "stanford",
+        "university",
+        "california",
+        "college",
+        "cardinal"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "stone-mountain",
+      "name": "Stone Mountain",
+      "description": "825-foot quartz dome east of Atlanta.",
+      "image": "/site-assets/pin-collection/pins/stone-mountain.png",
+      "acquiredAt": "Stone Mountain Park, Stone Mountain, Georgia",
+      "category": "Travel",
+      "tags": [
+        "georgia",
+        "stone-mountain",
+        "granite",
+        "atlanta",
+        "park"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "tallinn",
+      "name": "Tallinn",
+      "description": "Estonia's medieval Old Town. UNESCO-listed walled city with 13th-century towers still standing.",
+      "image": "/site-assets/pin-collection/pins/taillinn2.png",
+      "acquiredAt": "Tallinn Old Town, Tallinn, Estonia",
+      "category": "Travel",
+      "tags": [
+        "tallinn",
+        "estonia",
+        "baltics",
+        "europe",
+        "medieval"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "tuckaleechee",
+      "name": "Tuckaleechee Caverns",
+      "description": "Show cave near Townsend, Tennessee. One of the largest underground chambers in the eastern US.",
+      "image": "/site-assets/pin-collection/pins/tuckaleechee.png",
+      "acquiredAt": "Tuckaleechee Caverns, Townsend, Tennessee",
+      "category": "Travel",
+      "tags": [
+        "tennessee",
+        "caverns",
+        "smoky-mountains",
+        "cave",
+        "townsend"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "us-army-museum-hawaii",
+      "name": "U.S. Army Museum of Hawaii",
+      "description": "Housed in Battery Randolph, a 1911 coastal defense bunker on the beach at Fort DeRussy in Waikīkī.",
+      "image": "/site-assets/pin-collection/pins/us-army-museum-hawaii.png",
+      "acquiredAt": "U.S. Army Museum of Hawaii, Fort DeRussy, Waikīkī, Honolulu, Hawaii",
+      "category": "Museums",
+      "tags": [
+        "hawaii",
+        "museum",
+        "army",
+        "waikiki",
+        "battery-randolph"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "vail",
+      "name": "Vail",
+      "description": "Colorado's largest single-mountain resort. Famous for the Back Bowls.",
+      "image": "/site-assets/pin-collection/pins/vail.png",
+      "acquiredAt": "Vail Mountain, Vail, Colorado",
+      "category": "Travel",
+      "tags": [
+        "colorado",
+        "vail",
+        "skiing",
+        "resort",
+        "back-bowls"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "vasa",
+      "name": "Vasa",
+      "description": "Vasa Museum in Stockholm. Only intact 17th-century ship in the world, salvaged in 1961 after sinking on its 1628 maiden voyage.",
+      "image": "/site-assets/pin-collection/pins/vasa.png",
+      "acquiredAt": "Vasa Museum, Stockholm, Sweden",
+      "category": "Museums",
+      "tags": [
+        "sweden",
+        "stockholm",
+        "vasa",
+        "ship",
+        "maritime"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "venezia",
+      "name": "Venezia",
+      "description": "Venice. Carnival mask design.",
+      "image": "/site-assets/pin-collection/pins/venezia.png",
+      "acquiredAt": "Venice, Italy",
+      "category": "Travel",
+      "tags": [
+        "venice",
+        "venezia",
+        "italy",
+        "europe",
+        "gondola"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "vitruvian-man",
+      "name": "Vitruvian Man",
+      "description": "Da Vinci's c.1490 ink drawing of human proportions. The original is kept off public view at the Gallerie dell'Accademia in Venice.",
+      "image": "/site-assets/pin-collection/pins/vesuvian-man.png",
+      "acquiredAt": "Gallerie dell'Accademia, Venice, Italy",
+      "category": "Other",
+      "tags": [
+        "da-vinci",
+        "art",
+        "italy",
+        "vitruvian",
+        "renaissance"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "vietnam",
+      "name": "Vietnam",
+      "description": "Gold star on red. Picked up in Hanoi's Old Quarter.",
+      "image": "/site-assets/pin-collection/pins/vietnam.png",
+      "acquiredAt": "Hanoi Old Quarter, Vietnam",
+      "category": "Travel",
+      "tags": [
+        "vietnam",
+        "asia",
+        "hanoi",
+        "flag",
+        "southeast-asia"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "volcanoes-park",
+      "name": "Hawaiʻi Volcanoes National Park",
+      "description": "Home to Kīlauea on the southeast side of the Big Island.",
+      "image": "/site-assets/pin-collection/pins/volcanoes-park.png",
+      "acquiredAt": "Hawaiʻi Volcanoes National Park, Big Island, Hawaii",
+      "category": "Hawaii",
+      "tags": [
+        "hawaii",
+        "big-island",
+        "national-park",
+        "volcano",
+        "kilauea"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "waiola",
+      "name": "Waiola Shave Ice",
+      "description": "No-frills Honolulu shave ice spot. Family-run since 1940. Uniquely fluffy ice.",
+      "image": "/site-assets/pin-collection/pins/waiola.png",
+      "acquiredAt": "Waiola Shave Ice, Honolulu, Hawaii",
+      "category": "Hawaii",
+      "tags": [
+        "hawaii",
+        "oahu",
+        "shave-ice",
+        "honolulu",
+        "waiola"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "washington-dc-sax",
+      "name": "Washington DC Saxophone",
+      "description": "Saxophone pin from a DC trip. Bill Clinton 'Sax in the Oval' commemorative.",
+      "image": "/site-assets/pin-collection/pins/washington-dc-sax.png",
+      "acquiredAt": "Washington, DC",
+      "category": "Travel",
+      "tags": [
+        "washington-dc",
+        "saxophone",
+        "music",
+        "clinton",
+        "capital"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "washington-dc",
+      "name": "Washington DC",
+      "description": "Capitol dome silhouette.",
+      "image": "/site-assets/pin-collection/pins/washington-dc.png",
+      "acquiredAt": "National Mall, Washington, DC",
+      "category": "Travel",
+      "tags": [
+        "washington-dc",
+        "capital",
+        "usa",
+        "capitol",
+        "mall"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "whistler",
+      "name": "Whistler",
+      "description": "Whistler Blackcomb in BC's Coast Mountains. Largest ski resort in North America by skiable acres.",
+      "image": "/site-assets/pin-collection/pins/whistler.png",
+      "acquiredAt": "Whistler Blackcomb, British Columbia, Canada",
+      "category": "Travel",
+      "tags": [
+        "whistler",
+        "canada",
+        "british-columbia",
+        "skiing",
+        "resort"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "white-pass-yukon",
+      "name": "White Pass and Yukon Route",
+      "description": "Narrow-gauge railroad built in 1898 over the Coast Mountains during the Klondike Gold Rush. Still runs tourist trains out of Skagway.",
+      "image": "/site-assets/pin-collection/pins/white-pass-yukon.png",
+      "acquiredAt": "White Pass & Yukon Route Depot, Skagway, Alaska",
+      "category": "Travel",
+      "tags": [
+        "alaska",
+        "yukon",
+        "railroad",
+        "skagway",
+        "klondike"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "white-pass",
+      "name": "White Pass",
+      "description": "White Pass route into the Yukon. Same Skagway trip.",
+      "image": "/site-assets/pin-collection/pins/white-pass.png",
+      "acquiredAt": "Skagway, Alaska",
+      "category": "Travel",
+      "tags": [
+        "white-pass",
+        "alaska",
+        "yukon",
+        "mountain-pass"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "winchester-house",
+      "name": "Winchester Mystery House",
+      "description": "Sarah Winchester's 161-room Victorian in San Jose. Stairs to nowhere, doors that open into walls.",
+      "image": "/site-assets/pin-collection/pins/winchester-house.png",
+      "acquiredAt": "Winchester Mystery House, San Jose, California",
+      "category": "Travel",
+      "tags": [
+        "san-jose",
+        "california",
+        "winchester",
+        "mystery",
+        "victorian"
+      ],
+      "maker": "",
+      "favorite": false
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "description": "YouTube logo. Red play button.",
+      "image": "/site-assets/pin-collection/pins/youtube.png",
+      "acquiredAt": "Mountain View, California",
+      "category": "Brands",
+      "tags": [
+        "youtube",
+        "video",
+        "brand",
+        "logo",
+        "google"
+      ],
+      "maker": "YouTube",
+      "favorite": false
+    }
+  ]
+}

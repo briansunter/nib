@@ -1,0 +1,1062 @@
+{
+  "name": "Travel Map",
+  "description": "Places I have been, from quick city stops to longer trips, collected on one map.",
+  "visitedCountries": [
+    "LU"
+  ],
+  "visitedUsStates": [
+    "AL",
+    "MS",
+    "MO",
+    "NV",
+    "NM",
+    "NC",
+    "OR",
+    "SC",
+    "TX",
+    "VA",
+    "WV"
+  ],
+  "visitedChinaProvinces": [],
+  "cities": [
+    {
+      "id": "honolulu",
+      "name": "Honolulu",
+      "countryCode": "US",
+      "stateCode": "HI",
+      "gps": {
+        "lat": 21.3069,
+        "lng": -157.8583
+      },
+      "tags": [
+        "hawaii"
+      ]
+    },
+    {
+      "id": "hilo",
+      "name": "Hilo",
+      "countryCode": "US",
+      "stateCode": "HI",
+      "gps": {
+        "lat": 19.7079,
+        "lng": -155.0885
+      },
+      "tags": [
+        "hawaii"
+      ]
+    },
+    {
+      "id": "washington-dc",
+      "name": "Washington, DC",
+      "countryCode": "US",
+      "stateCode": "DC",
+      "gps": {
+        "lat": 38.9072,
+        "lng": -77.0369
+      },
+      "tags": [
+        "museums"
+      ]
+    },
+    {
+      "id": "melbourne-fl",
+      "name": "Melbourne",
+      "countryCode": "US",
+      "stateCode": "FL",
+      "gps": {
+        "lat": 28.0836,
+        "lng": -80.6081
+      },
+      "tags": [
+        "florida"
+      ]
+    },
+    {
+      "id": "orlando",
+      "name": "Orlando",
+      "countryCode": "US",
+      "stateCode": "FL",
+      "gps": {
+        "lat": 28.5383,
+        "lng": -81.3792
+      },
+      "tags": [
+        "florida",
+        "theme-parks"
+      ]
+    },
+    {
+      "id": "san-francisco",
+      "name": "San Francisco",
+      "countryCode": "US",
+      "stateCode": "CA",
+      "gps": {
+        "lat": 37.7749,
+        "lng": -122.4194
+      },
+      "tags": [
+        "california"
+      ]
+    },
+    {
+      "id": "los-angeles",
+      "name": "Los Angeles",
+      "countryCode": "US",
+      "stateCode": "CA",
+      "gps": {
+        "lat": 34.0522,
+        "lng": -118.2437
+      },
+      "tags": [
+        "california",
+        "photos"
+      ]
+    },
+    {
+      "id": "seattle",
+      "name": "Seattle",
+      "countryCode": "US",
+      "stateCode": "WA",
+      "gps": {
+        "lat": 47.6062,
+        "lng": -122.3321
+      },
+      "tags": [
+        "washington"
+      ]
+    },
+    {
+      "id": "juneau",
+      "name": "Juneau",
+      "countryCode": "US",
+      "stateCode": "AK",
+      "gps": {
+        "lat": 58.3019,
+        "lng": -134.4197
+      },
+      "tags": [
+        "alaska"
+      ]
+    },
+    {
+      "id": "skagway",
+      "name": "Skagway",
+      "countryCode": "US",
+      "stateCode": "AK",
+      "gps": {
+        "lat": 59.4583,
+        "lng": -135.3139
+      },
+      "tags": [
+        "alaska"
+      ]
+    },
+    {
+      "id": "new-orleans",
+      "name": "New Orleans",
+      "countryCode": "US",
+      "stateCode": "LA",
+      "gps": {
+        "lat": 29.9511,
+        "lng": -90.0715
+      },
+      "tags": [
+        "louisiana"
+      ]
+    },
+    {
+      "id": "chicago",
+      "name": "Chicago",
+      "countryCode": "US",
+      "stateCode": "IL",
+      "gps": {
+        "lat": 41.8781,
+        "lng": -87.6298
+      },
+      "tags": [
+        "illinois"
+      ]
+    },
+    {
+      "id": "new-york",
+      "name": "New York",
+      "countryCode": "US",
+      "stateCode": "NY",
+      "gps": {
+        "lat": 40.7128,
+        "lng": -74.006
+      },
+      "tags": [
+        "new-york"
+      ]
+    },
+    {
+      "id": "vail",
+      "name": "Vail",
+      "countryCode": "US",
+      "stateCode": "CO",
+      "gps": {
+        "lat": 39.6403,
+        "lng": -106.3742
+      },
+      "tags": [
+        "colorado"
+      ]
+    },
+    {
+      "id": "springdale",
+      "name": "Springdale",
+      "countryCode": "US",
+      "stateCode": "UT",
+      "gps": {
+        "lat": 37.1889,
+        "lng": -112.9986
+      },
+      "tags": [
+        "utah",
+        "national-parks"
+      ]
+    },
+    {
+      "id": "grand-canyon-village",
+      "name": "Grand Canyon Village",
+      "countryCode": "US",
+      "stateCode": "AZ",
+      "gps": {
+        "lat": 36.0544,
+        "lng": -112.1393
+      },
+      "tags": [
+        "arizona",
+        "national-parks"
+      ]
+    },
+    {
+      "id": "stone-mountain",
+      "name": "Stone Mountain",
+      "countryCode": "US",
+      "stateCode": "GA",
+      "gps": {
+        "lat": 33.8053,
+        "lng": -84.1458
+      },
+      "tags": [
+        "georgia"
+      ]
+    },
+    {
+      "id": "oak-bluffs",
+      "name": "Oak Bluffs",
+      "countryCode": "US",
+      "stateCode": "MA",
+      "gps": {
+        "lat": 41.4543,
+        "lng": -70.5611
+      },
+      "tags": [
+        "massachusetts"
+      ]
+    },
+    {
+      "id": "townsend",
+      "name": "Townsend",
+      "countryCode": "US",
+      "stateCode": "TN",
+      "gps": {
+        "lat": 35.6756,
+        "lng": -83.7557
+      },
+      "tags": [
+        "tennessee"
+      ]
+    },
+    {
+      "id": "london",
+      "name": "London",
+      "countryCode": "GB",
+      "gps": {
+        "lat": 51.5072,
+        "lng": -0.1276
+      },
+      "tags": [
+        "photos",
+        "europe"
+      ]
+    },
+    {
+      "id": "barcelona",
+      "name": "Barcelona",
+      "countryCode": "ES",
+      "gps": {
+        "lat": 41.3874,
+        "lng": 2.1686
+      },
+      "tags": [
+        "spain",
+        "europe"
+      ]
+    },
+    {
+      "id": "rome",
+      "name": "Rome",
+      "countryCode": "IT",
+      "gps": {
+        "lat": 41.9028,
+        "lng": 12.4964
+      },
+      "tags": [
+        "italy",
+        "europe"
+      ]
+    },
+    {
+      "id": "florence",
+      "name": "Florence",
+      "countryCode": "IT",
+      "gps": {
+        "lat": 43.7696,
+        "lng": 11.2558
+      },
+      "tags": [
+        "italy",
+        "europe"
+      ]
+    },
+    {
+      "id": "pisa",
+      "name": "Pisa",
+      "countryCode": "IT",
+      "gps": {
+        "lat": 43.7228,
+        "lng": 10.4017
+      },
+      "tags": [
+        "italy",
+        "europe"
+      ]
+    },
+    {
+      "id": "cinque-terre",
+      "name": "Cinque Terre",
+      "countryCode": "IT",
+      "gps": {
+        "lat": 44.1461,
+        "lng": 9.6549
+      },
+      "tags": [
+        "italy",
+        "europe"
+      ]
+    },
+    {
+      "id": "palermo",
+      "name": "Palermo",
+      "countryCode": "IT",
+      "gps": {
+        "lat": 38.1157,
+        "lng": 13.3615
+      },
+      "tags": [
+        "italy",
+        "europe"
+      ]
+    },
+    {
+      "id": "sorrento",
+      "name": "Sorrento",
+      "countryCode": "IT",
+      "gps": {
+        "lat": 40.6263,
+        "lng": 14.3757
+      },
+      "tags": [
+        "italy",
+        "europe"
+      ]
+    },
+    {
+      "id": "amalfi",
+      "name": "Amalfi",
+      "countryCode": "IT",
+      "gps": {
+        "lat": 40.634,
+        "lng": 14.6027
+      },
+      "tags": [
+        "italy",
+        "europe"
+      ]
+    },
+    {
+      "id": "bologna",
+      "name": "Bologna",
+      "countryCode": "IT",
+      "gps": {
+        "lat": 44.4949,
+        "lng": 11.3426
+      },
+      "tags": [
+        "italy",
+        "europe"
+      ]
+    },
+    {
+      "id": "venice",
+      "name": "Venice",
+      "countryCode": "IT",
+      "gps": {
+        "lat": 45.4408,
+        "lng": 12.3155
+      },
+      "tags": [
+        "italy",
+        "europe"
+      ]
+    },
+    {
+      "id": "lisbon",
+      "name": "Lisbon",
+      "countryCode": "PT",
+      "gps": {
+        "lat": 38.7223,
+        "lng": -9.1393
+      },
+      "tags": [
+        "portugal",
+        "europe"
+      ]
+    },
+    {
+      "id": "porto",
+      "name": "Porto",
+      "countryCode": "PT",
+      "gps": {
+        "lat": 41.1579,
+        "lng": -8.6291
+      },
+      "tags": [
+        "portugal",
+        "europe"
+      ]
+    },
+    {
+      "id": "valletta",
+      "name": "Valletta",
+      "countryCode": "MT",
+      "gps": {
+        "lat": 35.8989,
+        "lng": 14.5146
+      },
+      "tags": [
+        "malta",
+        "europe"
+      ]
+    },
+    {
+      "id": "copenhagen",
+      "name": "Copenhagen",
+      "countryCode": "DK",
+      "gps": {
+        "lat": 55.6761,
+        "lng": 12.5683
+      },
+      "tags": [
+        "denmark",
+        "europe"
+      ]
+    },
+    {
+      "id": "tallinn",
+      "name": "Tallinn",
+      "countryCode": "EE",
+      "gps": {
+        "lat": 59.437,
+        "lng": 24.7536
+      },
+      "tags": [
+        "estonia",
+        "europe"
+      ]
+    },
+    {
+      "id": "helsinki",
+      "name": "Helsinki",
+      "countryCode": "FI",
+      "gps": {
+        "lat": 60.1699,
+        "lng": 24.9384
+      },
+      "tags": [
+        "finland",
+        "europe"
+      ]
+    },
+    {
+      "id": "stockholm",
+      "name": "Stockholm",
+      "countryCode": "SE",
+      "gps": {
+        "lat": 59.3293,
+        "lng": 18.0686
+      },
+      "tags": [
+        "sweden",
+        "europe"
+      ]
+    },
+    {
+      "id": "gdansk",
+      "name": "Gdansk",
+      "countryCode": "PL",
+      "gps": {
+        "lat": 54.352,
+        "lng": 18.6466
+      },
+      "tags": [
+        "poland",
+        "europe"
+      ]
+    },
+    {
+      "id": "hanoi",
+      "name": "Hanoi",
+      "countryCode": "VN",
+      "gps": {
+        "lat": 21.0278,
+        "lng": 105.8342
+      },
+      "tags": [
+        "vietnam",
+        "asia"
+      ]
+    },
+    {
+      "id": "vinh",
+      "name": "Vinh",
+      "countryCode": "VN",
+      "gps": {
+        "lat": 18.6796,
+        "lng": 105.6813
+      },
+      "tags": [
+        "vietnam",
+        "asia"
+      ]
+    },
+    {
+      "id": "sa-pa",
+      "name": "Sa Pa",
+      "countryCode": "VN",
+      "gps": {
+        "lat": 22.3364,
+        "lng": 103.8438
+      },
+      "tags": [
+        "vietnam",
+        "asia"
+      ]
+    },
+    {
+      "id": "whistler",
+      "name": "Whistler",
+      "countryCode": "CA",
+      "gps": {
+        "lat": 50.1163,
+        "lng": -122.9574
+      },
+      "tags": [
+        "canada"
+      ]
+    },
+    {
+      "id": "puerto-vallarta",
+      "name": "Puerto Vallarta",
+      "countryCode": "MX",
+      "gps": {
+        "lat": 20.6534,
+        "lng": -105.2253
+      },
+      "tags": [
+        "mexico"
+      ]
+    },
+    {
+      "id": "beijing",
+      "name": "Beijing",
+      "countryCode": "CN",
+      "provinceCode": "BJ",
+      "gps": {
+        "lat": 39.9042,
+        "lng": 116.4074
+      },
+      "tags": [
+        "china",
+        "placeholder"
+      ]
+    },
+    {
+      "id": "hekou",
+      "name": "Hekou",
+      "countryCode": "CN",
+      "provinceCode": "YN",
+      "gps": {
+        "lat": 22.5295,
+        "lng": 103.9614
+      },
+      "tags": [
+        "china",
+        "asia"
+      ]
+    },
+    {
+      "id": "kunming",
+      "name": "Kunming",
+      "countryCode": "CN",
+      "provinceCode": "YN",
+      "gps": {
+        "lat": 25.0389,
+        "lng": 102.7183
+      },
+      "tags": [
+        "china",
+        "asia"
+      ]
+    },
+    {
+      "id": "lijiang",
+      "name": "Lijiang",
+      "countryCode": "CN",
+      "provinceCode": "YN",
+      "gps": {
+        "lat": 26.8565,
+        "lng": 100.2271
+      },
+      "tags": [
+        "china",
+        "asia"
+      ]
+    },
+    {
+      "id": "diqing",
+      "name": "Diqing",
+      "countryCode": "CN",
+      "provinceCode": "YN",
+      "gps": {
+        "lat": 27.8297,
+        "lng": 99.7006
+      },
+      "tags": [
+        "china",
+        "asia"
+      ]
+    },
+    {
+      "id": "chengdu",
+      "name": "Chengdu",
+      "countryCode": "CN",
+      "provinceCode": "SC",
+      "gps": {
+        "lat": 30.5728,
+        "lng": 104.0668
+      },
+      "tags": [
+        "china",
+        "asia"
+      ]
+    },
+    {
+      "id": "xian",
+      "name": "Xi'an",
+      "countryCode": "CN",
+      "provinceCode": "SN",
+      "gps": {
+        "lat": 34.3416,
+        "lng": 108.9398
+      },
+      "tags": [
+        "china",
+        "asia"
+      ]
+    },
+    {
+      "id": "emei-town",
+      "name": "Emei Town",
+      "countryCode": "CN",
+      "provinceCode": "SC",
+      "gps": {
+        "lat": 29.6012,
+        "lng": 103.4845
+      },
+      "tags": [
+        "china",
+        "asia"
+      ]
+    },
+    {
+      "id": "huayin",
+      "name": "Huayin",
+      "countryCode": "CN",
+      "provinceCode": "SN",
+      "gps": {
+        "lat": 34.5653,
+        "lng": 110.0664
+      },
+      "tags": [
+        "china",
+        "asia"
+      ]
+    },
+    {
+      "id": "yuanyang-yunnan",
+      "name": "Yuanyang, Yunnan",
+      "countryCode": "CN",
+      "provinceCode": "YN",
+      "gps": {
+        "lat": 23.2199,
+        "lng": 102.8352
+      },
+      "tags": [
+        "china",
+        "asia"
+      ]
+    },
+    {
+      "id": "yangon",
+      "name": "Yangon",
+      "countryCode": "MM",
+      "gps": {
+        "lat": 16.8409,
+        "lng": 96.1735
+      },
+      "tags": [
+        "myanmar",
+        "asia"
+      ]
+    },
+    {
+      "id": "bagan",
+      "name": "Bagan",
+      "countryCode": "MM",
+      "gps": {
+        "lat": 21.1717,
+        "lng": 94.8585
+      },
+      "tags": [
+        "myanmar",
+        "asia"
+      ]
+    },
+    {
+      "id": "mawlamyine",
+      "name": "Mawlamyine",
+      "countryCode": "MM",
+      "gps": {
+        "lat": 16.4905,
+        "lng": 97.6283
+      },
+      "tags": [
+        "myanmar",
+        "asia"
+      ]
+    },
+    {
+      "id": "naypyidaw",
+      "name": "Naypyidaw",
+      "countryCode": "MM",
+      "gps": {
+        "lat": 19.7633,
+        "lng": 96.0785
+      },
+      "tags": [
+        "myanmar",
+        "asia"
+      ]
+    },
+    {
+      "id": "mandalay",
+      "name": "Mandalay",
+      "countryCode": "MM",
+      "gps": {
+        "lat": 21.9588,
+        "lng": 96.0891
+      },
+      "tags": [
+        "myanmar",
+        "asia"
+      ]
+    },
+    {
+      "id": "paris",
+      "name": "Paris",
+      "countryCode": "FR",
+      "gps": {
+        "lat": 48.8566,
+        "lng": 2.3522
+      },
+      "tags": [
+        "france",
+        "europe"
+      ]
+    },
+    {
+      "id": "marseille",
+      "name": "Marseille",
+      "countryCode": "FR",
+      "gps": {
+        "lat": 43.2965,
+        "lng": 5.3698
+      },
+      "tags": [
+        "france",
+        "europe"
+      ]
+    },
+    {
+      "id": "monaco",
+      "name": "Monaco",
+      "countryCode": "MC",
+      "gps": {
+        "lat": 43.7384,
+        "lng": 7.4246
+      },
+      "tags": [
+        "monaco",
+        "europe"
+      ]
+    },
+    {
+      "id": "oslo",
+      "name": "Oslo",
+      "countryCode": "NO",
+      "gps": {
+        "lat": 59.9139,
+        "lng": 10.7522
+      },
+      "tags": [
+        "norway",
+        "europe"
+      ]
+    },
+    {
+      "id": "reykjavik",
+      "name": "Reykjavik",
+      "countryCode": "IS",
+      "gps": {
+        "lat": 64.1466,
+        "lng": -21.9426
+      },
+      "tags": [
+        "iceland",
+        "placeholder"
+      ]
+    },
+    {
+      "id": "berlin",
+      "name": "Berlin",
+      "countryCode": "DE",
+      "gps": {
+        "lat": 52.52,
+        "lng": 13.405
+      },
+      "tags": [
+        "germany",
+        "placeholder"
+      ]
+    },
+    {
+      "id": "munich",
+      "name": "Munich",
+      "countryCode": "DE",
+      "gps": {
+        "lat": 48.1351,
+        "lng": 11.582
+      },
+      "tags": [
+        "germany",
+        "europe"
+      ]
+    },
+    {
+      "id": "garmisch-partenkirchen",
+      "name": "Garmisch-Partenkirchen",
+      "countryCode": "DE",
+      "gps": {
+        "lat": 47.4917,
+        "lng": 11.0955
+      },
+      "tags": [
+        "germany",
+        "europe"
+      ]
+    },
+    {
+      "id": "vienna",
+      "name": "Vienna",
+      "countryCode": "AT",
+      "gps": {
+        "lat": 48.2082,
+        "lng": 16.3738
+      },
+      "tags": [
+        "austria",
+        "placeholder"
+      ]
+    },
+    {
+      "id": "tokyo",
+      "name": "Tokyo",
+      "countryCode": "JP",
+      "gps": {
+        "lat": 35.6762,
+        "lng": 139.6503
+      },
+      "tags": [
+        "japan",
+        "placeholder"
+      ]
+    },
+    {
+      "id": "dubrovnik",
+      "name": "Dubrovnik",
+      "countryCode": "HR",
+      "gps": {
+        "lat": 42.6507,
+        "lng": 18.0944
+      },
+      "tags": [
+        "croatia",
+        "europe"
+      ]
+    },
+    {
+      "id": "vientiane",
+      "name": "Vientiane",
+      "countryCode": "LA",
+      "gps": {
+        "lat": 17.9757,
+        "lng": 102.6331
+      },
+      "tags": [
+        "laos",
+        "placeholder"
+      ]
+    },
+    {
+      "id": "luang-prabang",
+      "name": "Luang Prabang",
+      "countryCode": "LA",
+      "gps": {
+        "lat": 19.8833,
+        "lng": 102.1333
+      },
+      "tags": [
+        "laos",
+        "asia"
+      ]
+    },
+    {
+      "id": "phonsavan",
+      "name": "Phonsavan",
+      "countryCode": "LA",
+      "gps": {
+        "lat": 19.449,
+        "lng": 103.191
+      },
+      "tags": [
+        "laos",
+        "asia"
+      ]
+    },
+    {
+      "id": "bangkok",
+      "name": "Bangkok",
+      "countryCode": "TH",
+      "gps": {
+        "lat": 13.7563,
+        "lng": 100.5018
+      },
+      "tags": [
+        "thailand",
+        "asia"
+      ]
+    },
+    {
+      "id": "koh-tao",
+      "name": "Koh Tao",
+      "countryCode": "TH",
+      "gps": {
+        "lat": 10.0956,
+        "lng": 99.8406
+      },
+      "tags": [
+        "thailand",
+        "asia"
+      ]
+    },
+    {
+      "id": "ko-pha-ngan",
+      "name": "Ko Pha Ngan",
+      "countryCode": "TH",
+      "gps": {
+        "lat": 9.7319,
+        "lng": 99.9952
+      },
+      "tags": [
+        "thailand",
+        "asia"
+      ]
+    },
+    {
+      "id": "chiang-mai",
+      "name": "Chiang Mai",
+      "countryCode": "TH",
+      "gps": {
+        "lat": 18.7883,
+        "lng": 98.9853
+      },
+      "tags": [
+        "thailand",
+        "asia"
+      ]
+    },
+    {
+      "id": "bogota",
+      "name": "Bogota",
+      "countryCode": "CO",
+      "gps": {
+        "lat": 4.711,
+        "lng": -74.0721
+      },
+      "tags": [
+        "colombia",
+        "placeholder"
+      ]
+    },
+    {
+      "id": "managua",
+      "name": "Managua",
+      "countryCode": "NI",
+      "gps": {
+        "lat": 12.114,
+        "lng": -86.2362
+      },
+      "tags": [
+        "nicaragua",
+        "placeholder"
+      ]
+    },
+    {
+      "id": "san-jose-costa-rica",
+      "name": "San Jose",
+      "countryCode": "CR",
+      "gps": {
+        "lat": 9.9281,
+        "lng": -84.0907
+      },
+      "tags": [
+        "costa-rica",
+        "placeholder"
+      ]
+    }
+  ]
+}

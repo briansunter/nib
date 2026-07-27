@@ -1,0 +1,1078 @@
+[
+  {
+    "slug": "3d-me",
+    "title": "3D Me: 3D Selfie",
+    "description": "I had myself body-scanned at a 3D-printing kiosk in San Francisco, then loaded the resulting mesh into a three.js scene so you can spin it around in the browser.",
+    "date": "2019-06-24T04:07:00.000Z",
+    "tags": [
+      "JavaScript",
+      "three.js",
+      "WebGL",
+      "3D",
+      "Photogrammetry"
+    ],
+    "featured": false,
+    "projectUrl": "https://briansunter.github.io/3D-me/",
+    "github": "https://github.com/briansunter/3D-me",
+    "cover": "/site-assets/3d-me-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>3D Me is an interactive viewer for a real, full-body 3D scan of myself. The mesh came from a body-scan kiosk; this project loads the exported model into a three.js scene so anyone can pan, zoom, and orbit around it in the browser. It&#39;s the same asset I had printed as a miniature figurine, just rendered live in WebGL instead of resin.</p>\n<h2>Background</h2>\n<p>A new store called Pocket Me opened in San Francisco&#39;s Fisherman&#39;s Wharf with a single pitch: step into a booth, get scanned by a ring of cameras, and walk away with a realistic miniature 3D-printed figurine of yourself. The end product looks like a custom action figure.</p>\n<p>What got me through the door wasn&#39;t the figurine; it was the source asset. A booth like that produces a high-resolution, fully-textured mesh of a human body, and once I had a copy I wanted to use it for more than a printed statue. Specifically, I wanted to drop it into the browser as a real-time 3D object, and to have something on hand for game and AR experiments.</p>\n<h2>What it does</h2>\n<ul>\n<li>Loads my scanned mesh into a three.js scene</li>\n<li>Orbit controls so you can rotate, pan, and zoom around the model</li>\n<li>Lighting set up so the textured surface reads cleanly from any angle</li>\n<li>Runs entirely in the browser: no plugin, no install, no server-side rendering</li>\n<li>Deployed to GitHub Pages, so the demo URL is the same as the source repo</li>\n</ul>\n<h2>How the scan was captured</h2>\n<p>The Pocket Me booth uses a multi-camera photogrammetry rig: dozens of synchronized cameras fire at once to capture the subject from every angle, and the software stitches those photos into a single textured mesh. The output is a watertight model with a baked color texture: good enough to print at miniature scale, and good enough to render in a browser without any cleanup.</p>\n<h2>Technology</h2>\n<ul>\n<li><a href=\"https://threejs.org/\">three.js</a> for the WebGL scene, camera, and orbit controls</li>\n<li>A standard glTF / OBJ-style mesh + texture as the input asset</li>\n<li>Plain JavaScript, no framework; the whole thing is small enough that a render loop and a model loader is most of the source</li>\n<li>Built and deployed to GitHub Pages out of the <code>docs/</code> folder</li>\n</ul>\n<h2>Running it locally</h2>\n<pre><code class=\"language-bash\">npm start              # dev server\nnpm run build          # production build\nnpm run build:pages    # build into docs/ for GitHub Pages\n</code></pre>\n<h2>Why I keep it around</h2>\n<p>A textured human-body mesh is a surprisingly useful prop. I&#39;ve reused this asset in three.js sketches, AR experiments, and as a stand-in character for game prototypes. The viewer page is mostly a way to show off what the booth produces and to keep the model loadable from a permanent URL, much easier than passing around a multi-hundred-megabyte file.</p>\n"
+  },
+  {
+    "slug": "anki-ai",
+    "title": "Anki AI",
+    "description": "An MCP server that exposes 45 Anki tools to Claude. Generate cards from text, audit decks, reschedule failures, and analyse your review history.",
+    "date": "2025-09-03T09:59:22.000Z",
+    "tags": [
+      "TypeScript",
+      "MCP",
+      "Claude",
+      "Anki",
+      "Spaced Repetition"
+    ],
+    "featured": false,
+    "projectUrl": "https://www.npmjs.com/package/anki-ai",
+    "github": "https://github.com/briansunter/anki-ai",
+    "cover": "/site-assets/anki-ai-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Anki AI is an MCP server that wraps Anki&#39;s local API and surfaces it to Claude as 45 tools, covering everything from card creation to deck stats. The point is to use Claude as the front door for the parts of Anki that are tedious in the desktop app: bulk tag rewrites, generating cloze cards from a PDF, finding the cards you keep failing.</p>\n<p><img src=\"/site-assets/anki-ai-explainer.png\" alt=\"Anki AI tool capabilities diagram\"></p>\n<h2>Features</h2>\n<ul>\n<li>45 tools covering cards, notes, decks, models, media, stats, and the Anki UI</li>\n<li>Generate cards from any text, PDF, or webpage</li>\n<li>Reschedule failures and tweak intervals based on your history</li>\n<li>Spot duplicates, leeches, and stale cards</li>\n<li>Bulk tag/move/update operations with auto-batching for large decks</li>\n</ul>\n<h2>What You Can Do</h2>\n<h3>Create Learning Content</h3>\n<ul>\n<li>Generate flashcards from PDFs, articles, or pasted text</li>\n<li>Cloze deletions for terminology</li>\n<li>Image-occlusion cards from diagrams</li>\n<li>Cards with audio for language learning</li>\n</ul>\n<h3>Review Management</h3>\n<ul>\n<li>Find difficult cards and analyse why they&#39;re hard</li>\n<li>Reschedule failed cards based on actual performance</li>\n<li>Stretch intervals on cards you clearly know</li>\n<li>Detect and merge duplicates</li>\n</ul>\n<h3>Mnemonics &amp; Stories</h3>\n<ul>\n<li>Generate stories that use today&#39;s due vocabulary</li>\n<li>Mnemonic prompts for formulas</li>\n<li>Memory-palace scaffolding</li>\n<li>Example sentences in context</li>\n</ul>\n<h3>Analytics</h3>\n<ul>\n<li>Look at review patterns over time</li>\n<li>Predict which cards are about to lapse</li>\n<li>Surface knowledge gaps by tag or deck</li>\n<li>Track progress on a per-subject basis</li>\n</ul>\n<h2>Tool Categories</h2>\n<ul>\n<li><strong>Cards</strong> (15): query, info, state, queue management</li>\n<li><strong>Notes</strong> (10): CRUD and tag management</li>\n<li><strong>Decks</strong> (7): create, delete, configure, stats</li>\n<li><strong>Models</strong> (5): query and create card templates</li>\n<li><strong>Media</strong> (3): store and retrieve files</li>\n<li><strong>Stats &amp; GUI</strong> (5): analytics and interface control</li>\n</ul>\n<h2>Installation</h2>\n<p>Requires Anki running locally with the Anki-Connect add-on (code: <code>2055492159</code>).</p>\n<pre><code class=\"language-json\">{\n  &quot;mcpServers&quot;: {\n    &quot;anki&quot;: {\n      &quot;command&quot;: &quot;npx&quot;,\n      &quot;args&quot;: [&quot;anki-ai&quot;]\n    }\n  }\n}\n</code></pre>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript MCP server with Zod-validated input</li>\n<li>Anki-Connect API</li>\n<li>Pagination and auto-batching for large decks</li>\n<li>Distributed via npm / <code>bunx</code></li>\n</ul>\n"
+  },
+  {
+    "slug": "arcfetch",
+    "title": "ArcFetch",
+    "description": "Fetch a URL, get clean Markdown back. Plain HTTP first, Playwright fallback for JS-heavy pages, and quality gates that throw out paywalls and login walls before they reach you.",
+    "date": "2025-12-25T06:23:56.000Z",
+    "tags": [
+      "TypeScript",
+      "CLI",
+      "MCP",
+      "AI",
+      "Web Scraping"
+    ],
+    "featured": false,
+    "github": "https://github.com/briansunter/arcfetch",
+    "cover": "/site-assets/arcfetch-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>ArcFetch is a URL-to-Markdown tool I built because every AI workflow I had eventually needed &quot;give me the readable text from this page&quot; and every existing option either choked on JavaScript-rendered sites, returned a wall of nav and ads, or silently handed back a paywall stub. It runs Mozilla Readability under plain HTTP first, retries with a stealthed Playwright browser when that fails, and rejects boilerplate, paywalls, and login walls before returning anything.</p>\n<h2>How It Works</h2>\n<p><img src=\"/site-assets/arcfetch-explainer.png\" alt=\"ArcFetch pipeline diagram\"></p>\n<p>Four stages in order: fetch, extract, quality-gate, output. Plain HTTP runs first because it&#39;s fast and free; if it returns blank or low-quality content, ArcFetch retries with Playwright in stealth mode. The quality gates score each result 0–100 and reject boilerplate, paywalls, login walls, and error pages before anything is saved.</p>\n<h2>Features</h2>\n<ul>\n<li>HTTP first, automatic Playwright fallback for JS-heavy sites</li>\n<li>Quality scoring (0–100) with detection for boilerplate, login walls, paywalls, and error pages</li>\n<li>Anti-bot escape hatches: stealth plugin, viewport / timezone / locale rotation, realistic headers</li>\n<li>Markdown output via Mozilla Readability + Turndown (typically 90–95% smaller than the raw HTML)</li>\n<li>Cache-to-temp workflow: stash a fetch in a temp folder, promote to <code>docs/</code> once you&#39;ve checked it</li>\n<li>Link extraction so you can batch-fetch every link on a page you&#39;ve already cached</li>\n<li>Available as both a CLI and an MCP server (6 tools)</li>\n<li>Output as plain text, JSON, file path, or summary</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript on Bun</li>\n<li>Mozilla Readability for content extraction</li>\n<li>Playwright (loaded only when the fallback fires)</li>\n<li>Turndown for HTML-to-Markdown conversion</li>\n</ul>\n"
+  },
+  {
+    "slug": "art",
+    "title": "Art Gallery",
+    "description": "A gallery of studies and finished pieces across pen and ink, charcoal, watercolor, graphite, and digital work, organized by series with a full-screen lightbox.",
+    "date": "2024-08-02T05:21:21.000Z",
+    "tags": [
+      "Art",
+      "Drawing",
+      "Astro",
+      "TypeScript",
+      "PhotoSwipe"
+    ],
+    "featured": false,
+    "projectUrl": "https://briansunter.com/art",
+    "cover": "/site-assets/art-gallery-hero.jpg",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>A gallery of my drawings and paintings, grouped into series by medium and theme. Each piece carries its own metadata (medium, surface, dimensions, year), so the gallery doubles as a record of practice over time.</p>\n<h2>Features</h2>\n<ul>\n<li>Series organized by medium and theme</li>\n<li>Full-screen lightbox via PhotoSwipe</li>\n<li>Per-piece metadata (medium, surface, dimensions, year)</li>\n<li>Filter by tag and medium</li>\n<li>Grid and list views</li>\n<li>Drafts hidden in production</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>YAML files for artwork metadata</li>\n<li>PhotoSwipe for the lightbox</li>\n<li>Astro content collections for type-safe loading</li>\n<li>Tailwind CSS, TypeScript</li>\n</ul>\n"
+  },
+  {
+    "slug": "audio",
+    "title": "Audiobook Player",
+    "description": "A cross-platform audiobook player built with Tauri, Rust, and React. Streams from Google Drive, plays offline, syncs progress, and runs on macOS, Windows, Linux, and iOS.",
+    "date": "2026-03-16T03:02:53.000Z",
+    "tags": [
+      "Tauri",
+      "Rust",
+      "TypeScript",
+      "React",
+      "iOS",
+      "Audiobooks",
+      "SQLite"
+    ],
+    "featured": false,
+    "cover": "/site-assets/audio-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Audiobook Player is a desktop and iOS audiobook app built with Tauri 2. It connects to Google Drive, detects audiobook folders, downloads chapters for offline listening, and plays them back with the controls you&#39;d expect from a dedicated reader: speed control, skip and seek, bookmarks, sleep timer, and a &quot;continue listening&quot; shelf that picks up exactly where you left off.</p>\n<p>I built it because I wanted to listen to my own audiobook collection without uploading it to a third-party service. The files live in a Drive folder I already pay for; this app is the playback layer on top.</p>\n<p><img src=\"/site-assets/audio-now-playing.webp\" alt=\"Audiobook Player now-playing screen on iOS\"></p>\n<h2>Features</h2>\n<h3>Google Drive integration</h3>\n<ul>\n<li>OAuth 2.0 with PKCE, no client secret stored on device</li>\n<li>Browse Drive folders, mark favorites for quick access</li>\n<li>Auto-detect audiobooks from folder structure, including chapter ordering</li>\n<li>Pull metadata from MP3 ID3 tags or MP4 atoms when available</li>\n<li>Cover art from a Drive image, the audio file itself, or picked manually</li>\n</ul>\n<h3>Library management</h3>\n<ul>\n<li>Local SQLite database for books, chapters, bookmarks, and progress</li>\n<li>Sort by title, author, recently added, or recently played</li>\n<li>Search across the library</li>\n<li>Edit title, author, and narrator after import</li>\n<li>A book wizard walks through detection, metadata, and cover selection on add</li>\n</ul>\n<h3>Playback</h3>\n<ul>\n<li>Symphonia decoding for MP3, AAC, and ISO MP4 / M4B containers</li>\n<li>Variable speed playback with a curated set of speed presets</li>\n<li>Skip forward / back, fine seek, and gapless chapter transitions</li>\n<li>Bookmarks with timestamps and notes</li>\n<li>Sleep timer</li>\n<li>Native iOS audio session and lock-screen controls via a Swift bridge</li>\n</ul>\n<h3>Offline downloads</h3>\n<ul>\n<li>Per-chapter downloads with progress events streamed to the UI</li>\n<li>Configurable cache size with eviction</li>\n<li>Clear individual chapters, whole books, or reset progress without re-downloading</li>\n</ul>\n<h3>Cross-platform</h3>\n<p>The same React UI runs on every target. The Rust core handles Drive, the database, the cache, and audio decoding; on iOS, a Swift library plugs into the system audio APIs so playback continues in the background and on the lock screen.</p>\n<h2>Technology stack</h2>\n<ul>\n<li>Tauri 2 with Rust on the backend, React 19 + TypeScript on the frontend</li>\n<li>Vite, Tailwind CSS v4, shadcn/ui, Radix primitives, lucide-react icons</li>\n<li><code>rusqlite</code> (bundled SQLite) for storage, <code>symphonia</code> for decoding, <code>rodio</code> for desktop output</li>\n<li><code>oauth2</code> crate with PKCE, <code>tauri-plugin-deep-link</code> and <code>tauri-plugin-web-auth</code> for the Drive auth flow</li>\n<li>Swift bridge via <code>swift-rs</code> for iOS-specific audio session handling</li>\n<li>Targets macOS, Windows, Linux, and iOS 15+</li>\n</ul>\n"
+  },
+  {
+    "slug": "bevy-agent",
+    "title": "Bevy Agent",
+    "description": "A Bevy plugin for driving a game as a deterministic simulation that an AI agent can step, inspect, snapshot, restore, replay, and branch.",
+    "date": "2026-05-13T00:00:00.000Z",
+    "tags": [
+      "Rust",
+      "Bevy",
+      "Bevy Plugin",
+      "ECS",
+      "Reinforcement Learning",
+      "Agents",
+      "Simulation"
+    ],
+    "featured": false,
+    "cover": "/site-assets/bevy-agent-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Bevy Agent is a Bevy plugin that turns a game into a deterministic simulation an external agent can drive tick-by-tick. Drop it into your <code>App</code>, register your gameplay state, and the plugin exposes <code>reset</code>, <code>step</code>, <code>snapshot</code>, <code>restore</code>, and <code>branch</code> over an in-process API, stdio JSON-RPC, HTTP, or WebSocket.</p>\n<p>I built it to make Bevy games usable as RL environments and as reproducible test harnesses, without leaving the regular Bevy plugin and ECS model.</p>\n<p><img src=\"/site-assets/bevy-agent-diagram.webp\" alt=\"Bevy Agent architecture diagram\"></p>\n<h2>Features</h2>\n<ul>\n<li>Deterministic stepping via <code>SimClock</code> + a dedicated <code>AgentTick</code> schedule</li>\n<li>Tier-1 snapshots of every registered resource and component, keyed by <code>StableEntityId</code></li>\n<li>Action logs, checkpoint indexes, and timeline branches for replay and what-if exploration</li>\n<li>Optional headless PNG capture with tick/frame/size metadata</li>\n<li>JSON-RPC over in-process, stdio, HTTP <code>POST /rpc</code>, or WebSocket</li>\n<li>Rust API, an <code>agentctl</code> HTTP CLI, and a stdlib-only Python client</li>\n</ul>\n<h2>Crates</h2>\n<ul>\n<li><code>bevy_agent_core</code>: schedules, <code>SimClock</code>, domain actions, input frames, observations, rewards, terminal state, checksums</li>\n<li><code>bevy_agent_runner</code>: owns the <code>App</code>, exposes the control API and visual capture hooks</li>\n<li><code>bevy_agent_snapshot</code>: snapshots of registered resources and components with stable entity IDs</li>\n<li><code>bevy_agent_replay</code>: action logs, checkpoint indexes, timeline branches</li>\n<li><code>bevy_agent_remote</code>: JSON-RPC bridge with capability and session-token checks</li>\n<li><code>sample_platformer</code>: a headless reference game wired end-to-end into <code>AgentTick</code></li>\n</ul>\n<h2>Quick Start</h2>\n<pre><code class=\"language-rust\">use bevy_agent_core::AgentAction;\nuse bevy_agent_runner::{AgentApp, ResetOptions};\n\nlet mut env = AgentApp::new(sample_platformer::build_headless_app);\nlet obs0 = env.reset(ResetOptions::default())?;\nlet step1 = env.step(AgentAction::Move { x: 1.0, y: 0.0 })?;\nlet snapshot = env.snapshot()?;\nenv.step(AgentAction::Jump)?;\nenv.restore(snapshot.snapshot_id)?;\nlet alternate = env.step(AgentAction::Noop)?;\n</code></pre>\n<p>Drive it from Python over HTTP:</p>\n<pre><code class=\"language-python\">from bevy_agent_client import AgentClient\n\nenv = AgentClient(&quot;http://127.0.0.1:4000/rpc&quot;)\nobs = env.reset(seed=42)\nstep = env.step({&quot;type&quot;: &quot;Move&quot;, &quot;x&quot;: 1.0, &quot;y&quot;: 0.0})\nsnapshot = env.snapshot()\nenv.restore(snapshot[&quot;snapshot_id&quot;])\n</code></pre>\n<h2>Determinism Contract</h2>\n<p>Gameplay systems that want replayable behavior should:</p>\n<ul>\n<li>run in <code>AgentTick</code>, not the ordinary frame <code>Update</code></li>\n<li>read <code>SimClock</code>, not wall-clock <code>Time</code></li>\n<li>consume <code>CurrentInputFrame&lt;AgentAction&gt;</code>, not keyboard or mouse state directly</li>\n<li>use <code>StableEntityId</code> for semantic entity identity</li>\n<li>register all gameplay state with <code>SnapshotAppExt</code></li>\n<li>keep rendering and UI systems read-only with respect to authoritative state</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>Rust 2024 edition, Bevy 0.18</li>\n<li>Custom <code>AgentTick</code> schedule for deterministic stepping</li>\n<li>JSON-RPC transports: in-process, stdio, HTTP, WebSocket</li>\n<li><code>image</code> crate for PNG capture</li>\n<li>Python client built on the standard library, no extra deps</li>\n</ul>\n"
+  },
+  {
+    "slug": "blackwater-rift",
+    "title": "Blackwater Rift",
+    "description": "A monochrome top-down shooter for the original Game Boy, with a browser shell that runs the same ROM on desktop and mobile.",
+    "date": "2026-05-11T00:00:00.000Z",
+    "tags": [
+      "Game Boy",
+      "GBDK",
+      "C",
+      "JavaScript",
+      "Vite"
+    ],
+    "featured": false,
+    "projectUrl": "https://briansunter.github.io/blackwater-rift/",
+    "github": "https://github.com/briansunter/blackwater-rift",
+    "cover": "/site-assets/blackwater-rift-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Blackwater Rift is a small top-down shooter built as a real Game Boy ROM and wrapped in a browser player. The browser version uses the same <code>.gb</code> file, so the page is a playable shell around the hardware-targeted build rather than a remake.</p>\n<p><img src=\"/site-assets/blackwater-rift-hero.webp\" alt=\"Blackwater Rift running in the browser Game Boy shell\"></p>\n<p>The game is designed around compact arcade loops: readable enemy waves, charge shots, bombs, pickups, stage bosses, and a password flow that works on original hardware.</p>\n<p><img src=\"/site-assets/blackwater-rift-title.webp\" alt=\"Blackwater Rift title screen in the browser Game Boy shell\"></p>\n<p>The screenshots below come from the project repo&#39;s generated screenshot set, which makes it easier to compare title, gameplay, and stage coverage as the ROM changes.</p>\n<p><img src=\"/site-assets/blackwater-rift-contact-sheet.webp\" alt=\"Contact sheet of Blackwater Rift stages and bosses\"></p>\n<h2>Features</h2>\n<ul>\n<li>Monochrome top-down shooter targeting the original Game Boy</li>\n<li>Browser shell for desktop keyboard play and mobile touch controls</li>\n<li>Six stages with enemy waves, bosses, pickups, bombs, and charge shots</li>\n<li>Password and save flow backed by SRAM on the ROM side and local storage in the browser shell</li>\n<li>Host-side tests for portable game logic</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>GBDK-2020 and SDCC for the ROM build</li>\n<li>C99 for gameplay logic</li>\n<li>Vite for the browser shell</li>\n<li><code>gameboy-emulator</code> for web playback</li>\n<li>Shell scripts and generated screenshots for release checks</li>\n</ul>\n"
+  },
+  {
+    "slug": "blogseq",
+    "title": "BlogSeq",
+    "description": "A Logseq plugin that exports a page to clean Markdown and bundles every referenced image and asset alongside it. Works as a drop-in for Jekyll, Hugo, Astro, etc.",
+    "date": "2025-09-01T02:33:16.000Z",
+    "tags": [
+      "TypeScript",
+      "React",
+      "Logseq",
+      "Plugin",
+      "Markdown"
+    ],
+    "featured": false,
+    "github": "https://github.com/briansunter/blogseq",
+    "cover": "/site-assets/blogseq-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>BlogSeq exports a Logseq page to portable Markdown. Properties become YAML frontmatter, block and page references resolve to readable text, and every image referenced anywhere in the tree (including UUID-based references buried in properties) is found and bundled into an <code>/assets/</code> folder, with all paths rewritten to point at it.</p>\n<p>I built it because publishing from Logseq used to mean copy-pasting Markdown and then chasing down broken images by hand. BlogSeq makes the export hand-off zero-touch.</p>\n<h2>Features</h2>\n<h3>Asset bundling</h3>\n<p>The thing that took the most work to get right:</p>\n<ul>\n<li>Walks blocks, properties, and nested references for image links</li>\n<li>Resolves UUID-based asset references to real files on disk</li>\n<li>Drops everything into a single <code>/assets/</code> directory</li>\n<li>Rewrites links in the Markdown to relative paths</li>\n</ul>\n<h3>YAML frontmatter</h3>\n<p>Logseq page properties come out as standard YAML frontmatter. Slot it straight into Jekyll, Hugo, Astro, or anything else that expects frontmatter at the top of a file.</p>\n<h3>Reference resolution</h3>\n<ul>\n<li><code>((block-references))</code> resolved to the referenced block&#39;s text</li>\n<li><code>[[page links]]</code> rendered as readable text</li>\n<li>Nested and recursive references handled</li>\n<li>Image references-by-UUID inside properties resolved</li>\n</ul>\n<h3>Live preview</h3>\n<p>See the rendered Markdown before exporting.</p>\n<h2>Export Options</h2>\n<ul>\n<li>Copy to clipboard</li>\n<li>Download a single <code>.md</code></li>\n<li>Download a <code>.zip</code> with the Markdown plus every asset</li>\n</ul>\n<h2>Configuration</h2>\n<ul>\n<li>Page name as H1</li>\n<li>Flatten blocks into paragraphs</li>\n<li>Include / exclude properties</li>\n<li>Preserve or strip Logseq-specific markup</li>\n<li>Resolve or keep block / page references</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>React 18 + TypeScript</li>\n<li>Vite</li>\n<li>Tailwind CSS</li>\n<li>JSZip for the bundle</li>\n<li>Logseq Plugin API</li>\n</ul>\n"
+  },
+  {
+    "slug": "c-ecs",
+    "title": "c-ecs",
+    "description": "A tiny single-header C99 entity-component-system for small games and embedded targets, with fixed capacities and no allocation.",
+    "date": "2026-05-11T00:00:00.000Z",
+    "tags": [
+      "C",
+      "ECS",
+      "Game Development",
+      "Embedded"
+    ],
+    "featured": false,
+    "cover": "/site-assets/cecs-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p><code>c-ecs</code> is a compact entity-component-system library for small games, toys, and embedded-style programs where allocation and runtime machinery need to stay predictable.</p>\n<p>It ships as a single C99 header, uses caller-owned memory, and leans on compile-time capacities instead of heap allocation. The goal is to make the common ECS workflow feel straightforward without bringing in a framework-sized dependency.</p>\n<h2>Features</h2>\n<ul>\n<li>Drop-in <code>cecs.h</code> single-header library</li>\n<li>No heap allocation or external dependencies</li>\n<li>Compile-time capacities for entities, components, resources, and systems</li>\n<li>Type-aware macros for component storage and queries</li>\n<li>Inline query iteration without callback indirection</li>\n<li>Small presets for constrained targets</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>C99</li>\n<li>Make-based test and benchmark targets</li>\n<li>Nix flake for reproducible development shells</li>\n</ul>\n"
+  },
+  {
+    "slug": "caliber",
+    "title": "Caliber",
+    "description": "A web reader for your Calibre library. Cursor pagination and virtualised lists keep it fast on million-book collections; EPUB and PDF readers are built in.",
+    "date": "2026-03-04T03:28:14.000Z",
+    "tags": [
+      "TypeScript",
+      "Bun",
+      "React",
+      "SQLite",
+      "TanStack",
+      "Tailwind CSS",
+      "MCP"
+    ],
+    "featured": false,
+    "github": "https://github.com/briansunter/caliber",
+    "cover": "/site-assets/caliber-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Caliber is a small web app that points at your existing <a href=\"https://calibre-ebook.com/\">Calibre</a> library (same SQLite database, same on-disk layout) and gives you a fast browser UI on top of it. The Calibre desktop app starts to drag once your library gets large; Caliber uses cursor-based pagination instead of <code>OFFSET</code> queries and virtualises the list view so scrolling stays smooth even on million-book collections. It also has built-in EPUB and PDF readers, so you can actually read in the browser instead of downloading first.</p>\n<h2>Features</h2>\n<ul>\n<li>Cursor pagination instead of <code>OFFSET</code> for speed at any library size</li>\n<li>Built-in EPUB reader (epub.js) and PDF viewer (pdf.js)</li>\n<li>Download any format Calibre has stored</li>\n<li>Virtualised list rendering with TanStack Virtual</li>\n<li>CLI for searching, browsing, and downloading from the terminal</li>\n<li>MCP server so Claude can search the library</li>\n<li>REST API: paginated listing, search, covers, downloads, stats</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>Bun for runtime, bundling, and SQLite (<code>bun:sqlite</code>)</li>\n<li>React 19 with TanStack Router, Query, Virtual, and Table</li>\n<li>Tailwind CSS v4 with shadcn/ui</li>\n<li>epub.js and pdf.js for in-browser reading</li>\n<li>Biome for lint and format</li>\n</ul>\n"
+  },
+  {
+    "slug": "chunk-audio",
+    "title": "Chunk Audio",
+    "description": "Chunk long-form audio into manageable segments for easier review, search, and reuse.",
+    "date": "2023-07-22T01:55:35.000Z",
+    "tags": [
+      "Audio",
+      "TypeScript",
+      "GitHub"
+    ],
+    "featured": false,
+    "projectUrl": "https://chunkaudio.briansunter.com",
+    "github": "https://github.com/briansunter/chunk-audio",
+    "cover": "/site-assets/chunk-audio-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Chunk Audio is a utility project focused on breaking longer audio files into smaller chunks so they are easier to process, inspect, and work with downstream.</p>\n<h2>Why I Built It</h2>\n<p>When working with long recordings, it’s often faster to split source audio into predictable segments before transcription, analysis, or editing. Chunk Audio packages that workflow into a single repository.</p>\n<h2>Use Cases</h2>\n<ul>\n<li>Preparing long recordings for transcription pipelines</li>\n<li>Creating smaller files for iterative AI processing</li>\n<li>Simplifying manual review of large audio sources</li>\n<li>Building repeatable batch workflows for audio preprocessing</li>\n</ul>\n<h2>Repository</h2>\n<ul>\n<li>GitHub: <a href=\"https://github.com/briansunter/chunk-audio\">https://github.com/briansunter/chunk-audio</a></li>\n</ul>\n"
+  },
+  {
+    "slug": "connectfour",
+    "title": "Connect Four",
+    "description": "Real-time multiplayer Connect Four with a 3D board. Create a room, share the link, drop pieces.",
+    "date": "2025-02-13T04:27:25.000Z",
+    "tags": [
+      "React",
+      "TypeScript",
+      "Socket.io",
+      "Three.js",
+      "PostgreSQL"
+    ],
+    "featured": false,
+    "projectUrl": "https://connectfour.briansunter.com",
+    "cover": "/site-assets/connectfour-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>A multiplayer Connect Four game I built to learn React Three Fiber and shore up my real-time stack. Players create rooms, share invite codes, and play head-to-head; the board is rendered in 3D so pieces actually drop into the slots.</p>\n<h2>Features</h2>\n<ul>\n<li>Real-time play over WebSockets</li>\n<li>Rooms with shareable invite codes</li>\n<li>3D board rendered with React Three Fiber</li>\n<li>Animated piece drops and win highlight</li>\n<li>Mobile-friendly layout</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>React + TypeScript on the frontend</li>\n<li>Socket.io for the game channel</li>\n<li>Express backend with sessions</li>\n<li>PostgreSQL via Drizzle ORM</li>\n<li>Redis for Socket.io scaling across processes</li>\n<li>Docker Compose for deployment</li>\n</ul>\n<h2>How It Works</h2>\n<p>Players join a room with a short code. Game state lives on the server; every move broadcasts to the room over Socket.io and re-renders for both players. The 3D board is the same React Three Fiber scene on both sides, just with mirrored camera positions.</p>\n"
+  },
+  {
+    "slug": "convocards",
+    "title": "Convo Cards",
+    "description": "Conversation-starter cards for dinners, parties, and road trips. Swipe through prompts the way you'd shuffle a real deck.",
+    "date": "2024-07-25T09:12:01.000Z",
+    "tags": [
+      "Next.js",
+      "TypeScript",
+      "Prisma",
+      "Stripe",
+      "OpenTelemetry"
+    ],
+    "featured": true,
+    "projectUrl": "https://convo.cards",
+    "cover": "/site-assets/convocards-hero.png",
+    "coverFile": "../assets/images/curated/convocards.png",
+    "bodyHtml": "<h2>Overview</h2>\n<p>A web app version of the deck-of-question-cards format you&#39;ve seen at dinner parties. Swipe to draw the next prompt, save the ones you like, and buy themed packs if you want more. It&#39;s useful for getting past small talk without it feeling forced.</p>\n<h2>Features</h2>\n<ul>\n<li>Curated prompts grouped into decks</li>\n<li>Swipe through cards like a real deck</li>\n<li>Group play across multiple devices</li>\n<li>Bookmark cards to a saved list</li>\n<li>Premium card packs via Stripe</li>\n<li>Mobile-first layout</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>Next.js 14 (App Router)</li>\n<li>Prisma ORM</li>\n<li>NextAuth</li>\n<li>Stripe</li>\n<li>OpenTelemetry for tracing</li>\n<li>Tailwind CSS + DaisyUI</li>\n</ul>\n"
+  },
+  {
+    "slug": "cooklang-parser",
+    "title": "Cooklang Parser",
+    "description": "A TypeScript parser for Cooklang, the plain-text recipe markup language. Turns .cook files into structured recipe data.",
+    "date": "2022-03-16T19:50:10.000Z",
+    "tags": [
+      "TypeScript",
+      "Vitest",
+      "npm"
+    ],
+    "featured": false,
+    "github": "https://github.com/briansunter/cooklang-parse",
+    "cover": "/site-assets/cooklang-parser-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>A TypeScript implementation of the Cooklang spec. Cooklang is a plain-text format for recipes (ingredients, cookware, and timers are marked inline with a light syntax), and this parser turns a <code>.cook</code> file into a structured object you can render, scale, or feed into a shopping-list builder.</p>\n<p>I now use it to power the <a href=\"/recipes\">recipe section of this site</a>.</p>\n<h2>Features</h2>\n<ul>\n<li>Full spec compliance (ingredients, cookware, timers, metadata)</li>\n<li>Typed output (full TypeScript definitions)</li>\n<li>Parses metadata blocks (servings, prep time, source, etc.)</li>\n<li>Step-by-step parsing with ingredients linked to the steps that use them</li>\n</ul>\n<h2>Use Cases</h2>\n<ul>\n<li>Recipe sites and apps</li>\n<li>Meal planners</li>\n<li>Shopping-list generators</li>\n<li>Recipe scaling and unit conversion</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript</li>\n<li>Vitest</li>\n<li>Published to npm</li>\n</ul>\n<h2>Links</h2>\n<ul>\n<li><a href=\"https://cooklang.org\">Cooklang Specification</a></li>\n</ul>\n"
+  },
+  {
+    "slug": "coolrss",
+    "title": "CoolRSS",
+    "description": "A local-first RSS reader and read-it-later desktop app (Tauri 2 shell, Rust core, React frontend, SQLite with FTS5 search, and a CLI that shares the same business logic).",
+    "date": "2026-04-08T17:04:46.000Z",
+    "tags": [
+      "Rust",
+      "Tauri",
+      "React",
+      "TypeScript",
+      "SQLite",
+      "RSS",
+      "TanStack",
+      "CLI"
+    ],
+    "featured": false,
+    "cover": "/site-assets/coolrss-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>CoolRSS is a desktop RSS reader and read-it-later app I run locally. It subscribes to feeds, fetches articles on a schedule, extracts the full body from the original page so I can read offline, and groups things I want to keep into collections. Everything lives in a SQLite database on disk with no account or server.</p>\n<p>I built it because hosted readers keep dying or pivoting, and I wanted one app that handled both feed reading and the &quot;save this article to read later&quot; workflow without juggling Pocket, Instapaper, and a third RSS app. Same database, same search, same keyboard shortcuts.</p>\n<h2>Features</h2>\n<h3>Feeds and articles</h3>\n<ul>\n<li>RSS and Atom subscriptions with OPML import and export</li>\n<li>Per-domain rate limiting and concurrent fetching with backpressure</li>\n<li>Full-text search over article bodies via SQLite FTS5</li>\n<li>Smart feeds: All Saved, Today, Unread, Starred, plus tag and collection views</li>\n<li>Filter by feed, collection, tag, read state, or date range</li>\n</ul>\n<h3>Read-it-later</h3>\n<p>Saving an arbitrary URL pulls the page, runs it through the content extractor, and stores a clean reading copy alongside subscribed feed articles. Saved items can be tagged, starred, dropped into collections, and searched the same way feed articles are.</p>\n<h3>Collections and tags</h3>\n<p>Collections are folders for things I want to keep (Read Later, Reference, Documentation, Tutorials, Inspiration, Research). Tags are orthogonal labels (<code>important</code>, <code>follow-up</code>, <code>interesting</code>) that can be color-coded in the sidebar. Drag-and-drop reordering for both, with the order persisted to the database.</p>\n<h3>Feed health</h3>\n<p>Fetch outcomes are classified into <code>Healthy</code>, <code>TransientError</code>, and <code>PermanentError</code>. Feeds with repeated permanent errors (404, 410, parse failures) are auto-deactivated after a strike threshold; transient errors (5xx, 429, timeouts) get more grace. Error counts reset on a successful fetch.</p>\n<h3>Content extraction</h3>\n<p>A reader pipeline takes raw HTML and produces a clean article: strips chrome, resolves relative URLs against the source, picks out the canonical title, and returns sanitized HTML the frontend renders inside a styled article view. Code blocks keep their syntax highlighting.</p>\n<h3>CLI</h3>\n<p><code>coolrss-cli</code> is a separate binary that links the same Rust core. Same database file (with <code>--db &lt;path&gt;</code> to target the desktop app&#39;s data directory), same fetch and parse logic, same OPML import. Useful for scripting feed adds, batch fetches from cron, or piping article JSON into an LLM workflow.</p>\n<h2>Architecture</h2>\n<p>The repo is a Cargo workspace plus a Vite/React frontend:</p>\n<table>\n<thead>\n<tr>\n<th>Path</th>\n<th>What it is</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>coolrss-core/</code></td>\n<td>Shared Rust library (db, models, parser, fetcher, reader, OPML, health)</td>\n</tr>\n<tr>\n<td><code>coolrss-cli/</code></td>\n<td>CLI binary built on <code>coolrss-core</code></td>\n</tr>\n<tr>\n<td><code>src-tauri/</code></td>\n<td>Tauri 2 backend, thin command wrappers around <code>coolrss-core</code></td>\n</tr>\n<tr>\n<td><code>src/</code></td>\n<td>React frontend, rendering only</td>\n</tr>\n</tbody></table>\n<p>Business logic lives in Rust. The Tauri command layer and the CLI are both glue around the same core, which means a feature only has to be implemented and tested once. The TypeScript side is deliberately dumb: it renders, it dispatches commands, it caches query results.</p>\n<p>SQL migrations sit in <code>coolrss-core/migrations/NNN_name.sql</code> and run on every app or CLI start via <code>sqlx</code>&#39;s migrator.</p>\n<h2>Frontend</h2>\n<ul>\n<li>React 19 with TanStack Router, Query, and Virtual</li>\n<li>shadcn/ui on Base UI primitives, Tailwind CSS v4</li>\n<li>Article selection driven by React state, not URL params, so switching articles doesn&#39;t remount the reader pane and re-fetch</li>\n<li>Optimistic cache updates via <code>setQueryData</code> / <code>setQueriesData</code> for instant UI on read/star/save toggles</li>\n</ul>\n<h2>Technology stack</h2>\n<ul>\n<li>Rust 2024 with <code>sqlx</code>, <code>reqwest</code>, <code>feed-rs</code>, <code>scraper</code>, <code>tokio</code></li>\n<li>Tauri 2 desktop shell, packaged for macOS, Windows, and Linux</li>\n<li>React 19 + Vite 7 + TanStack Router/Query/Virtual</li>\n<li>SQLite with FTS5 for storage and search</li>\n<li>shadcn/ui + Tailwind CSS v4 for the UI</li>\n<li>Bun as the package manager and frontend test runner</li>\n</ul>\n"
+  },
+  {
+    "slug": "cuckootimer",
+    "title": "CuckooTimer",
+    "description": "A 3D cuckoo-clock that lives in your macOS menu bar. Every 30 minutes the doors swing open and a tiny bird reminds you the morning is gone.",
+    "date": "2025-07-21T03:38:59.000Z",
+    "tags": [
+      "Rust",
+      "Tauri",
+      "React",
+      "Three.js",
+      "TypeScript",
+      "macOS",
+      "3D"
+    ],
+    "featured": true,
+    "projectUrl": "https://cuckootimer.com",
+    "cover": "/site-assets/cuckootimer-hero.png",
+    "coverFile": "../assets/images/curated/cuckootimer.png",
+    "bodyHtml": "<h2>Overview</h2>\n<p>CuckooTimer is a macOS menu-bar app that exists for one reason: I wanted a cuckoo clock without owning a real cuckoo clock. It hides in the menu bar, ticks quietly in the background, and on a configurable interval (15, 30, or 60 minutes) pops open a little 3D scene where the doors swing open and the bird sings. Then it tucks itself away again.</p>\n<p>It&#39;s a stretch to call it a productivity tool. It&#39;s a pleasant interruption.</p>\n<h2>Features</h2>\n<ul>\n<li>Lives in the menu bar; no Dock icon</li>\n<li>Animated 3D scene with procedural wood, swinging pendulum, opening doors, and a bird that pops out</li>\n<li>Intervals of 15, 30, or 60 minutes</li>\n<li>Three modes: appear only on cuckoo, always visible, or sound only</li>\n<li>Working-hours window so it doesn&#39;t chirp at you on a Sunday morning</li>\n<li>Optional ticking and chirp sounds</li>\n<li>Self-hosted update channel</li>\n<li>$3.99 one-time purchase, no subscription</li>\n</ul>\n<h2>How It Works</h2>\n<p>Set the interval. The Rust backend tracks time in the background. When the timer fires, the doors animate open, the bird emerges, the chirp plays, and the window auto-hides after the animation. That&#39;s the whole loop.</p>\n<h2>Technology Stack</h2>\n<ul>\n<li><strong>Desktop App</strong>: Rust with Tauri 2.0 for native macOS integration</li>\n<li><strong>3D Rendering</strong>: Three.js with WebGPU and TSL (Texture Shader Language) for the procedural wood</li>\n<li><strong>Frontend</strong>: React 18, TypeScript, Tailwind CSS</li>\n<li><strong>Website</strong>: TanStack Start (SSR), PostgreSQL via Drizzle ORM</li>\n<li><strong>Monorepo</strong>: pnpm workspaces (<code>@cuckoo/app</code>, <code>@cuckoo/site</code>, <code>@cuckoo/ui</code>)</li>\n<li><strong>Payments</strong>: Stripe</li>\n<li><strong>Hosting</strong>: DigitalOcean Spaces for builds and updates</li>\n</ul>\n"
+  },
+  {
+    "slug": "deadman",
+    "title": "Deadman",
+    "description": "A dead-man's switch for Prometheus / Alertmanager, running on Cloudflare Workers and Durable Objects. Alerts you when your monitoring goes silent.",
+    "date": "2026-03-09T03:38:17.000Z",
+    "tags": [
+      "TypeScript",
+      "Cloudflare Workers",
+      "Durable Objects",
+      "Prometheus",
+      "Alertmanager",
+      "Monitoring"
+    ],
+    "featured": false,
+    "github": "https://github.com/briansunter/deadman",
+    "cover": "/site-assets/deadman-hero-card.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Prometheus can&#39;t alert you about itself. If the whole observability stack falls over, Alertmanager isn&#39;t going to send you the alert that says &quot;Alertmanager is down.&quot; Deadman is the dead-man&#39;s switch that lives outside it: Alertmanager sends a periodic Watchdog heartbeat to Deadman, and if that heartbeat stops arriving, Deadman pages you.</p>\n<p>It runs on Cloudflare Workers + Durable Objects, so it&#39;s on completely independent infrastructure from whatever you&#39;re monitoring.</p>\n<h2>How It Works</h2>\n<p><img src=\"/site-assets/deadman-explainer.png\" alt=\"Deadman alert pipeline diagram\"></p>\n<ol>\n<li><strong>Heartbeat</strong>: Alertmanager sends a Watchdog alert to Deadman every minute, resetting a countdown timer (default 5 min).</li>\n<li><strong>Alert</strong>: If the timer expires with no heartbeat, Deadman fires notifications on every configured channel (Discord, Slack, Telegram, Email). Re-alerts on a cooldown (default 15 min).</li>\n<li><strong>Recovery</strong>: When heartbeats resume after an alert, Deadman sends a recovery notification.</li>\n</ol>\n<p>The whole switch is a single Durable Object. Each heartbeat schedules a DO alarm via <code>setAlarm()</code>, and Cloudflare handles the persistence and timing in the DO&#39;s SQLite storage (no polling, no cron, no always-on workers).</p>\n<h2>Features</h2>\n<ul>\n<li>Discord, Slack, Telegram, and Cloudflare Email Routing</li>\n<li>No always-on processes (Durable Object alarms do all the scheduling)</li>\n<li>One-click Workers deploy or via Wrangler CLI</li>\n<li>Configurable heartbeat timeout and re-alert cooldown</li>\n<li>Templated alert messages</li>\n<li>Endpoints for health, status, webhook, ping, and reset</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript on Cloudflare Workers + Durable Objects</li>\n<li>Zod for runtime validation</li>\n<li>Bun for local dev and tests</li>\n<li>Wrangler for deployment</li>\n</ul>\n"
+  },
+  {
+    "slug": "gitforest",
+    "title": "Gitforest",
+    "description": "A terminal UI for managing dozens of Git repositories at once: status dashboard, batch git operations, GitHub integration, and background fetches.",
+    "date": "2025-12-02T10:38:15.000Z",
+    "tags": [
+      "TypeScript",
+      "Bun",
+      "Ink",
+      "React",
+      "TUI",
+      "Git",
+      "GitHub",
+      "SQLite"
+    ],
+    "featured": false,
+    "projectUrl": "https://www.npmjs.com/package/gitforest",
+    "cover": "/site-assets/gitforest-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Gitforest is a terminal UI for managing many Git repositories at once. It scans configured directories for git repos, non-git projects, and submodules; surfaces uncommitted changes and unpushed/unpulled commits at a glance; and lets me run pull, push, fetch, or <code>gh</code>-driven GitHub operations across one repo or a whole selection without leaving the terminal.</p>\n<p>I built it because I work across a <code>~/projects</code> folder with dozens of repos plus a dotfiles tree of submodules, and &quot;is everything pushed?&quot; was a question I kept answering by <code>cd</code>-ing through directories. Gitforest answers it on one screen.</p>\n<h2>Features</h2>\n<h3>Project discovery</h3>\n<p>Configured directories are scanned with bounded depth and a concurrency limit. Gitforest recognizes git repos via <code>.git</code>, submodules via <code>.gitmodules</code>, and non-git projects via marker files (<code>package.json</code>, <code>Cargo.toml</code>, <code>pyproject.toml</code>, <code>go.mod</code>, <code>Gemfile</code>, <code>pom.xml</code>, <code>build.gradle</code>, and others) so I can spot folders that should probably be repos but aren&#39;t yet.</p>\n<h3>Status dashboard</h3>\n<p>For every git repo, the list shows:</p>\n<ul>\n<li>Clean / dirty working tree</li>\n<li>Number of unpushed and unpulled commits relative to the upstream</li>\n<li>Submodule indicator</li>\n<li>Last activity timestamp for sorting</li>\n</ul>\n<p>Sort by name, status, or last activity; filter with <code>/</code> and a free-text query.</p>\n<h3>Batch git operations</h3>\n<p>Multi-select with <code>space</code> (or <code>a</code> to select all), then run an operation across the whole selection:</p>\n<ul>\n<li><code>p</code> push, <code>P</code> pull, <code>f</code> fetch</li>\n<li><code>i</code> initialize git in selected non-git projects</li>\n<li><code>c</code> create a GitHub repo for selected directories (default visibility configurable)</li>\n<li><code>A</code> archive a GitHub repo</li>\n</ul>\n<p>Push and pull are parallelized with backpressure; results stream back into the dashboard as they finish.</p>\n<h3>Background sync</h3>\n<p>A worker fetches remotes every five minutes so the unpushed/unpulled counters stay roughly current without me hammering <code>f</code> myself.</p>\n<h3>Caching</h3>\n<p>A local SQLite database (via Drizzle) caches the last scan result, so subsequent runs render instantly and only re-stat the directories that changed.</p>\n<h2>Configuration</h2>\n<p><code>~/.config/gitforest/config.yaml</code> controls which directories to scan and how:</p>\n<pre><code class=\"language-yaml\">directories:\n  - path: ~/projects\n    maxDepth: 2\n    label: Projects\n  - path: ~/.dotfiles\n    maxDepth: 3\n    label: Dotfiles\n\nscan:\n  ignore: [node_modules, .git, vendor]\n  concurrency: 5\n\ngithub:\n  defaultVisibility: private\n\ndisplay:\n  sortBy: status\n  sortDirection: desc\n</code></pre>\n<p><code>gitforest --init</code> writes a starter file the first time.</p>\n<h2>Quick start</h2>\n<pre><code class=\"language-bash\"># Run without installing\nbunx gitforest --init\nbunx gitforest\n\n# Or install globally\nbun add -g gitforest\ngitforest\n</code></pre>\n<h2>Technology stack</h2>\n<ul>\n<li>TypeScript on the Bun runtime, distributed on npm as <code>gitforest</code></li>\n<li><a href=\"https://github.com/vadimdemedes/ink\">Ink</a> for the terminal UI. React is rendered into a TTY</li>\n<li><code>@inkjs/ui</code> and <code>ink-select-input</code> for higher-level components</li>\n<li><code>Bun.$</code> for git shell operations, the <code>gh</code> CLI for GitHub operations</li>\n<li>Drizzle ORM over SQLite for the scan cache</li>\n<li>Zod for config validation, YAML for the config file format</li>\n</ul>\n"
+  },
+  {
+    "slug": "kungfu",
+    "title": "Kungfu",
+    "description": "A library of reusable skills (prompts plus references and templates) that any Agent Skills–compatible coding agent can install and use.",
+    "date": "2026-01-24T03:10:14.000Z",
+    "tags": [
+      "TypeScript",
+      "Python",
+      "Claude",
+      "AI",
+      "MCP",
+      "SaaS"
+    ],
+    "featured": false,
+    "github": "https://github.com/briansunter/kungfu",
+    "cover": "/site-assets/kungfu-hero.jpg",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Kungfu is a collection of skills (structured prompts bundled with reference material, templates, and small helper scripts) that any agent supporting the Agent Skills format can install. Claude Code, Cursor, Windsurf, and anything else that loads skills can pick them up and run them.</p>\n<p>Skills cover the kinds of one-off business and SaaS tasks I keep ending up doing by hand: validating an idea, picking a domain, drafting pricing pages, writing a Show HN, reading SaaS metrics. Each one packages the prompts and the supporting files an agent actually needs to get a useful answer.</p>\n<h2>Features</h2>\n<ul>\n<li>16 skills across idea validation, pricing, retention, launches, legal, and metrics</li>\n<li>Each skill is a self-contained directory: instructions, references, templates, and optional scripts</li>\n<li>Works with any Agent Skills–compatible host</li>\n<li>Install with <code>npx skills add kungfu/&lt;skill-name&gt;</code></li>\n<li>CI runs type-checks, lint, format, and skill validation on every push</li>\n</ul>\n<h2>Available Skills</h2>\n<p>Idea-finding, domain-name discovery, pricing-page design, launch playbooks, SaaS-metrics analysis, retention plays, community growth, lead research, legal-doc generation, solo-founder ops, and a handful of others.</p>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript and Python for validation and code-gen helpers</li>\n<li>Bun runtime</li>\n<li>Just for tasks</li>\n<li>Biome and Prettier for formatting</li>\n<li>GitHub Actions for CI</li>\n</ul>\n"
+  },
+  {
+    "slug": "lofi",
+    "title": "Vibe Cafe",
+    "description": "A lofi coding room with ambient beats, streaming terminal diffs, Codex and Claude-style themes, and keyboard-friendly controls.",
+    "date": "2025-10-10T06:53:03.000Z",
+    "tags": [
+      "React",
+      "TypeScript",
+      "Bun",
+      "Tailwind CSS",
+      "Cloudflare Workers"
+    ],
+    "featured": false,
+    "projectUrl": "https://loficafe.briansunter.com/",
+    "cover": "/site-assets/lofi-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Vibe Cafe is a lofi coding companion: a dark terminal-inspired page that streams fake-but-familiar diffs while lofi tracks play in the background. It is meant to feel like a late-night coding session you can leave open while you work.</p>\n<h2>Features</h2>\n<ul>\n<li>Continuous terminal diff stream with animated thinking states</li>\n<li>Codex and Claude Code terminal themes</li>\n<li>Lofi audio player with track navigation and playback speed controls</li>\n<li>Fullscreen terminal mode for a focused ambient display</li>\n<li>Keyboard shortcuts for play/pause, theme switching, fullscreen, and track navigation</li>\n<li>Responsive layout with accessible controls, ARIA labels, and reduced-motion support</li>\n<li>Cloudflare Workers deployment with static assets</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>React 19 + TypeScript</li>\n<li>Bun runtime, package manager, and test runner</li>\n<li>Tailwind CSS v4</li>\n<li>Cloudflare Workers and Wrangler</li>\n<li>Biome for linting and formatting</li>\n<li>Bun Test, Testing Library, and happy-dom</li>\n</ul>\n"
+  },
+  {
+    "slug": "logseq-gpt3-plugin",
+    "title": "Logseq GPT-3 Plugin",
+    "description": "A Logseq plugin that wires OpenAI's text models into the editor. Type a prompt in a block, get the completion back in place.",
+    "date": "2022-05-31T05:04:30.000Z",
+    "tags": [
+      "TypeScript",
+      "React",
+      "OpenAI API",
+      "Logseq"
+    ],
+    "featured": true,
+    "projectUrl": "https://github.com/briansunter/logseq-plugin-gpt3-openai",
+    "github": "https://github.com/briansunter/logseq-plugin-gpt3-openai",
+    "cover": "/site-assets/logseq-openai-hero.png",
+    "coverFile": "../assets/images/curated/logseq-gpt3-plugin.png",
+    "bodyHtml": "<h2>Overview</h2>\n<p>This was one of the first GPT-3 integrations published to the Logseq marketplace, back in early 2023 when &quot;type a prompt and get a completion back&quot; was still a novel thing to have inside a notes app. You write a prompt in a block, run the slash command, and the model&#39;s response is inserted as a child block. The original idea was to have AI text-generation available in the same place I keep my notes, without needing to leave the editor.</p>\n<h2>Features</h2>\n<ul>\n<li>Generate text, summaries, or explanations directly into a block</li>\n<li>Reusable prompt templates for tasks you do often</li>\n<li>Send surrounding blocks as context so the model has something to work with</li>\n<li>Keyboard shortcuts so you don&#39;t have to mouse over to the slash menu</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript</li>\n<li>Logseq Plugin API</li>\n<li>OpenAI API</li>\n<li>React for the settings UI</li>\n</ul>\n<h2>Links</h2>\n<ul>\n<li><a href=\"https://github.com/briansunter/logseq-plugin-gpt3-openai\">GitHub Repository</a></li>\n<li><a href=\"https://logseq.com\">Logseq Marketplace</a></li>\n</ul>\n"
+  },
+  {
+    "slug": "logseq-mcp",
+    "title": "Logseq MCP",
+    "description": "An MCP server that hooks Claude into your Logseq graph. Search blocks, draft daily notes, surface TODOs, and run Datalog queries in plain English.",
+    "date": "2025-03-21T11:09:26.000Z",
+    "tags": [
+      "TypeScript",
+      "MCP",
+      "Claude",
+      "Logseq",
+      "Knowledge Management"
+    ],
+    "featured": true,
+    "projectUrl": "https://www.npmjs.com/package/logseq-mcp",
+    "cover": "/site-assets/logseq-mcp-hero.png",
+    "coverFile": "../assets/images/curated/logseq-mcp.png",
+    "bodyHtml": "<h2>Overview</h2>\n<p>Logseq MCP connects Claude to a running Logseq instance over its HTTP API. Once it&#39;s wired up, Claude can search the graph, read and write blocks, draft daily notes, pull lists of open TODOs, and run Datalog queries. All of this is available from a normal conversation.</p>\n<p>I built it because most of what I do in Logseq follows the same handful of patterns (&quot;what&#39;s still TODO&quot;, &quot;summarise this page&quot;, &quot;stitch these scattered blocks into one outline&quot;), and Claude is faster at those than I am with the keyboard.</p>\n<h2>Features</h2>\n<h3>Knowledge Management</h3>\n<ul>\n<li>Search the entire graph</li>\n<li>Summarise pages and block trees</li>\n<li>Create daily notes with predefined sections</li>\n<li>Re-nest flat block lists into a hierarchy</li>\n</ul>\n<h3>Task Management</h3>\n<ul>\n<li>Pull every block in a given task state (TODO, DOING, etc.)</li>\n<li>Extract action items from meeting notes</li>\n<li>Spin up structured task lists</li>\n<li>Walk task progress over time</li>\n</ul>\n<h3>Search &amp; Query</h3>\n<ul>\n<li>Plain-language search across the graph</li>\n<li>Block-level content search</li>\n<li>Run advanced Datalog queries</li>\n</ul>\n<h3>Content Organization</h3>\n<ul>\n<li>Restructure block trees in place</li>\n<li>Group blocks by any criterion you can describe</li>\n<li>Convert flat dumps into nested outlines</li>\n</ul>\n<h2>Example Usage</h2>\n<p>Ask Claude:</p>\n<ul>\n<li>&quot;Find all my TODO tasks in Logseq&quot;</li>\n<li>&quot;Create today&#39;s daily note with sections for Tasks, Notes, and Journal&quot;</li>\n<li>&quot;Summarise my Research page&quot;</li>\n<li>&quot;Search my graph for anything about machine learning&quot;</li>\n</ul>\n<h2>Installation</h2>\n<p>Enable the Logseq HTTP API, then add the server to your Claude Desktop config:</p>\n<pre><code class=\"language-json\">{\n  &quot;mcpServers&quot;: {\n    &quot;logseq&quot;: {\n      &quot;command&quot;: &quot;npx&quot;,\n      &quot;args&quot;: [&quot;logseq-mcp&quot;],\n      &quot;env&quot;: {\n        &quot;LOGSEQ_TOKEN&quot;: &quot;your_logseq_token&quot;\n      }\n    }\n  }\n}\n</code></pre>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript MCP server</li>\n<li>Logseq HTTP API</li>\n<li>Cross-platform binaries</li>\n<li>Distributed via npm / <code>bunx</code></li>\n</ul>\n"
+  },
+  {
+    "slug": "logseq-youtube-captions",
+    "title": "Logseq YouTube Captions",
+    "description": "A Logseq plugin that grabs the captions for any YouTube link in a block and pastes the transcript in below it.",
+    "date": "2022-06-14T05:29:10.000Z",
+    "tags": [
+      "TypeScript",
+      "Logseq",
+      "YouTube",
+      "Plugin",
+      "Captions"
+    ],
+    "featured": true,
+    "github": "https://github.com/briansunter/logseq-get-youtube-captions",
+    "cover": "/site-assets/logseq-youtube-captions-hero.png",
+    "coverFile": "../assets/images/curated/logseq-youtube-captions.png",
+    "bodyHtml": "<h2>Overview</h2>\n<p>A Logseq plugin that fetches the captions for any YouTube video referenced in a block and inserts the full transcript as a child block. Useful for keeping a searchable record of talks and tutorials in your graph, and even more useful when paired with an LLM plugin that can summarise or extract takeaways from the transcript.</p>\n<h2>Features</h2>\n<ul>\n<li>One slash command (<code>/get-youtube-captions</code>) or block-menu entry</li>\n<li>Works with embedded <code>{{video}}</code> blocks and any YouTube URL format</li>\n<li>Configurable caption language</li>\n<li>Pairs naturally with the GPT-3 plugin for summarisation</li>\n</ul>\n<h2>Usage</h2>\n<ol>\n<li>Drop a YouTube link into any block</li>\n<li>Run <code>/get-youtube-captions</code> from the slash menu</li>\n<li>The transcript lands as a child block under the link</li>\n</ol>\n<p>URL formats supported:</p>\n<ul>\n<li>Standard <code>youtube.com/watch?v=…</code></li>\n<li>Short links <code>youtu.be/…</code></li>\n<li>Embedded <code>{{video …}}</code> blocks</li>\n</ul>\n<h2>Pairing with an LLM plugin</h2>\n<p>Run <a href=\"https://github.com/briansunter/logseq-plugin-gpt3-openai\">my GPT-3 plugin</a> on the resulting transcript to:</p>\n<ul>\n<li>Pull the top five takeaways from a long talk</li>\n<li>Summarise lectures and tutorials</li>\n<li>Extract key points from interviews</li>\n</ul>\n<h2>Settings</h2>\n<ul>\n<li>Caption language</li>\n<li>Helpful error messages when the requested language isn&#39;t available</li>\n</ul>\n<h2>Installation</h2>\n<p>Search for <code>get-youtube-captions</code> in the Logseq Marketplace.</p>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript with Vite</li>\n<li>Logseq Plugin API</li>\n<li>YouTube caption extraction</li>\n<li>Semantic-release for publishing</li>\n</ul>\n"
+  },
+  {
+    "slug": "moodboard",
+    "title": "Moodboard",
+    "description": "An infinite-canvas moodboard with sticky notes and images. Pan, zoom, drop things wherever they make sense.",
+    "date": "2025-12-27T14:05:46.000Z",
+    "tags": [
+      "Bun",
+      "React",
+      "TypeScript",
+      "Konva",
+      "TanStack Router"
+    ],
+    "featured": false,
+    "projectUrl": "https://moodboard.briansunter.com",
+    "cover": "/site-assets/moodboard-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>An infinite-canvas board for sticky notes and images. No grid, no hierarchy. Just a surface big enough that you can lay things out spatially the way you&#39;d think about them on a wall.</p>\n<h2>Features</h2>\n<ul>\n<li>Infinite pan and zoom</li>\n<li>Sticky notes with rich-text editing</li>\n<li>Image upload and placement</li>\n<li>Drag and drop arrangement</li>\n<li>Works on desktop and mobile</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>Bun</li>\n<li>React 18 + TypeScript</li>\n<li>Konva.js for canvas rendering</li>\n<li>TanStack Router for file-based routing</li>\n<li>Tailwind CSS</li>\n</ul>\n"
+  },
+  {
+    "slug": "obsidian-csv-editor",
+    "title": "Obsidian CSV Editor",
+    "description": "An Obsidian plugin that opens .csv files in a spreadsheet-like grid with keyboard navigation, range selection, copy/paste, sorting, and debounced auto-save.",
+    "date": "2026-04-28T18:39:03.000Z",
+    "tags": [
+      "TypeScript",
+      "React",
+      "Obsidian",
+      "Plugin",
+      "CSV",
+      "Spreadsheet",
+      "Bun"
+    ],
+    "featured": false,
+    "cover": "/site-assets/obsidian-csv-editor-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Obsidian CSV Editor turns any <code>.csv</code> file in your vault into an editable spreadsheet. The default Obsidian renderer treats CSVs as plain text; this plugin registers a custom view so they open as a grid with keyboard navigation, range selection, copy/paste, sortable columns, and debounced auto-save back to disk.</p>\n<p>It&#39;s built on <a href=\"https://github.com/adazzle/react-data-grid\">react-data-grid</a> for fast virtualised rendering, so wide files (thousands of rows / dozens of columns) stay smooth.</p>\n<h2>Why I built this</h2>\n<p>I keep a lot of tabular data in my vault (workout logs, reading lists, finance trackers, scraped datasets), and editing them as raw text is tedious. The existing CSV plugins I tried either didn&#39;t handle keyboard-first editing well, didn&#39;t support range copy/paste against external spreadsheets, or rendered slowly on bigger files. I wanted something that felt like a real cell editor: tab between cells, paste a block from Google Sheets, sort a column, and have it save back transparently without leaving Obsidian.</p>\n<h2>Features</h2>\n<h3>Native CSV view</h3>\n<p><code>.csv</code> files open in the grid by default; no command is needed. The plugin registers a <code>FileView</code> against the <code>csv</code> extension so Obsidian routes them to it automatically.</p>\n<h3>Keyboard-first editing</h3>\n<ul>\n<li>Arrow keys to navigate</li>\n<li>Tab / Shift+Tab to move between cells (wraps to next/previous row at the end)</li>\n<li>Enter / Shift+Enter to commit and move down/up</li>\n<li>Type to start editing; F2 or Enter to enter edit mode explicitly</li>\n</ul>\n<h3>Range selection and clipboard</h3>\n<p>Shift+Click, Shift+Arrow keys, or click-and-drag to select a rectangular range. Selected cells are highlighted, and Cmd/Ctrl+C/X/V act on the whole range. Pasting tab-separated content (e.g. from Excel or Google Sheets) fills the grid starting at the active cell, expanding the row count as needed.</p>\n<h3>Right-click context menu</h3>\n<p>Insert / delete rows and columns at the click position, clear the active cell, or run copy / cut / paste over the current selection.</p>\n<h3>Column sorting</h3>\n<p>Click any header to sort ascending / descending. Sort is non-destructive; saving writes back the original on-disk row order, so a sort is a view-only operation.</p>\n<h3>Configurable delimiter</h3>\n<p>Comma, semicolon, tab, or pipe (set in plugin settings). The parser is RFC 4180 compliant: fields containing the delimiter, double quotes, or newlines are properly quoted on save, and embedded quotes are doubled.</p>\n<h3>Debounced auto-save</h3>\n<p>Edits are debounced (default 300 ms, configurable 100–2000 ms) and written back via the Obsidian vault API. Auto-save can be toggled off, in which case the toolbar&#39;s <strong>Save</strong> button writes on demand.</p>\n<h3>Theme-aware styling</h3>\n<p>Colors and borders are wired to Obsidian&#39;s CSS variables, so the grid follows your active theme (light, dark, or any community theme) without extra config.</p>\n<h3>Mobile compatible</h3>\n<p>No desktop-only APIs, so it works on iOS and Android.</p>\n<h2>Technology stack</h2>\n<ul>\n<li>TypeScript, bundled with esbuild into a single <code>main.js</code></li>\n<li>React 19 + <a href=\"https://github.com/adazzle/react-data-grid\">react-data-grid</a> for the virtualised grid</li>\n<li>Obsidian Plugin API (<code>FileView</code>, <code>registerExtensions</code>, vault read/modify)</li>\n<li><a href=\"https://bun.sh/\">Bun</a> for install, scripts, and CI</li>\n<li>ESLint with <code>eslint-plugin-obsidianmd</code> for plugin-specific lint rules</li>\n</ul>\n<h2>Project shape</h2>\n<pre><code>src/\n├── main.ts            # Plugin entry: registers the view + settings tab\n├── csvView.tsx        # FileView that mounts the React app into the leaf\n├── CSVEditorApp.tsx   # Grid component, selection / clipboard / sorting logic\n├── csvParser.ts       # RFC 4180 parse / serialize\n├── clipboardUtils.ts  # Range + TSV helpers for copy/paste\n└── settings.ts        # Settings tab and defaults\n</code></pre>\n<p>The plugin lifecycle file (<code>main.ts</code>) stays tiny: load settings, register the view against the <code>csv</code> extension, attach the settings tab. All real editing logic lives in the React app.</p>\n"
+  },
+  {
+    "slug": "obsidian-data-editor",
+    "title": "Obsidian Data Editor",
+    "description": "An Obsidian plugin that opens .json, .yaml, and .yml files in a visual tree editor, with inline editing, schema validation, and a CodeMirror source mode.",
+    "date": "2026-04-29T02:01:05.000Z",
+    "tags": [
+      "TypeScript",
+      "Obsidian",
+      "Plugin",
+      "JSON",
+      "YAML",
+      "CodeMirror",
+      "Bun"
+    ],
+    "featured": false,
+    "cover": "/site-assets/obsidian-data-editor-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Obsidian Data Editor turns <code>.json</code>, <code>.yaml</code>, and <code>.yml</code> files in your vault into a visual, collapsible tree. The plugin registers a custom file view so structured data opens as a browsable hierarchy by default. Edit scalar values inline, add and remove keys, search by key/value/path, and copy JSON Pointer paths. A CodeMirror-backed source mode and a side-by-side split mode are always one click away, so unusual constructs are never trapped behind the GUI.</p>\n<p><img src=\"/site-assets/obsidian-data-editor-hero.png\" alt=\"Obsidian Data Editor split view with JSON schema tree and source\"></p>\n<p>YAML files keep their comments, anchors, aliases, tags, and multi-document structure across edits whenever the operation supports preservation. Schema validation can be enabled per file glob from the settings tab; schemas are loaded from inside the vault, and no network requests are made.</p>\n<h2>Why I built this</h2>\n<p>I keep a lot of structured data in my vault (config files for other plugins, scraped datasets, frontmatter templates, recipe metadata, JSON Schemas for <a href=\"/projects/obsidian-schema\">Obsidian Schema</a>). Editing them as raw text is fine for a few keys but tedious once the document gets nested or large. I wanted the same thing my <a href=\"/projects/obsidian-csv-editor\">CSV editor</a> gives me for tabular data: open the file, click around, edit a value, save, all without leaving Obsidian or losing YAML comments.</p>\n<h2>Features</h2>\n<h3>Tree mode</h3>\n<ul>\n<li>Collapsible tree of nested objects, arrays, mappings, and sequences</li>\n<li>Inline edit for scalar values (string, number, boolean, null) with type-aware inputs; editing a <code>null</code> cell auto-detects the typed value&#39;s type</li>\n<li>Inline rename of object keys</li>\n<li>Add property / add item, delete, duplicate, move up/down within a parent</li>\n<li>Type conversion (string ↔ number ↔ boolean ↔ null ↔ object ↔ array) with a confirm prompt for lossy YAML changes</li>\n<li>Keyboard navigation (arrow keys to move, Enter to expand/collapse, double-click to edit a scalar) with ARIA tree semantics</li>\n<li>Search keys, values, and paths with auto-expansion of ancestors</li>\n<li>Copy node path as JSON Pointer</li>\n<li>Undo / redo across tree edits</li>\n<li>Empty-document landing card with one-click root creation (Object / Array / String / Number / true / false / null)</li>\n</ul>\n<h3>YAML preservation</h3>\n<ul>\n<li>Comments, anchors, aliases, and tags shown as metadata badges on each row</li>\n<li>Operations preserve comments and anchors when the underlying YAML AST supports it; potentially-lossy edits prompt for confirmation (toggleable in settings)</li>\n<li>Multi-document files exposed as switchable document tabs; all documents are saved together so unedited documents are never dropped</li>\n</ul>\n<h3>Source / split mode</h3>\n<p>CodeMirror 6 source editor with JSON / YAML syntax highlighting, bracket matching, fold gutters, and line numbers. Split mode shows the tree and source side by side, so you can navigate visually and drop into raw text whenever you need to.</p>\n<h3>Schema validation</h3>\n<ul>\n<li>JSON Schema validation via <a href=\"https://ajv.js.org/\">Ajv</a> (draft-07 by default)</li>\n<li>Schemas mapped to file globs in the settings tab (<code>pattern =&gt; path/to/schema.json</code>); patterns use <code>*</code> (any chars except <code>/</code>) and <code>**</code> (any chars)</li>\n<li>Diagnostics surface inline on the affected row, in a diagnostics panel below the tree, and in the status bar</li>\n<li>Vault-local only (no schemas are fetched over the network)</li>\n</ul>\n<h3>File handling</h3>\n<p>Auto-save with configurable debounce (default 500 ms), or manual <code>Save now</code> from the toolbar. Saving is blocked while the document has parse errors; the &quot;Allow saving invalid source&quot; advanced setting overrides this when you need it.</p>\n<h2>Settings</h2>\n<p>The settings tab is split into general (default mode, auto-save), JSON (indentation, sort keys on save, trailing newline), YAML (show anchors / aliases, confirm lossy operations), schema validation (enable, mapping table), and advanced (allow saving invalid source) sections.</p>\n<h2>Technology stack</h2>\n<ul>\n<li>TypeScript, bundled with esbuild into a single <code>main.js</code></li>\n<li>React for the tree UI</li>\n<li><a href=\"https://codemirror.net/\">CodeMirror 6</a> for the source editor</li>\n<li><a href=\"https://eemeli.org/yaml/\">yaml</a> for AST-preserving YAML parsing</li>\n<li><a href=\"https://ajv.js.org/\">Ajv</a> for JSON Schema validation</li>\n<li>Obsidian Plugin API (custom <code>FileView</code>, <code>registerExtensions</code>, vault read/modify)</li>\n<li><a href=\"https://bun.sh/\">Bun</a> for install, scripts, and the adapter contract smoke harness</li>\n</ul>\n<h2>License</h2>\n<p>0BSD</p>\n"
+  },
+  {
+    "slug": "obsidian-insights",
+    "title": "Obsidian Insights",
+    "description": "An Obsidian plugin that generates live AI writing insights, connections, counter-arguments, and suggested edits while you write.",
+    "date": "2026-05-01T23:57:54.000Z",
+    "tags": [
+      "TypeScript",
+      "Obsidian",
+      "Plugin",
+      "AI",
+      "OpenAI",
+      "Anthropic",
+      "Knowledge Management"
+    ],
+    "featured": false,
+    "cover": "/site-assets/obsidian-insights-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Obsidian Insights is a desktop plugin that watches the active Markdown note and generates live writing feedback in a right sidebar. It can suggest concrete improvements, next ideas, counter-arguments, references, and connections to other notes in the vault.</p>\n<p>I built it to make the AI assistant feel closer to a writing partner than a separate chat window. The plugin stays anchored to the note you are already editing, refreshes as the document changes, and keeps the output organized as structured insight cards instead of a long conversational transcript.</p>\n<h2>Features</h2>\n<h3>Live insight sidebar</h3>\n<ul>\n<li>Right-pane sidebar with generated insight cards for the active note</li>\n<li>Manual regenerate command for focused review passes</li>\n<li>Auto-run mode with a debounce and document-change threshold so feedback does not fire on every keystroke</li>\n<li>Per-category target counts for improvements, next ideas, connections, counter-arguments, references, and custom guidance</li>\n</ul>\n<h3>Incremental refreshes</h3>\n<p>Instead of regenerating every card after every edit, the plugin keeps a snapshot of the previous run and re-anchors existing insights against the current document. Small changes can update locally, while larger changes trigger a revise call or a full regenerate when the note has drifted too far.</p>\n<p>This keeps token usage lower and makes the sidebar feel less jumpy while writing.</p>\n<h3>Vault-aware research</h3>\n<p>The model can call local vault tools during a run:</p>\n<ul>\n<li>Search notes</li>\n<li>Read note slices</li>\n<li>List backlinks and outgoing links</li>\n<li>Inspect note metadata</li>\n<li>Find notes by tag</li>\n<li>List recent notes</li>\n</ul>\n<p>For semantic search, the plugin can use a local <code>qmd</code> binary when available. If QMD is missing or disabled, it falls back to an in-process lexical scan so the plugin still works without external setup.</p>\n<h3>One-click fixes</h3>\n<p>For concrete edit suggestions, the sidebar can ask the model for a surgical replacement of the cited lines. Fixes are applied through the editor so changes stay visible and undo-friendly.</p>\n<h3>Provider support</h3>\n<p>The plugin supports several model providers through the Vercel AI SDK:</p>\n<ul>\n<li>Anthropic</li>\n<li>OpenAI</li>\n<li>Google Gemini</li>\n<li>OpenRouter / OpenAI-compatible endpoints</li>\n</ul>\n<p>Provider credentials stay in the vault-local plugin data file. There is no hidden telemetry; note text is sent only when an insight or auto-fix run is triggered.</p>\n<h2>Technology stack</h2>\n<ul>\n<li>TypeScript Obsidian plugin</li>\n<li>esbuild bundle to a single <code>main.js</code></li>\n<li>Vercel AI SDK for streaming model calls and tool execution</li>\n<li>Zod schemas for validating model-submitted insight cards</li>\n<li>Obsidian Plugin API for commands, settings, views, editor access, and vault reads</li>\n<li>Optional local QMD process for semantic vault search</li>\n</ul>\n<h2>Project shape</h2>\n<pre><code>src/\n├── agent/       # model provider selection, prompts, tool schemas, auto-fix\n├── runner/      # editor watching, run orchestration, incremental re-anchoring\n├── ui/          # sidebar view, insight cards, thinking panel, fix application\n├── util/        # fetch shim, text diffing, qmd process bridge, hashing\n├── settings.ts  # provider, trigger, search, output, and guardrail settings\n└── main.ts      # plugin lifecycle and command registration\n</code></pre>\n<p>The main plugin entry point stays small; most behavior lives in focused modules so the model loop, editor integration, and UI can evolve independently.</p>\n"
+  },
+  {
+    "slug": "obsidian-schema",
+    "title": "Obsidian Schema",
+    "description": "An Obsidian plugin that validates note frontmatter against user-defined JSON Schema rules, with tag-driven selectors, a results sidebar, and inline error reporting.",
+    "date": "2026-04-27T02:22:20.000Z",
+    "tags": [
+      "TypeScript",
+      "Obsidian",
+      "Plugin",
+      "JSON Schema",
+      "Ajv",
+      "Bun"
+    ],
+    "featured": false,
+    "cover": "/site-assets/obsidian-schema-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Obsidian Schema is a plugin that brings real, declarative validation to your vault. You define rules as JSON Schema in a single file at the vault root (<code>note-schema.json</code>), and the plugin checks every note&#39;s frontmatter against them, flagging missing required fields, type mismatches, bad enum values, malformed dates, and more.</p>\n<p>Each rule has two parts: a <strong>selector</strong> that decides which notes it applies to (typically tag-driven, e.g. &quot;any note tagged <code>book</code>&quot;) and a <strong>schema</strong> those notes must satisfy. Rules don&#39;t fire on notes they don&#39;t match, so you can add structure to a vault gradually without flagging every existing note.</p>\n<h2>Why I built this</h2>\n<p>I have a vault of 5,000+ notes: books, movies, recipes, recruiter contacts, project pages, trip logs. Over the years the frontmatter drifted: some book notes had <code>author</code>, others didn&#39;t; some used <code>rating</code> 0–5, others 0–10; recruiter contacts were missing dates. Dataview queries silently broke. I wanted a way to declare &quot;every note tagged <code>book</code> must have an author and a positive page count&quot; and have Obsidian tell me which ones are out of conformance.</p>\n<p>JSON Schema is the right vocabulary for this. It&#39;s battle-tested, expressive, and there&#39;s a fast validator (Ajv) I could embed.</p>\n<h2>Features</h2>\n<h3>Tag-driven rules</h3>\n<p>The default selector pattern matches notes by tag. A rule for book notes only fires on notes tagged <code>book</code> (frontmatter or inline <code>#book</code>):</p>\n<pre><code class=\"language-json\">{\n  &quot;id&quot;: &quot;book-note&quot;,\n  &quot;selector&quot;: {\n    &quot;type&quot;: &quot;object&quot;,\n    &quot;properties&quot;: {\n      &quot;tags&quot;: { &quot;type&quot;: &quot;array&quot;, &quot;contains&quot;: { &quot;const&quot;: &quot;book&quot; } }\n    },\n    &quot;required&quot;: [&quot;tags&quot;]\n  },\n  &quot;schema&quot;: {\n    &quot;type&quot;: &quot;object&quot;,\n    &quot;required&quot;: [&quot;author&quot;, &quot;pages&quot;],\n    &quot;properties&quot;: {\n      &quot;pages&quot;:  { &quot;type&quot;: &quot;integer&quot;, &quot;minimum&quot;: 1 },\n      &quot;rating&quot;: { &quot;anyOf&quot;: [{ &quot;type&quot;: &quot;null&quot; }, { &quot;type&quot;: &quot;integer&quot;, &quot;minimum&quot;: 0, &quot;maximum&quot;: 10 }] }\n    }\n  }\n}\n</code></pre>\n<p>Selectors are themselves JSON Schemas, so <code>anyOf</code>, <code>not</code>, and folder-anchored patterns (via the synthetic <code>$file.path</code>) are all available when you need them.</p>\n<h3>Results sidebar</h3>\n<p>A right-pane view groups every issue by file with the rule name, frontmatter path, and a human-readable message. Click a file to jump to it. The status bar shows the running count.</p>\n<h3>Live re-validation</h3>\n<p>Edit a note and the plugin re-validates just that file. Edit the schema and the entire vault is re-checked. The full-vault scan is debounced and coalesced so back-to-back saves don&#39;t pile up runs.</p>\n<h3>Helpful error messages</h3>\n<p>Ajv&#39;s default messages are technical (<code>must NOT have additional properties</code>); the plugin formats them into readable form (<code>must have required property &quot;author&quot;</code>, <code>must be one of: planned, active, blocked, done</code>).</p>\n<h3>Offline verification script</h3>\n<p>Because the rule compiler, data builder, and validator are pure functions, you can drive them from a Bun script and audit the entire vault in a single pass. This is useful when authoring a new rule to see how many notes match before reloading the plugin.</p>\n<h2>What it does NOT do</h2>\n<p>By design:</p>\n<ul>\n<li><strong>No autofix.</strong> Issues are reported only; your notes are not modified.</li>\n<li><strong>No body validation.</strong> The plugin checks frontmatter (and inline tags). Markdown body content, links, and embeds are not in scope.</li>\n<li><strong>No <code>additionalProperties: false</code> by default.</strong> Real notes accumulate ad-hoc fields; locking them down spams the sidebar.</li>\n</ul>\n<h2>Technology stack</h2>\n<ul>\n<li>TypeScript, bundled with esbuild</li>\n<li><a href=\"https://ajv.js.org/\">Ajv 8</a> + <code>ajv-formats</code> for JSON Schema validation</li>\n<li>Obsidian Plugin API</li>\n<li><a href=\"https://bun.sh/\">Bun</a> for the test runner; <code>bun test --coverage</code> reports 100% line coverage on the pure validation modules</li>\n<li>Vitest-style unit tests covering the selector engine, schema compiler, and a fully mocked validation service</li>\n</ul>\n<h2>Project shape</h2>\n<pre><code>src/\n├── note-data.ts          # builds the note → JSON object the validator sees\n├── schema-config.ts      # parses note-schema.json, compiles each rule with Ajv\n├── validator.ts          # selector predicate + schema check + error formatting\n├── validation-service.ts # vault scanning, file lifecycle, subscription pub/sub\n└── views/                # sidebar UI\n</code></pre>\n<p>The plugin is intentionally split into pure modules and Obsidian-API integration shims, so the validation logic is unit-testable without a running Obsidian instance.</p>\n"
+  },
+  {
+    "slug": "oracle-world",
+    "title": "Oracle World",
+    "description": "OpenTofu modules for Oracle Cloud's Always Free tier. One `apply` gives you a 4-core ARM box with 24 GB RAM, 200 GB storage, and optional MySQL, S3, monitoring, and budget alerts.",
+    "date": "2026-02-17T04:54:56.000Z",
+    "tags": [
+      "OpenTofu",
+      "Terraform",
+      "Oracle Cloud",
+      "Infrastructure",
+      "DevOps"
+    ],
+    "featured": false,
+    "github": "https://github.com/briansunter/oracle-world",
+    "cover": "/site-assets/oracle-world-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Oracle Cloud has the most generous always-free tier of any of the big providers, most notably a 4-core ARM box with 24 GB of RAM that doesn&#39;t time out. The catch is that wiring it up in OCI&#39;s console is unpleasant. Oracle World is the OpenTofu/Terraform code I wrote so I could <code>tofu apply</code> myself a working ARM server in one shot, with optional MySQL HeatWave, S3-compatible object storage, idle-detection monitoring, and budget alerts on top.</p>\n<h2>Resources</h2>\n<table>\n<thead>\n<tr>\n<th>Resource</th>\n<th>Spec</th>\n</tr>\n</thead>\n<tbody><tr>\n<td>Compute</td>\n<td>VM.Standard.A1.Flex (4 OCPUs, 24 GB RAM)</td>\n</tr>\n<tr>\n<td>Boot Storage</td>\n<td>50 GB + weekly backups</td>\n</tr>\n<tr>\n<td>Block Storage</td>\n<td>150 GB at <code>/data</code></td>\n</tr>\n<tr>\n<td>MySQL HeatWave</td>\n<td>50 GB, private subnet (optional)</td>\n</tr>\n<tr>\n<td>Object Storage</td>\n<td>30 GB S3-compatible (optional)</td>\n</tr>\n<tr>\n<td>Monitoring</td>\n<td>Idle-detection alarms, so OCI doesn&#39;t reclaim the box (optional)</td>\n</tr>\n<tr>\n<td>Budget Alerts</td>\n<td>Email on any spend + at 50% / 80% / 100% (optional)</td>\n</tr>\n</tbody></table>\n<h2>Architecture</h2>\n<p><img src=\"/site-assets/oracle-world-explainer.png\" alt=\"Oracle World cloud infrastructure diagram\"></p>\n<p>The compute instance sits in a public subnet because OCI NAT gateways aren&#39;t free. MySQL HeatWave, when enabled, lives in a private subnet with no internet route (you reach it via SSH tunnel). SSH is closed by default; whitelist your IP with <code>just ssh-allow</code> and revoke with <code>just ssh-revoke</code>.</p>\n<h2>Features</h2>\n<ul>\n<li>One-command deploy: <code>just init &amp;&amp; just plan &amp;&amp; just apply</code></li>\n<li>Open and close SSH access by IP from the command line</li>\n<li>A Claude Code <code>/setup</code> walks you through the variables interactively</li>\n<li>Stays inside Oracle&#39;s Always Free limits by default</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>HCL (OpenTofu / Terraform)</li>\n<li>Oracle Cloud Infrastructure (OCI)</li>\n<li>Just task runner</li>\n</ul>\n"
+  },
+  {
+    "slug": "paratran",
+    "title": "Paratran",
+    "description": "A CLI, REST API, and MCP server for fast audio transcription on Apple Silicon, built on parakeet-mlx and the Parakeet TDT model.",
+    "date": "2026-02-12T01:18:33.000Z",
+    "tags": [
+      "Python",
+      "MLX",
+      "Apple Silicon",
+      "Speech-to-Text",
+      "CLI",
+      "MCP",
+      "FastAPI"
+    ],
+    "featured": false,
+    "projectUrl": "https://pypi.org/project/paratran/",
+    "github": "https://github.com/briansunter/paratran",
+    "cover": "/site-assets/paratran-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Paratran is a transcription tool for macOS on Apple Silicon. It wraps NVIDIA&#39;s Parakeet TDT model (running through <a href=\"https://github.com/senstella/parakeet-mlx\">parakeet-mlx</a>) in three interfaces: a CLI for one-off jobs, a REST API for long-running services, and an MCP server so Claude Code or Claude Desktop can transcribe audio as a tool call.</p>\n<p>I built it because Whisper is slow on a laptop and most of the fast alternatives are cloud services. The default Parakeet model hits 6.34% average WER across eight English benchmarks, supports 25 languages, and runs roughly 30x faster than Whisper on the same hardware via MLX. It&#39;s fast enough that a one-hour recording transcribes in well under a minute on an M-series chip.</p>\n<p><img src=\"/site-assets/paratran-diagram.webp\" alt=\"Paratran architecture diagram\"></p>\n<h2>Features</h2>\n<h3>CLI</h3>\n<ul>\n<li>Transcribe one file or a batch in a single command</li>\n<li>Output as plain text, JSON, SRT, or WebVTT (or all four at once)</li>\n<li>Greedy or beam search decoding with full control over beam size, length penalty, patience, and duration reward</li>\n<li>Chunking for long audio with configurable overlap so sentence boundaries survive joins</li>\n<li>Optional sentence splitting by max words, max duration, or silence gap</li>\n<li>BF16 by default with an <code>--fp32</code> flag for environments that need it</li>\n</ul>\n<h3>Client mode (no per-file model reload)</h3>\n<p>The model takes a few seconds to load. Reloading it for every file is wasteful, so the same <code>paratran</code> binary doubles as a client: start <code>paratran serve</code> once, then point subsequent invocations at it with <code>-s http://localhost:8000</code> (or <code>PARATRAN_SERVER</code> in the environment) and they hand the file off over HTTP and print the result. The CLI surface is identical either way.</p>\n<h3>REST API</h3>\n<p>A FastAPI server exposes <code>/health</code> and <code>/transcribe</code>. Upload a wav, mp3, flac, m4a, ogg, or webm file and get back the text plus per-sentence timing and per-token timestamps as JSON. All decoding and sentence-splitting options are query parameters, and interactive docs ship at <code>/docs</code>.</p>\n<pre><code class=\"language-bash\">curl -X POST http://localhost:8000/transcribe -F &quot;file=@recording.m4a&quot;\n</code></pre>\n<h3>MCP server</h3>\n<p>The same package installs <code>paratran-mcp</code>, an MCP server that exposes a <code>transcribe</code> tool to any MCP client. Stdio is the default (drop a few lines into <code>.claude/settings.json</code> and Claude Code can transcribe audio files in-place), and a streamable HTTP transport is available for remote or multi-client setups.</p>\n<pre><code class=\"language-json\">{\n  &quot;mcpServers&quot;: {\n    &quot;paratran&quot;: {\n      &quot;command&quot;: &quot;uvx&quot;,\n      &quot;args&quot;: [&quot;--from&quot;, &quot;paratran&quot;, &quot;paratran-mcp&quot;]\n    }\n  }\n}\n</code></pre>\n<h2>Quick start</h2>\n<pre><code class=\"language-bash\"># Run without installing\nuvx paratran recording.wav\n\n# Or install as a tool\nuv tool install paratran\nparatran recording.wav\n\n# Start the server once, transcribe many files instantly\nparatran serve &amp;\nparatran -s http://localhost:8000 --output-format all recording.wav\n</code></pre>\n<p>The default model (<code>parakeet-tdt-0.6b-v3</code>) downloads on first use into the HuggingFace cache. <code>--cache-dir</code> or <code>PARATRAN_MODEL_DIR</code> redirects it to an external drive when the local SSD is tight.</p>\n<h2>Technology stack</h2>\n<ul>\n<li>Python 3.11+, distributed on PyPI as <code>paratran</code></li>\n<li><a href=\"https://github.com/senstella/parakeet-mlx\">parakeet-mlx</a> for inference, running on Apple&#39;s MLX framework</li>\n<li>FastAPI and Uvicorn for the REST server</li>\n<li>The official <code>mcp</code> Python SDK for the MCP server, with stdio and streamable-HTTP transports</li>\n<li>macOS on M1/M2/M3/M4 (the MLX backend is Apple Silicon only)</li>\n</ul>\n"
+  },
+  {
+    "slug": "personal-site",
+    "title": "Personal Site",
+    "description": "This site. Astro, MDX, Tailwind v4: blog, projects, recipes, photos, and a pin collection, all built statically.",
+    "date": "2024-08-02T05:21:21.000Z",
+    "tags": [
+      "Astro",
+      "TypeScript",
+      "Tailwind CSS",
+      "MDX"
+    ],
+    "featured": true,
+    "projectUrl": "https://briansunter.com",
+    "cover": "/site-assets/personal-site-hero.png",
+    "coverFile": "../assets/images/curated/personal-site.png",
+    "bodyHtml": "<h2>Overview</h2>\n<p>The site you&#39;re on right now. It&#39;s where I keep my blog, projects, <a href=\"/recipes\">recipes</a>, <a href=\"/photos\">photos</a>, and <a href=\"/pin-collection\">pin collection</a>. All of these are generated statically from markdown, MDX, Cooklang, and YAML files in a single Astro project.</p>\n<h2>Features</h2>\n<ul>\n<li>MDX-based blog with KaTeX for math and Shiki for syntax highlighting</li>\n<li>Cooklang-powered recipes that scale to any serving size</li>\n<li>Photo gallery with EXIF data and a Leaflet map of where each shot was taken</li>\n<li>Pagefind full-text search across the whole site</li>\n<li>Dark mode that respects <code>prefers-color-scheme</code> and remembers your override</li>\n<li>RSS feed</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>Astro 6</li>\n<li>TypeScript</li>\n<li>Tailwind CSS v4 (configured via CSS, not JS)</li>\n<li>MDX</li>\n<li>Pagefind for search</li>\n<li>Custom remark/rehype plugins for tweets, wiki-links, Logseq quirks, and code-block headers</li>\n</ul>\n"
+  },
+  {
+    "slug": "photos",
+    "title": "Photo Gallery",
+    "description": "My photography portfolio: collections grouped by trip and theme, with EXIF data, GPS pins on a map, and a full-screen lightbox.",
+    "date": "2024-08-02T05:21:21.000Z",
+    "tags": [
+      "Photography",
+      "Astro",
+      "TypeScript",
+      "Leaflet",
+      "PhotoSwipe"
+    ],
+    "featured": false,
+    "projectUrl": "https://briansunter.com/photos",
+    "cover": "/site-assets/photos-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>A photography portfolio organized into collections: trips, projects, and themes. Each photo carries its EXIF data and a GPS pin so the gallery doubles as a record of where I&#39;ve been with a camera, not just what I shot.</p>\n<h2>Features</h2>\n<ul>\n<li>Collections organized by trip, theme, or project</li>\n<li>Full-screen lightbox via PhotoSwipe</li>\n<li>EXIF readout (camera, lens, exposure)</li>\n<li>Leaflet map for photos with GPS coordinates</li>\n<li>Filter by tag, location, or collection</li>\n<li>Grid and list views</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>YAML files for photo metadata</li>\n<li>Leaflet for the map</li>\n<li>PhotoSwipe for the lightbox</li>\n<li>Astro for static generation</li>\n<li>Tailwind CSS, TypeScript</li>\n</ul>\n"
+  },
+  {
+    "slug": "pin-collection",
+    "title": "Pin Collection",
+    "description": "A digital display case for my lapel-pin collection. Each pin is photographed, background-removed, and pinned (sorry) to a velvet-style backdrop with notes on where it came from.",
+    "date": "2024-08-02T05:21:21.000Z",
+    "tags": [
+      "Collection",
+      "Astro",
+      "TypeScript",
+      "rembg",
+      "Python"
+    ],
+    "featured": false,
+    "projectUrl": "https://briansunter.com/pin-collection",
+    "cover": "/site-assets/pin-collection-map-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>I collect lapel pins from museums, events, friends, and random vending machines, and the box of them was getting unwieldy. So I started photographing each one, running the photos through <a href=\"https://github.com/danielgatis/rembg\">rembg</a> to drop the background, and putting them on this page with notes on the provenance, materials, and where I picked them up.</p>\n<p>It&#39;s a digital version of the felt-board displays you see at pin-trading conventions, with the bonus that I can search and filter without touching the physical pile.</p>\n<h2>Map View</h2>\n<p>The collection also has a map view for pins with known coordinates. It turns the collection into a loose travel diary: brewery pins, museum pins, gifts, national parks, and roadside finds all land back where I picked them up.</p>\n<p><img src=\"/site-assets/pin-collection-map-hero.webp\" alt=\"Pin collection world map view\"></p>\n<p>Zooming in keeps the pin artwork front and center while labels appear only where they can fit. The result feels more like browsing a physical display case than scanning a spreadsheet of places.</p>\n<p><img src=\"/site-assets/pin-collection-map-north-america.webp\" alt=\"Pin collection North America map view\"></p>\n<h2>Features</h2>\n<ul>\n<li>Felt-style backdrop with each pin floating on a soft drop shadow</li>\n<li>Click for a detail modal with full metadata and prev/next nav</li>\n<li>Map view for pins with known coordinates</li>\n<li>Cluster-aware map labels and thumbnail markers</li>\n<li>Background-removal pipeline using Python&#39;s <code>rembg</code> with the BiRefNet model</li>\n<li>Filter by category, material, tag, or favorite</li>\n<li>Sort by acquisition date, name, or category</li>\n<li>Horizontal timeline of when each pin entered the collection</li>\n<li>Stats (top categories, year-over-year additions, top tags)</li>\n<li>Keyboard navigation; deep links via hash routing</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>YAML files for pin metadata</li>\n<li>Python <code>rembg</code> (BiRefNet model) for background removal</li>\n<li>Astro for static generation</li>\n<li>Leaflet for the interactive map view</li>\n<li>Tailwind CSS, TypeScript</li>\n</ul>\n"
+  },
+  {
+    "slug": "pizzaplan",
+    "title": "Pizza Plan",
+    "description": "A pizza-dough calculator that works backwards from when you want to eat. Tell it the style, the timing, and the kitchen temperature; it figures out the recipe.",
+    "date": "2025-03-15T11:00:26.000Z",
+    "tags": [
+      "React",
+      "TypeScript",
+      "TanStack Router",
+      "Vite",
+      "Tailwind CSS",
+      "Drizzle"
+    ],
+    "featured": true,
+    "projectUrl": "https://getpizzaplan.com",
+    "cover": "/site-assets/pizzaplan-hero.png",
+    "coverFile": "../assets/images/curated/pizzaplan.png",
+    "bodyHtml": "<h2>Overview</h2>\n<p>Pizza Plan is a dough calculator I built because I kept hand-converting hydration percentages and fermentation schedules every time I wanted to make pizza on a Saturday. You pick a style, say when you want to eat, tell it how warm your kitchen is, and it gives you the gram-by-gram recipe and a schedule that fits.</p>\n<h2>Features</h2>\n<ul>\n<li>Presets for Neapolitan, New York, Detroit, and a few other styles</li>\n<li>Schedule planner that works back from your eat-by time</li>\n<li>Adjusts hydration and fermentation for kitchen temperature</li>\n<li>Pick the number of pies and ball weight; the totals scale</li>\n<li>Tunable taste sliders (chew, crispness, browning)</li>\n<li>Save and share recipes</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>React 18 + TypeScript</li>\n<li>TanStack Router (file-based) and TanStack Query</li>\n<li>Vite</li>\n<li>Tailwind CSS</li>\n<li>Drizzle ORM</li>\n<li>Zod for schema validation</li>\n</ul>\n"
+  },
+  {
+    "slug": "platform",
+    "title": "Platform",
+    "description": "A small 2D platformer rendered with isometric 3D models, written in C99 and built on Sokol and a tiny ECS. Same binary runs natively and in the browser via WebAssembly.",
+    "date": "2026-05-13T00:00:00.000Z",
+    "tags": [
+      "C",
+      "Sokol",
+      "WebAssembly",
+      "Game Development",
+      "ECS"
+    ],
+    "featured": false,
+    "projectUrl": "https://briansunter.github.io/platform/",
+    "github": "https://github.com/briansunter/platform",
+    "cover": "/site-assets/platform-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Platform is a small side-scrolling platformer written in C99. The world is 2D, but everything on screen is a real 3D mesh from the Kenney Platformer Kit, lit at asset-conversion time so the renderer does no lighting math at runtime.</p>\n<p><img src=\"/site-assets/platform-hero.webp\" alt=\"Platform gameplay screenshot\"></p>\n<p>The same source builds to a native macOS/Linux binary and to a WebAssembly bundle for the browser, so desktop, mobile web, and a packaged native build all run the same gameplay code.</p>\n<h2>Features</h2>\n<ul>\n<li>2D platformer movement with run, jump variable-height jump-cut, and one-way platforms</li>\n<li>Coins, hearts, jewels, stars, keys, and other pickup types</li>\n<li>Touch controls for mobile web: left half for movement, right half to jump</li>\n<li>Deterministic gameplay core split into <code>game_core.c</code> with its own unit test suite and 90%+ coverage gate</li>\n<li>Static C mesh data generated from Kenney OBJ models at build time, with no runtime model loading</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>C99 for all gameplay and rendering code</li>\n<li><a href=\"https://github.com/floooh/sokol\">Sokol</a> for graphics, app, and input across Metal, OpenGL, and WebGL2</li>\n<li><a href=\"/projects/c-ecs\">c-ecs</a> for entities, components, and systems</li>\n<li>Emscripten for the WebAssembly build</li>\n<li>Python tool that bakes Kenney OBJ meshes into static C arrays</li>\n<li>Nix flake for a reproducible clang + emscripten dev shell</li>\n</ul>\n"
+  },
+  {
+    "slug": "pogo-panic",
+    "title": "Pogo Panic",
+    "description": "A tiny Game Boy arcade platformer built with GBDK-2020. You're always bouncing on a pogo stick: steer, stomp cracked blocks, grab the battery, reach the exit.",
+    "date": "2026-04-01T00:00:00.000Z",
+    "tags": [
+      "Game Boy",
+      "GBDK-2020",
+      "C",
+      "Vite",
+      "Game Dev"
+    ],
+    "featured": false,
+    "projectUrl": "https://briansunter.github.io/pogo-panic/",
+    "github": "https://github.com/briansunter/pogo-panic",
+    "cover": "/site-assets/pogo-panic-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Pogo Panic is a real DMG Game Boy game. The player is always bouncing on a pogo stick; you can&#39;t stop, only steer. The build is a 32 KB ROM compiled with GBDK-2020 that runs unmodified on original hardware, flashcarts, and standalone emulators. A small Vite browser runner loads the same <code>.gb</code> file through <code>gameboy-emulator</code> so anyone can try it without a flashcart.</p>\n<p>The ROM is the canonical artifact: gameplay rules, level generation, save handling, and music all live in C. The browser shell is treated as a demo and never re-implements game logic.</p>\n<p><img src=\"/site-assets/pogo-panic-gameplay.webp\" alt=\"Pogo Panic Adventure room gameplay screenshot\"></p>\n<h2>Gameplay</h2>\n<ul>\n<li>Steer left and right; you can&#39;t stop bouncing</li>\n<li><strong>A</strong> stomps to break cracked blocks and rocks</li>\n<li><strong>B</strong> tilts for a short hop</li>\n<li>Collect the golden battery, then reach the exit door</li>\n</ul>\n<h2>Modes</h2>\n<ul>\n<li><strong>Adventure</strong>: 80 curated fixed rooms with SRAM-backed unlocks</li>\n<li><strong>Panic</strong>: endless procedurally generated rooms with rising hazard pressure</li>\n<li><strong>Time Trial</strong>: race the Adventure rooms with a best-time record per room</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>C with GBDK-2020 targeting the DMG (Game Boy) CPU</li>\n<li>Vite + <code>gameboy-emulator</code> for the browser runner</li>\n<li>Node&#39;s built-in <code>node:test</code> for ROM and web-module smoke tests</li>\n<li>SRAM for save data (Adventure unlocks, best times, Panic best depth)</li>\n</ul>\n<h2>How It Works</h2>\n<p><code>src-rom/main.c</code> is the full game: gameplay, level generation, menus, 4-channel music, and rendering. <code>make</code> compiles it to <code>dist/pogo-panic.gb</code> and copies the ROM into <code>public/roms/</code> so the browser shell can fetch it. The web side is strictly host code: emulator boot, input mapping, SRAM persistence, and a level debug viewer that consumes JSON dumped from the C source. The constraint that everything must run on a real DMG keeps scope honest: 160×144 screen, 4-color palette, fixed-tick bounce physics.</p>\n"
+  },
+  {
+    "slug": "pokeclaude",
+    "title": "PokeClaude",
+    "description": "An MCP server for Pokémon TCG Pocket. Claude can search the full card pool, find synergies, build 20-card decks, and read the meta.",
+    "date": "2025-10-03T05:37:07.000Z",
+    "tags": [
+      "TypeScript",
+      "MCP",
+      "Claude",
+      "DuckDB",
+      "AI"
+    ],
+    "featured": false,
+    "projectUrl": "https://www.npmjs.com/package/pokemon-pocket-mcp-server",
+    "github": "https://github.com/briansunter/pokeclaude",
+    "cover": "/site-assets/pokeclaude-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>PokeClaude is an MCP server (and Claude Code plugin) that gives Claude access to the full Pokémon TCG Pocket card pool (2,077 cards including art variants, 1,068 unique) backed by an in-memory DuckDB so SQL queries against the catalogue are instant. Claude uses it to search, score synergies, propose 20-card decks, and look up the current meta.</p>\n<h2>Features</h2>\n<ul>\n<li>7 MCP tools: search, filter, analyze, find synergies, find counters, deckbuild, meta</li>\n<li>Full card database (2,077 cards / 1,068 unique once art variants are deduped)</li>\n<li>DuckDB query engine; everything stays in-memory</li>\n<li>20-card deck construction with energy and trainer balance</li>\n<li>Tier lists and usage stats from current meta data</li>\n</ul>\n<h2>Claude Code Plugin</h2>\n<p>Four slash commands ship with the plugin:</p>\n<ul>\n<li><code>/pokemon:build-deck</code>: build a 20-card deck around a chosen Pokémon or strategy</li>\n<li><code>/pokemon:analyze</code>: analyse a card&#39;s stats and matchups</li>\n<li><code>/pokemon:find-counters</code>: find counters to a deck or archetype</li>\n<li><code>/pokemon:meta</code>: current tier list and meta breakdown</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript MCP server (stdio transport)</li>\n<li>DuckDB for in-memory queries against the card data</li>\n<li>Web scraper that auto-refreshes the card data</li>\n<li>Claude Code plugin framework</li>\n<li>Distributed via npm / <code>bunx</code></li>\n</ul>\n<h2>How It Works</h2>\n<p>Install via npm or <code>bunx</code> and add the server to your Claude config. On startup it loads the card data into DuckDB and exposes the tools listed above. Claude calls them when you ask deck-building or meta questions.</p>\n"
+  },
+  {
+    "slug": "postcardpop",
+    "title": "PostcardPop",
+    "description": "Create and share beautiful digital postcards with custom images, messages, map stamps, and a copyable link.",
+    "date": "2020-07-04T05:42:56.000Z",
+    "tags": [
+      "React",
+      "TypeScript",
+      "Vite",
+      "Leaflet",
+      "Bun"
+    ],
+    "featured": false,
+    "projectUrl": "https://postcardpop.briansunter.com/",
+    "cover": "/site-assets/postcardpop-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>PostcardPop is a small web app for making digital postcards. Pick a front image, flip the card over, write a note, add a recipient and sender, stamp it with a map location, then copy a share link to send the finished postcard.</p>\n<h2>Features</h2>\n<ul>\n<li>Flip-card postcard layout with editable front and back sides</li>\n<li>Custom front image via any hosted image URL</li>\n<li>Personal message, recipient, sender, and location fields</li>\n<li>Map stamp powered by Leaflet and OpenStreetMap tiles</li>\n<li>Address geocoding with Nominatim</li>\n<li>Shareable postcard links encoded in the URL</li>\n<li>Light and dark themes</li>\n<li>First-run tutorial and received-card flip hint</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>React 19 + TypeScript</li>\n<li>Vite</li>\n<li>Bun</li>\n<li>Leaflet and React Leaflet</li>\n<li>Vitest and Testing Library</li>\n<li>Cypress for end-to-end tests</li>\n<li>GitHub Pages deployment</li>\n</ul>\n"
+  },
+  {
+    "slug": "quantum-engine",
+    "title": "Quantum Engine",
+    "description": "A minimal, modular Entity Component System (ECS) game engine in TypeScript. Browser-first, plugin-driven, and tuned for WebGL, Canvas, and modern web APIs.",
+    "date": "2025-11-02T09:01:40.000Z",
+    "tags": [
+      "TypeScript",
+      "ECS",
+      "Game Engine",
+      "WebGL",
+      "Three.js",
+      "Bun"
+    ],
+    "featured": false,
+    "cover": "/site-assets/quantum-engine-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Quantum Engine is a TypeScript Entity Component System designed for the browser. It is a Bun monorepo of 20 packages: a tiny ECS core plus optional plugins for rendering, physics, input, audio, animation, networking, UI, and scene editing, all wired together by a fluent <code>App</code> runtime with a schedule-based system executor and an event bus.</p>\n<p>The goal was a Bevy-style architecture that runs natively on the web. Every package targets the browser (WebGL, Canvas, <code>requestAnimationFrame</code>), state lives in cache-friendly Structure-of-Arrays component storage, and the same plugin pattern that registers core systems also powers the Three.js renderer, the Rapier3D physics layer, and the scene editor.</p>\n<p><img src=\"/site-assets/quantum-engine-diagram.png\" alt=\"Quantum Engine architecture diagram\"></p>\n<h2>Features</h2>\n<h3>ECS core</h3>\n<ul>\n<li>Type-safe components with both Structure of Arrays (SoA) and Array of Structures (AoS) storage</li>\n<li>Archetype-based queries with caching, BitSet component checks, and topological system ordering</li>\n<li>Entity lifecycle with ID reuse and component lifecycle hooks</li>\n<li>Resource manager for typed global state and an event bus for loose coupling between systems</li>\n</ul>\n<h3>Plugin architecture</h3>\n<p>Everything outside the core is a plugin. A plugin declares its dependencies, components, systems, and resources, and gets <code>build</code>, <code>startup</code>, and <code>shutdown</code> hooks. Plugins are hot-swappable, dependency-ordered, and composed through a fluent builder.</p>\n<h3>Convenience presets</h3>\n<p><code>@quantum/presets</code> ships preset bundles so a typical app is one line:</p>\n<pre><code class=\"language-ts\">import { createWebApp } from &#39;@quantum/presets&#39;\n\nconst { app, canvas } = createWebApp()\napp.addSystem(ScheduleLabel.Update, new MovementSystem())\napp.run()\n</code></pre>\n<p>Presets cover the common cases: <code>core</code> (server / headless), <code>web</code> (2D canvas + input), <code>render</code> (Three.js), <code>game</code> (render + physics + animation + assets), and <code>full</code> (everything).</p>\n<h3>Rendering, physics, and assets</h3>\n<ul>\n<li><code>@quantum/render</code>: Three.js integration with scene, camera, and renderer wired to the ECS</li>\n<li><code>@quantum/physics</code>: Rapier3D bindings, exposed as components and systems</li>\n<li><code>@quantum/asset</code>: async asset loading with cache and lifecycle integration</li>\n<li><code>@quantum/animation</code>, <code>@quantum/audio</code>, <code>@quantum/spatial</code>, <code>@quantum/networking</code>, <code>@quantum/ui</code>: additional plugins for the rest of a typical game stack</li>\n</ul>\n<h3>Scene editor</h3>\n<p><code>@quantum/editor</code> adds picking, gizmos, and camera controls, and pairs with <code>@quantum/scene</code> for serialization, prefabs, and a scene builder API. The editor is itself an ECS app; it registers systems and resources just like any other plugin.</p>\n<h3>Tooling</h3>\n<ul>\n<li>Bun workspace with Turborepo for parallel builds and dependency-aware watching</li>\n<li>Vitest for unit tests, Playwright for browser/component tests, mitata for benchmarks</li>\n<li>TypeDoc + an Astro/Starlight docs site under <code>apps/site</code></li>\n<li>Per-package builds target the browser with external workspace deps and tree-shakeable ESM output</li>\n</ul>\n<h2>Architecture</h2>\n<pre><code>App\n  ├── World          // entity + component storage and queries\n  ├── ResourceManager // typed global state\n  ├── Schedule       // Startup → PreUpdate → Update → PostUpdate → Render\n  └── EventBus       // typed events between systems\n\nPlugins layer on top: Time, Transform, Web, Input, Render, Physics, Asset,\nAnimation, Audio, UI, Spatial, Networking, Editor, Scene, Debug, ...\n</code></pre>\n<p>A typical frame walks the schedule once: time advances, input is sampled, gameplay systems run in <code>Update</code>, transforms and physics resolve in <code>PostUpdate</code>, and the renderer flushes in <code>Render</code>.</p>\n<h2>Quick start</h2>\n<pre><code class=\"language-ts\">import { createWebApp } from &#39;@quantum/presets&#39;\nimport { defineComponent, createQuery, ScheduleLabel, System } from &#39;@quantum/core&#39;\n\nconst Position = defineComponent({ x: Float32Array, y: Float32Array }, { name: &#39;Position&#39; })\nconst Velocity = defineComponent({ x: Float32Array, y: Float32Array }, { name: &#39;Velocity&#39; })\n\nclass Movement extends System {\n  update(world) {\n    const q = createQuery().with(Position).with(Velocity).build()\n    q.executeWithCallback(world, (_e, p, v) =&gt; {\n      p.x += v.x\n      p.y += v.y\n    })\n  }\n}\n\nconst { app } = createWebApp()\napp.addSystem(ScheduleLabel.Update, new Movement())\napp.run()\n</code></pre>\n<h2>Technology stack</h2>\n<ul>\n<li>TypeScript across a Bun monorepo of 20 <code>@quantum/*</code> packages plus tutorial and example apps</li>\n<li>Browser-first build pipeline (ESM, external workspace deps, code splitting, source maps)</li>\n<li>Three.js for 3D rendering, Rapier3D for physics, native Web APIs for input, audio, and timing</li>\n<li>Turborepo for build orchestration; Vitest, Playwright, and mitata for tests and benchmarks</li>\n<li>Astro + Starlight documentation site backed by TypeDoc-generated API references</li>\n</ul>\n"
+  },
+  {
+    "slug": "raindrop-mcp",
+    "title": "Raindrop MCP",
+    "description": "An MCP server for Raindrop.io, letting Claude (or any MCP client) read, write, and reorganise your bookmarks, collections, tags, and highlights.",
+    "date": "2025-09-21T04:55:25.000Z",
+    "tags": [
+      "TypeScript",
+      "MCP",
+      "Claude",
+      "Raindrop.io",
+      "Bookmarks"
+    ],
+    "featured": false,
+    "projectUrl": "https://www.npmjs.com/package/@briansunter/raindrop-mcp",
+    "github": "https://github.com/briansunter/raindrop-mcp",
+    "cover": "/site-assets/raindrop-mcp-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Raindrop MCP exposes the <a href=\"https://raindrop.io/\">Raindrop.io</a> API as an MCP server, so Claude and other MCP clients can search bookmarks, create new ones, manage collection trees, and clean up tags conversationally instead of through the Raindrop UI.</p>\n<p>I built it because most of my &quot;save for later&quot; links live in Raindrop, and being able to ask &quot;find me everything I saved about Postgres last year and tag it <code>db</code>&quot; is much faster than clicking through the web app.</p>\n<p><img src=\"/site-assets/raindrop-mcp-explainer.png\" alt=\"Raindrop MCP architecture diagram\"></p>\n<h2>Features</h2>\n<ul>\n<li>Create, search, update, delete bookmarks</li>\n<li>Browse and manage nested collections</li>\n<li>List, merge, rename, and clean up tags</li>\n<li>Pull metadata from any URL (title, description, og-image)</li>\n<li>Raindrop&#39;s full search syntax (<code>#tag</code>, <code>site:</code>, <code>type:</code>, etc.)</li>\n<li>Field filtering so responses stay small</li>\n<li>Bulk operations for tag-rewrite migrations</li>\n</ul>\n<h2>Available Tools</h2>\n<h3>Bookmarks</h3>\n<ul>\n<li><code>list-raindrops</code>: list bookmarks in a collection</li>\n<li><code>search-raindrops</code>: search with Raindrop&#39;s query syntax</li>\n<li><code>create-raindrop</code>: save a new bookmark, auto-parsed from URL</li>\n<li><code>update-raindrop</code> / <code>delete-raindrop</code>: edit or remove existing bookmarks</li>\n</ul>\n<h3>Collections &amp; Tags</h3>\n<ul>\n<li><code>list-collections</code> / <code>create-collection</code>: manage the folder tree</li>\n<li><code>list-tags</code> / <code>merge-tags</code>: clean up your tag taxonomy</li>\n</ul>\n<h3>Utilities</h3>\n<ul>\n<li><code>parse-url</code>: pull metadata from a URL without saving it</li>\n<li><code>check-url-exists</code>: duplicate-check before adding</li>\n<li><code>list-highlights</code>: read your saved highlights</li>\n</ul>\n<h2>Installation</h2>\n<p>Add to your Claude Desktop config and set your Raindrop API token:</p>\n<pre><code class=\"language-json\">{\n  &quot;mcpServers&quot;: {\n    &quot;raindrop&quot;: {\n      &quot;command&quot;: &quot;npx&quot;,\n      &quot;args&quot;: [&quot;-y&quot;, &quot;@briansunter/raindrop-mcp&quot;],\n      &quot;env&quot;: {\n        &quot;RAINDROP_TOKEN&quot;: &quot;your-token-here&quot;\n      }\n    }\n  }\n}\n</code></pre>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript MCP server (stdio)</li>\n<li>Raindrop.io REST API</li>\n<li>Field filtering and pagination</li>\n<li>Distributed via npm / <code>bunx</code></li>\n</ul>\n"
+  },
+  {
+    "slug": "rainybow",
+    "title": "Rainybow",
+    "description": "A Hawaii rainbow tracker that combines weather, rain chances, cloud cover, humidity, and sun angle to forecast when and where to look.",
+    "date": "2026-05-01T02:42:57.000Z",
+    "tags": [
+      "React",
+      "TypeScript",
+      "Bun",
+      "Tailwind CSS",
+      "Weather"
+    ],
+    "featured": false,
+    "projectUrl": "https://rainybow.briansunter.com",
+    "cover": "/site-assets/rainybow-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Rainybow is a location-aware rainbow forecast for Hawaii. It checks current weather, hourly rain chances, cloud cover, humidity, and sun angle, then turns those signals into a simple rainbow score and direction to look.</p>\n<h2>Features</h2>\n<ul>\n<li>Current-location forecast with browser geolocation</li>\n<li>Open-Meteo weather data for current, hourly, and daily conditions</li>\n<li>Rainbow scoring based on rain, cloud breaks, humidity, and solar geometry</li>\n<li>Direction guidance for where to look, including anti-solar bearing</li>\n<li>24-hour outlook with hourly chance bars</li>\n<li>Week-ahead summary with daily peak rainbow windows</li>\n<li>Secure-context and Safari-specific location permission guidance</li>\n<li>Responsive dark glass UI with weather and compass visuals</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>React 19 + TypeScript</li>\n<li>Bun runtime and bundler</li>\n<li>Tailwind CSS v4</li>\n<li>Lucide React icons</li>\n<li>Radix UI primitives</li>\n<li>Open-Meteo Forecast API</li>\n</ul>\n"
+  },
+  {
+    "slug": "recipes",
+    "title": "Recipe Collection",
+    "description": "My recipes, written in Cooklang and rendered with a custom Astro integration. Ingredients scale, steps are linked, and everything is plain text on disk.",
+    "date": "2024-08-02T05:21:21.000Z",
+    "tags": [
+      "Cooklang",
+      "Astro",
+      "TypeScript",
+      "Recipe Management"
+    ],
+    "featured": false,
+    "projectUrl": "https://briansunter.com/recipes",
+    "cover": "/site-assets/recipes-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>The recipes I cook regularly, written in <a href=\"https://cooklang.org/\">Cooklang</a>. It&#39;s a plain-text markup where ingredients, cookware, and timers are inlined with the steps. I built a small Astro integration that parses the <code>.cook</code> files at build time so the site can render them, scale ingredients to any serving size, and let me search by ingredient.</p>\n<p>Cooklang means each recipe is a single text file I can edit anywhere, version in git, and parse with <a href=\"/projects/cooklang-parser\">my Cooklang TypeScript parser</a>. No proprietary recipe schema gets between me and dinner.</p>\n<h2>Features</h2>\n<ul>\n<li>Plain-text Cooklang source (one <code>.cook</code> file per recipe)</li>\n<li>Ingredient scaling to any serving count</li>\n<li>Filter by cuisine, dietary tag, or meal</li>\n<li>Search by ingredient or name</li>\n<li>Print-friendly layout</li>\n<li>Typography tuned for reading at arm&#39;s length on a kitchen counter</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>Cooklang for the source format</li>\n<li>A custom Astro integration that parses <code>.cook</code> at build time</li>\n<li>TypeScript</li>\n<li>Tailwind CSS</li>\n</ul>\n"
+  },
+  {
+    "slug": "rss-ai",
+    "title": "RSS AI",
+    "description": "A CLI RSS/Atom feed reader with OPML support, smart caching, full-text search, content extraction, broken link repair, and an interactive TUI.",
+    "date": "2026-02-13T05:05:50.000Z",
+    "tags": [
+      "TypeScript",
+      "Bun",
+      "CLI",
+      "TUI",
+      "RSS",
+      "SQLite",
+      "Drizzle"
+    ],
+    "featured": false,
+    "projectUrl": "https://www.npmjs.com/package/rss-ai",
+    "cover": "/site-assets/rss-ai-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>RSS AI is a command-line RSS and Atom feed reader. It manages subscriptions in a local SQLite database, fetches feeds with HTTP conditional requests so it does not re-download what has not changed, extracts full article content from the original page, and ships an interactive terminal UI for reading.</p>\n<p>I built it because most feed readers want to be a server or a hosted service, and I wanted something I could run as <code>bunx rss-ai</code> against a local database, script with JSON output, and pipe into an LLM workflow when I felt like it.</p>\n<h2>Features</h2>\n<h3>Feeds and articles</h3>\n<ul>\n<li>RSS and Atom feed support with lenient parsing</li>\n<li>OPML import and export covering 1.0, 1.1, and 2.0 formats</li>\n<li>Per-domain rate limiting and configurable concurrent fetching</li>\n<li>Full-text search across articles via SQLite FTS5</li>\n<li>Filter by feed, category, author, read or unread, starred, broken links, or date</li>\n<li>Flexible date formats: ISO, relative (<code>yesterday</code>, <code>this week</code>), expressions (<code>3 days ago</code>), and ranges</li>\n</ul>\n<h3>Smart caching</h3>\n<p>Three layers minimize bandwidth:</p>\n<ol>\n<li>HTTP conditional requests using ETag and If-Modified-Since</li>\n<li>Content hashing (MD5) to detect changes when servers ignore cache headers</li>\n<li>In-memory deduplication on <code>guid</code> and <code>link</code> to prevent duplicate inserts</li>\n</ol>\n<p><code>--force</code> bypasses all of them when needed.</p>\n<h3>Content extraction and link repair</h3>\n<p>Articles can fetch their full body from the original page rather than relying on the (often truncated) feed entry. A repair pass tries HTTP/HTTPS swaps, <code>www</code> toggling, and an archive.org fallback for links that no longer resolve, and can flag or remove articles that stay broken.</p>\n<h3>Auto-deactivation on persistent errors</h3>\n<p>Feeds with repeated permanent errors (404, 410, 403, parse failures) are deactivated after three strikes; transient errors (5xx, 429, timeouts, DNS) get five. Error counts reset on a successful fetch, and a feed can be reactivated with a single command.</p>\n<h3>Interactive TUI</h3>\n<p>A <code>rss tui</code> command launches a terminal UI built on <code>@opentui/react</code> with keyboard navigation, markdown rendering, search, sort cycling, and three resizable layout modes. Keys follow vim-style conventions (<code>j</code>/<code>k</code>, <code>g</code>/<code>G</code>, <code>/</code> for search) alongside the standard arrow keys.</p>\n<h3>Scripting and agent workflows</h3>\n<p>Every command takes a <code>-j, --json</code> flag that emits structured output, and a <code>--quiet</code> flag that suppresses everything else. The CLI is designed to compose with shell pipelines and LLM tool-call loops (list articles, pipe the JSON into a model, mark them read, and so on).</p>\n<h2>Quick start</h2>\n<pre><code class=\"language-bash\"># Run directly with bunx\nbunx rss-ai feed add https://hnrss.org/frontpage\nbunx rss-ai fetch all\nbunx rss-ai article list --unread\nbunx rss-ai tui\n</code></pre>\n<p>The database auto-initializes on first use and runs Drizzle migrations on every boot.</p>\n<h2>Technology stack</h2>\n<ul>\n<li>TypeScript on the Bun runtime, distributed on npm as <code>rss-ai</code></li>\n<li>SQLite with Drizzle ORM for storage and migrations, FTS5 for search</li>\n<li><code>commander</code> for the CLI, <code>@opentui/react</code> for the TUI</li>\n<li><code>xml2js</code> for feed parsing, <code>cheerio</code> and <code>turndown</code> for content extraction</li>\n<li><code>bun build --compile</code> produces a standalone binary</li>\n</ul>\n"
+  },
+  {
+    "slug": "searchthing",
+    "title": "SearchThing",
+    "description": "Semantic search over your own documents, running entirely in the browser. Drop in PDFs, Markdown, or text; embeddings are generated on-device with Transformers.js.",
+    "date": "2025-02-26T10:00:38.000Z",
+    "tags": [
+      "TypeScript",
+      "React",
+      "AI",
+      "Search",
+      "Bun"
+    ],
+    "featured": false,
+    "projectUrl": "https://searchthing.briansunter.com/",
+    "cover": "/site-assets/searchthing-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>SearchThing is a local-first document search tool that runs the entire pipeline (embedding, indexing, querying) inside the browser. Drop in PDFs, Markdown, or plain-text files, and search across them in natural language. Nothing leaves your machine; embeddings are generated on-device via <a href=\"https://huggingface.co/docs/transformers.js\">Hugging Face Transformers.js</a> inside a Web Worker.</p>\n<h2>Features</h2>\n<ul>\n<li>Semantic search via on-device embeddings (no API calls, no network round-trip)</li>\n<li>Hybrid BM25 + vector ranking with reciprocal rank fusion</li>\n<li>Upload, store, and browse PDFs, Markdown, and text</li>\n<li>All embedding work happens in a Web Worker so the UI doesn&#39;t stutter</li>\n<li>Caches embeddings per chunk so unchanged content isn&#39;t re-embedded</li>\n<li>Built-in reader view that highlights the chunk that matched your query</li>\n<li>Mobile layout with adaptive navigation</li>\n<li>Drop files anywhere in the window to upload</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript</li>\n<li>React</li>\n<li>Bun (server and bundler)</li>\n<li>Hugging Face Transformers.js for local embeddings</li>\n<li>shadcn/ui + Tailwind CSS</li>\n<li>Comlink for the main-thread ↔ worker bridge</li>\n</ul>\n"
+  },
+  {
+    "slug": "sreader",
+    "title": "SReader",
+    "description": "An RSVP speed reader where words flash one at a time at a fixed point, so your eyes don't have to track across lines.",
+    "date": "2026-01-16T05:43:34.000Z",
+    "tags": [
+      "TypeScript",
+      "React",
+      "TanStack",
+      "Speed Reading",
+      "RSVP"
+    ],
+    "featured": false,
+    "projectUrl": "https://sreader.briansunter.com/",
+    "cover": "/site-assets/sreader-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>SReader is a Rapid Serial Visual Presentation (RSVP) reader. Instead of moving your eyes across a page, words flash one at a time at a single focal point. Whether RSVP actually makes you a faster reader is debatable; either way, it&#39;s a fun way to chew through long articles.</p>\n<h2>Features</h2>\n<ul>\n<li>Speed adjustable from 100 to 1000+ WPM</li>\n<li>Show 1–5 words per flash</li>\n<li>Saved texts in localStorage</li>\n<li>Keyboard-driven controls</li>\n<li>Dark theme</li>\n<li>Position, word count, and time-remaining indicator</li>\n</ul>\n<h2>How It Works</h2>\n<p>Each word is positioned with its &quot;optimal recognition point&quot; (the letter your eye naturally lands on) aligned to a fixed marker on screen. Your gaze stays put while the words come to you.</p>\n<h2>Controls</h2>\n<ul>\n<li>Play / pause</li>\n<li>Speed up / down</li>\n<li>Rewind to the start</li>\n<li>Words-per-flash 1–5</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>TanStack Start (React framework)</li>\n<li>TanStack Router</li>\n<li>Tailwind CSS, shadcn/ui</li>\n<li>Vitest, Biome</li>\n</ul>\n"
+  },
+  {
+    "slug": "subs",
+    "title": "Subs: Email Signup API",
+    "description": "An email-signup API that writes straight into a Google Sheet. Cloudflare Turnstile blocks bots, Bun or Workers as the runtime, no separate database to operate.",
+    "date": "2026-01-13T06:14:47.000Z",
+    "tags": [
+      "TypeScript",
+      "Bun",
+      "ElysiaJS",
+      "Cloudflare Workers",
+      "Google Sheets API"
+    ],
+    "featured": false,
+    "projectUrl": "https://github.com/briansunter/subs",
+    "github": "https://github.com/briansunter/subs",
+    "cover": "/site-assets/subs-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Subs is a tiny email-signup API. You POST an email, it writes a row to a Google Sheet, and you stop having to operate a database for what was always just &quot;a list of email addresses.&quot; It also wires in Cloudflare Turnstile so spam bots get filtered before the row is written, and ships embeddable widgets so you can drop the form into a static site without touching the backend.</p>\n<h2>Features</h2>\n<ul>\n<li><strong>Google Sheets storage</strong>: no separate database; writes go straight to a sheet, with auto-tab-creation and dedup across tabs.</li>\n<li><strong>Cloudflare Turnstile</strong>: invisible bot protection; no checkbox CAPTCHAs.</li>\n<li><strong>Multiple embed surfaces</strong>: iframe widget, inline HTML, raw POST endpoint, or a JS SDK.</li>\n<li><strong>Extended metadata</strong>: name, source, tags, and arbitrary metadata alongside the email.</li>\n<li><strong>Bulk endpoint</strong>: accept up to 100 signups in one request.</li>\n<li><strong>Observability built in</strong>: Prometheus metrics, structured JSON logs, health and stats endpoints.</li>\n</ul>\n<h2>Deployment Options</h2>\n<ul>\n<li>Bun / Node server with hot reload for local dev</li>\n<li>Cloudflare Workers for an edge deploy</li>\n<li>Multi-stage Dockerfile + Compose</li>\n</ul>\n<h2>API Endpoints</h2>\n<table>\n<thead>\n<tr>\n<th>Endpoint</th>\n<th>Description</th>\n</tr>\n</thead>\n<tbody><tr>\n<td><code>POST /api/signup</code></td>\n<td>Basic email signup</td>\n</tr>\n<tr>\n<td><code>POST /api/signup/extended</code></td>\n<td>Signup with name, source, tags</td>\n</tr>\n<tr>\n<td><code>POST /api/signup/bulk</code></td>\n<td>Bulk signups (up to 100)</td>\n</tr>\n<tr>\n<td><code>GET /api/stats</code></td>\n<td>Signup statistics</td>\n</tr>\n<tr>\n<td><code>GET /api/health</code></td>\n<td>Health check</td>\n</tr>\n<tr>\n<td><code>GET /api/config</code></td>\n<td>Configuration info</td>\n</tr>\n<tr>\n<td><code>GET /api/metrics</code></td>\n<td>Prometheus metrics</td>\n</tr>\n</tbody></table>\n<h2>Technology Stack</h2>\n<ul>\n<li><strong>Runtime</strong>: Bun</li>\n<li><strong>Framework</strong>: ElysiaJS</li>\n<li><strong>Validation</strong>: Zod</li>\n<li><strong>Bot Protection</strong>: Cloudflare Turnstile</li>\n<li><strong>Storage</strong>: Google Sheets API (REST, no SDK)</li>\n<li><strong>Auth</strong>: Google service account, JWT signing via <code>jose</code></li>\n<li><strong>Monitoring</strong>: Prometheus + Pino</li>\n<li><strong>Testing</strong>: Vitest (unit + integration)</li>\n<li><strong>Deployment</strong>: Cloudflare Workers via Wrangler</li>\n</ul>\n<h2>Links</h2>\n<ul>\n<li><a href=\"https://github.com/briansunter/subs\">GitHub Repository</a></li>\n</ul>\n"
+  },
+  {
+    "slug": "swipefeed",
+    "title": "swipefeed",
+    "description": "Headless React primitives for building TikTok and Reels-style swipe feeds: a render-prop component and hook with virtualization, gestures, keyboard, and accessibility built in.",
+    "date": "2025-12-08T04:52:27.000Z",
+    "tags": [
+      "TypeScript",
+      "React",
+      "UI",
+      "Component Library",
+      "Accessibility"
+    ],
+    "featured": false,
+    "projectUrl": "https://briansunter.github.io/swipefeed/example/",
+    "github": "https://github.com/briansunter/swipefeed",
+    "cover": "/site-assets/swipefeed-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>swipefeed is a headless React library for vertical or horizontal swipe feeds (the TikTok / Reels / Stories interaction pattern). It ships a render-prop component (<code>SwipeDeck</code>) and a hook (<code>useSwipeDeck</code>) that wire up native CSS scroll-snap, TanStack virtualization, pointer/wheel/keyboard input, accessibility, and programmatic controls. You bring the markup and styles; swipefeed handles the behavior.</p>\n<p><img src=\"/site-assets/swipefeed-explainer.png\" alt=\"Swipefeed input and rendering architecture diagram\"></p>\n<h2>Features</h2>\n<ul>\n<li><strong>Headless</strong>: Bring your own markup and styles; spread the supplied props for behavior</li>\n<li><strong>Vertical or Horizontal</strong>: LTR and RTL aware for horizontal feeds</li>\n<li><strong>Virtualized</strong>: Backed by <code>@tanstack/react-virtual</code> with auto-measured viewport size and tunable overscan</li>\n<li><strong>Multi-Input</strong>: Pointer drag/flick, discrete wheel paging with heavy dampening, keyboard (global or scoped)</li>\n<li><strong>Controlled or Uncontrolled</strong>: Optional controlled <code>index</code>, loopable navigation, and programmatic <code>prev / next / scrollTo</code></li>\n<li><strong>Accessibility-First</strong>: Focusable <code>role=&quot;feed&quot;</code> viewport, per-item <code>role=&quot;article&quot;</code>, <code>aria-label</code>, <code>aria-busy</code>, snap alignment</li>\n<li><strong>Reduced-Motion Aware</strong>: <code>prefers-reduced-motion</code> triggers instant scrolling</li>\n<li><strong>Infinite Loading Hook</strong>: <code>onEndReached</code> fires near both ends with distance and direction</li>\n</ul>\n<h2>Quick Start</h2>\n<pre><code class=\"language-tsx\">import { SwipeDeck } from &quot;swipefeed&quot;;\n\nfunction Feed({ items }) {\n  return (\n    &lt;SwipeDeck items={items} className=&quot;w-full h-screen overflow-hidden&quot;&gt;\n      {({ item, isActive, props }) =&gt; (\n        &lt;section {...props} style={{ height: &quot;100vh&quot; }}&gt;\n          &lt;VideoPlayer video={item} playing={isActive} /&gt;\n        &lt;/section&gt;\n      )}\n    &lt;/SwipeDeck&gt;\n  );\n}\n</code></pre>\n<p>For full control over markup and layout, drop down to the hook:</p>\n<pre><code class=\"language-tsx\">const deck = useSwipeDeck({ items, orientation: &quot;horizontal&quot;, direction: &quot;rtl&quot; });\nconst viewportProps = deck.getViewportProps();\n</code></pre>\n<h2>Input Handling</h2>\n<p>Pointer gestures use threshold + flick-velocity detection with axis locking. Wheel input is discretized with debounce, cooldown, and delta caps to stop trackpads from jumping multiple items at once. Keyboard bindings (arrows, Home/End, PageUp/PageDown) can be scoped to the viewport or registered globally, and flip horizontal intent in RTL. Programmatic <code>scrollTo</code> honors <code>prefers-reduced-motion</code> and temporarily disables snap while animating to avoid fighting CSS snap.</p>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript and React 19</li>\n<li><code>@tanstack/react-virtual</code> for virtualization</li>\n<li>Bun for development, build, and tests</li>\n<li>Vitest (jsdom + browser runners) with 99% coverage</li>\n<li>TypeDoc for API docs, Storybook for component stories, GitHub Pages for the demo</li>\n</ul>\n"
+  },
+  {
+    "slug": "tracer",
+    "title": "Tracer",
+    "description": "Trace artwork directly on your screen. Load any reference image, dial the opacity down, and draw over it on phone or tablet.",
+    "date": "2026-01-10T05:49:33.000Z",
+    "tags": [
+      "TypeScript",
+      "React",
+      "Canvas",
+      "AR"
+    ],
+    "featured": true,
+    "projectUrl": "https://traceoverlay.com",
+    "cover": "/site-assets/tracer-hero.png",
+    "coverFile": "../assets/images/curated/tracer.png",
+    "bodyHtml": "<h2>Overview</h2>\n<p>Tracer turns your phone or tablet into a tracing surface. Load a reference image, set its opacity, and draw on top of it. This approach is useful for learning to draw by copying master works, the same way figure-drawing classes have used lightboxes forever, just without the lightbox.</p>\n<h2>Features</h2>\n<ul>\n<li>Import any image as a reference layer</li>\n<li>Adjustable reference-layer opacity</li>\n<li>Brush tools with size and color controls</li>\n<li>Save and export traced work</li>\n<li>Touch input on mobile</li>\n<li>Dark theme for low-light practice</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>React + TypeScript</li>\n<li>HTML5 Canvas</li>\n<li>Touch event handling for mobile</li>\n<li>Responsive layout</li>\n</ul>\n"
+  },
+  {
+    "slug": "trad",
+    "title": "TRAD Strike",
+    "description": "A small Raiden Trad-inspired vertical shooter written in C99, built on Sokol and a tiny ECS. The same binary runs natively and in the browser via WebAssembly.",
+    "date": "2026-05-13T00:00:00.000Z",
+    "tags": [
+      "C",
+      "Sokol",
+      "WebAssembly",
+      "Game Development",
+      "ECS"
+    ],
+    "featured": false,
+    "projectUrl": "https://briansunter.github.io/trad/",
+    "github": "https://github.com/briansunter/trad",
+    "cover": "/site-assets/trad-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>TRAD Strike is a small vertical shoot-&#39;em-up inspired by Raiden Trad, written in C99. The view is top-down and 2D, but every ship, projectile, and prop on screen is a real 3D mesh from the Kenney Space Kit, lit at asset-conversion time so the renderer does no lighting math at runtime.</p>\n<p><img src=\"/site-assets/trad-hero.webp\" alt=\"TRAD Strike gameplay screenshot\"></p>\n<p>The same source builds to a native macOS/Linux binary and to a WebAssembly bundle, so desktop and mobile web both run the same gameplay code as the native build.</p>\n<h2>Features</h2>\n<ul>\n<li>Wave-based vertical shooter with enemy waves, projectiles, particles, and pickups</li>\n<li>ECS layout with <code>spawn</code>, <code>player</code>, <code>enemy</code>, <code>movement</code>, <code>collision</code>, <code>lifetime</code>, and <code>cleanup</code> systems</li>\n<li>Desktop input via WASD/arrows, Space/Z/X to fire, R to restart, mouse aim</li>\n<li>Mobile touch controls: left half is a d-pad, right half is the fire button</li>\n<li>Parallax starfield and alpha-blended glow effects rendered through Sokol GL immediate-mode</li>\n<li>Static C mesh data generated from Kenney OBJ models at build time, with no runtime model loading</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>C99 for all gameplay and rendering code</li>\n<li><a href=\"https://github.com/floooh/sokol\">Sokol</a> for graphics, app, and input across Metal, OpenGL, and WebGL2</li>\n<li><a href=\"/projects/c-ecs\">c-ecs</a> for entities, components, and systems</li>\n<li>Emscripten for the WebAssembly build</li>\n<li>Python tool that bakes Kenney OBJ meshes into static C arrays</li>\n<li>Nix flake for a reproducible clang + emscripten dev shell</li>\n</ul>\n"
+  },
+  {
+    "slug": "travel-map",
+    "title": "Travel Map",
+    "description": "An interactive map of the countries, US states, China provinces, and cities I have visited, powered by a small YAML travel log.",
+    "date": "2026-05-11T00:00:00.000Z",
+    "tags": [
+      "Travel",
+      "Astro",
+      "TypeScript",
+      "D3",
+      "YAML"
+    ],
+    "featured": false,
+    "projectUrl": "https://briansunter.com/travel-map",
+    "cover": "/site-assets/travel-map-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>I wanted a travel page that felt closer to a notebook than a checklist. The map highlights countries I have visited, breaks out individual US states and China provinces, and plots cities as clickable dots so a trip can be read at country, state, province, or city level.</p>\n<p>The data lives in a YAML file, which keeps it easy to update without touching the rendering code. The current version tracks 30 countries, 26 US states, 4 China provinces, and 79 cities.</p>\n<h2>Features</h2>\n<ul>\n<li>Country highlighting across the full world map</li>\n<li>Separate US state highlighting instead of treating the United States as one shape</li>\n<li>Separate China province highlighting instead of treating China as one shape</li>\n<li>Clickable city dots with names and locations</li>\n<li>Drag-to-pan and click-then-scroll zoom behavior</li>\n<li>Labels that appear as the map zooms in</li>\n<li>YAML-backed travel log for cities, states, provinces, and countries</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>Astro for the static page</li>\n<li>TypeScript for data validation and map state</li>\n<li>D3 geo utilities for projection and path rendering</li>\n<li>TopoJSON datasets for world countries, US states, and China provinces</li>\n<li>YAML for the editable travel log</li>\n</ul>\n"
+  },
+  {
+    "slug": "typst-business-cards",
+    "title": "Typst Business Card Templates",
+    "description": "A collection of professionally-designed business card templates built with Typst, featuring multiple styles from minimalist to luxury.",
+    "date": "2024-11-18T04:22:08.000Z",
+    "tags": [
+      "typst",
+      "design",
+      "templates",
+      "business-cards"
+    ],
+    "featured": false,
+    "github": "https://github.com/briansunter/typst-business-cards",
+    "cover": "/site-assets/typst-business-cards-hero.webp",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>A collection of seven professionally-designed business card templates built with <a href=\"https://typst.app/\">Typst</a>. Each template features distinct typography, spacing, and visual hierarchy to cover a range of styles and use cases.</p>\n<h2>Templates</h2>\n<h3>Full Circle</h3>\n<p>Modern design with a striking circular monogram accent.</p>\n<p><img src=\"/site-assets/typst-card-full-circle.png\" alt=\"Full Circle business card template\"></p>\n<h3>Refine</h3>\n<p>Elegant minimalist card with premium Baskerville typography.</p>\n<p><img src=\"/site-assets/typst-card-refine.png\" alt=\"Refine business card template\"></p>\n<h3>Simple Modern</h3>\n<p>Clean, crisp layout with contemporary sans-serif type.</p>\n<p><img src=\"/site-assets/typst-card-simple-modern.png\" alt=\"Simple Modern business card template\"></p>\n<h3>Bold Serif</h3>\n<p>Confident design with commanding serif presence.</p>\n<p><img src=\"/site-assets/typst-card-bold-serif.png\" alt=\"Bold Serif business card template\"></p>\n<h3>Elegant Serif</h3>\n<p>Sophisticated card with classic proportions and refined readability.</p>\n<p><img src=\"/site-assets/typst-card-elegant-serif.png\" alt=\"Elegant Serif business card template\"></p>\n<h3>Big Name</h3>\n<p>Bold layout that puts your name front and center.</p>\n<p><img src=\"/site-assets/typst-card-big-name.png\" alt=\"Big Name business card template\"></p>\n<h3>Patrick Bateman</h3>\n<p>Luxury executive card inspired by high-end stationery, a nod to <em>American Psycho</em>.</p>\n<p><img src=\"/site-assets/typst-card-patrick-bateman.png\" alt=\"Patrick Bateman business card template\"></p>\n<h2>Features</h2>\n<ul>\n<li><strong>Build automation</strong> via <code>justfile</code>: compile to PDF, SVG, and PNG with a single command</li>\n<li><strong>Live preview</strong> with <code>just watch</code> for rapid iteration</li>\n<li><strong>Customizable</strong>: edit colors, fonts, and content directly in Typst source</li>\n<li><strong>High-res output</strong>: 300 PPI PNG exports for crisp previews</li>\n<li><strong>Template scaffold</strong>: <code>just new-template</code> to create new designs from scratch</li>\n</ul>\n<h2>Tech Stack</h2>\n<ul>\n<li><strong>Typst</strong>: modern markup-based typesetting system (successor to LaTeX for document design)</li>\n<li><strong>Just</strong>: command runner for build automation</li>\n<li><strong>ImageMagick</strong>: post-processing and format conversion</li>\n</ul>\n"
+  },
+  {
+    "slug": "ubersearch",
+    "title": "UberSearch",
+    "description": "One CLI/MCP front-end for Tavily, Brave, Linkup, and self-hosted SearXNG. Tries free providers first, falls back to paid ones, tracks credits.",
+    "date": "2025-12-23T21:57:08.000Z",
+    "tags": [
+      "TypeScript",
+      "CLI",
+      "MCP",
+      "Search",
+      "Bun"
+    ],
+    "featured": false,
+    "github": "https://github.com/briansunter/ubersearch",
+    "cover": "/site-assets/ubersearch-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>UberSearch is one CLI (and one MCP server) that fronts every web-search provider I use: Tavily, Brave, Linkup, and a Docker-managed SearXNG instance. By default it queries free SearXNG first and only falls back to the paid providers when SearXNG comes back empty or errors. Credits are tracked per provider so I notice before I burn through a free tier.</p>\n<h2>How It Works</h2>\n<p><img src=\"/site-assets/ubersearch-explainer.png\" alt=\"UberSearch provider routing architecture diagram\"></p>\n<p>The orchestrator runs a first-success strategy by default: SearXNG (auto-started via Docker), then Tavily, Brave, Linkup. There&#39;s also an <code>all</code> strategy that fans out across every provider in parallel and merges the result sets. Credit usage is logged per engine.</p>\n<h2>Features</h2>\n<ul>\n<li>Multiple providers: Tavily, Brave, Linkup, SearXNG (Docker-auto-started)</li>\n<li>Plug-in custom providers via TypeScript</li>\n<li>Strategies: <code>all</code> (merge every provider) or <code>first-success</code> (cheapest path)</li>\n<li>Per-engine credit tracking with low-credit warnings</li>\n<li>MCP server for using it from Claude Desktop</li>\n<li>JSON or TypeScript config (<code>defineConfig</code>), XDG-aware paths</li>\n<li>Optional Docker integration for the SearXNG instance</li>\n</ul>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript on Bun</li>\n<li>Docker (optional) for SearXNG</li>\n<li>Model Context Protocol</li>\n</ul>\n"
+  },
+  {
+    "slug": "vannevar",
+    "title": "Vannevar",
+    "description": "Local RAG search for markdown files. SQLite FTS5 keyword search and HNSW vector search fused with Reciprocal Rank Fusion, running fully offline on a local ONNX embedding model.",
+    "date": "2025-10-30T08:48:25.000Z",
+    "tags": [
+      "TypeScript",
+      "Bun",
+      "RAG",
+      "Vector Search",
+      "HNSW",
+      "SQLite",
+      "FTS5",
+      "Embeddings",
+      "ONNX"
+    ],
+    "featured": false,
+    "cover": null,
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Vannevar is a local RAG search tool for markdown files. It builds a hybrid index over a directory of notes: BM25 keyword search via SQLite FTS5 and semantic vector search via an HNSW graph. It fuses the two ranked lists with Reciprocal Rank Fusion to return better results than either approach alone.</p>\n<p>Everything runs offline. The embedding model (<a href=\"https://huggingface.co/nomic-ai/nomic-embed-text-v1.5\">nomic-embed-text-v1.5</a>, q4f16 quantized) downloads once and runs locally via ONNX, the vector index lives on disk, and queries hit a local SQLite database.</p>\n<p>It is named after <a href=\"https://en.wikipedia.org/wiki/Vannevar_Bush\">Vannevar Bush</a>, who envisioned the <a href=\"https://en.wikipedia.org/wiki/Memex\">Memex</a>, a device for storing, linking, and retrieving personal knowledge.</p>\n<h2>Features</h2>\n<h3>Hybrid search</h3>\n<p>FTS5 ranks chunks by BM25 keyword relevance. The vector store embeds the query with the same model used at index time and finds nearest neighbors via HNSW cosine similarity. RRF merges the two ranked lists with <code>score = weight / (k + rank)</code> at k=60, deduplicating chunks that appear in both, and normalizes so the top result is 1.0.</p>\n<p>The CLI also exposes the underlying searches directly: <code>search</code> for BM25 only and <code>vsearch</code> for vector only, so you can fall back to whichever side fits the query.</p>\n<h3>Markdown-aware chunking</h3>\n<p>The chunker respects heading hierarchy, keeps fenced code blocks and tables atomic, and applies configurable overlap between chunks so an answer that straddles a chunk boundary still surfaces.</p>\n<h3>Fully local</h3>\n<p>No API keys, no cloud calls. The embedding model is ~111MB and downloads on first use; after that, everything (embedding, indexing, search) runs on the local machine.</p>\n<h3>Root-aware indexes</h3>\n<p>Directory indexes store each document as <code>root path + relative path</code>, so a single database can hold multiple indexed directories with overlapping filenames. <code>get</code> accepts a unique relative path, an absolute path, or a <code>#</code> document/chunk ID prefix.</p>\n<h3>Fast</h3>\n<p>FTS queries land in the ~0.1ms range, vector search in ~14ms, and the fused hybrid query in ~11ms on the bundled benchmarks.</p>\n<h2>Quick start</h2>\n<pre><code class=\"language-bash\"># Index a directory of markdown files\nbun src/cli.ts index ./docs\n\n# Hybrid search (default)\nbun src/cli.ts query &quot;how to configure authentication&quot;\n\n# Keyword search only (BM25)\nbun src/cli.ts search &quot;authentication config&quot;\n\n# Vector search only\nbun src/cli.ts vsearch &quot;setting up user login&quot;\n\n# Retrieve a chunk or document\nbun src/cli.ts get setup.md\nbun src/cli.ts get &#39;#&lt;chunk-or-document-id-prefix&gt;&#39;\n</code></pre>\n<p>Output flags cover <code>--json</code>, <code>--md</code>, <code>--csv</code>, <code>--xml</code>, and <code>--files</code> for compact file references.</p>\n<h2>Architecture</h2>\n<p>Indexing runs in two phases with pipelining: read and chunk first, then embed and store. The store is SQLite via <code>bun:sqlite</code> and Drizzle ORM, with an FTS5 virtual table for keyword search. The vector side wraps <a href=\"/projects/verso\">verso-db</a> for the HNSW index, so the same vector store I use elsewhere drives the semantic half of the search.</p>\n<h2>Technology stack</h2>\n<ul>\n<li>TypeScript on the <a href=\"https://bun.sh\">Bun</a> runtime, using <code>bun:sqlite</code>, <code>Bun.file</code>, and <code>Bun.CryptoHasher</code></li>\n<li>SQLite with <a href=\"https://orm.drizzle.team\">Drizzle ORM</a> for storage, FTS5 with porter stemming for keyword search</li>\n<li><a href=\"/projects/verso\">verso-db</a> HNSW index for vector search</li>\n<li><a href=\"https://huggingface.co/nomic-ai/nomic-embed-text-v1.5\">nomic-embed-text-v1.5</a> embeddings via <a href=\"https://github.com/huggingface/transformers.js\">@huggingface/transformers</a> (ONNX, q4f16 quantized)</li>\n<li><a href=\"https://biomejs.dev\">Biome</a> for linting</li>\n</ul>\n"
+  },
+  {
+    "slug": "verso",
+    "title": "Verso",
+    "description": "A high-performance vector database for Bun, Node.js, and the browser. HNSW indexing, Int8 quantization, and pluggable storage backends.",
+    "date": "2025-11-27T08:37:18.000Z",
+    "tags": [
+      "TypeScript",
+      "Vector Search",
+      "HNSW",
+      "Embeddings",
+      "RAG",
+      "Bun",
+      "OPFS"
+    ],
+    "featured": false,
+    "projectUrl": "https://www.npmjs.com/package/verso-db",
+    "cover": "/site-assets/verso-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Verso is an embeddable vector database written in TypeScript. It runs the same HNSW index in Bun, Node.js, and the browser, persists to the local file system or the Origin Private File System depending on where it is loaded, and ships with Int8 quantization, metadata filtering, and a small library of pre-tuned parameter presets.</p>\n<p>I built it because most ANN libraries assume a server. I wanted something I could drop into a Bun script, a desktop app, or a static web page and have it index a few hundred thousand vectors locally without spinning up a separate service.</p>\n<p><img src=\"/site-assets/verso-explainer.png\" alt=\"Verso vector index architecture diagram\"></p>\n<h2>Features</h2>\n<h3>HNSW index</h3>\n<ul>\n<li>Hierarchical Navigable Small World graph for approximate nearest neighbor search</li>\n<li>Cosine, Euclidean, and dot product distance metrics</li>\n<li>Build-time (<code>M</code>, <code>efConstruction</code>) and query-time (<code>efSearch</code>) tuning</li>\n<li>Tuned presets target 95-99%+ Recall@10 depending on data and <code>efSearch</code></li>\n<li>Sub-millisecond to low-millisecond queries in the bundled benchmarks</li>\n</ul>\n<h3>Int8 quantization</h3>\n<p>A <code>ScalarQuantizer</code> trains on a sample of vectors and produces an Int8 representation that uses 4x less memory than the original Float32 vectors, with minimal recall loss. A <code>QuantizedVectorStore</code> keeps the compact form in memory for environments where every byte matters.</p>\n<h3>Multi-platform storage</h3>\n<p>Verso picks the right backend automatically:</p>\n<ul>\n<li><strong>Bun / Node.js</strong>: file system via <code>BunStorageBackend</code></li>\n<li><strong>Browser</strong>: Origin Private File System via <code>OPFSBackend</code></li>\n<li><strong>Fallback</strong>: in-memory <code>MemoryBackend</code> when persistence is not available</li>\n</ul>\n<p>The same collection API works across all three, so a snippet that builds an index in a Bun script can run unchanged inside a web worker.</p>\n<h3>Metadata filtering</h3>\n<p>Each vector can carry an arbitrary metadata object, and queries accept a MongoDB-style filter that runs alongside the ANN search:</p>\n<pre><code class=\"language-ts\">const results = await collection.query({\n  queryVector: queryVec,\n  k: 10,\n  filter: {\n    category: &#39;tech&#39;,\n    score: { $gt: 0.5 },\n    tags: { $in: [&#39;ai&#39;, &#39;ml&#39;] }\n  }\n});\n</code></pre>\n<p>Supported operators: <code>$eq</code>, <code>$ne</code>, <code>$gt</code>, <code>$gte</code>, <code>$lt</code>, <code>$lte</code>, <code>$in</code>, <code>$nin</code>.</p>\n<h3>Parameter presets</h3>\n<p>A small set of named presets covers the common cases without forcing users to learn HNSW tuning:</p>\n<ul>\n<li>By dimension: <code>low-dim</code>, <code>medium-dim</code>, <code>high-dim</code>, <code>very-high-dim</code></li>\n<li>By dataset size: <code>small-dataset</code>, <code>large-dataset</code></li>\n<li>By goal: <code>max-recall</code>, <code>low-latency</code></li>\n<li>By embedding model: <code>getRAGPreset(&#39;text-embedding-3-large&#39;)</code> and friends</li>\n</ul>\n<p><code>getRecommendedPreset(dimension)</code> picks a sensible default automatically.</p>\n<h3>Batch and upsert</h3>\n<p>Single-vector add, batch add, upsert (update existing or insert new), single and batch delete, batch query, and a <code>compact()</code> operation that permanently reclaims space from soft-deleted vectors.</p>\n<h2>Quick start</h2>\n<pre><code class=\"language-ts\">import { VectorDB } from &#39;verso-db&#39;;\n\nconst db = new VectorDB({ storagePath: &#39;./my_vectors&#39; });\nconst collection = await db.createCollection(&#39;docs&#39;, { dimension: 3 });\n\nawait collection.add({\n  ids: [&#39;a&#39;, &#39;b&#39;, &#39;c&#39;],\n  vectors: [\n    new Float32Array([1, 0, 0]),\n    new Float32Array([0, 1, 0]),\n    new Float32Array([0, 0, 1])\n  ]\n});\n\nconst results = await collection.query({\n  queryVector: new Float32Array([1, 0.1, 0]),\n  k: 2\n});\n\nconsole.log(results.ids); // [&#39;a&#39;, &#39;b&#39;]\nawait db.close();\n</code></pre>\n<h2>Technology stack</h2>\n<ul>\n<li>TypeScript, distributed on npm as <code>verso-db</code></li>\n<li>HNSW implementation written from scratch</li>\n<li>Bun and Node.js runtime support, plus a browser build using OPFS</li>\n<li>Vitest for unit tests, plus a separate browser test suite</li>\n<li>Recall, storage, and end-to-end benchmark suites against the Cohere Wikipedia dataset</li>\n</ul>\n"
+  },
+  {
+    "slug": "wikipedia-3d-embeddings",
+    "title": "Wikipedia 3D Embeddings",
+    "description": "Embed thousands of Wikipedia articles, project them into 3D with UMAP, and fly through the result in the browser. Articles cluster by what they're about, not by what folder they live in.",
+    "date": "2023-08-27T03:06:29.000Z",
+    "tags": [
+      "Python",
+      "Three.js",
+      "Machine Learning",
+      "UMAP",
+      "Text Embeddings",
+      "Data Visualization"
+    ],
+    "featured": false,
+    "projectUrl": "https://briansunter.github.io/wikipedia-3d-embeddings/",
+    "github": "https://github.com/briansunter/wikipedia-3d-embeddings",
+    "cover": "/site-assets/wikipedia-3d-embeddings-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>This started as an experiment in self-organising knowledge: instead of categorising Wikipedia articles by hand, embed them with a sentence-transformer, run UMAP to drop the high-dimensional vectors into 3D, and render the result with Three.js. Articles end up positioned by meaning. The planets and astronomy stuff sits in one cloud, the World War II stuff sits in another, and you can fly through it in the browser.</p>\n<h2>Features</h2>\n<ul>\n<li>Renders 1,000 or 10,000 Wikipedia articles in 3D</li>\n<li>No manual categorisation. Positions come from the embedding model.</li>\n<li>Pan, rotate, zoom</li>\n<li>Articles colored by region of the cloud to make groupings legible</li>\n<li>Distance-based label sizing and billboarding so labels don&#39;t pile up</li>\n<li>Pure browser rendering with Three.js</li>\n</ul>\n<h2>Technology Stack</h2>\n<p><strong>Python pipeline:</strong></p>\n<ul>\n<li><code>sentence-transformers</code> (all-MiniLM-L6-v2) for embeddings</li>\n<li>UMAP for the 384D → 3D reduction</li>\n<li>Wikipedia API for article text</li>\n</ul>\n<p><strong>Frontend:</strong></p>\n<ul>\n<li>Three.js</li>\n<li>WebGL</li>\n<li>Canvas-based label rendering</li>\n</ul>\n<h2>How It Works</h2>\n<ol>\n<li><strong>Embed</strong>: each article is turned into a 384-D vector via a sentence-transformer</li>\n<li><strong>Reduce</strong>: UMAP collapses 384 dimensions to 3 while preserving local structure</li>\n<li><strong>Render</strong>: articles are placed at the resulting (x, y, z) coordinates in a Three.js scene</li>\n<li><strong>Explore</strong>: you fly around with mouse and keyboard</li>\n</ol>\n<h2>Notes</h2>\n<ul>\n<li>Articles can sit between categories; nothing forces a single tag.</li>\n<li>Adding new articles re-positions the cloud. The layout is emergent, not pre-baked.</li>\n<li>Some of the unexpected adjacencies (biology articles next to chemistry, certain historical figures clustered by era rather than nationality) are more interesting than the categorical groupings I&#39;d have written by hand.</li>\n<li>3D preserves more of the original neighbourhood structure than 2D, which matters once the data set gets big.</li>\n</ul>\n<h2>The Dataset</h2>\n<p><a href=\"https://en.wikipedia.org/wiki/Wikipedia:Vital_articles\">Wikipedia&#39;s Vital Articles</a>, in two sizes:</p>\n<ul>\n<li><strong>1K</strong>: Level 3 vital articles (essential topics)</li>\n<li><strong>10K</strong>: Level 4 vital articles (broader coverage)</li>\n</ul>\n<p>Articles are split into 500-word chunks and the chunk embeddings averaged per article, so each point represents a single article&#39;s &quot;average meaning.&quot;</p>\n<h2>Demo &amp; Code</h2>\n<ul>\n<li><a href=\"https://briansunter.github.io/wikipedia-3d-embeddings/\">Live Demo</a></li>\n<li><a href=\"https://github.com/briansunter/wikipedia-3d-embeddings\">Source Code</a></li>\n</ul>\n"
+  },
+  {
+    "slug": "wraptc",
+    "title": "wraptc: Multi-Provider AI Coding CLI",
+    "description": "A unified CLI wrapper that routes coding requests across Gemini, OpenCode, Qwen Code, and Codex with automatic fallback, daily-credit tracking, and a built-in MCP server.",
+    "date": "2025-12-24T23:00:36.000Z",
+    "tags": [
+      "TypeScript",
+      "Bun",
+      "CLI",
+      "MCP",
+      "AI Agents",
+      "Routing"
+    ],
+    "featured": false,
+    "github": "https://github.com/briansunter/wraptc",
+    "cover": "/site-assets/wraptc-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>wraptc is a single CLI that fronts every other coding-agent CLI on my machine. Instead of remembering which tool has free quota left today, which one supports streaming JSON, and which one needs a different flag for file context, I run <code>wraptc ask -p &quot;...&quot;</code> and it picks the best available provider (Gemini CLI, OpenCode, Qwen Code, Codex, or any custom binary I&#39;ve registered), falls back automatically when one runs out of credits or starts erroring, and tracks how many Claude tokens I&#39;ve avoided spending in the process.</p>\n<p>It also ships an MCP server, so Claude Desktop (and any other MCP client) can hand off coding subtasks to the same routing layer.</p>\n<p><img src=\"/site-assets/wraptc-explainer.png\" alt=\"Wraptc provider routing architecture diagram\"></p>\n<h2>Why I built this</h2>\n<p>I use Claude as my main coding agent, but a lot of day-to-day requests (boilerplate generation, &quot;explain this function&quot;, &quot;write a unit test for X&quot;) don&#39;t actually need Claude. The free tiers on Gemini, Qwen, and Codex are more than enough for those, and using them keeps my Claude usage focused on the work that&#39;s worth it.</p>\n<p>The problem is that each of those CLIs has its own UX. Different prompt flags, different ways to attach files, different streaming formats, different error semantics, different daily limits, and zero awareness of each other. Manually rotating between them (&quot;Gemini&#39;s out, try Qwen, wait, Qwen errored twice in a row, fall back to Codex&quot;) is not how I want to spend my time.</p>\n<p>wraptc is the layer that makes that boring. One command, one JSON shape, automatic routing.</p>\n<h2>Features</h2>\n<h3>Multi-provider routing with automatic fallback</h3>\n<p>A priority list defines the default order (<code>[&quot;gemini&quot;, &quot;opencode&quot;, &quot;qwen-code&quot;, &quot;codex&quot;]</code> in my config). The router picks the first provider that is installed, hasn&#39;t hit its daily request limit, isn&#39;t currently in cooldown from consecutive errors, and supports the requested capability. If a request fails mid-flight with a retryable error, it falls back to the next provider transparently.</p>\n<p>Per-mode overrides let me say &quot;for <code>test</code> mode, prefer Codex over Gemini&quot; without changing the global order.</p>\n<h3>Daily credit tracking</h3>\n<p>Each provider has a configurable <code>dailyRequestLimit</code> and <code>resetHourUtc</code>. wraptc persists a per-provider counter in <code>~/.config/wraptc/state.json</code> and stops routing to a provider once its limit is hit, until the reset hour rolls around. No more &quot;oops, I burned through Gemini&#39;s free tier at 11pm and didn&#39;t notice.&quot;</p>\n<h3>Error-threshold blacklisting</h3>\n<p>After N consecutive failures from a provider, wraptc blacklists it for a cooldown window. This catches the common failure mode where a provider&#39;s API is flaking but each individual request still takes 10+ seconds to time out. Without it, the router would eat that latency on every request until I noticed.</p>\n<h3>Tokens-saved tracking</h3>\n<p>Every successful delegation logs an estimate of the Claude tokens I would have spent if I&#39;d run the same prompt through Claude. Over a week it adds up to a real number, and it&#39;s the closest thing I have to a metric for &quot;did this thing pay for itself.&quot;</p>\n<h3>Unified JSON-first API</h3>\n<p>Every provider returns the same shape:</p>\n<pre><code class=\"language-json\">{\n  &quot;provider&quot;: &quot;qwen-code&quot;,\n  &quot;text&quot;: &quot;...generated code...&quot;,\n  &quot;usage&quot;: { &quot;inputTokens&quot;: 45, &quot;outputTokens&quot;: 23 },\n  &quot;meta&quot;: { &quot;elapsedMs&quot;: 1250 }\n}\n</code></pre>\n<p>That&#39;s true whether the underlying CLI emits structured JSON natively, only supports streaming JSONL, or just dumps text to stdout. wraptc has per-provider adapters that normalize all of those into the same envelope. Streaming is supported in JSONL or plain-text mode.</p>\n<h3>Custom providers via config</h3>\n<p>Adding a new coding-agent CLI doesn&#39;t require code changes. Drop a block into the providers map with a binary name, an args template, a JSON / streaming mode, and a list of capabilities, and the router treats it like any first-class provider:</p>\n<pre><code class=\"language-json\">{\n  &quot;providers&quot;: {\n    &quot;my-custom-llm&quot;: {\n      &quot;binary&quot;: &quot;my-llm-cli&quot;,\n      &quot;argsTemplate&quot;: [&quot;--model&quot;, &quot;gpt-4&quot;, &quot;--prompt&quot;, &quot;{{prompt}}&quot;],\n      &quot;streamingMode&quot;: &quot;line&quot;,\n      &quot;capabilities&quot;: [&quot;generate&quot;, &quot;explain&quot;]\n    }\n  }\n}\n</code></pre>\n<h3>MCP server</h3>\n<p><code>wraptc --mcp</code> runs the same router as a Model Context Protocol server. It exposes three tools: <code>run_coding_task</code>, <code>get_providers</code>, and <code>dry_run</code>. Claude Desktop can ask wraptc to delegate a task on its behalf, list what&#39;s available, or preview which provider would be picked for a given prompt without burning the request.</p>\n<p>That last one matters more than it sounds: it means Claude can reason about which subtasks are worth handing off vs. handling itself.</p>\n<h2>Quick start</h2>\n<pre><code class=\"language-bash\"># Install\nbrew install briansunter/wraptc/wraptc\n\n# Use the best available provider\nwraptc ask -p &quot;Write a TypeScript function that reverses a string&quot;\n\n# Pin a specific provider\nwraptc ask -p &quot;Explain this code&quot; --provider gemini\n\n# Attach file context\nwraptc ask -p &quot;Refactor this module&quot; -f src/utils.ts -f src/main.ts\n\n# See what would run, without actually running it\nwraptc ask -p &quot;Generate tests&quot; --dry-run\n\n# Check provider state\nwraptc providers\n</code></pre>\n<h2>Configuration</h2>\n<p>wraptc uses a layered config system, merged in this order:</p>\n<ol>\n<li>Built-in defaults</li>\n<li>System config (<code>/etc/wraptc/config.json</code>)</li>\n<li>User config (<code>~/.config/wraptc/config.json</code>)</li>\n<li>Project config (<code>./.config/wraptc/config.json</code>)</li>\n<li>Environment variables (<code>WRAPTC_*</code>)</li>\n<li>CLI flags</li>\n</ol>\n<p>So a project can override the user-level routing order without touching global state. This is useful when one repo wants <code>[&quot;codex&quot;, &quot;gemini&quot;]</code> and another wants the opposite. Config is validated with <a href=\"https://zod.dev/\">Zod</a> on startup, so misconfigurations fail loud rather than silently routing to the wrong place.</p>\n<h2>Architecture</h2>\n<p>The repo is a Bun monorepo with three packages:</p>\n<pre><code>packages/\n├── core/         # Provider abstraction, router, state, config\n├── cli/          # Commander-based wraptc command\n└── mcp-server/   # MCP protocol server using the same core\n</code></pre>\n<p><code>packages/core</code> is the interesting one. Inside it:</p>\n<ul>\n<li><strong><code>providers/</code></strong>: one adapter per provider, all implementing a common <code>Provider</code> interface. Adapters handle the per-CLI quirks (flag names, JSON modes, streaming formats, error parsing).</li>\n<li><strong><code>router.ts</code></strong>: picks a provider given the request, the priority list, current state, and per-mode overrides; orchestrates fallback when a provider fails.</li>\n<li><strong><code>state.ts</code></strong>: persists per-provider request counters, daily-reset bookkeeping, error history, and cooldown windows.</li>\n<li><strong><code>config.ts</code></strong>: multi-source merge + Zod validation.</li>\n</ul>\n<p>The CLI and MCP-server packages are both thin shells over core; everything that matters lives in one place.</p>\n<h2>Error model</h2>\n<p>wraptc classifies provider errors into five buckets: <code>OUT_OF_CREDITS</code>, <code>RATE_LIMIT</code>, <code>TRANSIENT</code>, <code>BAD_REQUEST</code>, and <code>INTERNAL</code>. The router then decides whether to retry, fall back, or surface based on the class. <code>BAD_REQUEST</code> short-circuits and returns immediately (retrying a malformed prompt is pointless); <code>OUT_OF_CREDITS</code> puts the provider in cooldown until its reset hour and falls forward; <code>TRANSIENT</code> triggers an in-flight fallback to the next provider in the list.</p>\n<h2>Technology stack</h2>\n<ul>\n<li>TypeScript, packaged as a Bun monorepo</li>\n<li><a href=\"https://bun.sh/\">Bun</a> for install, build, test, and link</li>\n<li><a href=\"https://github.com/tj/commander.js\">Commander</a> for the CLI surface</li>\n<li><a href=\"https://zod.dev/\">Zod</a> for config schema validation</li>\n<li>The official <a href=\"https://modelcontextprotocol.io/\">Model Context Protocol</a> SDK for the MCP server</li>\n<li>Native binaries built per-platform for the install-without-Bun path (curl-installer, Homebrew tap, GitHub Releases)</li>\n</ul>\n<h2>License</h2>\n<p>MIT</p>\n"
+  },
+  {
+    "slug": "yuptime",
+    "title": "Yuptime",
+    "description": "A Kubernetes-native uptime monitor. Monitors are CRDs, state lives on the CRD's status subresource, and each check runs in its own throw-away Job pod.",
+    "date": "2025-12-16T08:57:22.000Z",
+    "tags": [
+      "TypeScript",
+      "Kubernetes",
+      "Uptime Monitoring",
+      "CRD",
+      "Controller"
+    ],
+    "featured": false,
+    "github": "https://github.com/briansunter/yuptime",
+    "cover": "/site-assets/yuptime-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Yuptime is an uptime-monitoring controller where every monitor is a Kubernetes CRD. There&#39;s no database; state lives on each CRD&#39;s status subresource, and every check runs as its own short-lived Job pod, so a misbehaving probe can&#39;t take down the controller. That makes the whole thing GitOps-native: declare your monitors as YAML in a repo, sync with Flux or Argo CD, done.</p>\n<h2>Features</h2>\n<ul>\n<li>All configuration is YAML in Git; works cleanly with Flux, Argo CD, or any GitOps flow</li>\n<li>No database: state lives on CRD status subresources</li>\n<li>Each check runs in an isolated Kubernetes Job pod</li>\n<li>Prometheus metrics for monitoring and alerting</li>\n<li>Native Alertmanager integration</li>\n<li>Maintenance-window CRDs suppress alerts during planned work</li>\n</ul>\n<h2>Monitor Types</h2>\n<h3>Network</h3>\n<ul>\n<li>HTTP: check status code and response body</li>\n<li>TCP: port reachability</li>\n<li>DNS: resolve and validate records</li>\n<li>Ping: ICMP reachability</li>\n<li>WebSocket: connect and exchange a frame</li>\n</ul>\n<h3>Application</h3>\n<ul>\n<li>Push: heartbeat endpoint for cron jobs and batch processes</li>\n<li>Steam: game-server availability</li>\n<li>Kubernetes: pod and service health inside the cluster</li>\n</ul>\n<h2>Architecture</h2>\n<p>Standard Kubernetes operator pattern:</p>\n<ul>\n<li>Reconcilers for <code>Monitor</code>, <code>MonitorSet</code>, and <code>MaintenanceWindow</code></li>\n<li>A job manager that schedules and runs checks</li>\n<li>A validation layer that rejects malformed CRDs before they hit the reconciler</li>\n</ul>\n<h2>Configuration</h2>\n<pre><code class=\"language-yaml\">apiVersion: yuptime.io/v1\nkind: Monitor\nmetadata:\n  name: api-health\nspec:\n  type: http\n  enabled: true\n  schedule:\n    intervalSeconds: 60\n    timeoutSeconds: 30\n  target:\n    http:\n      url: https://api.example.com/health\n</code></pre>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript on Bun</li>\n<li>Kubernetes client for CRD management</li>\n<li>Custom reconciler framework</li>\n<li>CloudWatch integration for metrics export</li>\n</ul>\n"
+  },
+  {
+    "slug": "z-cli",
+    "title": "Z.AI CLI",
+    "description": "Unified command-line interface and MCP server for Z.AI services: image generation, OCR, vision, web search, web reader, and Zread code research.",
+    "date": "2026-02-12T01:07:24.000Z",
+    "tags": [
+      "TypeScript",
+      "CLI",
+      "MCP",
+      "AI",
+      "Bun"
+    ],
+    "featured": false,
+    "projectUrl": "https://www.npmjs.com/package/@briansunter/z-cli",
+    "github": "https://github.com/briansunter/z-cli",
+    "cover": "/site-assets/z-cli-hero.png",
+    "coverFile": null,
+    "bodyHtml": "<h2>Overview</h2>\n<p>Z.AI CLI is a single command-line tool that wraps the Z.AI service catalog (image generation, OCR, vision analysis, web search, web reader, and code research via Zread) and exposes the same tools as a Model Context Protocol server for Claude Code. One install, one API key, eight tools.</p>\n<p><img src=\"/site-assets/z-cli-explainer.png\" alt=\"Z.AI CLI capabilities overview\"></p>\n<h2>Features</h2>\n<ul>\n<li><strong>Image Generation</strong>: Generate images from prompts with quality and size controls</li>\n<li><strong>OCR</strong>: Extract text from images and PDFs (URLs or local paths)</li>\n<li><strong>Vision</strong>: Ask natural-language questions about images</li>\n<li><strong>Web Search</strong>: Query the web with recency and result-count filters</li>\n<li><strong>Web Reader</strong>: Fetch and parse web pages into clean text or markdown</li>\n<li><strong>Zread Code Research</strong>: Search docs, get repo structure, and read files from any GitHub repo</li>\n<li><strong>MCP Server</strong>: All tools exposed to Claude Code with selectable subsets (<code>mcp web</code>, <code>mcp zread</code>, etc.)</li>\n<li><strong>Zero Install</strong>: Run via <code>bunx @briansunter/z-cli</code> without installing globally</li>\n</ul>\n<h2>CLI Usage</h2>\n<pre><code class=\"language-bash\"># Image generation\nbunx @briansunter/z-cli image &quot;a sunset over mountains&quot; --quality hd --size 1280x1280\n\n# OCR: extract text from images and PDFs\nbunx @briansunter/z-cli ocr ./document.pdf\n\n# Vision: analyze images\nbunx @briansunter/z-cli vision ./photo.png &quot;Describe this image&quot;\n\n# Web search and reader\nbunx @briansunter/z-cli search &quot;Claude Code MCP server&quot; --count 5 --recency oneWeek\nbunx @briansunter/z-cli read https://bun.com --format text --no-images\n\n# Code research via Zread\nbunx @briansunter/z-cli zread search facebook/react &quot;hooks&quot;\nbunx @briansunter/z-cli zread structure vercel/next.js\nbunx @briansunter/z-cli zread read vercel/next.js package.json\n</code></pre>\n<h2>MCP Server</h2>\n<p>Run the full MCP server or scope it to a single capability; this keeps Claude Code&#39;s tool surface small.</p>\n<pre><code class=\"language-bash\">bunx @briansunter/z-cli mcp           # All 8 tools\nbunx @briansunter/z-cli mcp image     # generate_image only\nbunx @briansunter/z-cli mcp web       # web_search + web_reader\nbunx @briansunter/z-cli mcp zread     # search_doc, get_repo_structure, read_file\n</code></pre>\n<p>Add to your <code>.mcp.json</code> for Claude Code:</p>\n<pre><code class=\"language-json\">{\n  &quot;mcpServers&quot;: {\n    &quot;z-ai&quot;: {\n      &quot;command&quot;: &quot;bunx&quot;,\n      &quot;args&quot;: [&quot;@briansunter/z-cli&quot;, &quot;mcp&quot;],\n      &quot;env&quot;: { &quot;Z_AI_API_KEY&quot;: &quot;${Z_AI_API_KEY}&quot; }\n    }\n  }\n}\n</code></pre>\n<h2>Technology Stack</h2>\n<ul>\n<li>TypeScript on Bun</li>\n<li>Z.AI REST APIs (image, OCR, vision, search, reader, Zread)</li>\n<li>Model Context Protocol (stdio transport)</li>\n<li>npm / bunx distribution</li>\n</ul>\n"
+  }
+]

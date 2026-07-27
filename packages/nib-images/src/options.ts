@@ -21,6 +21,8 @@ export interface ContentImageSource {
   readonly directory: string
   readonly widths?: readonly number[]
   readonly sizes?: string
+  /** Maximum CSS/display width for rewritten content images. */
+  readonly maxWidth?: number
 }
 
 export interface NormalizedImagesOptions {
@@ -40,6 +42,7 @@ export interface NormalizedContentImageSource {
   readonly directory: string
   readonly widths: readonly number[] | undefined
   readonly sizes: string | undefined
+  readonly maxWidth: number | undefined
 }
 
 const defaultWidths = [320, 480, 640, 768, 1024, 1280, 1536, 1920, 2560]
@@ -139,6 +142,9 @@ export function validateImagesOptions(options: ImagesOptions = {}): void {
       if (source.sizes !== undefined && typeof source.sizes !== 'string') {
         throw new Error(`@briansunter/nib-images: content[${index}].sizes must be a string`)
       }
+      if (source.maxWidth !== undefined) {
+        normalizedPositiveIntegers([source.maxWidth], `content[${index}].maxWidth`)
+      }
     }
   }
   if (
@@ -186,6 +192,7 @@ export function normalizeImagesOptions(root: string, options: ImagesOptions = {}
       directory: path.resolve(resolvedRoot, source.directory),
       widths: source.widths === undefined ? undefined : normalizedPositiveIntegers(source.widths, 'content widths'),
       sizes: source.sizes,
+      maxWidth: source.maxWidth,
     })),
   }
 }

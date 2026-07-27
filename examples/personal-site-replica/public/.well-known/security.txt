@@ -1,0 +1,6 @@
+Contact: mailto:public@briansunter.com
+Contact: https://briansunter.com/
+Encryption: https://briansunter.com/pubkey.txt
+Canonical: https://briansunter.com/.well-known/security.txt
+Preferred-Languages: en
+Expires: 2027-06-01T00:00:00.000Z

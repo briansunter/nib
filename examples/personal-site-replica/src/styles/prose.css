@@ -1,0 +1,211 @@
+/* Editorial content shared by articles, project bodies, and recipe notes. */
+.prose-editorial,
+.prose {
+  max-width: 100%;
+  margin-inline: auto;
+  color: var(--color-ink);
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  line-height: 1.7;
+  letter-spacing: 0;
+  font-feature-settings: "kern" 1, "liga" 1, "onum" 1;
+  hanging-punctuation: first last;
+  text-rendering: optimizeLegibility;
+}
+
+@media (min-width: 1024px) {
+  .prose-editorial,
+  .prose {
+    font-size: 1.3125rem;
+  }
+}
+
+.prose-editorial > * + *,
+.prose > * + * {
+  margin-top: 1.5rem;
+}
+
+.prose-editorial > :where(p, ul, ol, blockquote, h1, h2, h3, h4, h5, h6, hr),
+.prose > :where(p, ul, ol, blockquote, h1, h2, h3, h4, h5, h6, hr) {
+  max-width: 46rem;
+  margin-inline: auto;
+}
+
+.prose-editorial > :where(figure, img, video, iframe, table, pre),
+.prose > :where(figure, img, video, iframe, table, pre) {
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+.prose-editorial p,
+.prose p {
+  margin-bottom: 1.5rem;
+  font-family: var(--font-serif);
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 2;
+}
+
+.prose-editorial h2,
+.prose h2 {
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 1.875rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.2;
+}
+
+.prose-editorial h3,
+.prose h3 {
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.prose-editorial h4,
+.prose h4 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+@media (min-width: 1024px) {
+  .prose-editorial h2,
+  .prose h2 { font-size: 2.625rem; }
+  .prose-editorial h3,
+  .prose h3 { font-size: 2rem; }
+  .prose-editorial h4,
+  .prose h4 { font-size: 1.375rem; }
+}
+
+.prose-editorial a,
+.prose a {
+  color: var(--color-accent);
+  font-family: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.prose-editorial a:hover,
+.prose a:hover {
+  color: var(--color-accent-hover);
+  text-decoration-color: var(--color-accent-hover);
+  text-decoration-thickness: 2px;
+}
+
+.prose-editorial blockquote,
+.prose blockquote {
+  margin-block: 2.5rem;
+  border-left: 3px solid var(--color-accent);
+  padding-left: 1.5rem;
+  color: var(--color-ink-secondary);
+  font-style: italic;
+}
+
+.prose-editorial code,
+.prose code {
+  border: 1px solid var(--color-code-border);
+  border-radius: 0.25rem;
+  padding: 0.2em 0.4em;
+  background: var(--color-code-bg);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.prose-editorial pre,
+.prose pre {
+  overflow-x: auto;
+  margin-block: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  background: var(--color-surface-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.prose-editorial pre code,
+.prose pre code {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.prose-editorial img,
+.prose img {
+  margin: 2rem 0 0.5rem;
+  border-radius: var(--radius-md);
+}
+
+.prose-editorial figcaption,
+.prose figcaption {
+  margin-block: 0.5rem 2rem;
+  color: var(--color-ink-muted);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  text-align: center;
+}
+
+.prose-editorial ul,
+.prose-editorial ol,
+.prose ul,
+.prose ol {
+  margin-block: 1.5rem;
+  padding-left: 1.5rem;
+}
+
+.prose-editorial li,
+.prose li { margin-bottom: 0.5rem; }
+
+.prose-editorial hr,
+.prose hr {
+  margin-block: 3rem;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.prose-editorial table,
+.prose table {
+  width: 100%;
+  margin-block: 1.5rem;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: 0.9em;
+}
+
+.prose-editorial th,
+.prose th {
+  padding: 0.75rem 1rem;
+  background: var(--color-surface-subtle);
+  color: var(--color-ink);
+  font-weight: 600;
+  text-align: left;
+}
+
+.prose-editorial td,
+.prose td {
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding: 0.75rem 1rem;
+}
+
+@media (max-width: 640px) {
+  .prose-editorial code:not(pre code),
+  .prose code:not(pre code) {
+    padding: 0.15em 0.35em;
+    font-size: 0.8em;
+  }
+}

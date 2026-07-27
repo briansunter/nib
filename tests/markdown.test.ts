@@ -12,10 +12,51 @@ describe('markdown', () => {
     expect(compiled.layout).toBeUndefined()
   })
 
+  it('allows a site to opt out of the built-in GFM pass', () => {
+    const compiled = markdownToCompiledPage('~~literal~~', { gfm: false })
+    expect(compiled.html).toContain('~~literal~~')
+    expect(compiled.html).not.toContain('<del>')
+  })
+
+  it('serializes trusted raw HTML when explicitly enabled', () => {
+    const html = '<div data-embed="owned">Embedded content</div>'
+    expect(markdownToCompiledPage(html).html).not.toContain('<div data-embed="owned">')
+    expect(markdownToCompiledPage(html, { allowDangerousHtml: true }).html)
+      .toContain('<div data-embed="owned">Embedded content</div>')
+  })
+
   it('keeps layout frontmatter separate from page metadata', () => {
     const compiled = markdownToCompiledPage('---\ntitle: Hello\nlayout: docs\n---\n# World')
     expect(compiled.meta).toEqual({ title: 'Hello' })
     expect(compiled.layout).toBe('docs')
+  })
+
+  it('preserves social metadata fields from Markdown frontmatter', () => {
+    const compiled = markdownToCompiledPage(
+      '---\n'
+      + 'title: Hello\n'
+      + 'image: /cover.png\n'
+      + 'type: article\n'
+      + 'twitterCard: summary\n'
+      + 'layout: docs\n'
+      + '---\n# World',
+    )
+    expect(compiled.meta).toEqual({
+      title: 'Hello',
+      image: '/cover.png',
+      type: 'article',
+      twitterCard: 'summary',
+    })
+    // Layout stays separate from the social metadata fields.
+    expect(compiled.layout).toBe('docs')
+    expect(compiled.meta).not.toHaveProperty('layout')
+  })
+
+  it('rejects invalid social metadata field types in Markdown frontmatter', () => {
+    expect(() => markdownToCompiledPage('---\ntype: profile\n---\n# World'))
+      .toThrow('Markdown frontmatter')
+    expect(() => markdownToCompiledPage('---\ntwitterCard: hero\n---\n# World'))
+      .toThrow('Markdown frontmatter')
   })
 
   it('rejects invalid Markdown layouts while compiling', () => {

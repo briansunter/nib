@@ -1,9 +1,19 @@
-# Personal site shape, rebuilt with Nib
+# Personal site replicated with Nib
 
-This is a bounded proof of how much of `../personal-site` maps cleanly onto
-the published Nib `0.12.0` framework and `0.3.0` image package. It deliberately uses the target site's Inter/Lora fonts, warm editorial
-palette, avatar, project artwork, and a small sample of its art and travel
-photos. It is not a second copy of the complete 648-image, 320-recipe site.
+This example ports the current content and public asset surface of
+`../personal-site` into the workspace Nib framework and image package. The
+example intentionally consumes the sibling workspace packages so framework
+changes are exercised before publication.
+
+The generated snapshot currently contains:
+
+- 62 root-level writing routes, including nested newsletter routes
+- 58 project detail routes
+- 320 Cooklang recipe detail routes
+- 496 tag detail routes
+- 25 artworks, 158 photos, 131 pins, and 79 travel cities
+- the source site's public files, 648 image assets, 16 videos, RSS, sitemap,
+  and `/llms.txt`
 
 ## Run it
 
@@ -15,15 +25,18 @@ bun run verify
 bun run dev
 ```
 
-The example consumes the published packages directly, so this verifies the
-release artifact rather than a checked-out workspace link.
+The committed/generated snapshot is what the build consumes. To refresh it
+from the sibling Astro site:
 
-The deployable output is `dist/client`.
-The target Astro site uses no trailing slashes, and this proof now publishes
-matching extensionless artifacts where the route is a leaf. Nib preview
-redirects slash-form requests to the canonical extensionless URL; deployments
-need a host that serves extensionless page files as HTML and rewrites a parent
-route to its directory index.
+```bash
+PERSONAL_SITE_SRC=../personal-site bun run import:content
+```
+
+`dist/client` is the deployable static output. The site keeps the original
+extensionless URL policy (`trailingSlash: 'never'`); Nib emits extensionless
+page artifacts and redirect documents for `/notes` → `/pages` and
+`/rss.xml` → `/index.xml`. A deployment host must serve those extensionless
+files as HTML and handle both slash and non-slash requests at its edge.
 
 ## View the running proof
 
@@ -34,56 +47,64 @@ Tailscale Serve:
 - Any device on the tailnet: <https://macmini.taild80340.ts.net:8447/>
 
 Use the Tailscale URL from another device; `localhost` there refers to that
-device, not this Mac. The loopback-only listener is intentional, so the dev
-server is not exposed directly on the LAN. The configured LaunchAgent keeps it
-running as `com.briansunter.nib-personal-site`; inspect it with
+device, not this Mac. The configured LaunchAgent keeps it running as
+`com.briansunter.nib-personal-site`; inspect it with
 `launchctl print gui/$(id -u)/com.briansunter.nib-personal-site` and inspect the
 proxy with `tailscale serve status`.
 
-## What is proved
+## What is covered
 
-| Target-site feature | Nib proof |
-| --- | --- |
-| Editorial homepage and shared header/footer | `src/pages/page.tsx`, `src/site-shell.tsx`, and plain CSS |
-| Markdown writing pages and layouts | `src/pages/notes/*/page.md` with `src/layouts/article.tsx` |
-| Typed content collections | YAML collections in `src/content/posts` and `fromPageSource(projectPages)` |
-| Generated project detail pages | `definePageSource` plus `pageRenderer('./src/data-pages', 'ProjectDetailPage')` turns project YAML into routes without preloading image transforms in config |
-| Responsive local images | `?nib-image` imports plus `Image` in home, project index, art, and photos |
-| Lazy/eager loading and intrinsic dimensions | image props and `scripts/check-performance.mjs` assertions |
-| RSS and sitemap | first-party `rss()` and `sitemap()` plugins in `nib.config.ts` |
-| Browser-only interaction | `ThemeToggle`, `Search`, and recipe serving scaler islands |
-| Tags, redirects, 404, privacy, and external links | representative static routes/configuration |
+The replica uses pattern-discovered Nib page sources for project, recipe, and
+tag detail routes;
+typed collections for the imported JSON snapshots; the article Markdown
+layout for writing; first-party RSS and sitemap plugins; responsive
+`?nib-image` imports for the avatar, homepage writing covers, and featured
+project covers plus reference-driven optimization for content images; and
+small
+browser islands for theme switching, search, recipe filtering, recipe serving
+scaling, and copying the Bitcoin address.
 
-The performance script checks that the built homepage contains responsive
-`<picture>` markup, AVIF/WebP candidates, lazy and priority images, and that a
-Markdown route has no island runtime. It also checks the generated RSS feed.
+Writing pages preserve local images, YouTube/Google Maps iframe embeds, and
+local MP4 embeds through Nib's allow-listed media adapter. Homepage writing
+and featured project covers are optimized by `nib-images`; the source image
+catalog lives under `src/assets/site-assets`, and only referenced content
+images are emitted into the deployable output. Gallery pages (photos, art,
+pin-collection) annotate each `<img>` with both `data-nib-width` and
+`data-nib-widths`: the first matches the actual CSS slot (`1024px` featured,
+`504px` photo card, `332px` art cell, `180px` pin), while the second keeps a
+small responsive ladder rather than shipping every source at its natural
+`1200px` width.
 
-## What was not easy or not possible in this pass
+`bun run check:performance` verifies the built homepage's picture/srcset,
+AVIF/WebP, lazy/priority image output, RSS items, extensionless internal
+links, route accessibility basics, local media references, and the fact that
+a static Markdown article does not ship island runtime code. It also asserts
+the `/photos`, `/art`, and `/pin-collection` routes ship optimized `<picture>`
+markup with per-use responsive candidate ladders (authored via the
+`data-nib-width` and `data-nib-widths` hints), slot-sized intrinsic
+width/height dimensions, and authored `sizes`, and that the RSS feed mirrors
+the original Astro `index.xml`:
+stylesheet processing instruction, atom/content/dc namespaces, channel
+language/copyright/managingEditor/webMaster, per-item `dc:creator`, and
+project cover images embedded in `content:encoded`.
 
-- The target uses Astro content loaders for hundreds of Markdown/MDX pages,
-  YAML photo/art collections, and a custom Cooklang parser. Nib can support
-  these through typed collections or a page-source plugin, but there is no
-  built-in Cooklang loader, so porting all 320 recipes would be a separate
-  adapter rather than a mechanical move.
-- Nib's image optimizer intentionally requires explicit local raster imports
-  with `?nib-image`. The target rewrites many Obsidian/Markdown image embeds
-  and has a large asset catalog. Those images need an import/catalog step;
-  automatic Markdown image optimization and remote images are not part of the
-  current package.
-- The target's generated Satori OG PNG routes, Pagefind search index, Leaflet
-  travel map, PhotoSwipe lightbox, EXIF/photo metadata, and full gallery
-  masonry are not reproduced here. Islands can cover the browser interactions,
-  but the build-time OG/image-index/map integrations need dedicated plugins or
-  app-owned build steps.
-- Nib does not expose a general typed document-head mutation seam. The target's
-  preload/structured-schema/alternate-markdown work would need explicit page
-  markup or a future document-contribution plugin. The proof uses image
-  `priority` and route metadata instead.
-- The newsletter form remains an external-service handoff. No network signup,
-  authentication, analytics, or production console was exercised.
+## Known differences
 
-The strongest clean result is the static publishing core: shared page chrome,
-Markdown, typed YAML data, route generation, RSS/sitemap, and build-time
-responsive images all work in one small Nib project. The main friction is
-porting the target's specialized content and browser integrations, not the
-editorial site shape itself.
+These parts of the Astro site are represented by accessible static fallbacks
+rather than copied wholesale:
+
+- Leaflet travel maps, PhotoSwipe galleries, and the original Pagefind runtime
+- Satori-generated per-page OG images (the Nib metadata plugin still emits
+  canonical, Open Graph, Twitter, and WebPage metadata)
+- the original custom Cooklang parser's full unit/scaling behavior; the
+  adapter parses the source into typed ingredients, cookware, sections,
+  timings, nutrition metadata, and preserves the original source text
+- fetched X/Twitter embeds and bespoke MDX/JSX widgets
+- external newsletter signup, analytics, and other production services
+- RSS cover images are resized by Nib's normal page-image pipeline only when
+  they are rendered as pages; feed content currently embeds the canonical
+  source URL rather than the Astro webp@1200 derivative.
+
+Those are the boundaries that required app-owned adapters or integrations;
+the static publishing, content, route, image, feed, and basic interaction
+surface is exercised in the replica.

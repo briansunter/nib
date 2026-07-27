@@ -209,7 +209,7 @@ describe('generic content', () => {
 
   it('generates a watched Vite module for configured data extensions', async () => {
     const source = definePageSource({
-      extensions: ['yaml'],
+      extensions: ['json', 'yaml'],
       schema: itemSchema,
       load: () => ({ data: { slug: 'one', count: 1 } }),
       component: pageRenderer('./src/data-pages', 'ItemPage'),
@@ -221,11 +221,24 @@ describe('generic content', () => {
       'tests/fixtures/basic-site/src/pages/team/page.yaml',
     ))
 
-    expect(result).toContain('compileDataPages(pageSources[0]')
-    expect(result).toContain('virtual:nib/page-sources')
-    expect(result).toContain('import { ItemPage as __nibPageRenderer } from "/site/src/data-pages"')
-    expect(result).toContain(', __nibPageRenderer)')
-    expect(result).toContain('defaultPath: "/team"')
+    // Generated data-page modules must advertise a JS module type so Vite 8
+    // does not guess JSON from a `.json`/`.yaml` source extension and skip
+    // import analysis for the virtual:nib/page-sources import.
+    expect(result).toEqual(expect.objectContaining({ moduleType: 'js' }))
+    const code = (result as { code: string }).code
+    expect(code).toContain('compileDataPages(pageSources[0]')
+    expect(code).toContain('virtual:nib/page-sources')
+    expect(code).toContain('import { ItemPage as __nibPageRenderer } from "/site/src/data-pages"')
+    expect(code).toContain(', __nibPageRenderer)')
+    expect(code).toContain('defaultPath: "/team"')
+
+    const jsonRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-content-json-page-'))
+    temporaryDirectories.push(jsonRoot)
+    const jsonFile = path.join(jsonRoot, 'projects.json')
+    await fs.writeFile(jsonFile, '{"slug":"json-project","count":2}')
+    const jsonResult = await load(jsonFile)
+    expect(jsonResult).toEqual(expect.objectContaining({ moduleType: 'js' }))
+    expect((jsonResult as { code: string }).code).toContain('virtual:nib/page-sources')
 
     const sourceModule = await load('\0virtual:nib/page-sources')
     expect(sourceModule).toContain('"phase":"page-source-module"')

@@ -544,6 +544,11 @@ For images:
 7. changed bytes produce a new request key and ETag, while a timestamp-only or
    byte-identical rewrite retains the existing artifact and returns `304`.
 
+Configured authored content-image roots are also served by the development
+middleware at their public paths, with base-path support and directory/symlink
+containment checks. This keeps content `<img>` references usable in development;
+the production finalizer still rewrites only the referenced files.
+
 Never encode an unrestricted absolute path in a browser URL. Reject unknown
 source IDs, path traversal, unsupported formats, unconfigured qualities,
 oversized dimensions, and files outside the allowed project roots.

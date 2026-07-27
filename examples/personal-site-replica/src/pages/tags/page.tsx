@@ -1,26 +1,37 @@
-import { type PageProps } from '@briansunter/nib'
+import type { PageProps } from '@briansunter/nib'
 import type config from '../../../nib.config'
-import { tagSearchHref } from '../../data/tag-links'
 
 export const meta = {
   title: 'Tags',
-  description: 'Topics used across the writing and project collections.',
+  description: 'Browse all topics used across the writing, projects, and recipes.',
 }
 
 export default function TagsPage({ collections }: PageProps<typeof config>) {
-  const counts = new Map<string, number>()
-  for (const entry of [...collections.posts, ...collections.projects]) {
-    for (const tag of entry.data.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1)
+  const counts = new Map<string, { display: string; count: number }>()
+  function bump(tag: string) {
+    const key = tag.toLowerCase().replace(/\s+/g, '-')
+    const existing = counts.get(key)
+    if (existing) existing.count += 1
+    else counts.set(key, { display: tag, count: 1 })
   }
-  const tags = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+  for (const entry of collections.writing) for (const tag of entry.data.tags) bump(tag)
+  for (const entry of collections.projects) for (const tag of entry.data.tags) bump(tag)
+  for (const entry of collections.recipes) for (const tag of entry.data.metadata.tags) bump(tag)
+  const tags = [...counts.entries()]
+    .map(([key, value]) => ({ key, ...value }))
+    .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
 
   return (
     <div className="content-column tag-page">
       <p className="eyebrow">Browse the archive</p>
       <h1>Tags</h1>
-      <p className="lead">Search the writing and project archive by topic.</p>
+      <p className="lead">{tags.length} topics across writing, projects, and recipes.</p>
       <div className="tag-cloud">
-        {tags.map(([tag, count]) => <a className="tag tag--pill" href={tagSearchHref(tag)} key={tag}>{tag} <span>{count}</span></a>)}
+        {tags.map((tag) => (
+          <a className="tag tag--pill" href={`/tags/${tag.key}`} key={tag.key}>
+            {tag.display} <span>{tag.count}</span>
+          </a>
+        ))}
       </div>
     </div>
   )

@@ -1,10 +1,11 @@
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { PassThrough } from 'node:stream'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import sharp from 'sharp'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Image } from '../src/image-component'
 import { ImageRegistryProvider } from '../src/image-context'
 import { ImageBuildRegistry } from '../src/image-registry'
@@ -18,6 +19,7 @@ import {
   developmentImageUrl,
   parseDevelopmentImageRequest,
 } from '../src/image-request'
+import { optimizeContentImages } from '../src/content-images'
 
 const temporaryDirectories: string[] = []
 
@@ -59,6 +61,12 @@ describe('static Image component', () => {
     expect(() => normalizeImagesOptions(root, null as any)).toThrow('options must be an object')
     expect(() => normalizeImagesOptions(root, { quality: { png: 50 } } as any))
       .toThrow('quality does not support png')
+    expect(normalizeImagesOptions(root, {
+      content: [{ publicPath: '/site-assets/', directory: 'src/assets/site-assets', maxWidth: 1720 }],
+    }).content[0]?.maxWidth).toBe(1720)
+    expect(() => normalizeImagesOptions(root, {
+      content: [{ publicPath: '/site-assets/', directory: 'src/assets/site-assets', maxWidth: 0 }],
+    } as any)).toThrow('content[0].maxWidth must contain positive integers')
     expect(() => images({ widths: [] } as any)).toThrow('widths must contain positive integers')
   })
 
@@ -332,6 +340,85 @@ describe('static Image component', () => {
       .toThrow('cannot transform to gif')
   })
 
+  it('serves authored content images in development without exposing source escapes', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-dev-content-'))
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-dev-outside-'))
+    temporaryDirectories.push(root, outside)
+    const publicDirectory = path.join(root, 'src', 'assets', 'site-assets')
+    await fs.mkdir(publicDirectory, { recursive: true })
+    const sourceFile = path.join(publicDirectory, 'hero.png')
+    const sourceData = await sharp({
+      create: { width: 16, height: 8, channels: 3, background: '#336699' },
+    }).png().toBuffer()
+    await fs.writeFile(sourceFile, sourceData)
+    await fs.writeFile(path.join(outside, 'secret.png'), sourceData)
+    await fs.symlink(path.join(outside, 'secret.png'), path.join(publicDirectory, 'link.png'))
+
+    const plugin = imageVitePlugin(normalizeImagesOptions(root, {
+      content: [{ publicPath: '/site-assets/', directory: 'src/assets/site-assets' }],
+    }), 'development')
+    let middleware: ((request: any, response: any, next: () => void) => Promise<void>) | undefined
+    const configureServer = (plugin as any).configureServer
+    configureServer({
+      config: { base: '/repository/' },
+      middlewares: { use(handler: typeof middleware) { middleware = handler } },
+    } as any)
+    if (!middleware) throw new Error('Image Vite plugin did not install its middleware')
+
+    const request = (
+      url: string,
+      headers: Record<string, string> = {},
+      method: 'GET' | 'HEAD' = 'GET',
+    ) => {
+      const response = new PassThrough() as PassThrough & {
+        statusCode: number
+        headersSent: boolean
+        headers: Map<string, string | number>
+        setHeader(name: string, value: string | number): void
+      }
+      response.statusCode = 200
+      response.headersSent = false
+      response.headers = new Map()
+      response.setHeader = (name, value) => response.headers.set(name.toLowerCase(), value)
+      const body = new Promise<Buffer>((resolve, reject) => {
+        const chunks: Buffer[] = []
+        response.on('data', (chunk) => chunks.push(Buffer.from(chunk)))
+        response.on('end', () => resolve(Buffer.concat(chunks)))
+        response.on('error', reject)
+      })
+      const next = vi.fn()
+      return { response, body, next, promise: middleware!({ url, method, headers }, response, next) }
+    }
+
+    const served = request('/repository/site-assets/hero.png')
+    await served.promise
+    expect(await served.body).toEqual(sourceData)
+    expect(served.response.statusCode).toBe(200)
+    expect(served.response.headers.get('content-type')).toBe('image/png')
+    expect(served.next).not.toHaveBeenCalled()
+
+    const head = request('/repository/site-assets/hero.png', {}, 'HEAD')
+    await head.promise
+    expect(await head.body).toHaveLength(0)
+    expect(head.response.statusCode).toBe(200)
+    expect(head.response.headers.get('content-length')).toBe(sourceData.length)
+
+    const cached = request('/repository/site-assets/hero.png', {
+      'if-none-match': String(served.response.headers.get('etag')),
+    })
+    await cached.promise
+    expect(await cached.body).toHaveLength(0)
+    expect(cached.response.statusCode).toBe(304)
+
+    const escaped = request('/repository/site-assets/%2e%2e/secret.png')
+    await escaped.promise
+    expect(escaped.next).toHaveBeenCalledOnce()
+
+    const symlink = request('/repository/site-assets/link.png')
+    await symlink.promise
+    expect(symlink.next).toHaveBeenCalledOnce()
+  })
+
   it('deduplicates requests and never exceeds transform concurrency', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-'))
     temporaryDirectories.push(root)
@@ -400,5 +487,91 @@ describe('static Image component', () => {
     ])
     expect(creates).toBe(1)
     expect([first.hit, second.hit].sort()).toEqual([false, true])
+  })
+
+  it('content image rewriter honors per-use data-nib-widths and authored sizes', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-content-'))
+    temporaryDirectories.push(root)
+    const publicDir = path.join(root, 'src/assets/site-assets')
+    await fs.mkdir(publicDir, { recursive: true })
+    const sourceFile = path.join(publicDir, 'photo.jpg')
+    // 1600x800 source: the authored [480,800,1200] ladder must cap both
+    // responsive candidates and intrinsic layout dimensions at 1200px.
+    await sharp({
+      create: { width: 1600, height: 800, channels: 3, background: '#336699' },
+    }).jpeg().toFile(sourceFile)
+    const options = normalizeImagesOptions(root, {
+      formats: ['avif', 'webp'],
+      widths: [320, 640, 1280],
+      content: [{
+        publicPath: '/site-assets/',
+        directory: 'src/assets/site-assets',
+        widths: [320, 640, 1280],
+        sizes: '(min-width: 900px) 860px, 100vw',
+      }],
+    })
+    const registry = new ImageBuildRegistry(options, '/', 'production')
+    const clientDirectory = path.join(root, 'dist/client')
+    const pageFile = path.join(clientDirectory, 'photos')
+    await fs.mkdir(clientDirectory, { recursive: true })
+    await fs.writeFile(pageFile, [
+      '<figure>',
+      '<img src="/site-assets/photo.jpg" alt="A photo" data-nib-widths="480, 800, 1200" sizes="(min-width: 1280px) 25vw, 100vw" loading="lazy" decoding="async">',
+      '</figure>',
+    ].join('\n'))
+    const replacements = await optimizeContentImages(clientDirectory, '/', options, registry)
+    expect(replacements).toBe(1)
+    const rewritten = await fs.readFile(pageFile, 'utf8')
+    expect(rewritten).toContain('<picture>')
+    // Authored ladder is preserved as width descriptors.
+    expect(rewritten).toContain(' 480w')
+    expect(rewritten).toContain(' 800w')
+    expect(rewritten).toContain(' 1200w')
+    // Default-width descriptors are not emitted alongside the authored ladder.
+    expect(rewritten).not.toContain(' 1280w')
+    expect(rewritten).not.toContain(' 320w')
+    // Authored sizes pass through verbatim.
+    expect(rewritten).toContain('sizes="(min-width: 1280px) 25vw, 100vw"')
+    // Intrinsic dimensions use the per-use cap and preserve the aspect ratio.
+    expect(rewritten).toContain('width="1200"')
+    expect(rewritten).toContain('height="600"')
+    expect(rewritten).not.toContain(' 1600w')
+    // The internal hint attribute does not leak into the optimized output.
+    expect(rewritten).not.toContain('data-nib-widths')
+  })
+
+  it('content image rewriter separates display width from its responsive ladder', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-content-width-'))
+    temporaryDirectories.push(root)
+    const publicDir = path.join(root, 'src/assets/site-assets')
+    await fs.mkdir(publicDir, { recursive: true })
+    const sourceFile = path.join(publicDir, 'photo.jpg')
+    await sharp({
+      create: { width: 1600, height: 800, channels: 3, background: '#336699' },
+    }).jpeg().toFile(sourceFile)
+    const options = normalizeImagesOptions(root, {
+      formats: ['avif', 'webp'],
+      content: [{
+        publicPath: '/site-assets/',
+        directory: 'src/assets/site-assets',
+      }],
+    })
+    const registry = new ImageBuildRegistry(options, '/', 'production')
+    const clientDirectory = path.join(root, 'dist/client')
+    const pageFile = path.join(clientDirectory, 'photos')
+    await fs.mkdir(clientDirectory, { recursive: true })
+    await fs.writeFile(pageFile, [
+      '<img src="/site-assets/photo.jpg" alt="A photo" width="504" data-nib-width="504" data-nib-widths="240, 320, 480, 640, 960" sizes="504px">',
+    ].join('\n'))
+
+    const replacements = await optimizeContentImages(clientDirectory, '/', options, registry)
+    expect(replacements).toBe(1)
+    const rewritten = await fs.readFile(pageFile, 'utf8')
+    expect(rewritten).toContain('width="504"')
+    expect(rewritten).toContain('height="252"')
+    expect(rewritten).toContain(' 960w')
+    expect(rewritten).not.toContain(' 1200w')
+    expect(rewritten).toContain('sizes="504px"')
+    expect(rewritten).not.toContain('data-nib-width')
   })
 })

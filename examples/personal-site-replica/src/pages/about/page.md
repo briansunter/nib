@@ -9,9 +9,10 @@ turning fuzzy ideas into tools that feel calm to use: a small command-line
 utility, a local-first app, a recipe parser, or a website that makes a long
 piece of writing easier to read.
 
-This replica keeps the personal-site shape: writing, projects, recipes, art,
-and photos all live beside one another. The content is resolved at build time,
-so each route can ship as ordinary HTML and CSS.
+This Nib replica mirrors the personal-site shape: writing, projects, recipes,
+art, photos, pins, and a travel map all live beside one another. The content is
+resolved at build time, so each route ships as ordinary HTML and CSS with
+islands only where a control needs the browser.
 
 ## What I’m interested in
 
@@ -20,5 +21,17 @@ so each route can ship as ordinary HTML and CSS.
 - AI as a practical instrument rather than a decorative feature
 - drawing, cooking, walking, and noticing places
 
-The full site has more collections and much more interaction. This folder is a
-small proving ground for how much of that shape Nib can carry today.
+## How this replica is built
+
+- **Writing** entries live at root-level slugs (for example
+  `/why-large-language-models-are-interesting`), with `/pages` as the archive.
+- **Projects** and **recipes** are generated from typed YAML and Cooklang
+  snapshots through Nib page sources.
+- **Galleries** (art, photos, pins) render responsive static images from copied
+  site assets; the original Leaflet map and PhotoSwipe lightbox are intentionally
+  approximated as accessible static lists and grids.
+- **RSS** is published at `/index.xml` and the legacy `/rss.xml` redirects to it.
+
+The full Astro source has more browser interaction (Satori OG images, Pagefind
+search index, EXIF browser). This proof keeps the editorial site shape and the
+build-time content pipeline; the missing integrations are listed in the README.

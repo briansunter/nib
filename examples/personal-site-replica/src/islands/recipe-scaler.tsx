@@ -3,8 +3,9 @@ import { useState } from 'react'
 
 interface Ingredient {
   name: string
-  quantity: number
+  quantity: number | null
   unit: string
+  raw: string
 }
 
 function RecipeScalerComponent({ baseServings, ingredients }: { baseServings: number; ingredients: Ingredient[] }) {
@@ -21,15 +22,22 @@ function RecipeScalerComponent({ baseServings, ingredients }: { baseServings: nu
         <label>
           Servings
           <select value={servings} onChange={(event) => setServings(Number(event.target.value))}>
-            {[2, 4, 6, 8].map((value) => <option value={value} key={value}>{value}</option>)}
+            {[baseServings, 2, 4, 6, 8]
+              .filter((value, index, values) => values.indexOf(value) === index)
+              .sort((a, b) => a - b)
+              .map((value) => <option value={value} key={value}>{value}</option>)}
           </select>
         </label>
       </div>
       <ul>
-        {ingredients.map((ingredient) => (
-          <li key={ingredient.name}>
+        {ingredients.map((ingredient, index) => (
+          <li key={`${ingredient.name}-${index}`}>
             <span>{ingredient.name}</span>
-            <strong>{Number((ingredient.quantity * multiplier).toFixed(1))} {ingredient.unit}</strong>
+            <strong>
+              {ingredient.quantity == null
+                ? ingredient.raw
+                : `${Number((ingredient.quantity * multiplier).toFixed(2))} ${ingredient.unit}`.trim()}
+            </strong>
           </li>
         ))}
       </ul>

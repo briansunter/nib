@@ -127,13 +127,40 @@ function reactAttributes(input: HtmlAttributes): Record<string, string> {
   const result: Record<string, string> = {}
   for (const [name, value] of Object.entries(input)) {
     if (
-      ['src', 'alt', 'srcset', 'sizes', 'width', 'height', 'loading', 'decoding', 'fetchpriority', 'style']
+      ['src', 'alt', 'srcset', 'sizes', 'width', 'height', 'loading', 'decoding', 'fetchpriority', 'style', 'data-nib-width', 'data-nib-widths']
         .includes(name)
     ) continue
     const reactName = name === 'class' ? 'className' : name === 'referrerpolicy' ? 'referrerPolicy' : name
     result[reactName] = value
   }
   return result
+}
+
+/** Parses and validates a per-use `data-nib-widths` ladder (e.g. "480, 800, 1200"). */
+function parseAuthoredWidths(value: string | undefined): readonly number[] | undefined {
+  if (value === undefined || value === '') return undefined
+  const parts = value.split(',').map((part) => part.trim()).filter((part) => part !== '')
+  if (parts.length === 0) {
+    throw new Error('@briansunter/nib-images: data-nib-widths must list positive integers')
+  }
+  const widths = parts.map((part) => {
+    const parsed = Number(part)
+    if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+      throw new Error(`@briansunter/nib-images: data-nib-widths must contain positive integers (got "${part}")`)
+    }
+    return parsed
+  })
+  return [...new Set(widths)].sort((left, right) => left - right)
+}
+
+/** Parses a per-use display width without accepting CSS units or fractions. */
+function parseAuthoredWidth(value: string | undefined): number | undefined {
+  if (value === undefined || value.trim() === '') return undefined
+  const parsed = Number(value.trim())
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(`@briansunter/nib-images: data-nib-width must be a positive integer (got "${value}")`)
+  }
+  return parsed
 }
 
 async function replaceAsync(
@@ -187,14 +214,50 @@ async function rewriteFile(
     }
     const highPriority = input.fetchpriority?.toLowerCase() === 'high'
     const loading = input.loading === 'lazy' || input.loading === 'eager' ? input.loading : undefined
+    let authoredWidth: number | undefined
+    let authoredWidths: readonly number[] | undefined
+    try {
+      authoredWidth = parseAuthoredWidth(input['data-nib-width'])
+      authoredWidths = parseAuthoredWidths(input['data-nib-widths'])
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      console.warn(`nib-images: ${detail}; preserving ${src}`)
+      return full
+    }
+    const authoredMaximum = authoredWidths?.at(-1)
+    // Before data-nib-width existed, the largest authored candidate also
+    // served as the intrinsic layout width. Preserve that behavior for
+    // existing sites, while allowing a smaller display width with a useful
+    // 2x responsive ladder for new content-image call sites.
+    const requestedDisplayWidth = authoredWidth ?? authoredMaximum
+    const configuredWidth = Math.min(
+      source.width,
+      ...(sourceDefinition.maxWidth === undefined ? [] : [sourceDefinition.maxWidth]),
+      ...(requestedDisplayWidth === undefined ? [] : [requestedDisplayWidth]),
+    )
+    const requestedHardMaximum = authoredWidth === undefined
+      ? configuredWidth
+      : authoredMaximum === undefined
+        ? undefined
+        : Math.max(authoredMaximum, configuredWidth)
+    const hardMaximum = sourceDefinition.maxWidth === undefined
+      ? requestedHardMaximum
+      : requestedHardMaximum === undefined
+        ? sourceDefinition.maxWidth
+        : Math.min(sourceDefinition.maxWidth, requestedHardMaximum)
+    const authoredSizes = input.sizes === undefined || input.sizes === ''
+      ? sourceDefinition.sizes
+      : input.sizes
+    const widths = authoredWidths ?? sourceDefinition.widths
     const props = {
       ...reactAttributes(input),
       src: source,
       alt: input.alt ?? '',
       layout: 'constrained' as const,
-      maxWidth: source.width,
-      ...(sourceDefinition.widths === undefined ? {} : { widths: sourceDefinition.widths }),
-      ...(sourceDefinition.sizes === undefined ? {} : { sizes: sourceDefinition.sizes }),
+      width: configuredWidth,
+      ...(hardMaximum === undefined ? {} : { maxWidth: Math.min(source.width, hardMaximum) }),
+      ...(widths === undefined ? {} : { widths }),
+      ...(authoredSizes === undefined ? {} : { sizes: authoredSizes }),
       ...(highPriority ? { priority: true as const } : loading === undefined ? {} : { loading }),
     } as ImageProps
     replacements += 1

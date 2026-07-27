@@ -1,0 +1,13 @@
+# robots.txt for briansunter.com
+# https://www.robotstxt.org/robotstxt.html
+
+User-agent: *
+Crawl-delay: 2
+Allow: /
+
+# Disallow admin/internal paths
+Disallow: /admin/
+Disallow: /api/
+
+# Sitemaps
+Sitemap: https://briansunter.com/sitemap-index.xml

@@ -118,6 +118,9 @@ describe('RSS plugin', () => {
     expect(() => rss({
       site: 'https://example.test', title: 'Journal', description: 'Entries', ttl: -1, items: [],
     })).toThrow('non-negative integer')
+    expect(() => rss({
+      site: 'https://example.test', title: 'Journal', description: 'Entries', stylesheet: '', items: [],
+    })).toThrow('non-empty string')
 
     const plugin = rss({
       site: 'https://example.test',
@@ -127,5 +130,43 @@ describe('RSS plugin', () => {
     })
     if (!plugin.routes) throw new Error('RSS plugin has no route provider')
     await expect(plugin.routes(context)).rejects.toThrow('absolute URL or an absolute route path')
+  })
+
+  it('emits stylesheet, dc creator, and channel metadata for original-feed parity', async () => {
+    const plugin = rss({
+      site: 'https://example.test',
+      title: 'Journal',
+      description: 'Entries',
+      path: '/index.xml',
+      language: 'en-us',
+      copyright: '© 2026 Author',
+      managingEditor: 'noreply@example.test (Author)',
+      webMaster: 'noreply@example.test (Author)',
+      stylesheet: '/rss/styles.xsl',
+      items: [
+        {
+          title: 'With cover',
+          link: '/posts/one/',
+          description: 'A summary',
+          content: '<p>Body with <img src="https://example.test/cover.webp" alt=""></p>',
+          creator: 'Author',
+          categories: ['Notes'],
+        },
+      ],
+    })
+    if (!plugin.routes) throw new Error('RSS plugin has no route provider')
+    const route = await plugin.routes(context)
+    if (!route || Array.isArray(route) || route.kind !== 'resource') {
+      throw new Error('Expected an RSS resource route')
+    }
+    expect(route.body).toContain('<?xml-stylesheet type="text/xsl" href="/rss/styles.xsl"?>')
+    expect(route.body).toContain('xmlns:dc="http://purl.org/dc/elements/1.1/"')
+    expect(route.body).toContain('<language>en-us</language>')
+    expect(route.body).toContain('<copyright>© 2026 Author</copyright>')
+    expect(route.body).toContain('<managingEditor>noreply@example.test (Author)</managingEditor>')
+    expect(route.body).toContain('<webMaster>noreply@example.test (Author)</webMaster>')
+    expect(route.body).toContain('<dc:creator><![CDATA[Author]]></dc:creator>')
+    expect(route.body).toContain('<content:encoded><![CDATA[<p>Body with <img src="https://example.test/cover.webp" alt=""></p>]]></content:encoded>')
+    expect(route.body).toContain('href="https://example.test/journal/index.xml"')
   })
 })

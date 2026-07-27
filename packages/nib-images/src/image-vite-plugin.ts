@@ -1,3 +1,5 @@
+import { createReadStream } from 'node:fs'
+import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { Plugin } from 'vite'
 import type { NibViteTarget } from '@briansunter/nib/plugin'
@@ -9,7 +11,83 @@ import {
 } from './image-request'
 import type { InternalImageSource } from './image-source'
 import { ImageSourceCatalog } from './image-source-catalog'
-import type { NormalizedImagesOptions } from './options'
+import { isAllowedSource, type NormalizedContentImageSource, type NormalizedImagesOptions } from './options'
+
+const authoredImageContentTypes: Readonly<Record<string, string>> = {
+  '.avif': 'image/avif',
+  '.gif': 'image/gif',
+  '.jpeg': 'image/jpeg',
+  '.jpg': 'image/jpeg',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.webp': 'image/webp',
+}
+
+function normalizedBase(base: string | undefined): string {
+  if (!base || base === '/') return '/'
+  return `/${base.replace(/^\/+|\/+$/g, '')}/`
+}
+
+function authoredContentFile(
+  pathname: string,
+  source: NormalizedContentImageSource,
+  base: string | undefined,
+): string | undefined {
+  const prefixes = [...new Set([
+    source.publicPath,
+    `${normalizedBase(base)}${source.publicPath.replace(/^\/+/, '')}`,
+  ])].sort((left, right) => right.length - left.length)
+  const prefix = prefixes.find((candidate) => pathname.startsWith(candidate))
+  if (!prefix) return undefined
+
+  let relative: string
+  try {
+    relative = decodeURIComponent(pathname.slice(prefix.length))
+  } catch {
+    return undefined
+  }
+  if (
+    relative === ''
+    || relative.includes('\\')
+    || path.isAbsolute(relative)
+    || relative.split('/').includes('..')
+  ) return undefined
+
+  const file = path.resolve(source.directory, relative)
+  const fromRoot = path.relative(source.directory, file)
+  if (fromRoot.startsWith('..') || path.isAbsolute(fromRoot)) return undefined
+  return file
+}
+
+interface AuthoredContentImage {
+  readonly file: string
+  readonly contentType: string
+  readonly size: number
+  readonly modifiedAt: Date
+}
+
+async function findAuthoredContentImage(
+  pathname: string,
+  base: string | undefined,
+  options: NormalizedImagesOptions,
+): Promise<AuthoredContentImage | undefined> {
+  for (const source of options.content) {
+    const candidate = authoredContentFile(pathname, source, base)
+    if (!candidate) continue
+    const contentType = authoredImageContentTypes[path.extname(candidate).toLowerCase()]
+    if (!contentType) continue
+
+    const [root, file] = await Promise.all([
+      fs.realpath(source.directory).catch(() => undefined),
+      fs.realpath(candidate).catch(() => undefined),
+    ])
+    if (!root || !file || !isAllowedSource(file, [root])) continue
+    const stats = await fs.stat(file).catch(() => undefined)
+    if (!stats?.isFile()) continue
+    return { file, contentType, size: stats.size, modifiedAt: stats.mtime }
+  }
+  return undefined
+}
 
 function staticOnlyError(): Error {
   return new Error(
@@ -78,7 +156,36 @@ export function imageVitePlugin(
       server.middlewares.use(async (request, response, next) => {
         const requestUrl = request.url
         if (!requestUrl) return next()
-        const parsed = parseDevelopmentImageRequest(new URL(requestUrl, 'http://nib.local').pathname)
+        const pathname = new URL(requestUrl, 'http://nib.local').pathname
+        if (request.method === 'GET' || request.method === 'HEAD' || request.method === undefined) {
+          const authored = await findAuthoredContentImage(pathname, server.config.base, options)
+          if (authored) {
+            const etag = `"${authored.size.toString(16)}-${Math.trunc(authored.modifiedAt.getTime()).toString(16)}"`
+            response.setHeader('ETag', etag)
+            response.setHeader('Last-Modified', authored.modifiedAt.toUTCString())
+            response.setHeader('Cache-Control', 'no-cache')
+            if (request.headers['if-none-match'] === etag) {
+              response.statusCode = 304
+              response.end()
+              return
+            }
+            response.statusCode = 200
+            response.setHeader('Content-Type', authored.contentType)
+            response.setHeader('Content-Length', authored.size)
+            if (request.method === 'HEAD') {
+              response.end()
+              return
+            }
+            const stream = createReadStream(authored.file)
+            stream.on('error', (error) => {
+              if (response.headersSent) response.destroy(error)
+              else next(error)
+            })
+            stream.pipe(response)
+            return
+          }
+        }
+        const parsed = parseDevelopmentImageRequest(pathname)
         if (!parsed) return next()
         try {
           const source = sources.get(parsed.sourceId)
