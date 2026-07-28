@@ -26,7 +26,6 @@ import {
   type Project,
   type Recipe,
   type TagPage,
-  type Writing,
 } from './src/content'
 import { SiteShell } from './src/site-shell'
 import { generateThemeScript } from './src/lib/theme'
@@ -207,7 +206,7 @@ export default defineConfig({
   },
   pageSources: [projectPages, recipePages, tagPages],
   plugins: [
-    clientNavigation(),
+    clientNavigation({ prefetch: 'explicit' }),
     images({
       formats: ['avif', 'webp'],
       widths: [320, 480, 640, 960, 1280],

@@ -111,6 +111,10 @@ attribute above. Cache entries have a short TTL and a fixed maximum count;
 failed or non-HTML responses are evicted. Prefetch never mutates history or the
 live document.
 
+`clientNavigation({ prefetch: 'explicit' })` disables the implicit hover
+strategy while retaining annotated `hover`, `tap`, `load`, and `viewport`
+strategies. The default remains `hover` for compatibility.
+
 ## Head, style, script, and persistence policy
 
 Head synchronization compares resolved URLs rather than authored relative

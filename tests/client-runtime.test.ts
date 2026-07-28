@@ -114,4 +114,36 @@ describe('island client entry', () => {
     expect(cancelIdleCallback).toHaveBeenCalledWith(11)
     expect(hydrateRoot).toHaveBeenCalledOnce()
   })
+
+  it('clears island bookkeeping even when React cleanup throws', async () => {
+    const element = islandElement({
+      hydrate: 'load',
+      island: 'counter',
+      instance: 'nib-0',
+      prefix: 'nib-0-',
+      props: '{}',
+    })
+    const root = rootWith([element])
+    const firstUnmount = vi.fn(() => {
+      throw new Error('React cleanup failed')
+    })
+    const secondUnmount = vi.fn()
+    hydrateRoot
+      .mockReturnValueOnce({ unmount: firstUnmount })
+      .mockReturnValueOnce({ unmount: secondUnmount })
+    const Counter = defineIsland('counter', () => null)
+    const runtime = createIslandRuntime({
+      '/src/islands/counter.tsx': async () => ({ default: Counter }),
+    })
+    runtime.mount(root)
+    await vi.waitFor(() => expect(hydrateRoot).toHaveBeenCalledOnce())
+
+    expect(() => runtime.unmount(root)).toThrow(AggregateError)
+    runtime.mount(root)
+    await vi.waitFor(() => expect(hydrateRoot).toHaveBeenCalledTimes(2))
+    runtime.unmount(root)
+
+    expect(firstUnmount).toHaveBeenCalledOnce()
+    expect(secondUnmount).toHaveBeenCalledOnce()
+  })
 })

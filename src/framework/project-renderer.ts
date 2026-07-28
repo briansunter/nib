@@ -84,7 +84,7 @@ function pageDescriptors(routes: Iterable<ResolvedRoute>): readonly PageDescript
 export interface ProjectRenderer {
   readonly paths: readonly string[]
   render(url: string): RenderedOutput
-  finalize(context: Pick<NibFinalizeContext, 'clientDirectory'>): Promise<void>
+  finalize(context: Pick<NibFinalizeContext, 'clientDirectory' | 'publication'>): Promise<void>
 }
 
 function readonlySite(config: NibConfig): NibFinalizeContext['site'] {
@@ -298,6 +298,7 @@ export async function createProjectRenderer(
       const finalContext: NibFinalizeContext = Object.freeze({
         ...rendererContext,
         clientDirectory: context.clientDirectory,
+        publication: deepFreeze(context.publication),
         renderedPaths: Object.freeze([...renderedPaths]),
       })
       await plugins.finalize(finalContext)

@@ -32,9 +32,14 @@ export function images<const Options extends ImagesOptions>(options?: Options) {
             context.base,
             normalizedOptions,
             registry,
+            finalizeContext.publication.routes,
           )
           await registry.finalize(finalizeContext.clientDirectory)
-          await restoreFailedContentImages(finalizeContext.clientDirectory, registry)
+          await restoreFailedContentImages(
+            finalizeContext.clientDirectory,
+            registry,
+            finalizeContext.publication.routes,
+          )
         },
       }
     },

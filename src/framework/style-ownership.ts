@@ -1,30 +1,48 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import type { Plugin } from 'vite'
 import type { NibViteTarget } from './plugin'
-
-const CSS_IMPORT = /\b(?:import|export)\s+(?:[^'"]*?\sfrom\s*)?['"]([^'"]+\.css(?:\?[^'"]*)?)['"]/g
-const DYNAMIC_CSS_IMPORT = /\bimport\s*\(\s*['"]([^'"]+\.css(?:\?[^'"]*)?)['"]\s*\)/g
 
 function cleanId(id: string): string {
   return id.replace(/[?#].*$/, '').replaceAll('\\', '/')
 }
 
+function sourceRoot(root: string): string {
+  const resolved = path.resolve(root, 'src')
+  const canonical = (() => {
+    try {
+      return fs.realpathSync.native(resolved)
+    } catch {
+      return resolved
+    }
+  })()
+  return `${canonical.replaceAll('\\', '/')}/`
+}
+
 function applicationModule(root: string, id: string): boolean {
-  const sourceRoot = `${path.resolve(root, 'src').replaceAll('\\', '/')}/`
+  const applicationRoot = sourceRoot(root)
   const file = cleanId(id)
-  return file.startsWith(sourceRoot)
+  return file.startsWith(applicationRoot)
     && !file.includes('/src/islands/')
     && !file.includes('/src/behaviors/')
-    && file !== `${sourceRoot}style.css`
+    && file !== `${applicationRoot}style.css`
     && !file.endsWith('.client.ts')
     && !file.endsWith('.client.tsx')
 }
 
-function cssImports(code: string): string[] {
-  return [...new Set(
-    [...code.matchAll(CSS_IMPORT), ...code.matchAll(DYNAMIC_CSS_IMPORT)]
-      .map((match) => match[1]!),
-  )]
+function clientOwnedModule(root: string, id: string): boolean {
+  const applicationRoot = sourceRoot(root)
+  const file = cleanId(id)
+  return id.includes('virtual:nib/enhancement-entry')
+    || (
+      file.startsWith(applicationRoot)
+      && (
+        file.includes('/src/islands/')
+        || file.includes('/src/behaviors/')
+        || file.endsWith('.client.ts')
+        || file.endsWith('.client.tsx')
+      )
+    )
 }
 
 /**
@@ -35,15 +53,24 @@ export function pageStyleOwnershipGuard(
   root: string,
   target: NibViteTarget,
 ): Plugin {
+  const clientOwned = new Set<string>()
   return {
     name: 'nib-page-style-ownership',
     enforce: 'pre',
-    transform(code, id) {
-      if (target === 'client' || !applicationModule(root, id)) return null
-      const stylesheets = cssImports(code)
-      if (stylesheets.length === 0) return null
+    async resolveId(source, importer) {
+      if (target === 'client' || importer === undefined) return null
+      const resolved = await this.resolve(source, importer, { skipSelf: true })
+      const resolvedId = resolved?.id ?? source
+      const importerIsClientOwned = clientOwned.has(cleanId(importer))
+        || clientOwnedModule(root, importer)
+      if (importerIsClientOwned) {
+        if (!cleanId(resolvedId).endsWith('.css')) clientOwned.add(cleanId(resolvedId))
+        return null
+      }
+      if (!applicationModule(root, importer)) return null
+      if (!cleanId(resolvedId).endsWith('.css')) return null
       throw new Error([
-        `Nib cannot deploy stylesheet ${stylesheets[0]} imported by ${cleanId(id)}.`,
+        `Nib cannot deploy stylesheet ${source} imported by ${cleanId(importer)}.`,
         'Move the import to src/style.css, an island or .client behavior module,',
         'or a plugin-owned client entry. Route-scoped page CSS is not supported.',
       ].join(' '))

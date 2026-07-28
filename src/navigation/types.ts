@@ -1,5 +1,14 @@
 export type NavigationDirection = 'back' | 'forward'
 export type NavigationType = 'push' | 'replace' | 'traverse'
+export type NavigationPrefetchPolicy = 'hover' | 'explicit'
+
+export interface ClientNavigationOptions {
+  /**
+   * `hover` prefetches ordinary eligible links after hover intent.
+   * `explicit` prefetches only links carrying data-nib-prefetch.
+   */
+  readonly prefetch?: NavigationPrefetchPolicy
+}
 
 export interface NavigateOptions {
   readonly history?: Extract<NavigationType, 'push' | 'replace'>

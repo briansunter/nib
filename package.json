@@ -115,6 +115,8 @@
     "preview": "node bin/nib.js preview --root examples/docs",
     "test:watch": "vitest",
     "typecheck": "bun run build:framework && bun run build:images && tsc --noEmit && bun run --cwd packages/nib-images typecheck",
+    "check:unused": "tsc --noEmit --noUnusedLocals --noUnusedParameters && tsc --project packages/nib-images/tsconfig.json --noEmit --noUnusedLocals --noUnusedParameters && tsc --project examples/personal-site-replica/tsconfig.json --noEmit --noUnusedLocals --noUnusedParameters",
+    "verify": "bun run typecheck && bun run check:unused && bun run test && bun run build:docs && bun run --cwd examples/personal-site-replica verify",
     "check:version-policy": "tsx scripts/check-version-policy.ts"
   },
   "dependencies": {

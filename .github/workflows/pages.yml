@@ -38,6 +38,9 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      - name: Check unused imports
+        run: bun run check:unused
+
       - name: Test
         run: bun run test
 

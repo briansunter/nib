@@ -1,40 +1,28 @@
-import { readFile, readdir, rm } from 'node:fs/promises'
+import { readFile, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { close, createIndex } from 'pagefind'
 import { definePlugin } from '@briansunter/nib/plugin'
 
-function routeFromFile(clientDirectory: string, file: string): string {
-  const relative = path.relative(clientDirectory, file).replaceAll(path.sep, '/')
-  if (relative === 'index.html') return '/'
-  if (relative.endsWith('/index.html')) {
-    return `/${relative.slice(0, -'/index.html'.length)}`
-  }
-  return `/${relative}`
-}
-
 async function collectIndexablePages(
   clientDirectory: string,
-  directory: string,
-  outputDirectory: string,
+  routes: readonly {
+    readonly kind: string
+    readonly path: string
+    readonly artifact: string
+    readonly contentType: string
+  }[],
   pages: Array<{ url: string; content: string }>,
 ): Promise<void> {
-  for (const entry of await readdir(directory, { withFileTypes: true })) {
-    const file = path.join(directory, entry.name)
-    if (entry.isDirectory()) {
-      if (file !== outputDirectory) {
-        await collectIndexablePages(clientDirectory, file, outputDirectory, pages)
-      }
-      continue
+  for (const route of routes) {
+    if (route.kind !== 'page' || !route.contentType.startsWith('text/html')) continue
+    const file = path.resolve(clientDirectory, route.artifact)
+    const relative = path.relative(clientDirectory, file)
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      throw new Error(`Pagefind artifact escapes the client directory: ${route.artifact}`)
     }
-    if (!entry.isFile()) continue
-
-    const isIndex = entry.name === 'index.html'
-    const isExtensionless = path.extname(entry.name) === ''
-    if (!isIndex && !isExtensionless) continue
     const content = await readFile(file, 'utf8')
-    if (!/<(?:!doctype\s+html|html)\b/i.test(content.slice(0, 512))) continue
     if (!content.includes('data-pagefind-body')) continue
-    pages.push({ url: routeFromFile(clientDirectory, file), content })
+    pages.push({ url: route.path, content })
   }
 }
 
@@ -44,14 +32,13 @@ export function pagefindSearch() {
     name: 'personal-site-pagefind',
     renderer() {
       return {
-        async finalize({ clientDirectory }) {
+        async finalize({ clientDirectory, publication }) {
           const outputDirectory = path.join(clientDirectory, 'pagefind')
           await rm(outputDirectory, { recursive: true, force: true })
           const pages: Array<{ url: string; content: string }> = []
           await collectIndexablePages(
             clientDirectory,
-            clientDirectory,
-            outputDirectory,
+            publication.routes,
             pages,
           )
           pages.sort((left, right) => left.url.localeCompare(right.url))

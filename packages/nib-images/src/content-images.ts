@@ -14,23 +14,30 @@ interface HtmlAttributes {
   readonly [name: string]: string
 }
 
-async function filesUnder(directory: string): Promise<string[]> {
-  const entries = await fs.readdir(directory, { withFileTypes: true }).catch(() => [])
-  const files: string[] = []
-  for (const entry of entries) {
-    const file = path.join(directory, entry.name)
-    if (entry.isDirectory()) files.push(...await filesUnder(file))
-    else files.push(file)
-  }
-  return files
+interface PublicationRoute {
+  readonly kind: string
+  readonly artifact: string
+  readonly contentType: string
 }
 
-function outputPrefix(clientDirectory: string, base: string, publicPath: string): string {
-  return path.join(
-    clientDirectory,
-    base.replace(/^\/+|\/+$/g, ''),
-    publicPath.replace(/^\/+/, ''),
-  )
+function outputPrefix(clientDirectory: string, publicPath: string): string {
+  const output = path.resolve(clientDirectory, publicPath.replace(/^\/+/, ''))
+  const relative = path.relative(clientDirectory, output)
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`@briansunter/nib-images: content publicPath escapes client output: ${publicPath}`)
+  }
+  return output
+}
+
+function publicContentUrl(src: string, base: string): string {
+  const parsed = new URL(src, 'http://nib.local')
+  const normalizedBase = base === '/' ? '/' : `/${base.replace(/^\/+|\/+$/g, '')}/`
+  const basePrefix = normalizedBase.replace(/\/$/, '')
+  const pathname = basePrefix !== ''
+    && (parsed.pathname === basePrefix || parsed.pathname.startsWith(`${basePrefix}/`))
+    ? parsed.pathname
+    : `${normalizedBase}${parsed.pathname.replace(/^\/+/, '')}`
+  return `${pathname}${parsed.search}${parsed.hash}`
 }
 
 function sourceForUrl(
@@ -47,15 +54,20 @@ function sourceForUrl(
 
 async function copyContentSource(
   clientDirectory: string,
-  base: string,
   source: NormalizedContentImageSource,
   sourceFile: string,
 ): Promise<void> {
-  const relative = path.relative(source.directory, sourceFile)
-  if (relative.startsWith('..') || path.isAbsolute(relative)) return
-  const target = path.join(outputPrefix(clientDirectory, base, source.publicPath), relative)
+  const [sourceRoot, resolvedSource] = await Promise.all([
+    fs.realpath(source.directory),
+    fs.realpath(sourceFile),
+  ])
+  const relative = path.relative(sourceRoot, resolvedSource)
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`@briansunter/nib-images: content source escapes its configured directory: ${sourceFile}`)
+  }
+  const target = path.join(outputPrefix(clientDirectory, source.publicPath), relative)
   await fs.mkdir(path.dirname(target), { recursive: true })
-  await fs.copyFile(sourceFile, target)
+  await fs.copyFile(resolvedSource, target)
 }
 
 async function copyReferencedContentSources(
@@ -71,19 +83,31 @@ async function copyReferencedContentSources(
       if (match[2]) references.add(match[2])
     }
   }
-  await Promise.all([...references].flatMap((reference) => {
+  const copies = new Map<string, Promise<void>>()
+  for (const reference of references) {
     const match = sourceForUrl(reference, base, options)
-    return match === undefined ? [] : [copyContentSource(clientDirectory, base, match.source, match.file)]
-  }))
+    if (match === undefined) continue
+    const relative = path.relative(match.source.directory, match.file)
+    const target = path.join(outputPrefix(clientDirectory, match.source.publicPath), relative)
+    if (!copies.has(target)) {
+      copies.set(target, copyContentSource(clientDirectory, match.source, match.file))
+    }
+  }
+  await Promise.all(copies.values())
 }
 
-function htmlFiles(clientDirectory: string, files: readonly string[]): string[] {
-  const ignored = new Set(['.nib', 'assets', 'fonts', 'site-assets', 'videos'])
-  return files.filter((file) => {
+function htmlFiles(
+  clientDirectory: string,
+  routes: readonly PublicationRoute[],
+): string[] {
+  return routes.flatMap((route) => {
+    if (route.kind !== 'page' || !route.contentType.startsWith('text/html')) return []
+    const file = path.resolve(clientDirectory, route.artifact)
     const relative = path.relative(clientDirectory, file)
-    if (relative.split(path.sep).some((segment) => ignored.has(segment))) return false
-    const extension = path.extname(file)
-    return extension === '' || extension === '.html'
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      throw new Error(`@briansunter/nib-images: publication artifact escapes client output: ${route.artifact}`)
+    }
+    return [file]
   })
 }
 
@@ -190,8 +214,19 @@ async function rewriteFile(
   sourceCache: Map<string, Awaited<ReturnType<ImageSourceCatalog['load']>>>,
 ): Promise<number> {
   const html = await fs.readFile(file, 'utf8')
+  const normalizedHtml = html.replace(
+    /\b(src|href)\s*=\s*(["'])(.*?)\2/gi,
+    (attribute, _name: string, quote: string, reference: string) => (
+      sourceForUrl(reference, base, options) === undefined
+        ? attribute
+        : attribute.replace(
+            `${quote}${reference}${quote}`,
+            `${quote}${escapeAttribute(publicContentUrl(reference, base))}${quote}`,
+          )
+    ),
+  )
   let replacements = 0
-  const rewritten = await replaceAsync(html, /<img\b([^>]*?)>/gi, async (full, rawAttributes: string) => {
+  const rewritten = await replaceAsync(normalizedHtml, /<img\b([^>]*?)>/gi, async (full, rawAttributes: string) => {
     const input = parseAttributes(rawAttributes)
     const src = input.src
     if (!src) return full
@@ -200,12 +235,15 @@ async function rewriteFile(
     const { source: sourceDefinition, file: sourceFile } = match
     let source = sourceCache.get(sourceFile)
     try {
-      await copyContentSource(clientDirectory, base, sourceDefinition, sourceFile)
+      await copyContentSource(clientDirectory, sourceDefinition, sourceFile)
       if (!source) {
         source = await catalog.load(sourceFile)
         sourceCache.set(sourceFile, source)
       }
-      const fallback: ContentImageFallback = { sourceFile, publicUrl: src }
+      const fallback: ContentImageFallback = {
+        sourceFile,
+        publicUrl: publicContentUrl(src, base),
+      }
       registry.registerContentFallback(source, fallback)
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)
@@ -276,11 +314,12 @@ export async function optimizeContentImages(
   base: string,
   options: NormalizedImagesOptions,
   registry: ImageBuildRegistry,
+  routes: readonly PublicationRoute[],
 ): Promise<number> {
   if (options.content.length === 0) return 0
   const catalog = new ImageSourceCatalog(options)
   const sourceCache = new Map<string, Awaited<ReturnType<ImageSourceCatalog['load']>>>()
-  const files = htmlFiles(clientDirectory, await filesUnder(clientDirectory))
+  const files = htmlFiles(clientDirectory, routes)
   await copyReferencedContentSources(clientDirectory, base, options, files)
   let replacements = 0
   for (const file of files) {
@@ -314,10 +353,11 @@ function restoreImageTag(tag: string, publicUrl: string): string {
 export async function restoreFailedContentImages(
   clientDirectory: string,
   registry: ImageBuildRegistry,
+  routes: readonly PublicationRoute[],
 ): Promise<number> {
   const failures = registry.failedContentImageFallbacks()
   if (failures.length === 0) return 0
-  const files = htmlFiles(clientDirectory, await filesUnder(clientDirectory))
+  const files = htmlFiles(clientDirectory, routes)
   let restored = 0
   for (const file of files) {
     const html = await fs.readFile(file, 'utf8')

@@ -1231,7 +1231,8 @@ nib-island {
   color: var(--nib-paper);
 }
 
-.docs-article > .prose {
+.docs-article > .prose,
+.docs-article > .nib-markdown {
   max-width: none;
   --tw-prose-body: var(--nib-muted);
   --tw-prose-headings: var(--nib-paper);
@@ -1252,15 +1253,15 @@ nib-island {
   line-height: 1.82;
 }
 
-.docs-article > .prose h1,
-.docs-article > .prose h2,
-.docs-article > .prose h3,
-.docs-article > .prose h4 {
+.docs-article > :is(.prose, .nib-markdown) h1,
+.docs-article > :is(.prose, .nib-markdown) h2,
+.docs-article > :is(.prose, .nib-markdown) h3,
+.docs-article > :is(.prose, .nib-markdown) h4 {
   scroll-margin-top: 7rem;
   text-wrap: balance;
 }
 
-.docs-article > .prose h1 {
+.docs-article > :is(.prose, .nib-markdown) h1 {
   max-width: 12ch;
   margin-bottom: 1.4rem;
   font-family: Georgia, "Times New Roman", serif;
@@ -1270,7 +1271,7 @@ nib-island {
   line-height: 0.98;
 }
 
-.docs-article > .prose h2 {
+.docs-article > :is(.prose, .nib-markdown) h2 {
   margin-top: 3.3rem;
   padding-top: 1.1rem;
   border-top: 1px solid var(--nib-line);
@@ -1278,37 +1279,37 @@ nib-island {
   letter-spacing: -0.025em;
 }
 
-.docs-article > .prose h3 {
+.docs-article > :is(.prose, .nib-markdown) h3 {
   color: var(--nib-teal);
   font-size: 1.16rem;
 }
 
-.docs-article > .prose a {
+.docs-article > :is(.prose, .nib-markdown) a {
   text-decoration-color: rgba(124, 230, 211, 0.4);
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
   transition: color 160ms ease, text-decoration-color 160ms ease;
 }
 
-.docs-article > .prose a:hover {
+.docs-article > :is(.prose, .nib-markdown) a:hover {
   color: var(--nib-paper);
   text-decoration-color: var(--nib-paper);
 }
 
-.docs-article > .prose code:not(pre code) {
+.docs-article > :is(.prose, .nib-markdown) code:not(pre code) {
   border: 1px solid var(--nib-line);
   border-radius: 0.3rem;
   background: rgba(124, 230, 211, 0.08);
   padding: 0.13em 0.3em;
 }
 
-.docs-article > .prose pre {
+.docs-article > :is(.prose, .nib-markdown) pre {
   border: 1px solid var(--nib-line);
   border-radius: 0.65rem;
   box-shadow: inset 0 1px rgba(255, 255, 255, 0.04);
 }
 
-.docs-article > .prose table {
+.docs-article > :is(.prose, .nib-markdown) table {
   display: block;
   overflow-x: auto;
   white-space: nowrap;
@@ -1462,7 +1463,7 @@ nib-island {
     margin-bottom: 1.25rem;
   }
 
-  .docs-article > .prose h1 {
+  .docs-article > :is(.prose, .nib-markdown) h1 {
     max-width: 15ch;
     font-size: clamp(2.75rem, 15vw, 4.5rem);
   }

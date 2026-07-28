@@ -1,4 +1,4 @@
-import { siteHref, type PageProps } from '@briansunter/nib'
+import type { PageProps } from '@briansunter/nib'
 import type config from '../../nib.config'
 import { AboutSection } from '../components/AboutSection'
 import { BlogList } from '../components/BlogList'

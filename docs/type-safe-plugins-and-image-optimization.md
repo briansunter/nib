@@ -266,6 +266,7 @@ export interface NibRenderPageContext {
 
 export interface NibFinalizeContext extends NibRendererPluginContext {
   readonly clientDirectory: string
+  readonly publication: PublicationManifest
   readonly renderedPaths: readonly string[]
 }
 

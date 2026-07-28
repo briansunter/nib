@@ -127,6 +127,7 @@ export function validateImagesOptions(options: ImagesOptions = {}): void {
         || !source.publicPath.endsWith('/')
         || source.publicPath.includes('?')
         || source.publicPath.includes('#')
+        || source.publicPath.split('/').includes('..')
       ) {
         throw new Error(`@briansunter/nib-images: content[${index}].publicPath must start and end with "/"`)
       }

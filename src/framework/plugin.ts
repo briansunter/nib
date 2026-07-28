@@ -1,5 +1,7 @@
 import type { ComponentType, ReactNode } from 'react'
 import type { Plugin, PluginOption } from 'vite'
+import type { PublicationManifest } from './publication'
+import { ownedClientMarkup, type OwnedClientMarkup } from './html-document'
 import type {
   HeadContribution,
   HeadElement,
@@ -74,6 +76,8 @@ export interface NibRenderPageContext {
 
 export interface NibFinalizeContext extends NibRendererPluginContext {
   readonly clientDirectory: string
+  /** Immutable route-to-artifact mapping for the completed publication. */
+  readonly publication: PublicationManifest
   readonly renderedPaths: readonly string[]
 }
 
@@ -218,7 +222,7 @@ export function validateRendererExtension(
 export function validateRenderedPage(
   value: unknown,
   plugin: NibPlugin,
-  expectedIslandMarkup?: readonly string[],
+  expectedClientMarkup?: OwnedClientMarkup,
 ): NibRenderedPage {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`Nib plugin ${plugin.name} transformPage() must return a rendered page object`)
@@ -234,13 +238,21 @@ export function validateRenderedPage(
   ) {
     throw new Error(`Nib plugin ${plugin.name} transformPage() returned an invalid rendered page`)
   }
-  if (expectedIslandMarkup !== undefined) {
-    const actual = islandMarkup(page.html)
+  if (expectedClientMarkup !== undefined) {
+    const actual = ownedClientMarkup(page.html)
     if (
-      actual.length !== expectedIslandMarkup.length
-      || actual.some((markup, index) => markup !== expectedIslandMarkup[index])
+      actual.islands.length !== expectedClientMarkup.islands.length
+      || actual.islands.some((markup, index) => markup !== expectedClientMarkup.islands[index])
     ) {
       throw new Error(`Nib plugin ${plugin.name} transformPage() cannot change React island markup`)
+    }
+    if (
+      actual.behaviors.length !== expectedClientMarkup.behaviors.length
+      || actual.behaviors.some((markup, index) => markup !== expectedClientMarkup.behaviors[index])
+    ) {
+      throw new Error(
+        `Nib plugin ${plugin.name} transformPage() cannot change client behavior markup`,
+      )
     }
   }
   return {
@@ -248,20 +260,6 @@ export function validateRenderedPage(
     head: page.head,
     html: page.html,
   }
-}
-
-function islandMarkup(html: string): string[] {
-  const openings = html.match(/<nib-island\b/gi) ?? []
-  const markup = html.match(/<nib-island\b[^>]*>[\s\S]*?<\/nib-island\s*>/gi) ?? []
-  if (openings.length !== markup.length) return []
-  return markup
-}
-
-function behaviorMarkup(html: string): string[] {
-  const openings = html.match(/<nib-behavior\b/gi) ?? []
-  const markup = html.match(/<nib-behavior\b[^>]*>[\s\S]*?<\/nib-behavior\s*>/gi) ?? []
-  if (openings.length !== markup.length) return []
-  return markup
 }
 
 export interface NibRendererPipeline {
@@ -326,25 +324,15 @@ export async function createRendererPluginPipeline(
     },
     transformPage(page, pageContext) {
       let transformed = page
-      const expectedIslandMarkup = islandMarkup(page.html)
-      const expectedBehaviorMarkup = behaviorMarkup(page.html)
+      const expectedClientMarkup = ownedClientMarkup(page.html)
       for (const { plugin, extension } of extensions) {
         if (!extension.transformPage) continue
         try {
           transformed = validateRenderedPage(
             extension.transformPage(Object.freeze({ ...transformed }), pageContext),
             plugin,
-            expectedIslandMarkup,
+            expectedClientMarkup,
           )
-          const actualBehaviorMarkup = behaviorMarkup(transformed.html)
-          if (
-            actualBehaviorMarkup.length !== expectedBehaviorMarkup.length
-            || actualBehaviorMarkup.some((markup, index) => markup !== expectedBehaviorMarkup[index])
-          ) {
-            throw new Error(
-              `Nib plugin ${plugin.name} transformPage() cannot change client behavior markup`,
-            )
-          }
         } catch (error) {
           throw pluginError(plugin, 'transformPage()', error, pageContext.route.path)
         }

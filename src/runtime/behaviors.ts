@@ -131,9 +131,25 @@ export function createBehaviorRuntime(
     state.active = false
     state.scheduled?.cancel()
     state.controller.abort()
-    state.cleanup?.()
     delete element.dataset.scheduled
     mounted.delete(element)
+    const applicationCleanup = state.cleanup
+    delete state.cleanup
+    applicationCleanup?.()
+  }
+
+  function cleanupAll(entries: readonly [HTMLElement, MountedBehavior][]) {
+    const failures: unknown[] = []
+    for (const [element, state] of entries) {
+      try {
+        cleanup(element, state)
+      } catch (error) {
+        failures.push(error)
+      }
+    }
+    if (failures.length > 0) {
+      throw new AggregateError(failures, 'Nib behavior cleanup failed')
+    }
   }
 
   const runtime: BehaviorRuntime = {
@@ -180,15 +196,14 @@ export function createBehaviorRuntime(
       }
     },
     unmount(root = document) {
-      for (const [element, state] of mounted) {
-        if (state.owner !== root && rootContains(root, element) === false) continue
-        cleanup(element, state)
-      }
+      cleanupAll([...mounted].filter(([element, state]) => (
+        state.owner === root || rootContains(root, element)
+      )))
     },
     destroy() {
       if (destroyed) return
-      for (const [element, state] of [...mounted]) cleanup(element, state)
       destroyed = true
+      cleanupAll([...mounted])
     },
   }
   return runtime

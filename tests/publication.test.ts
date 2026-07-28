@@ -83,6 +83,8 @@ describe('route publication', () => {
         },
       ],
     })
+    expect(Object.isFrozen(manifest)).toBe(true)
     expect(Object.isFrozen(manifest.routes)).toBe(true)
+    expect(manifest.routes.every((route) => Object.isFrozen(route))).toBe(true)
   })
 })

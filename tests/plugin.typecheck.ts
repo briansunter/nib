@@ -62,6 +62,9 @@ const plugin = definePlugin({
       },
       async finalize(context) {
         context.clientDirectory
+        context.publication.routes
+        // @ts-expect-error publication data is immutable.
+        context.publication.routes.push()
       },
     }
   },

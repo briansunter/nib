@@ -231,7 +231,8 @@ const markdownFeatureAssertions = {
     && /<article class="article-post-content" data-pagefind-body(?:="(?:true)?")?>\s*<div class="prose-editorial">/.test(mediaArticle),
   responsiveEditorialMedia:
     codeArticle.includes('data-nib-orientation="landscape"')
-    && codeArticle.includes('--nib-image-comfort-width:'),
+    && codeArticle.includes('--nib-image-source-width:')
+    && !codeArticle.includes('--nib-image-comfort-width:'),
   articleEnhancementsBehavior:
     staticArticle.includes('data-behavior="content-enhancements"')
     && !staticArticle.includes('data-island="content-enhancements"'),
