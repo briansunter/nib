@@ -1,7 +1,7 @@
 import { siteHref, type PageProps } from '@briansunter/nib'
 import type { CSSProperties, ReactNode } from 'react'
 import type config from '../../../nib.config'
-import PinFilter from '../../islands/pin-filter'
+import { PinFilter } from '../../client-behaviors'
 
 export const meta = {
   title: 'Pin Collection | Brian Sunter',
@@ -465,7 +465,7 @@ export default function PinCollectionPage({ collections }: PageProps<typeof conf
         type="application/json"
         dangerouslySetInnerHTML={{ __html: serializedPinDetails }}
       />
-      <PinFilter />
+      <PinFilter props={{}} />
     </>
   )
 }

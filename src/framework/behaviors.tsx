@@ -63,9 +63,16 @@ function isHydrationStrategy(value: unknown): value is HydrationStrategy {
  * Declares a server-safe progressive enhancement boundary. The browser
  * implementation is discovered separately from `src/behaviors/*.client.ts`.
  */
+export function defineClientBehavior(
+  id: string,
+): ClientBehaviorDefinition<Record<never, never>>
 export function defineClientBehavior<Props extends object>(
   id: string,
   ..._guard: DefinitionGuard<Props>
+): ClientBehaviorDefinition<Props>
+export function defineClientBehavior<Props extends object>(
+  id: string,
+  ..._guard: unknown[]
 ): ClientBehaviorDefinition<Props> {
   const behaviorId = validateIslandId(id)
   function BehaviorBoundary({

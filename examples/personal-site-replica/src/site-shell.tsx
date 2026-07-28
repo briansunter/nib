@@ -1,7 +1,7 @@
 import { siteHref, type SiteShellProps } from '@briansunter/nib'
 import { GLYPHS, Icon, SocialGlyph } from './components/icons'
 import type { Writing } from './content'
-import ShellBehavior from './islands/shell-behavior'
+import { ShellBehavior } from './client-behaviors'
 import { blogPosts } from './lib/content-queries'
 import {
   footerSocials,
@@ -356,7 +356,7 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
         </svg>
       </button>
 
-      <ShellBehavior />
+      <ShellBehavior props={{}} />
     </div>
   )
 }

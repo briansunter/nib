@@ -2,7 +2,7 @@ import { siteHref, type DataPageProps } from '@briansunter/nib'
 import { Image } from '@briansunter/nib-images'
 import { Fragment } from 'react'
 import CopyButton from './islands/copy-button'
-import ContentEnhancements from './islands/content-enhancements'
+import { ContentEnhancements } from './client-behaviors'
 import RecipeControls from './islands/recipe-controls'
 import { imageMap } from './data/images'
 import type { Project, Recipe, TagPage } from './content'
@@ -165,7 +165,7 @@ export function ProjectDetailPage({ data, site }: DataPageProps<Project>) {
       <div className="mx-auto max-w-3xl px-3 pb-12 lg:px-8">
         <SocialShare slug={`projects/${data.slug}`} title={data.title} label="Share this project" />
       </div>
-      <ContentEnhancements hydrate="load" />
+      <ContentEnhancements props={{}} hydrate="load" />
     </>
   )
 }

@@ -2,7 +2,8 @@ type NavigationDirection = 'back' | 'forward'
 type NavigationType = 'push' | 'replace' | 'traverse'
 
 interface ClientNavigationOptions {
-  rehydrate: () => void
+  mount: (root?: ParentNode) => void
+  unmount: (root?: ParentNode) => void
 }
 
 interface NavigationRequest {
@@ -32,7 +33,7 @@ interface NavigationContext {
 
 interface ClientNavigationController {
   destroy: () => void
-  setRehydrate: (rehydrate: () => void) => void
+  setRuntime: (options: ClientNavigationOptions) => void
 }
 
 interface NavigationHistoryState {
@@ -574,14 +575,16 @@ class PersonalSiteClientNavigation implements ClientNavigationController {
   private currentUrl = new URL(location.href)
   private hoverTimer = 0
   private navigationAbort?: AbortController
-  private rehydrate: () => void
+  private mountRuntime: (root?: ParentNode) => void
+  private unmountRuntime: (root?: ParentNode) => void
   private scrollFrame = 0
   private viewportObserver?: IntersectionObserver
   private readonly viewportTimers = new WeakMap<Element, number>()
   private activeTransition?: ViewTransition
 
   constructor(options: ClientNavigationOptions) {
-    this.rehydrate = options.rehydrate
+    this.mountRuntime = options.mount
+    this.unmountRuntime = options.unmount
     const state = navigationState()
     const existingIndex = stateNumber(state, HISTORY_INDEX, Number.NaN)
     this.currentIndex = Number.isFinite(existingIndex) ? existingIndex : 0
@@ -606,8 +609,9 @@ class PersonalSiteClientNavigation implements ClientNavigationController {
     window.dispatchEvent(new Event('nib:client-navigation-ready'))
   }
 
-  setRehydrate = (rehydrate: () => void) => {
-    this.rehydrate = rehydrate
+  setRuntime = (options: ClientNavigationOptions) => {
+    this.mountRuntime = options.mount
+    this.unmountRuntime = options.unmount
   }
 
   destroy = () => {
@@ -982,7 +986,7 @@ class PersonalSiteClientNavigation implements ClientNavigationController {
       const completeNavigation = async () => {
         await executeNewScripts(finalUrl, signal)
         if (signal.aborted) return
-        this.rehydrate()
+        this.mountRuntime(document)
         await Promise.resolve()
         document.dispatchEvent(new Event('astro:page-load'))
         announceRoute()
@@ -1053,6 +1057,7 @@ class PersonalSiteClientNavigation implements ClientNavigationController {
       )
       copyAttributes(nextDocument.body, document.body)
       restoreFocus = restorePersistedElements(currentRoot, nextRoot)
+      this.unmountRuntime(currentRoot)
       currentRoot.replaceWith(nextRoot)
     }
     const beforeSwap = navigationEvent(
@@ -1106,13 +1111,13 @@ class PersonalSiteClientNavigation implements ClientNavigationController {
 
 /**
  * Installs one site-wide ClientRouter-compatible runtime. It deliberately
- * survives shell island replacement; every subsequently hydrated shell calls
- * this function again and only refreshes the island rehydration callback.
+ * survives shell replacement; every subsequently mounted shell behavior calls
+ * this function again and refreshes the public runtime controllers.
  */
 export function initClientNavigation(options: ClientNavigationOptions): void {
   const existing = window.__nibPersonalSiteClientNavigation
   if (existing) {
-    existing.setRehydrate(options.rehydrate)
+    existing.setRuntime(options)
     return
   }
   window.__nibPersonalSiteClientNavigation = new PersonalSiteClientNavigation(

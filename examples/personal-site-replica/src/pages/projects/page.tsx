@@ -2,7 +2,7 @@ import type { PageProps } from '@briansunter/nib'
 import type config from '../../../nib.config'
 import { PageHero } from '../../components/PageHero'
 import { ProjectCard } from '../../components/ProjectCard'
-import ProjectFilter from '../../islands/project-filter'
+import { ProjectFilter } from '../../client-behaviors'
 import { stripPageSuffix } from '../../lib/content-queries'
 
 export const meta = {
@@ -90,7 +90,7 @@ export default function ProjectsPage({ collections, site }: PageProps<typeof con
       <p className="mt-4 font-sans text-sm text-ink-muted" role="status" aria-live="polite" data-project-status>
         Showing all {projects.length} projects.
       </p>
-      <ProjectFilter hydrate="load" />
+      <ProjectFilter props={{}} hydrate="load" />
       {featured.length > 0 && (
         <section className="projects-section" aria-labelledby="featured-heading" data-project-section>
           <header className="section-head">

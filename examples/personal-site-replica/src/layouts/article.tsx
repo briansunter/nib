@@ -6,7 +6,7 @@ import { NewsletterSignup } from '../components/NewsletterSignup'
 import { SocialShare } from '../components/SocialShare'
 import type { Writing } from '../content'
 import { writingImageMap } from '../data/writing-images'
-import ContentEnhancements from '../islands/content-enhancements'
+import { ContentEnhancements } from '../client-behaviors'
 import { adjacentPages, relatedPages } from '../lib/content-queries'
 import { formatArticleDate, formatDisplayDate } from '../lib/date'
 
@@ -164,7 +164,7 @@ export default function ArticleLayout({
         )}
         <SocialShare slug={slug} title={title} label="Share this article" />
       </footer>
-      <ContentEnhancements hydrate="load" />
+      <ContentEnhancements props={{}} hydrate="load" />
     </>
   )
 }

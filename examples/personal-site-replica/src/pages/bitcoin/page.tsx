@@ -1,6 +1,6 @@
 import { Image } from '@briansunter/nib-images'
 import { bitcoinQrCode } from '../../data/images'
-import BitcoinCopyBehavior from '../../islands/bitcoin-copy-behavior'
+import { BitcoinCopyBehavior } from '../../client-behaviors'
 
 export const meta = {
   title: 'Bitcoin Donation',
@@ -89,7 +89,7 @@ export default function BitcoinPage() {
       </div>
 
       <p className="footer-note">Thank you for your support!</p>
-      <BitcoinCopyBehavior hydrate="load" />
+      <BitcoinCopyBehavior props={{}} hydrate="load" />
     </div>
   )
 }
