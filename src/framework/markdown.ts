@@ -1,10 +1,7 @@
 import matter from 'gray-matter'
-import rehypeStringify from 'rehype-stringify'
-import remarkGfm from 'remark-gfm'
-import remarkParse from 'remark-parse'
-import remarkRehype from 'remark-rehype'
-import { unified } from 'unified'
 import { defaultMarkdownSchema, parseData } from './content'
+import { compiledMarkdownContent } from './markdown-content'
+import { renderMarkdown } from './markdown-renderer'
 import { normalizeHeadContribution } from './meta'
 import type {
   DataSchema,
@@ -14,31 +11,6 @@ import type {
   MarkdownSourceContext,
   PageMeta,
 } from './types'
-
-function renderMarkdown(
-  markdown: string,
-  definition?: MarkdownDefinition<any>,
-  context?: MarkdownSourceContext,
-): string {
-  const processor = unified().use(remarkParse)
-  // Applications can opt out and install a compatible GFM variant in the
-  // authored plugin order (for example, GFM without bare-URL autolinking).
-  if (definition?.gfm !== false) processor.use(remarkGfm)
-  processor
-    .use([...(definition?.remarkPlugins ?? [])])
-    .use(remarkRehype, {
-      allowDangerousHtml: definition?.allowDangerousHtml ?? false,
-    })
-    .use([...(definition?.rehypePlugins ?? [])])
-    .use(rehypeStringify, {
-      allowDangerousHtml: definition?.allowDangerousHtml ?? false,
-    })
-  return String(processor.processSync(
-    context === undefined
-      ? markdown
-      : { value: markdown, path: context.file },
-  ))
-}
 
 function getMarkdownLayoutName(layout: unknown): string | undefined {
   if (layout === undefined) return undefined
@@ -97,8 +69,10 @@ export function markdownToCompiledPage<
     label: 'Markdown page fields',
   })
   const { meta, layout } = getMarkdownMeta(values)
+  const html = renderMarkdown(parsed.content, definition, context)
   return {
-    html: renderMarkdown(parsed.content, definition, context),
+    html,
+    content: compiledMarkdownContent(html, context?.file ?? 'inline Markdown page'),
     frontmatter,
     meta,
     layout,

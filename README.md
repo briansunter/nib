@@ -105,6 +105,29 @@ export const DocsLayout = defineLayout<{ title: string }, typeof config>(
 These helpers return the original component and add no browser or build
 runtime code.
 
+Generated pages can compile prose through the same synchronous Markdown seam
+as `page.md`:
+
+```tsx
+import { Content, markdownBody } from '@briansunter/nib'
+
+const body = markdownBody(source, {
+  file: 'src/content/projects/example.md',
+  profile: config.markdown,
+})
+
+export function ProjectBody() {
+  return <Content body={body} as="section" className="prose" data-pagefind-body="" />
+}
+```
+
+`markdownBody()` retains the source identity for Unified diagnostics and
+returns an opaque, frozen value. Only `Content` can render its compiled HTML.
+For a Markdown route, `PageLayoutProps.Content` is the same body already bound
+to the route; a named layout can render it with its own semantic tag, classes,
+and static attributes instead of inspecting or cloning `children`. Nib fails
+the server render if that route body is omitted or rendered more than once.
+
 Keep execution targets explicit:
 
 ```ts

@@ -19,6 +19,11 @@ export { file, glob } from './framework/content-compat'
 export { defineIsland } from './framework/islands'
 export { defineClientBehavior } from './framework/behaviors'
 export { markdownMedia } from './framework/markdown-media'
+export {
+  Content,
+  isMarkdownContent,
+  markdownBody,
+} from './framework/markdown-content'
 export { metadata } from './metadata'
 export { search } from './search'
 export { siteHref } from './framework/urls'
@@ -80,6 +85,14 @@ export type {
   SiteShellProps,
   TrailingSlash,
 } from './framework/types'
+export type {
+  ContentProps,
+  ContentRenderer,
+  ContentRootProps,
+  ContentRootTag,
+  MarkdownBodyOptions,
+  MarkdownContent,
+} from './framework/markdown-content'
 export type {
   PublicationManifest,
   PublicationManifestRoute,

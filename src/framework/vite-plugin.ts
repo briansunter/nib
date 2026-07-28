@@ -74,18 +74,21 @@ export function nibMarkdown(configPath = 'nib.config.ts'): Plugin {
 
       return [
         `import { createElement } from 'react'`,
+        `import { Content as NibContent } from '@briansunter/nib'`,
         `import config from ${configImport}`,
         `import { markdownToCompiledPage } from '@briansunter/nib/internal/server'`,
         `const compiled = markdownToCompiledPage(${JSON.stringify(source)}, config.markdown, { file: ${JSON.stringify(cleanId)} })`,
         `export const meta = compiled.meta`,
         `export const frontmatter = compiled.frontmatter`,
         `export const layout = compiled.layout`,
+        `export const content = compiled.content`,
         `const defaultClassName = 'prose-editorial prose prose-invert max-w-none prose-a:text-sky-300'`,
-        `export default function MarkdownPage({ route: _route, site: _site, collections: _collections, data: _data, className = defaultClassName, ...articleProps } = {}) {`,
-        `  return createElement('article', {`,
+        `export default function MarkdownPage({ route: _route, site: _site, collections: _collections, data: _data, Content = NibContent, className = defaultClassName, ...articleProps } = {}) {`,
+        `  return createElement(Content, {`,
         `    ...articleProps,`,
+        `    ...(Content === NibContent ? { body: compiled.content } : {}),`,
+        `    as: 'article',`,
         `    className,`,
-        `    dangerouslySetInnerHTML: { __html: compiled.html }`,
         `  })`,
         `}`
       ].join('\n')

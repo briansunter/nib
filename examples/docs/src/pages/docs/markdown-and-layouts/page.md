@@ -78,14 +78,45 @@ import { z, type PageLayoutProps } from '@briansunter/nib'
 import { articleSchema } from '../content'
 
 export default function ArticleLayout({
-  children,
+  Content,
   frontmatter,
 }: PageLayoutProps<z.infer<typeof articleSchema>>) {
-  return <article data-tags={frontmatter?.tags.join(',')}>{children}</article>
+  if (!Content) throw new Error('Article layout requires Markdown content')
+  return (
+    <Content
+      as="article"
+      className="prose"
+      data-tags={frontmatter?.tags.join(',')}
+      data-pagefind-body=""
+    />
+  )
 }
 ```
 
-Layouts may place [React islands](../react-islands/) before, after, or beside those children. Inline JSX inside `page.md` is not supported.
+`Content` is bound to the route's compiled Markdown. The layout chooses its
+semantic root and static attributes without cloning or inspecting a child
+element. Nib rejects a render that drops or duplicates the body. Layouts may
+place [React islands](../react-islands/) before, after, or beside `Content`.
+Inline JSX inside `page.md` is not supported.
+
+Generated data pages can use the same pipeline:
+
+```tsx
+import { Content, markdownBody } from '@briansunter/nib'
+
+const body = markdownBody(project.bodyMarkdown, {
+  file: `src/content/projects/${project.slug}.md`,
+  profile: markdown,
+})
+
+export function ProjectProse() {
+  return <Content body={body} as="section" className="prose" />
+}
+```
+
+The profile is an ordinary `defineMarkdown()` definition, so plugin order,
+raw-HTML policy, source-located errors, and synchronous build behavior stay
+identical between file pages and generated prose.
 
 Layout names are flat filenames. `src/layouts/docs.tsx` works; nested layout paths are intentionally unsupported.
 

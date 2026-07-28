@@ -2,6 +2,7 @@ import type { ComponentType, ReactNode } from 'react'
 import type { Pluggable } from 'unified'
 import type { PluginOption } from 'vite'
 import type { Awaitable, NibPlugin, NibVitePluginContext } from './plugin'
+import type { ContentRenderer, MarkdownContent } from './markdown-content'
 
 export interface PageMeta {
   title?: string
@@ -285,6 +286,8 @@ export interface PageLayoutProps<
   children: ReactNode
   data: Data | undefined
   frontmatter: Frontmatter | undefined
+  /** Bound Markdown content for layouts that own the semantic content root. */
+  Content: ContentRenderer | undefined
 }
 
 export interface SiteShellProps<
@@ -330,6 +333,7 @@ export interface PageModule {
   meta?: PageMeta
   frontmatter?: unknown
   layout?: string
+  content?: MarkdownContent
   pages?: GeneratedPage[]
 }
 
@@ -349,6 +353,7 @@ export interface ResolvedPageRoute extends PageRoute {
   component: ComponentType<any>
   data?: unknown
   frontmatter?: unknown
+  content?: MarkdownContent
   layouts: ComponentType<any>[]
 }
 
