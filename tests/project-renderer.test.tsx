@@ -21,6 +21,7 @@ describe('project renderer', () => {
         head: '<title>Site</title>\n    <meta name="description" content="Description" />',
         html: '<header><a href="/">Site</a></header><main><h1>Home</h1></main>',
         islands: [],
+        behaviors: [],
       },
     })
   })

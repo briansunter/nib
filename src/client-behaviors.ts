@@ -1,11 +1,4 @@
 export {
-  createIslandRuntime,
-  startIslandRuntime,
-  type CreateIslandRuntimeOptions,
-  type IslandClientModules,
-  type IslandRuntime,
-} from './runtime/client'
-export {
   createBehaviorRuntime,
   defineBehaviorClient,
   type BehaviorCleanup,
@@ -24,9 +17,3 @@ export {
   unmountClientRuntimes,
   type ClientRuntimeController,
 } from './runtime/coordinator'
-export type {
-  IslandHydrationEnvironment,
-  IslandHydrateRoot,
-  IslandHydrateRootOptions,
-  IslandReactRoot,
-} from './framework/island-runtime'

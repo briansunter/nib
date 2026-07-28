@@ -16,6 +16,7 @@ describe('framework-owned site builds', () => {
 
     const home = await fs.readFile(path.join(output, 'client/index.html'), 'utf8')
     const about = await fs.readFile(path.join(output, 'client/about/index.html'), 'utf8')
+    const enhanced = await fs.readFile(path.join(output, 'client/enhanced/index.html'), 'utf8')
     const team = await fs.readFile(path.join(output, 'client/team/index.html'), 'utf8')
     const pencil = await fs.readFile(
       path.join(output, 'client/products/pencil/index.html'),
@@ -52,6 +53,10 @@ describe('framework-owned site builds', () => {
       trailingSlash: string
       routes: Array<{ path: string; artifact: string; contentType: string }>
     }
+    const viteManifest = JSON.parse(await fs.readFile(
+      path.join(output, 'client/.vite/manifest.json'),
+      'utf8',
+    )) as Record<string, { file: string; name?: string; imports?: string[] }>
 
     expect(home).toContain('<title>Home | Journal</title>')
     expect(home).toMatch(/<link rel="stylesheet" href="\/journal\/assets\/[^"]+\.css" \/>/)
@@ -65,6 +70,21 @@ describe('framework-owned site builds', () => {
     expect(about).toContain('<h1>About the journal</h1>')
     expect(about).toContain('<section data-eyebrow="Company">')
     expect(about).not.toContain('data-nib-islands')
+    expect(about).not.toContain('data-nib-behaviors')
+    expect(enhanced).toContain('data-behavior="reveal"')
+    expect(enhanced).toContain('data-nib-behaviors')
+    expect(enhanced).not.toContain('data-nib-islands')
+    const behaviorEntry = Object.values(viteManifest)
+      .find((entry) => entry.name === 'behaviors')
+    expect(behaviorEntry).toBeDefined()
+    const behaviorFiles = [
+      behaviorEntry!.file,
+      ...(behaviorEntry!.imports ?? []).map((id) => viteManifest[id]!.file),
+    ]
+    const behaviorJavaScript = (await Promise.all(
+      behaviorFiles.map((file) => fs.readFile(path.join(output, 'client', file), 'utf8')),
+    )).join('\n')
+    expect(behaviorJavaScript).not.toMatch(/react-dom|hydrateRoot|createRoot/)
     expect(team).toContain('<h1>Ada, Engineer</h1>')
     expect(pencil).toContain('<h1>Pencil</h1>')
     expect(pencil).toContain('<p>$2</p>')
@@ -86,6 +106,7 @@ describe('framework-owned site builds', () => {
         artifact: 'about/index.html',
         contentType: 'text/html; charset=utf-8',
       }),
+      expect.objectContaining({ path: '/enhanced/', artifact: 'enhanced/index.html' }),
       expect.objectContaining({
         path: '/rss.xml',
         artifact: 'rss.xml',

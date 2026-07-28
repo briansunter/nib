@@ -44,6 +44,36 @@ export default function Page() {
 
 Every island is rendered into the generated HTML first. The browser then loads that island module and hydrates its independent React root. A route without islands has no React client entry.
 
+## Client behaviors without React
+
+Use a behavior when the HTML already exists and the browser only needs event
+listeners or another imperative enhancement:
+
+```tsx
+// src/components/reveal.tsx
+import { defineClientBehavior } from '@briansunter/nib'
+
+export const Reveal = defineClientBehavior<{ open: boolean }>('reveal')
+```
+
+```ts
+// src/behaviors/reveal.client.ts
+import { defineBehaviorClient } from '@briansunter/nib/client/behaviors'
+
+export default defineBehaviorClient('reveal', ({ root, signal }) => {
+  const button = root.querySelector('button')
+  const panel = root.querySelector<HTMLElement>('[data-panel]')
+  button?.addEventListener('click', () => {
+    if (panel) panel.hidden = !panel.hidden
+  }, { signal })
+})
+```
+
+Render `<Reveal props={{ open: false }}>...</Reveal>` around the complete static
+fallback. Behavior IDs match their `.client.ts` path under `src/behaviors`.
+Behavior-only pages ship the behavior runtime, not React DOM. Both runtime
+types support cancellable `load`, `idle`, and `visible` scheduling.
+
 ## Props and boundaries
 
 Island props must be JSON-serializable. Strings, booleans, finite numbers, `null`, arrays, plain objects, and absent optional properties are supported. Functions, React nodes, class instances, dates, maps, sets, cycles, explicit `undefined`, and non-finite numbers fail type checking or the build.

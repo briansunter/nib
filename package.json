@@ -39,6 +39,14 @@
       "types": "./dist/framework/client.d.ts",
       "import": "./dist/framework/client.js"
     },
+    "./client/islands": {
+      "types": "./dist/framework/client-islands.d.ts",
+      "import": "./dist/framework/client/islands.js"
+    },
+    "./client/behaviors": {
+      "types": "./dist/framework/client-behaviors.d.ts",
+      "import": "./dist/framework/client/behaviors.js"
+    },
     "./server": {
       "types": "./dist/framework/server.d.ts",
       "import": "./dist/framework/server.js"

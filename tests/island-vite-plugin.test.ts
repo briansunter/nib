@@ -16,6 +16,16 @@ describe('island Vite integration', () => {
     expect(hook.handler('<head></head>')).toBe('<head></head>')
   })
 
+  it('marks the generated behavior entry script', () => {
+    const hook = nibIslandsEntry().transformIndexHtml as {
+      handler(html: string): string
+    }
+    const html = hook.handler(
+      '<!--nib-behaviors-entry--><script type="module" src="/behaviors.js"></script>',
+    )
+    expect(html).toContain('data-nib-behaviors')
+  })
+
   it('full-reloads static server-rendered modules but not island modules', () => {
     expect(needsStaticPageReload('/site/src/pages/about/page.tsx')).toBe(true)
     expect(needsStaticPageReload('C:\\site\\src\\layouts\\docs.tsx')).toBe(true)

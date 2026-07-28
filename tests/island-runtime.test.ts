@@ -1,4 +1,4 @@
-import { createElement } from 'react'
+import { createElement, type ReactNode } from 'react'
 import { renderToString } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import {
@@ -6,6 +6,7 @@ import {
   scheduleHydration,
   visibilityTargets,
   type IslandHydrationEnvironment,
+  type IslandHydrateRootOptions,
 } from '../src/framework/island-runtime'
 import { defineIsland } from '../src/framework/islands'
 
@@ -96,7 +97,11 @@ describe('island hydration runtime', () => {
     const Counter = defineIsland('counter', ({ count }: { count: number }) => (
       createElement('div', null, createElement(Label, { count, hydrate: 'visible' }))
     ))
-    const hydrateRoot = vi.fn()
+    const hydrateRoot = vi.fn((
+      _element: HTMLElement,
+      _content: ReactNode,
+      _options: IslandHydrateRootOptions,
+    ) => ({ unmount: vi.fn() }))
     const reportError = vi.fn()
     await hydrateIsland(
       islandElement({

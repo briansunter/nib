@@ -10,6 +10,8 @@ import type {
 
 export type { FileLoaderOptions, GlobLoaderFile, GlobLoaderOptions }
 
+const serverEntry = '@briansunter/nib/server'
+
 /**
  * @deprecated Import `glob` from `@briansunter/nib/server`.
  *
@@ -18,7 +20,7 @@ export type { FileLoaderOptions, GlobLoaderFile, GlobLoaderOptions }
  */
 export function glob(options: GlobLoaderOptions) {
   return async (context: CollectionLoaderContext): Promise<CollectionLoaderResult> => {
-    const server = await import('./content-server')
+    const server = await import(/* @vite-ignore */ serverEntry)
     return server.glob(options)(context)
   }
 }
@@ -31,7 +33,7 @@ export function glob(options: GlobLoaderOptions) {
  */
 export function file(options: FileLoaderOptions) {
   return async (context: CollectionLoaderContext): Promise<CollectionLoaderResult> => {
-    const server = await import('./content-server')
+    const server = await import(/* @vite-ignore */ serverEntry)
     return server.file(options)(context)
   }
 }

@@ -234,7 +234,11 @@ export async function createProjectRenderer(
       renderedPaths.add(route.path)
       return {
         kind: 'page',
-        page: { ...renderedPage, islands: reactPage.islands },
+        page: {
+          ...renderedPage,
+          islands: reactPage.islands,
+          behaviors: reactPage.behaviors,
+        },
       }
     },
     async finalize(context) {

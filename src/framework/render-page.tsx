@@ -23,6 +23,14 @@ interface CollectedIsland {
 export interface RenderedReactPage {
   html: string
   islands: string[]
+  behaviors: string[]
+}
+
+function behaviorIds(html: string): string[] {
+  return [...new Set(
+    [...html.matchAll(/<nib-behavior\b[^>]*\bdata-behavior="([^"]+)"/gi)]
+      .map((match) => match[1]!),
+  )]
 }
 
 function islandTree(island: CollectedIsland): ReactNode {
@@ -59,7 +67,9 @@ export function renderReactPage(page: ReactNode): RenderedReactPage {
   const collectedShell = renderToStaticMarkup(
     createElement(IslandRenderContext.Provider, { value: collector }, page),
   )
-  if (collected.length === 0) return { html: collectedShell, islands: [] }
+  if (collected.length === 0) {
+    return { html: collectedShell, islands: [], behaviors: behaviorIds(collectedShell) }
+  }
 
   for (const island of collected) {
     island.html = renderToString(islandTree(island), {
@@ -104,5 +114,6 @@ export function renderReactPage(page: ReactNode): RenderedReactPage {
   return {
     html,
     islands: [...new Set(collected.map((island) => island.definition.islandId))],
+    behaviors: behaviorIds(html),
   }
 }

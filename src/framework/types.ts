@@ -338,6 +338,7 @@ export interface RenderedPage {
   head: string
   html: string
   islands: string[]
+  behaviors: string[]
 }
 
 export type RenderedOutput =

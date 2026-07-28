@@ -2,6 +2,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   NIB_CLIENT_ENTRY,
+  NIB_BEHAVIOR_ENTRY,
   NIB_SERVER_ENTRY,
   nibProject,
 } from '../src/framework/project-vite-plugin'
@@ -21,14 +22,20 @@ describe('consumer project Vite adapter', () => {
     const resolve = plugin.resolveId as (id: string) => string | null
     const load = plugin.load as (id: string) => string | null
     const clientId = resolve(NIB_CLIENT_ENTRY)
+    const behaviorId = resolve(NIB_BEHAVIOR_ENTRY)
     const serverId = resolve(NIB_SERVER_ENTRY)
-    if (!clientId || !serverId) throw new Error('Nib virtual entries did not resolve')
+    if (!clientId || !behaviorId || !serverId) throw new Error('Nib virtual entries did not resolve')
 
     const client = load(clientId)
+    const behavior = load(behaviorId)
     const server = load(serverId)
     expect(client).toContain("import.meta.glob('/src/islands/**/*.tsx')")
-    expect(client).toContain('@briansunter/nib/internal/client')
-    expect(client).toContain('window.__nibStartIslandRuntime = start')
+    expect(client).toContain('@briansunter/nib/client/islands')
+    expect(client).toContain('createIslandRuntime')
+    expect(client).not.toContain('__nibStartIslandRuntime')
+    expect(behavior).toContain("import.meta.glob('/src/behaviors/**/*.client.{ts,tsx}')")
+    expect(behavior).toContain('createBehaviorRuntime')
+    expect(behavior).toContain('@briansunter/nib/client/behaviors')
     expect(server).toContain(path.resolve('/site/nib.config.ts'))
     expect(server).toContain('"/src/pages/**/page.tsx"')
     expect(server).toContain('"/src/pages/**/page.yaml"')

@@ -3,9 +3,11 @@ import type { Plugin } from 'vite'
 import type { NibCommand } from './plugin'
 
 export const NIB_CLIENT_ENTRY = 'virtual:nib/client-entry'
+export const NIB_BEHAVIOR_ENTRY = 'virtual:nib/behavior-entry'
 export const NIB_SERVER_ENTRY = 'virtual:nib/server-entry'
 
 const RESOLVED_CLIENT_ENTRY = `\0${NIB_CLIENT_ENTRY}`
+const RESOLVED_BEHAVIOR_ENTRY = `\0${NIB_BEHAVIOR_ENTRY}`
 const RESOLVED_SERVER_ENTRY = `\0${NIB_SERVER_ENTRY}`
 
 export function nibProject(
@@ -28,6 +30,7 @@ export function nibProject(
     name: 'nib-project',
     resolveId(id) {
       if (id === NIB_CLIENT_ENTRY) return RESOLVED_CLIENT_ENTRY
+      if (id === NIB_BEHAVIOR_ENTRY) return RESOLVED_BEHAVIOR_ENTRY
       if (id === NIB_SERVER_ENTRY) return RESOLVED_SERVER_ENTRY
       return null
     },
@@ -40,11 +43,20 @@ export function nibProject(
     load(id) {
       if (id === RESOLVED_CLIENT_ENTRY) {
         return [
-          `import { startIslandRuntime } from '@briansunter/nib/internal/client'`,
+          `import { createIslandRuntime, registerClientRuntime } from '@briansunter/nib/client/islands'`,
           `const modules = import.meta.glob('/src/islands/**/*.tsx')`,
-          `const start = () => startIslandRuntime(modules)`,
-          `window.__nibStartIslandRuntime = start`,
-          `start()`,
+          `const runtime = createIslandRuntime(modules)`,
+          `registerClientRuntime(runtime)`,
+          `runtime.mount(document)`,
+        ].join('\n')
+      }
+      if (id === RESOLVED_BEHAVIOR_ENTRY) {
+        return [
+          `import { createBehaviorRuntime, registerClientRuntime } from '@briansunter/nib/client/behaviors'`,
+          `const modules = import.meta.glob('/src/behaviors/**/*.client.{ts,tsx}')`,
+          `const runtime = createBehaviorRuntime(modules)`,
+          `registerClientRuntime(runtime)`,
+          `runtime.mount(document)`,
         ].join('\n')
       }
       if (id !== RESOLVED_SERVER_ENTRY) return null
