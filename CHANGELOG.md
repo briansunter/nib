@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.15.0](https://github.com/briansunter/nib/compare/v0.14.0...v0.15.0) (2026-07-28)
+
+
+### Features
+
+* add lifecycle-aware client behaviors ([fd58b98](https://github.com/briansunter/nib/commit/fd58b989fad80c20672f52c257866909aefb8b5f))
+* add opt-in static site navigation ([c49efc6](https://github.com/briansunter/nib/commit/c49efc628a70ee1fe25375be59746c0db6a4ce89))
+* add read-only site verifier extensions ([1a2e286](https://github.com/briansunter/nib/commit/1a2e28649c186ed327c0942f21bcf392294a834b))
+* add reusable markdown content slots ([1dda288](https://github.com/briansunter/nib/commit/1dda2883814871d18346c0a32bd08709cd6aa253))
+* add semantic publication testing helpers ([5da10f9](https://github.com/briansunter/nib/commit/5da10f9a1587a6d9b81caa634a6f01fa44804dc5))
+* add structured publication inspection ([ffeb886](https://github.com/briansunter/nib/commit/ffeb88668478bc21bd5ffb84f3596bfaa00e1535))
+* complete personal site replica parity ([cb98aa7](https://github.com/briansunter/nib/commit/cb98aa7fedb243f8c1ebef18cc38bec197744296))
+* derive collections from page metadata ([2f86d0b](https://github.com/briansunter/nib/commit/2f86d0b85bd133983ecbbcacef2acb211d96c987))
+* expand content framework and site replica ([3510469](https://github.com/briansunter/nib/commit/35104696b84d017ffc0a185a47a4e05e1606013b))
+* expose server and client package boundaries ([ca4afe0](https://github.com/briansunter/nib/commit/ca4afe0ff98be4a802a9ee7fde0ce2080746eb43))
+* publish and verify image provenance ([90ad50d](https://github.com/briansunter/nib/commit/90ad50d00b545657a6d3cdafe6508d7f74a7b04c))
+* simplify framework and add blog template ([c87c5d1](https://github.com/briansunter/nib/commit/c87c5d1a453dcdd176880bc2cf59cb04344b28d0))
+* snapshot pre-parsed semantic roots ([8db7a5e](https://github.com/briansunter/nib/commit/8db7a5e7be4ca4144f3d56e498c510b2137a7bcf))
+
+
+### Bug Fixes
+
+* reject undeployable page style imports ([2518403](https://github.com/briansunter/nib/commit/2518403146515d7c2a29563fbba18c8025b658e8))
+
+
+### Performance Improvements
+
+* accelerate warm publication inspection ([e45d7df](https://github.com/briansunter/nib/commit/e45d7df895f90045a0aff3e58f94bf73809f6005))
+
 ## [0.14.0](https://github.com/briansunter/nib/compare/v0.13.0...v0.14.0) (2026-07-20)
 
 

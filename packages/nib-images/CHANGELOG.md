@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.5.0](https://github.com/briansunter/nib/compare/nib-images-v0.4.0...nib-images-v0.5.0) (2026-07-28)
+
+
+### Features
+
+* complete personal site replica parity ([cb98aa7](https://github.com/briansunter/nib/commit/cb98aa7fedb243f8c1ebef18cc38bec197744296))
+* expand content framework and site replica ([3510469](https://github.com/briansunter/nib/commit/35104696b84d017ffc0a185a47a4e05e1606013b))
+* publish and verify image provenance ([90ad50d](https://github.com/briansunter/nib/commit/90ad50d00b545657a6d3cdafe6508d7f74a7b04c))
+* simplify framework and add blog template ([c87c5d1](https://github.com/briansunter/nib/commit/c87c5d1a453dcdd176880bc2cf59cb04344b28d0))
+
+
+### Bug Fixes
+
+* refine personal site responsive layouts ([08ef502](https://github.com/briansunter/nib/commit/08ef502d84d1f85669f82489aed0c45989719bd9))
+
 ## [0.4.0](https://github.com/briansunter/nib/compare/nib-images-v0.3.0...nib-images-v0.4.0) (2026-07-20)
 
 
