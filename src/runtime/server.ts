@@ -1,5 +1,13 @@
 export { DefaultSiteShell } from '../framework/default-shell'
-export { compileDataPages, loadCollections } from '../framework/content'
+export { compileDataPages } from '../framework/content'
+export {
+  file,
+  glob,
+  loadCollections,
+  type FileLoaderOptions,
+  type GlobLoaderFile,
+  type GlobLoaderOptions,
+} from '../framework/content-server'
 export { markdownToCompiledPage } from '../framework/markdown'
 export { renderHead } from '../framework/meta'
 export {

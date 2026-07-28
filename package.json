@@ -35,6 +35,14 @@
       "types": "./dist/framework/hosting.d.ts",
       "import": "./dist/framework/hosting.js"
     },
+    "./client": {
+      "types": "./dist/framework/client.d.ts",
+      "import": "./dist/framework/client.js"
+    },
+    "./server": {
+      "types": "./dist/framework/server.d.ts",
+      "import": "./dist/framework/server.js"
+    },
     "./internal/client": {
       "types": "./dist/framework/runtime/client.d.ts",
       "import": "./dist/framework/internal/client.js"

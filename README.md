@@ -103,6 +103,19 @@ export const DocsLayout = defineLayout<{ title: string }, typeof config>(
 These helpers return the original component and add no browser or build
 runtime code.
 
+Keep execution targets explicit:
+
+```ts
+import { defineCollection } from '@briansunter/nib'
+import { glob } from '@briansunter/nib/server'
+import type { IslandHydrationEnvironment } from '@briansunter/nib/client'
+```
+
+The root package is universal authoring API, `/server` owns filesystem-backed
+loaders, and `/client` owns browser lifecycle contracts. Nib also rejects a
+`.server.ts(x)` module imported by the production client graph or a
+`.client.ts(x)` module imported by the production server graph.
+
 ### Document head
 
 Site configuration and page metadata can add typed head elements without taking

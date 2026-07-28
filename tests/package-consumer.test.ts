@@ -76,6 +76,10 @@ describe('published package consumer', () => {
     expect(packedFiles).toContain('dist/framework/verify.d.ts')
     expect(packedFiles).toContain('dist/framework/hosting.js')
     expect(packedFiles).toContain('dist/framework/hosting.d.ts')
+    expect(packedFiles).toContain('dist/framework/client.js')
+    expect(packedFiles).toContain('dist/framework/client.d.ts')
+    expect(packedFiles).toContain('dist/framework/server.js')
+    expect(packedFiles).toContain('dist/framework/server.d.ts')
     expect(packedFiles).toContain('templates/default/nib.config.ts')
     expect(packedFiles).toContain('templates/default/gitignore')
     expect(packedFiles.some((file) => file.startsWith('tests/'))).toBe(false)
@@ -83,6 +87,19 @@ describe('published package consumer', () => {
 
     const browserEntry = await fs.readFile('dist/framework/index.js', 'utf8')
     expect(browserEntry).not.toMatch(/from ["']node:(?:fs|path)/)
+    expect(browserEntry).not.toContain('tinyglobby')
+    const clientEntry = await fs.readFile('dist/framework/client.js', 'utf8')
+    expect(clientEntry).not.toMatch(/(?:node:|tinyglobby)/)
+    const serverEntry = await fs.readFile('dist/framework/server.js', 'utf8')
+    const serverModules = [
+      serverEntry,
+      ...await Promise.all(
+        [...serverEntry.matchAll(/from "(\.\/[^"]+)"/g)]
+          .map((match) => fs.readFile(path.join('dist/framework', match[1]!), 'utf8')),
+      ),
+    ].join('\n')
+    expect(serverModules).toMatch(/node:fs\/promises/)
+    expect(serverModules).toContain('tinyglobby')
 
     const consumerRoot = await temporaryDirectory('nib-consumer')
     const consumerEnvironment = {

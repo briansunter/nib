@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from 'react'
-import { loadCollections } from './content'
+import { loadCollections } from './content-server'
 import { DefaultSiteShell } from './default-shell'
 import { normalizeHeadContribution, renderHead } from './meta'
 import { renderReactPage } from './render-page'
