@@ -1,6 +1,6 @@
 # Nib Base Library Improvement Plan
 
-Status: proposed
+Status: completed
 
 Baseline: `cb98aa7fedb243f8c1ebef18cc38bec197744296`
 
