@@ -1,2 +1,20 @@
-export { verifySite } from './framework/verify'
-export type { SiteCheckResult, VerifySiteOptions } from './framework/verify'
+export {
+  formatSiteIssue,
+  inspectSite,
+  siteInspectionReport,
+  SiteVerificationError,
+  verifySite,
+} from './framework/verify'
+export type {
+  InspectedPage,
+  InspectedReference,
+  InspectedSiteFile,
+  InspectSiteOptions,
+  SiteCheckResult,
+  SiteInspection,
+  SiteInspectionMetrics,
+  SiteInspectionReport,
+  SiteIssue,
+  SiteIssueSeverity,
+  VerifySiteOptions,
+} from './framework/verify'

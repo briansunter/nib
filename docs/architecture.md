@@ -178,8 +178,10 @@ The framework also provides small publication seams for common site concerns:
 route-level `image`, `type`, and `twitterCard` metadata override its defaults
 independently,
 `search()` emits a deterministic JSON resource route, `hosting` emits adapter
-configuration from the publication manifest, and `nib check` validates the
-published route/artifact/link contract.
+configuration from the publication manifest. `nib inspect` builds one
+immutable route/file/page index with standards-parsed HTML and structured issue
+codes; `nib check` applies verification semantics to that same model and
+reports all failures together.
 
 Within the image package, a shared request module owns cache keys and the
 development URL grammar; a transform executor owns cache misses and bounded
