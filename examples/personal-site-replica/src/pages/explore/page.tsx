@@ -1,5 +1,6 @@
 import { siteHref } from '@briansunter/nib'
 import { Icon } from '../../components/icons'
+import { PageFrame } from '../../components/PageFrame'
 import { PageHero } from '../../components/PageHero'
 
 export const meta = {
@@ -48,8 +49,9 @@ const collections = [
 
 export default function ExplorePage() {
   return (
-    <div className="py-12 sm:py-16 md:py-20" data-pagefind-ignore>
-      <PageHero title="Explore">
+    <PageFrame>
+      <div className="py-12 sm:py-16 md:py-20" data-pagefind-ignore>
+        <PageHero title="Explore">
         Writing is only one part of this site. Browse the collections, tools, and creative work I keep here.
       </PageHero>
       <ul className="mt-10 grid list-none grid-cols-1 gap-4 p-0 sm:mt-14 sm:grid-cols-2 sm:gap-6">
@@ -70,7 +72,8 @@ export default function ExplorePage() {
             </a>
           </li>
         ))}
-      </ul>
-    </div>
+        </ul>
+      </div>
+    </PageFrame>
   )
 }

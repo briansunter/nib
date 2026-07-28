@@ -54,8 +54,8 @@ export default function ArticleLayout({
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <header className="mx-auto max-w-5xl px-3 pb-10 pt-8 lg:px-8 lg:pb-14 lg:pt-12">
-        <div className="text-center">
+      <header className="article-post-header">
+        <div>
           {date && (
             <p className="overline-label mb-3">
               <time dateTime={date.toISOString()}>
@@ -75,7 +75,7 @@ export default function ArticleLayout({
         </div>
       </header>
       {cover && (
-        <div className="mx-auto mb-12 max-w-6xl px-3 lg:px-8">
+        <div className="article-post-cover">
           <Image
             src={cover}
             alt={`Cover image for ${title}`}
@@ -90,12 +90,10 @@ export default function ArticleLayout({
           />
         </div>
       )}
-      <Content
-        as="article"
-        className="prose-editorial mx-auto max-w-5xl px-3 lg:px-8"
-        data-pagefind-body=""
-      />
-      <footer className="mx-auto max-w-5xl px-3 pb-12 lg:px-8">
+      <article className="article-post-content" data-pagefind-body>
+        <Content as="div" className="prose-editorial" />
+      </article>
+      <footer className="article-post-footer">
         <section className="mx-auto mt-14 max-w-3xl">
           <NewsletterSignup />
         </section>

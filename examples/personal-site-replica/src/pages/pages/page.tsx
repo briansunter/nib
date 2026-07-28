@@ -1,6 +1,7 @@
 import { type PageProps } from '@briansunter/nib'
 import type config from '../../../nib.config'
 import { PostListItem } from '../../components/BlogList'
+import { PageFrame } from '../../components/PageFrame'
 import { PageHero } from '../../components/PageHero'
 import { groupPostsByYearMonth, titledPages } from '../../lib/content-queries'
 
@@ -14,14 +15,15 @@ export default function ArchivePage({ collections }: PageProps<typeof config>) {
   const grouped = groupPostsByYearMonth(posts)
 
   return (
-    <div className="py-16 sm:py-20" data-pagefind-ignore>
-      <PageHero title="Archive">
-        A chronological collection of articles, notes, and thoughts.
-        <span className="mt-2 block font-sans text-base md:text-lg">
-          <span className="font-semibold text-ink tabular-nums">{posts.length}</span> posts.
-        </span>
-      </PageHero>
-      <div className="space-y-14">
+    <PageFrame>
+      <div className="py-16 sm:py-20" data-pagefind-ignore>
+        <PageHero title="Archive">
+          A chronological collection of articles, notes, and thoughts.
+          <span className="mt-2 block font-sans text-base md:text-lg">
+            <span className="font-semibold text-ink tabular-nums">{posts.length}</span> posts.
+          </span>
+        </PageHero>
+        <div className="space-y-14">
           {grouped.map(({ year, months }) => (
             <section key={year}>
               <div className="mb-8 flex items-center gap-4 sm:mb-12 sm:gap-6">
@@ -47,7 +49,8 @@ export default function ArchivePage({ collections }: PageProps<typeof config>) {
               </div>
             </section>
           ))}
+        </div>
       </div>
-    </div>
+    </PageFrame>
   )
 }

@@ -1,0 +1,27 @@
+/*
+ * Nib's responsive Image preserves the source aspect ratio, while the source
+ * site's Astro transform normalizes project thumbnails to 16:10. Size the
+ * rendered image box the same way so every card has a consistent visual rail.
+ */
+.project-card-media picture {
+  display: contents;
+}
+
+.project-card-image {
+  width: auto;
+  max-width: 100%;
+  height: 100% !important;
+  max-height: 100%;
+  aspect-ratio: var(--aspect-card);
+  object-fit: cover;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .project-card .card-link:hover {
+    border-color: var(--color-border);
+  }
+
+  .project-card .card-link:hover .project-card-image {
+    transform: none;
+  }
+}

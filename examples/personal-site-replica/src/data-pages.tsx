@@ -7,6 +7,7 @@ import RecipeControls from './components/RecipeControls'
 import { imageMap } from './data/images'
 import type { Project, Recipe, TagPage } from './content'
 import { PostListItem } from './components/BlogList'
+import { PageFrame } from './components/PageFrame'
 import { PageHero } from './components/PageHero'
 import { SocialShare } from './components/SocialShare'
 import { stripPageSuffix, titledPages } from './lib/content-queries'
@@ -206,7 +207,8 @@ export function RecipeDetailPage({ data }: DataPageProps<Recipe>) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
-      <div className="mx-auto max-w-3xl px-3 py-12 sm:px-6 lg:px-8 lg:py-20" data-pagefind-body>
+      <PageFrame>
+        <div className="mx-auto max-w-3xl px-3 py-12 sm:px-6 lg:px-8 lg:py-20" data-pagefind-body>
         <header className="mb-10">
           <h1 className="mb-6 font-sans text-4xl font-bold leading-[1.1] tracking-tight text-ink md:text-5xl lg:text-6xl">{metadata.title}</h1>
           {metadata.description && <p className="dek text-xl leading-relaxed">{metadata.description}</p>}
@@ -425,7 +427,8 @@ export function RecipeDetailPage({ data }: DataPageProps<Recipe>) {
             </div>
           </details>
         </section>
-      </div>
+        </div>
+      </PageFrame>
     </>
   )
 }
@@ -433,8 +436,9 @@ export function RecipeDetailPage({ data }: DataPageProps<Recipe>) {
 export function TagDetailPage({ data }: DataPageProps<TagPage>) {
   const posts = titledPages(data.entries)
   return (
-    <div className="py-16 sm:py-20" data-pagefind-ignore>
-      <PageHero
+    <PageFrame>
+      <div className="py-16 sm:py-20" data-pagefind-ignore>
+        <PageHero
         titleNode={<span className="tag-mono">{data.display}</span>}
         before={(
           <a href={siteHref('/tags')} className="page-hero-back focus-accent">
@@ -458,7 +462,8 @@ export function TagDetailPage({ data }: DataPageProps<TagPage>) {
             key={post.slug}
           />
         ))}
+        </div>
       </div>
-    </div>
+    </PageFrame>
   )
 }

@@ -1,5 +1,6 @@
 import type { PageProps } from '@briansunter/nib'
 import type config from '../../../nib.config'
+import { PageFrame } from '../../components/PageFrame'
 import { PageHero } from '../../components/PageHero'
 import { ProjectCard } from '../../components/ProjectCard'
 import { ProjectFilter } from '../../client-behaviors'
@@ -54,9 +55,10 @@ export default function ProjectsPage({ collections, site }: PageProps<typeof con
     },
   }
   return (
-    <div className="projects-index py-10 sm:py-16 md:py-20" data-project-browser data-pagefind-ignore id="project-list">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <PageHero title="Projects">
+    <PageFrame>
+      <div className="projects-index py-10 sm:py-16 md:py-20" data-project-browser data-pagefind-ignore id="project-list">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <PageHero title="Projects">
         Software projects, experiments, and open source contributions.
         <span className="block mt-2 font-sans text-base md:text-lg">
           <span className="font-semibold text-ink tabular-nums">{projects.length}</span> projects.
@@ -129,11 +131,12 @@ export default function ProjectsPage({ collections, site }: PageProps<typeof con
           </div>
         </section>
       )}
-      {projects.length === 0 && (
-        <div className="py-20 text-center">
-          <p className="text-xl text-ink-secondary">No projects yet. Check back soon!</p>
-        </div>
-      )}
-    </div>
+        {projects.length === 0 && (
+          <div className="py-20 text-center">
+            <p className="text-xl text-ink-secondary">No projects yet. Check back soon!</p>
+          </div>
+        )}
+      </div>
+    </PageFrame>
   )
 }

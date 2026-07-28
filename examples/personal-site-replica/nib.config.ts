@@ -215,8 +215,8 @@ export default defineConfig({
       content: [{
         publicPath: '/site-assets/',
         directory: 'src/assets/site-assets',
-        widths: [320, 640, 1280],
-        sizes: '(min-width: 900px) 860px, 100vw',
+        widths: [320, 640, 896, 1280],
+        sizes: '(min-width: 900px) 896px, 100vw',
       }],
     }),
     pagefindSearch(),

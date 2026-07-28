@@ -1,0 +1,52 @@
+/*
+ * Standalone gallery pages bypass the standard PageFrame, matching the source
+ * site's StandalonePageShell. These rails compensate only for Nib's shared
+ * main-element padding and keep the authored gallery gutters intact.
+ */
+.photos-replica,
+.art-replica {
+  margin: 0;
+}
+
+.photos-replica .page-hero::after,
+.art-replica .page-hero::after {
+  display: none;
+  content: none;
+}
+
+.photos-container,
+.art-container {
+  max-width: 110rem;
+  margin-inline: auto;
+}
+
+.photos-container {
+  padding-inline: 0.75rem;
+}
+
+.art-container {
+  padding-inline: 1.25rem;
+}
+
+.art-index .page-hero {
+  margin-bottom: 2.5rem;
+}
+
+@media (min-width: 640px) {
+  .art-container {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .art-index .page-hero {
+    margin-bottom: 4rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .photos-container,
+  .art-container {
+    padding-inline: 2rem;
+  }
+}

@@ -52,6 +52,19 @@ const staticArticle = await readFile(path.join(client, 'daily-highlight-producti
 const codeArticle = await readFile(path.join(client, 'convocards-launch-retro'), 'utf8')
 const mermaidArticle = await readFile(path.join(client, 'heap'), 'utf8')
 const mediaArticle = await readFile(path.join(client, 'central-pacific-update'), 'utf8')
+const standardPageRailRoutes = [
+  'index.html',
+  'pages/index.html',
+  'projects/index.html',
+  'recipes/index.html',
+  'explore',
+  'search',
+  'tags/index.html',
+  'privacy',
+]
+const standardPageRailHtml = await Promise.all(
+  standardPageRailRoutes.map((route) => readFile(path.join(client, route), 'utf8')),
+)
 const galleryPages = {
   photos: await readFile(path.join(client, 'photos'), 'utf8'),
   art: await readFile(path.join(client, 'art'), 'utf8'),
@@ -72,6 +85,15 @@ const visualStylesheetAssertions = {
   katexLayout:
     visualStylesheets.includes('.katex-html')
     && visualStylesheets.includes('font-family:KaTeX_Main'),
+  centeredLongformMedia:
+    visualStylesheets.includes('.article-post-header')
+    && visualStylesheets.includes('figure a.pswp-zoomable')
+    && visualStylesheets.includes('margin-inline:auto')
+    && visualStylesheets.includes('--article-artifact-width:56rem')
+    && visualStylesheets.includes('data-nib-orientation=portrait'),
+  normalizedProjectCards:
+    visualStylesheets.includes('.project-card-image')
+    && visualStylesheets.includes('aspect-ratio:var(--aspect-card)'),
 }
 const failedVisualStylesheetAssertions = Object.entries(visualStylesheetAssertions)
   .filter(([, ok]) => !ok)
@@ -201,6 +223,15 @@ for (const route of ['photos', 'art', 'pin-collection']) {
 }
 
 const markdownFeatureAssertions = {
+  standardPageRails: standardPageRailHtml.every((html) => (
+    html.includes('class="mx-auto max-w-6xl px-3 lg:px-8"')
+  )),
+  articleLayoutRails:
+    /<header class="article-post-header">/.test(mediaArticle)
+    && /<article class="article-post-content" data-pagefind-body(?:="(?:true)?")?>\s*<div class="prose-editorial">/.test(mediaArticle),
+  responsiveEditorialMedia:
+    codeArticle.includes('data-nib-orientation="landscape"')
+    && codeArticle.includes('--nib-image-comfort-width:'),
   articleEnhancementsBehavior:
     staticArticle.includes('data-behavior="content-enhancements"')
     && !staticArticle.includes('data-island="content-enhancements"'),

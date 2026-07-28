@@ -1,3 +1,5 @@
+import { PageFrame } from '../../components/PageFrame'
+
 export const meta = {
   title: 'Privacy Policy',
   description: 'Privacy policy for briansunter.com',
@@ -7,7 +9,8 @@ const lastUpdated = '2026-07-09'
 
 export default function PrivacyPage() {
   return (
-    <div className="max-w-3xl mx-auto px-3 lg:px-8 py-12">
+    <PageFrame>
+      <div className="max-w-3xl mx-auto px-3 lg:px-8 py-12">
       <h1 className="font-sans text-3xl sm:text-4xl font-bold tracking-tight text-ink mb-8">
         Privacy Policy
       </h1>
@@ -99,7 +102,8 @@ export default function PrivacyPage() {
             This privacy policy may be updated from time to time. Any changes will be posted on this page with an updated revision date.
           </p>
         </section>
+        </div>
       </div>
-    </div>
+    </PageFrame>
   )
 }

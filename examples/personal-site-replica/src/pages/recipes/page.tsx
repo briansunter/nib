@@ -1,5 +1,6 @@
 import { siteHref, type PageProps } from '@briansunter/nib'
 import type config from '../../../nib.config'
+import { PageFrame } from '../../components/PageFrame'
 import { PageHero } from '../../components/PageHero'
 import RecipeFilter from '../../islands/recipe-filter'
 import {
@@ -33,8 +34,9 @@ export default function RecipesPage({ collections }: PageProps<typeof config>) {
   const tags = popular.filter((option) => !isMainRecipeCategory(option.value))
 
   return (
-    <div className="py-16 sm:py-20" data-pagefind-ignore>
-      <PageHero title="Recipes" className="mb-12 sm:mb-14">
+    <PageFrame>
+      <div className="py-16 sm:py-20" data-pagefind-ignore>
+        <PageHero title="Recipes" className="mb-12 sm:mb-14">
         A collection of recipes for home cooking.
         <span className="mt-2 block font-sans text-base md:text-lg">
           <span className="font-semibold text-ink tabular-nums">{recipes.length}</span> recipes.
@@ -115,7 +117,8 @@ export default function RecipesPage({ collections }: PageProps<typeof config>) {
           <p className="text-xl font-semibold text-ink-secondary sm:text-lg">No recipes found</p>
           <p className="mt-2 text-base text-ink-muted sm:text-sm">Try adjusting your search or filters.</p>
         </div>
-      </section>
-    </div>
+        </section>
+      </div>
+    </PageFrame>
   )
 }

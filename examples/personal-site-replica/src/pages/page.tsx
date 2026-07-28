@@ -3,6 +3,7 @@ import type config from '../../nib.config'
 import { AboutSection } from '../components/AboutSection'
 import { BlogList } from '../components/BlogList'
 import { Newsletter } from '../components/Newsletter'
+import { PageFrame } from '../components/PageFrame'
 import { SocialProfiles } from '../components/SocialProfiles'
 
 export const meta = {
@@ -17,7 +18,7 @@ export default function HomePage({ collections }: PageProps<typeof config>) {
     .map((entry) => entry.data)
 
   return (
-    <div className="mx-auto max-w-6xl px-3 lg:px-8">
+    <PageFrame>
       <div className="flex flex-col gap-16 lg:gap-24" data-pagefind-ignore>
         <AboutSection />
         <SocialProfiles />
@@ -26,6 +27,6 @@ export default function HomePage({ collections }: PageProps<typeof config>) {
         </section>
         <BlogList posts={posts} />
       </div>
-    </div>
+    </PageFrame>
   )
 }

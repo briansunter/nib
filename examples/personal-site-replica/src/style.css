@@ -1,3 +1,5 @@
+@layer legacy, theme, base, components, utilities;
+
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @import "./styles/tokens.css";
@@ -6,6 +8,8 @@
 @import "./styles/components.css";
 @import "./styles/katex.min.css";
 @import "./styles/prose.css";
+@import "./styles/article.css";
+@import "./styles/project-card.css";
 @import "./styles/alerts.css";
 @import "./styles/integrations/mermaid.css";
 @import "./styles/replica.css";
@@ -15,12 +19,19 @@
 @import "./styles/integrations/gallery.css";
 @import "./styles/integrations/photos.css";
 @import "./styles/integrations/art.css";
+@import "./styles/gallery-shell.css";
 @import "./styles/integrations/travel.css";
 @import "./styles/integrations/bitcoin.css";
 /* PinCollectionPage is server-rendered, so its visual contract belongs in the
    client stylesheet entry instead of a server-only page-module import. */
 @import "./styles/integrations/pin-collection.css";
 
+/*
+ * Transitional styles for the replica's earliest BEM components. Keep these
+ * available without allowing their broad selectors to override the canonical
+ * component styles or Tailwind utilities used by the current implementation.
+ */
+@layer legacy {
 * { box-sizing: border-box; }
 html { background: var(--surface); scroll-behavior: smooth; }
 body { min-width: 320px; margin: 0; background: var(--surface); color: var(--ink); font-family: var(--sans); line-height: 1.55; text-rendering: optimizeLegibility; }
@@ -492,6 +503,7 @@ body {
   .photo-card:not(:first-child) .photo-image { aspect-ratio: var(--aspect-photo); }
   .site-footer { grid-template-columns: 1fr; }
   .footer-note { grid-column: auto; }
+}
 }
 
 /* ====================================================================== */

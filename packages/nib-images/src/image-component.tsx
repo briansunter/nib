@@ -127,6 +127,13 @@ function formatDensity(value: number): string {
   return Number(value.toFixed(3)).toString()
 }
 
+function imageOrientation(source: ImageSource): 'landscape' | 'portrait' | 'square' {
+  const ratio = source.width / source.height
+  if (ratio >= 1.2) return 'landscape'
+  if (ratio <= 0.8) return 'portrait'
+  return 'square'
+}
+
 function srcSet(entries: readonly CandidateUrl[], fixed: boolean): string {
   return entries
     .map(({ url, width, density }) => `${url} ${fixed ? `${formatDensity(density!)}x` : `${width}w`}`)
@@ -170,11 +177,17 @@ export function Image(props: ImageProps) {
     throw new Error('@briansunter/nib-images: unsupported output format')
   }
   const userStyle = props.style
+  const intrinsicStyle = {
+    '--nib-image-width': `${source.width}px`,
+    '--nib-image-height': `${source.height}px`,
+    '--nib-image-aspect': String(source.width / source.height),
+    '--nib-image-comfort-width': `${Math.round(source.width * 1.25)}px`,
+  } as CSSProperties
   const layoutStyle: CSSProperties = layout === 'full'
-    ? { width: '100%', height: 'auto', ...userStyle }
+    ? { ...intrinsicStyle, width: '100%', height: 'auto', ...userStyle }
     : layout === 'constrained'
-      ? { maxWidth: '100%', height: 'auto', ...userStyle }
-      : userStyle ?? {}
+      ? { ...intrinsicStyle, maxWidth: '100%', height: 'auto', ...userStyle }
+      : { ...intrinsicStyle, ...userStyle }
   const {
     src: _src,
     alt,
@@ -209,6 +222,7 @@ export function Image(props: ImageProps) {
       alt,
       width: plan.displayWidth,
       height: plan.displayHeight,
+      'data-nib-orientation': imageOrientation(source),
       loading: priority ? 'eager' : loading ?? 'lazy',
       decoding: 'async',
       ...(priority ? { fetchPriority: 'high' } : fetchPriority === undefined ? {} : { fetchPriority }),
@@ -225,6 +239,7 @@ export function Image(props: ImageProps) {
     alt,
     width: plan.displayWidth,
     height: plan.displayHeight,
+    'data-nib-orientation': imageOrientation(source),
     loading: priority ? 'eager' : loading ?? 'lazy',
     decoding: 'async',
     ...(priority ? { fetchPriority: 'high' } : fetchPriority === undefined ? {} : { fetchPriority }),

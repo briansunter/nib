@@ -1,6 +1,7 @@
 import { siteHref, type PageProps } from '@briansunter/nib'
 import { Fragment } from 'react'
 import type config from '../../../nib.config'
+import { PageFrame } from '../../components/PageFrame'
 import { PageHero } from '../../components/PageHero'
 import Search from '../../components/Search'
 import { tagCounts, titledPages } from '../../lib/content-queries'
@@ -16,7 +17,7 @@ export default function SearchPage({ collections }: PageProps<typeof config>) {
   const recentWriting = titledPages(writing).slice(0, 5)
 
   return (
-    <div className="mx-auto max-w-6xl px-3 lg:px-8">
+    <PageFrame>
       <div className="search-page py-16 sm:py-20" data-pagefind-ignore>
         <PageHero title="Search" className="mb-12">
           Find articles, projects, recipes, and more across the entire site.
@@ -82,6 +83,6 @@ export default function SearchPage({ collections }: PageProps<typeof config>) {
           </section>
         </div>
       </div>
-    </div>
+    </PageFrame>
   )
 }

@@ -1,5 +1,6 @@
 import { siteHref } from '@briansunter/nib'
 import { Image } from '@briansunter/nib-images'
+import { Fragment } from 'react'
 import type { Project } from '../content'
 import { imageMap } from '../data/images'
 import { randomGradient } from '../lib/randomGradient'
@@ -34,7 +35,7 @@ export function ProjectCard({
         data-umami-event-slug={project.slug}
         className="card-link flex flex-col overflow-hidden rounded-2xl border border-border bg-surface-elevated transition-colors duration-200 hover:border-ink-muted md:flex-row"
       >
-        <div className="aspect-card flex items-center justify-center overflow-hidden bg-surface-subtle p-2 sm:p-4 md:w-[44%] md:flex-shrink-0 md:p-6">
+        <div className="project-card-media aspect-card flex items-center justify-center overflow-hidden bg-surface-subtle p-2 sm:p-4 md:w-[44%] md:flex-shrink-0 md:p-6">
           {cover ? (
             <Image
               src={cover}
@@ -45,7 +46,7 @@ export function ProjectCard({
               widths={[400, 600, 960]}
               sizes="(min-width: 768px) 480px, 100vw"
               loading={eager ? 'eager' : 'lazy'}
-              className="h-auto max-h-full w-auto max-w-full rounded-lg object-contain transition-transform duration-500 group-hover:scale-[1.02]"
+              className="project-card-image rounded-lg transition-transform duration-500 group-hover:scale-[1.02]"
             />
           ) : (
             <div
@@ -87,7 +88,11 @@ export function ProjectCard({
             )}
             {visibleTags.length > 0 && (
               <div className="flex flex-wrap items-center gap-3">
-                {visibleTags.map((tag) => <span className="proj-tag tag-mono text-xs text-ink-secondary" key={tag}>{tag}</span>)}
+                {visibleTags.map((tag) => (
+                  <Fragment key={tag}>
+                    <span className="proj-tag tag-mono text-xs text-ink-secondary">{tag}</span>{' '}
+                  </Fragment>
+                ))}
               </div>
             )}
           </div>
