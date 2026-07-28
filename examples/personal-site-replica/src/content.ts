@@ -2,6 +2,8 @@ import {
   defineCollection,
   defineMarkdown,
   fromMarkdownPages,
+  isMarkdownContent,
+  type MarkdownContent,
   z,
 } from '@briansunter/nib'
 import { file } from '@briansunter/nib/server'
@@ -52,7 +54,7 @@ export const writing = fromMarkdownPages<Writing>({
   sort: (left, right) => pageDateValue(right) - pageDateValue(left),
 })
 
-export const projectSchema = z.object({
+export const projectSourceSchema = z.object({
   slug: z.string(),
   title: z.string(),
   description: z.string().default(''),
@@ -63,8 +65,15 @@ export const projectSchema = z.object({
   coverFile: z.string().nullable(),
   projectUrl: z.string().url().optional(),
   github: z.string().url().optional(),
-  bodyHtml: z.string().default(''),
+  bodyMarkdown: z.string().default(''),
 })
+export type ProjectSource = z.infer<typeof projectSourceSchema>
+
+export const projectSchema = projectSourceSchema
+  .omit({ bodyMarkdown: true })
+  .extend({
+    body: z.custom<MarkdownContent>(isMarkdownContent),
+  })
 export type Project = z.infer<typeof projectSchema>
 
 export const ingredientSchema = z.object({

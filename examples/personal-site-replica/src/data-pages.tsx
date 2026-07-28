@@ -1,4 +1,4 @@
-import { siteHref, type DataPageProps } from '@briansunter/nib'
+import { Content, siteHref, type DataPageProps } from '@briansunter/nib'
 import { Image } from '@briansunter/nib-images'
 import { Fragment } from 'react'
 import CopyButton from './islands/copy-button'
@@ -12,7 +12,6 @@ import { SocialShare } from './components/SocialShare'
 import { stripPageSuffix, titledPages } from './lib/content-queries'
 import { highlightCooklang } from './lib/cooklang-highlight'
 import { formatDisplayDate } from './lib/date'
-import { renderProjectProse } from './lib/project-prose'
 import {
   categoryIcon,
   formatDuration,
@@ -41,9 +40,6 @@ export function ProjectDetailPage({ data, site }: DataPageProps<Project>) {
     'project',
     ...data.tags.map(stripPageSuffix),
   ])]
-  const projectBodyHtml = data.bodyHtml
-    ? renderProjectProse(data.bodyHtml)
-    : undefined
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': data.github ? 'SoftwareSourceCode' : data.projectUrl ? 'SoftwareApplication' : 'CreativeWork',
@@ -151,11 +147,8 @@ export function ProjectDetailPage({ data, site }: DataPageProps<Project>) {
         </div>
       ) : null}
       <article className="mx-auto max-w-3xl px-3 lg:px-8" data-pagefind-body>
-        {projectBodyHtml ? (
-          <div
-            className="prose-editorial"
-            dangerouslySetInnerHTML={{ __html: projectBodyHtml }}
-          />
+        {data.body.html ? (
+          <Content body={data.body} as="div" className="prose-editorial" />
         ) : (
           <div className="prose-editorial">
             <p>{data.description}</p>

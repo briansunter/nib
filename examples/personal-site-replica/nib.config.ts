@@ -4,6 +4,7 @@ import {
   fromCollection,
   fromPageSource,
   markdownMedia,
+  markdownBody,
   pageRenderer,
   search,
 } from '@briansunter/nib'
@@ -17,6 +18,7 @@ import {
   photos,
   pins,
   projectSchema,
+  projectSourceSchema,
   recipeSchema,
   tagPageSchema,
   travel,
@@ -31,6 +33,7 @@ import { generateThemeScript } from './src/lib/theme'
 import { cooklangToPlainText, htmlToPlainText } from './src/lib/search-text'
 import { sourceRedirects } from './src/redirects'
 import { sourceMetadata } from './src/lib/source-metadata'
+import { projectMarkdown } from './src/lib/project-markdown'
 
 function parseJson<T>(raw: string, file: string): T {
   try {
@@ -48,11 +51,19 @@ const projectPages = definePageSource({
   match: (file) => file.replaceAll('\\', '/').endsWith('/src/content/projects.json'),
   schema: projectSchema,
   load: ({ source }) => {
-    const projects = parseJson<Project[]>(source, 'projects.json')
-    return projects.map((project) => ({
+    const projects = projectSourceSchema.array().parse(
+      parseJson<unknown>(source, 'projects.json'),
+    )
+    return projects.map(({ bodyMarkdown, ...project }) => ({
       path: `/projects/${project.slug}`,
       collectionId: project.slug,
-      data: project,
+      data: {
+        ...project,
+        body: markdownBody(bodyMarkdown, {
+          file: `src/content/projects/${project.slug}.md`,
+          profile: projectMarkdown,
+        }),
+      },
       meta: { title: project.title, description: project.description },
     }))
   },
@@ -115,7 +126,7 @@ const projectSearchItems = fromCollection(projects, (entries) => (
     href: `/projects/${data.slug}`,
     kind: 'Project',
     tags: data.tags,
-    text: htmlToPlainText(data.bodyHtml) || data.description,
+    text: htmlToPlainText(data.body.html) || data.description,
   }))
 ))
 const recipeSearchItems = fromCollection(recipes, (entries) => (
@@ -148,7 +159,7 @@ const projectFeedItems = fromCollection(projects, (entries) => (
       pubDate: project.date,
       categories: project.tags,
       creator: 'Brian Sunter',
-      content: `${cover}${project.bodyHtml}`,
+      content: `${cover}${project.body.html}`,
     }
   })
 ))

@@ -30,7 +30,6 @@
     "github-slugger": "^2.0.0",
     "hast-util-from-html": "^2.0.3",
     "leaflet": "^1.9.4",
-    "marked": "^16.0.0",
     "mermaid": "^11.16.0",
     "photoswipe": "^5.4.4",
     "react": "^19.2.7",

@@ -12,7 +12,6 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
-import { marked } from 'marked'
 import {
   cookware_display_name,
   ingredient_display_name,
@@ -284,7 +283,6 @@ async function importProjects() {
     for (const rel of [...bodyMarkdown.matchAll(/\/site-assets\/([^)\s"']+)/g)].map((m) => m[1])) {
       await copyImage(rel)
     }
-    const bodyHtml = await marked.parse(bodyMarkdown)
     projects.push({
       slug,
       title,
@@ -296,7 +294,7 @@ async function importProjects() {
       ...(github ? { github } : {}),
       cover: coverUrl,
       coverFile,
-      bodyHtml,
+      bodyMarkdown,
     })
   }
   await mkdir(OUT_CONTENT, { recursive: true })

@@ -1,6 +1,5 @@
 import { siteHref, type PageLayoutProps } from '@briansunter/nib'
 import { Image } from '@briansunter/nib-images'
-import { cloneElement, isValidElement } from 'react'
 import type config from '../../nib.config'
 import { NewsletterSignup } from '../components/NewsletterSignup'
 import { SocialShare } from '../components/SocialShare'
@@ -20,12 +19,13 @@ interface ArticleFrontmatter {
 }
 
 export default function ArticleLayout({
-  children,
+  Content,
   frontmatter,
   route,
   site,
   collections,
 }: PageLayoutProps<ArticleFrontmatter, typeof config>) {
+  if (!Content) throw new Error(`Article layout requires Markdown content for ${route.path}`)
   const slug = route.path.replace(/^\/+|\/+$/g, '')
   const writing = collections.writing.map((entry) => entry.data as Writing)
   const current = writing.find((entry) => entry.slug === slug)
@@ -51,23 +51,6 @@ export default function ArticleLayout({
     keywords: current?.tags,
     image: current?.cover ? new URL(current.cover, `${origin}/`).href : undefined,
   }
-  // Nib's Markdown renderer already returns the semantic <article>. Reuse it
-  // as the editorial root so compiled headings, paragraphs, and media stay
-  // direct children, matching the source CSS contract without nested articles.
-  const articleContent = isValidElement<Record<string, unknown>>(children)
-    ? cloneElement(children, {
-        className: 'prose-editorial mx-auto max-w-5xl px-3 lg:px-8',
-        'data-pagefind-body': '',
-      })
-    : (
-        <article
-          className="prose-editorial mx-auto max-w-5xl px-3 lg:px-8"
-          data-pagefind-body
-        >
-          {children}
-        </article>
-      )
-
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
@@ -107,7 +90,11 @@ export default function ArticleLayout({
           />
         </div>
       )}
-      {articleContent}
+      <Content
+        as="article"
+        className="prose-editorial mx-auto max-w-5xl px-3 lg:px-8"
+        data-pagefind-body=""
+      />
       <footer className="mx-auto max-w-5xl px-3 pb-12 lg:px-8">
         <section className="mx-auto mt-14 max-w-3xl">
           <NewsletterSignup />
