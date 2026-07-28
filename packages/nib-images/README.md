@@ -10,7 +10,6 @@ import { defineConfig } from '@briansunter/nib'
 import { images } from '@briansunter/nib-images/plugin'
 
 export default defineConfig({
-  site: { title: 'My site' },
   plugins: [images()],
 })
 ```
