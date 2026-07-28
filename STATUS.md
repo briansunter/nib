@@ -8,4 +8,4 @@
 - Completed complete gates: authoritative root test command (186 framework tests, 21 image-package tests, and 2 package-consumer tests), root typecheck, docs build, full replica `verify` after the Batch 5 migration, and Batch 6 replica `verify` with 493 exact pages, a 243-line semantic parity adapter, 23,475 checked local references, 5,472 provenance-backed optimized assets, 58 exact project bodies, 62 writing entries, 120 RSS items, 440 search items, and no broken routes or page issues
 - Remaining work: Batches 6–7 and the complete validation/documentation gate
 - Known failures: none
-- Current boundary: Batch 7 is paused pending the explicit optional-navigation ADR decision required by `PLAN.md`
+- Current boundary: `docs/adr-optional-client-navigation.md` is proposed; Batch 7 implementation is paused pending the explicit approval required by `PLAN.md`
