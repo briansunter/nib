@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/briansunter/nib/compare/v0.15.0...v0.15.1) (2026-07-28)
+
+
+### Bug Fixes
+
+* harden repository package boundaries ([3b9c7b6](https://github.com/briansunter/nib/commit/3b9c7b66d4dae756eb30b2c5a514bc2a24ec9c1f))
+
 ## [0.15.0](https://github.com/briansunter/nib/compare/v0.14.0...v0.15.0) (2026-07-28)
 
 

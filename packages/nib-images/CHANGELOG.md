@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/briansunter/nib/compare/nib-images-v0.5.0...nib-images-v0.5.1) (2026-07-28)
+
+
+### Bug Fixes
+
+* harden repository package boundaries ([3b9c7b6](https://github.com/briansunter/nib/commit/3b9c7b66d4dae756eb30b2c5a514bc2a24ec9c1f))
+
 ## [0.5.0](https://github.com/briansunter/nib/compare/nib-images-v0.4.0...nib-images-v0.5.0) (2026-07-28)
 
 
