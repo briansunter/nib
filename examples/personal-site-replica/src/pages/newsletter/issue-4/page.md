@@ -21,7 +21,7 @@ I also include some articles about Yann LeCun, head of AI at Meta (Facebook), wh
 
 ## Updates 🆕
 
-### [notetaking-with-ai](/notetaking-with-ai)
+### [[notetaking-with-ai]]
 
 See this guide to learn how you can use the latest AI techniques for personal knowledge management.
 
@@ -29,7 +29,7 @@ See this guide to learn how you can use the latest AI techniques for personal kn
 
 In this section, I'll share a productivity tip I've learned recently.
 
-### [Logseq Projects](/logseq-projects)
+### [[logseq-projects|Logseq Projects]]
 
 In this guide, I write a basic tutorial on how to use Logseq for task management.
 
@@ -121,4 +121,4 @@ Next week, we'll continue with more Logseq guides, like how to manage projects.
 
 I'll also get started on my data structures and algorithms guide with an intro. In future issues, we'll build up this guide on algorithms in great detail. Hopefully, this will help others learn algorithms and share my approach to note-taking.
 
-Check out the [newsletter-roadmap](/newsletter-roadmap) to see what I have in mind for future issues. Let me know on [twitter @bsunter](https://twitter.com)
+Check out the [[newsletter-roadmap]] to see what I have in mind for future issues. Let me know on [twitter @bsunter](https://twitter.com)

@@ -137,4 +137,4 @@ In practice, you'd use a faster algorithm like quicksort or mergesort. Bubble so
 - **Data structures** organize the data your algorithms work with
 - **Efficiency matters**: different algorithms can produce the same result at very different speeds
 
-For a deeper dive into measuring algorithm speed, check out my notes on [time complexity](/time-complexity).
+For a deeper dive into measuring algorithm speed, check out my notes on [[time-complexity|time complexity]].

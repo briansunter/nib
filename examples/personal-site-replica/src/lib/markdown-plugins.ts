@@ -1,12 +1,13 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { Parent, Root, Text } from 'mdast'
+import type { Image, Parent, Root, Text } from 'mdast'
 import type { Element, Root as HastRoot } from 'hast'
 import rehypeFigure from '@microflash/rehype-figure'
 import { rehypeGithubAlerts } from 'rehype-github-alerts'
 import rehypeKatex from 'rehype-katex'
 import remarkGfm from 'remark-gfm-no-autolink'
 import remarkMath from 'remark-math'
+import remarkSmartypants from 'remark-smartypants'
 import remarkWikiLink from 'remark-wiki-link'
 import { visit } from 'unist-util-visit'
 import { codeToHast, createHighlighterCoreSync } from '@shikijs/core'
@@ -26,78 +27,54 @@ import typescript from '@shikijs/langs/typescript'
 import xml from '@shikijs/langs/xml'
 import yaml from '@shikijs/langs/yaml'
 import githubDark from '@shikijs/themes/github-dark'
+import { rehypeHeadingIds } from './heading-ids'
+import { remarkMermaid } from './mermaid-plugin'
+import { rehypeTweetCards, remarkTweetCards } from './tweet-plugin'
+import writingEntries from '../content/writing.json'
+import { sourceRedirects } from '../redirects'
 
-const pageRoot = path.resolve(new URL('../pages', import.meta.url).pathname)
-
-interface TweetSnapshot {
-  id_str?: string
-  text?: string
-  created_at?: string
-  favorite_count?: number
-  conversation_count?: number
-  user?: {
-    name?: string
-    screen_name?: string
-    profile_image_url_https?: string
-    profile_image_shape?: string
-    is_blue_verified?: boolean
-  }
-  entities?: {
-    urls?: Array<{ url?: string; expanded_url?: string; display_url?: string }>
-  }
-  mediaDetails?: Array<{
-    type?: string
-    media_url_https?: string
-    url?: string
-    video_info?: { variants?: Array<{ content_type?: string; url?: string; bitrate?: number }> }
-  }>
-  photos?: Array<{ url?: string }>
-  video?: {
-    poster?: string
-    variants?: Array<{ type?: string; src?: string }>
+const pageRoot = path.resolve(process.cwd(), 'src/pages')
+// This manifest is imported as build data instead of scanning relative to
+// import.meta.url, which points inside dist/server after the SSR bundle runs.
+const knownPermalinks = [...new Set([
+  ...writingEntries.map((entry) => entry.slug),
+  ...Object.keys(sourceRedirects)
+    .map((route) => route.replace(/^\/+|\/+$/g, ''))
+    .filter(Boolean),
+])]
+const knownPermalinkSet = new Set(knownPermalinks)
+const permalinkAliases = new Map<string, string>()
+for (const permalink of knownPermalinks) {
+  const basename = permalink.split('/').at(-1) ?? permalink
+  if (
+    basename !== permalink
+    && !knownPermalinkSet.has(basename)
+    && !permalinkAliases.has(basename)
+  ) {
+    permalinkAliases.set(basename, permalink)
   }
 }
 
-const tweetCachePath = [
-  path.resolve(process.cwd(), 'src/content/tweet-cache.json'),
-  path.resolve(process.cwd(), 'examples/personal-site-replica/src/content/tweet-cache.json'),
-  path.resolve(pageRoot, '../content/tweet-cache.json'),
-].find((candidate) => fs.existsSync(candidate))
-let tweetCache: Record<string, TweetSnapshot> = {}
-try {
-  if (tweetCachePath) tweetCache = JSON.parse(fs.readFileSync(tweetCachePath, 'utf8')) as Record<string, TweetSnapshot>
-} catch {
-  // A missing cache leaves a useful external-link fallback in the article.
+/** Return the target portion of Obsidian's [[target|label]] syntax. */
+export function wikilinkTarget(value: string): string {
+  return value.split('|', 1)[0]!.trim()
 }
-
-function markdownPages(directory: string, relative = ''): string[] {
-  let entries: fs.Dirent[]
-  try {
-    entries = fs.readdirSync(directory, { withFileTypes: true })
-  } catch {
-    return []
-  }
-
-  return entries.flatMap((entry) => {
-    const file = path.join(directory, entry.name)
-    const route = relative ? `${relative}/${entry.name}` : entry.name
-    if (entry.isDirectory()) return markdownPages(file, route)
-    return entry.name === 'page.md' ? [relative] : []
-  })
-}
-
-const knownPermalinks = markdownPages(pageRoot).filter(Boolean)
 
 function pageCandidates(name: string): string[] {
-  const normalized = name
+  const normalized = wikilinkTarget(name)
     .trim()
     .replace(/^notes\//i, '')
     .replace(/\\/g, '/')
     .replace(/\.md$/i, '')
+    .replace(/_/g, '-')
     .replace(/\s+/g, '-')
     .toLowerCase()
   const basename = normalized.split('/').at(-1) ?? normalized
-  return [...new Set([normalized, basename])]
+  const resolved = knownPermalinkSet.has(normalized)
+    ? normalized
+    : permalinkAliases.get(normalized)
+      ?? (knownPermalinkSet.has(basename) ? basename : permalinkAliases.get(basename))
+  return [...new Set([resolved, normalized, basename].filter((value): value is string => Boolean(value)))]
 }
 
 function escapeHtml(value: string): string {
@@ -114,101 +91,20 @@ function paragraphText(node: { children?: Array<{ type: string; value?: string }
   return node.children[0].value ?? null
 }
 
-const tweetHosts = new Set(['x.com', 'www.x.com', 'twitter.com', 'www.twitter.com', 'mobile.twitter.com'])
-
-function extractTweetId(target: string): string | null {
-  if (/^\d+$/.test(target)) return target
-  try {
-    const url = new URL(target)
-    if (!tweetHosts.has(url.hostname.toLowerCase())) return null
-    const parts = url.pathname.split('/').filter(Boolean)
-    const statusIndex = parts.indexOf('status')
-    const id = statusIndex >= 0 ? parts[statusIndex + 1] : undefined
-    return id && /^\d+$/.test(id) ? id : null
-  } catch {
-    return null
-  }
-}
-
-function formatTweetCount(count: number | undefined): string {
-  const value = count ?? 0
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`
-  return String(value)
-}
-
-function tweetTextHtml(tweet: TweetSnapshot): string {
-  let html = escapeHtml(tweet.text ?? '')
-  for (const entity of tweet.entities?.urls ?? []) {
-    if (!entity.url) continue
-    const display = entity.display_url || entity.expanded_url || entity.url
-    html = html.replace(
-      escapeHtml(entity.url),
-      `<a class="tweet-link" href="${escapeHtml(entity.expanded_url || entity.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(display)}</a>`,
-    )
-  }
-  return html
-}
-
-function tweetMediaHtml(tweet: TweetSnapshot, tweetUrl: string): string {
-  const media = tweet.mediaDetails?.[0]
-  const photoUrl = media?.type === 'photo' ? media.media_url_https : tweet.photos?.[0]?.url
-  if (photoUrl) {
-    return `<div class="tweet-media"><img src="${escapeHtml(photoUrl)}" alt="Tweet media" loading="lazy" /></div>`
-  }
-
-  const video = tweet.video
-  const videoVariant = video?.variants?.find((variant) => variant.type === 'video/mp4' && variant.src)
-    ?? media?.video_info?.variants?.filter((variant) => variant.content_type === 'video/mp4' && variant.url).sort((a, b) => (b.bitrate ?? 0) - (a.bitrate ?? 0))[0]
-  const videoSrc = videoVariant && (('src' in videoVariant && videoVariant.src) || ('url' in videoVariant && videoVariant.url))
-  const poster = video?.poster || media?.media_url_https
-  if (!videoSrc && !poster) return ''
-  if (!videoSrc) return `<div class="tweet-media"><img src="${escapeHtml(poster!)}" alt="Tweet media" loading="lazy" /></div>`
-  return `<div class="tweet-media"><video class="tweet-video" controls preload="metadata"${poster ? ` poster="${escapeHtml(poster)}"` : ''}><source src="${escapeHtml(videoSrc)}" type="video/mp4" /><a href="${escapeHtml(tweetUrl)}" target="_blank" rel="noopener noreferrer">Watch on X</a></video></div>`
-}
-
-function tweetHtml(tweetId: string, tweet: TweetSnapshot): string {
-  const id = tweet.id_str || tweetId
-  const userName = tweet.user?.name || 'X user'
-  const screenName = tweet.user?.screen_name || 'user'
-  const tweetUrl = `https://twitter.com/${encodeURIComponent(screenName)}/status/${encodeURIComponent(id)}`
-  const longTweet = (tweet.text ?? '').length > 400 || (tweet.text?.match(/\n/g) ?? []).length >= 8
-  const toggleId = `tweet-expand-${id}`
-  const createdAt = tweet.created_at
-    ? new Date(tweet.created_at).toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, month: 'short', day: 'numeric', year: 'numeric' })
-    : ''
-  const avatarClass = tweet.user?.profile_image_shape === 'Circle' ? 'tweet-avatar' : 'tweet-avatar tweet-avatar-square'
-  const media = tweetMediaHtml(tweet, tweetUrl)
-
-  return `<div class="not-prose tweet-embed" data-tweet-id="${escapeHtml(id)}">
-    <div class="tweet-card">
-      <a href="${tweetUrl}" target="_blank" rel="noopener noreferrer" class="tweet-card-link" aria-label="View tweet by ${escapeHtml(userName)} on X"></a>
-      <div class="tweet-header">
-        <div class="tweet-author">
-          ${tweet.user?.profile_image_url_https ? `<img src="${escapeHtml(tweet.user.profile_image_url_https)}" class="${avatarClass}" alt="${escapeHtml(userName)}'s avatar" loading="lazy" />` : ''}
-          <div class="tweet-author-info">
-            <a href="${tweetUrl}" target="_blank" rel="noopener noreferrer" class="tweet-author-name-link">
-              <div class="tweet-author-name-row"><span class="tweet-author-name">${escapeHtml(userName)}</span>${tweet.user?.is_blue_verified ? '<span class="tweet-verified-badge" aria-label="Verified">✓</span>' : ''}</div>
-            </a>
-            <span class="tweet-author-handle">@${escapeHtml(screenName)}</span>
-          </div>
-        </div>
-        <a href="${tweetUrl}" target="_blank" rel="noopener noreferrer" class="tweet-x-link" aria-label="View on X"><span class="tweet-x-logo" aria-hidden="true">𝕏</span></a>
-      </div>
-      ${longTweet ? `<input type="checkbox" id="${toggleId}" class="tweet-expand-toggle" />` : ''}
-      <div class="tweet-body">${tweetTextHtml(tweet)}</div>
-      ${longTweet ? `<label for="${toggleId}" class="tweet-show-more">Show more</label>` : ''}
-      ${media}
-      <a href="${tweetUrl}" target="_blank" rel="noopener noreferrer" class="tweet-timestamp-link"><span class="tweet-timestamp">${createdAt}</span></a>
-      <hr class="tweet-divider" />
-      <div class="tweet-actions"><div class="tweet-action tweet-action-like"><span aria-hidden="true">♥</span><span>${formatTweetCount(tweet.favorite_count)}</span></div><div class="tweet-action tweet-action-reply"><span aria-hidden="true">↩</span><span>${formatTweetCount(tweet.conversation_count)}</span></div></div>
-    </div>
-  </div>`
-}
-
-function tweetFallbackHtml(tweetId: string): string {
-  const tweetUrl = `https://twitter.com/i/status/${encodeURIComponent(tweetId)}`
-  return `<div class="not-prose tweet-embed tweet-embed-fallback" data-tweet-id="${escapeHtml(tweetId)}"><a href="${tweetUrl}" target="_blank" rel="noopener noreferrer">View this post on X</a></div>`
+function youtubeEmbedHtml(videoId: string): string {
+  return `<div style="position: relative; display: flex; justify-content: center; align-items: center; margin: 10px 0;">
+  <iframe
+    width="100%"
+    height="315"
+    src="https://www.youtube.com/embed/${videoId}"
+    title="YouTube video"
+    frameborder="0"
+    loading="lazy"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen
+    style="max-width: 600px; border-radius: 8px;"
+  ></iframe>
+</div>`
 }
 
 /** Render the reference site's shortcode syntax without a network request. */
@@ -223,7 +119,7 @@ export function remarkEmbeddedMedia() {
       if (youtube) {
         parent.children[index] = {
           type: 'html',
-          value: `<div class="media-embed media-embed--youtube"><iframe src="https://www.youtube.com/embed/${youtube[1]}" title="YouTube video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`,
+          value: youtubeEmbedHtml(youtube[1]!),
         }
         return
       }
@@ -235,35 +131,9 @@ export function remarkEmbeddedMedia() {
         parent.children[index] = {
           type: 'html',
           value: youtubeId
-            ? `<div class="media-embed media-embed--youtube"><iframe src="https://www.youtube.com/embed/${youtubeId}" title="YouTube video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+            ? youtubeEmbedHtml(youtubeId)
             : `<p><a href="${escapeHtml(source)}">Watch video</a></p>`,
         }
-        return
-      }
-
-      const tweet = value.trim().match(/^\{\{\s*tweet\s+(.+?)\s*\}\}$/i)
-      if (tweet) {
-        const target = tweet[1]!.trim()
-        const tweetId = extractTweetId(target)
-        if (tweetId) {
-          parent.children[index] = {
-            type: 'html',
-            value: tweetCache[tweetId] ? tweetHtml(tweetId, tweetCache[tweetId]) : tweetFallbackHtml(tweetId),
-          }
-        }
-      }
-    })
-  }
-}
-
-/** Keep mermaid as a semantic client-rendered diagram instead of raw fenced code. */
-export function remarkMermaid() {
-  return (tree: Root) => {
-    visit(tree, 'code', (node: any, index?: number, parent?: Parent) => {
-      if (index === undefined || !parent || node.lang?.toLowerCase() !== 'mermaid') return
-      parent.children[index] = {
-        type: 'html',
-        value: `<div class="mermaid" data-mermaid-source="${escapeHtml(String(node.value ?? ''))}">${escapeHtml(String(node.value ?? ''))}</div>`,
       }
     })
   }
@@ -278,13 +148,23 @@ export function remarkRemoveHiddenImages() {
   }
 }
 
+const IMAGE_FILENAME_RE = /([^/\\]+?)(?:\.[a-zA-Z0-9]+)?$/
+const LOGSEQ_TIMESTAMP_RE = /[_-]?\d{10,}_?\d*$/
+
+function altFromUrl(url: string): string {
+  const match = url.match(IMAGE_FILENAME_RE)
+  if (!match) return 'Image'
+  const stem = match[1]!.replace(LOGSEQ_TIMESTAMP_RE, '').replace(/_+/g, ' ').trim()
+  return stem.length > 0 ? stem : 'Image'
+}
+
 export function remarkNormalizeImageAlt() {
   return (tree: Root) => {
-    visit(tree, 'image', (node: any) => {
-      if (typeof node.alt !== 'string' || node.alt.trim() !== '') return
-      const filename = node.url?.split('/').at(-1)?.replace(/\.[^.]+$/, '') ?? 'Image'
-      node.alt = filename.replace(/[_-]+/g, ' ').replace(/\d{10,}.*$/, '').trim() || 'Image'
+    visit(tree, 'image', (node: Image) => {
+      const alt = typeof node.alt === 'string' ? node.alt.trim() : ''
+      if (alt === '') node.alt = altFromUrl(node.url)
     })
+    return tree
   }
 }
 
@@ -328,6 +208,39 @@ export function remarkWikilinkValidate() {
   }
 }
 
+interface WikiLinkNode {
+  type: 'wikiLink'
+  value: string
+  data?: {
+    alias?: string
+    hChildren?: Array<{ type: 'text'; value: string }>
+    [key: string]: unknown
+  }
+}
+
+/**
+ * Keep the source site's adapter for Obsidian's [[target|label]] form. The
+ * parser resolves the target through `wikilinkTarget`; this pass only updates
+ * the rendered label while preserving its resolved permalink and existence.
+ */
+export function remarkWikilinkPipeAlias() {
+  return (tree: Root) => {
+    visit(tree, 'wikiLink', (node: WikiLinkNode) => {
+      const separator = node.value.indexOf('|')
+      if (separator === -1) return
+
+      const target = node.value.slice(0, separator).trim()
+      const alias = node.value.slice(separator + 1).trim() || target
+      node.value = target
+      node.data = {
+        ...node.data,
+        alias,
+        hChildren: [{ type: 'text', value: alias }],
+      }
+    })
+  }
+}
+
 const highlighter = createHighlighterCoreSync({
   themes: [githubDark],
   langs: [bash, css, dockerfile, html, javascript, json, jsx, markdown, python, sql, tsx, typescript, xml, yaml],
@@ -352,6 +265,9 @@ export function rehypeShiki() {
       if (!code) return
       const className = code.properties?.className
       const classes = Array.isArray(className) ? className.map(String) : [String(className ?? '')]
+      // remark-math emits display math as <pre><code class="language-math
+      // math-display">. Leave that node intact for the following KaTeX pass.
+      if (classes.includes('language-math') || classes.includes('math-display')) return
       const requested = classes.find((entry) => entry.startsWith('language-'))?.slice('language-'.length) ?? 'plaintext'
       const normalized = languageAliases[requested.toLowerCase()] ?? requested.toLowerCase()
       const loaded = highlighter.getLoadedLanguages()
@@ -402,15 +318,18 @@ export function rehypeShiki() {
 }
 
 export const remarkPlugins: any[] = [
+  // Astro enables smartypants by default before site-specific remark plugins.
+  remarkSmartypants,
   remarkEmbeddedMedia,
+  remarkTweetCards,
   remarkObsidianImageEmbed,
   remarkGfm,
   [remarkWikiLink, {
     permalinks: knownPermalinks,
     pageResolver: pageCandidates,
     hrefTemplate: (permalink: string) => `/${permalink}`,
-    aliasDivider: '|',
   }],
+  remarkWikilinkPipeAlias,
   remarkWikilinkValidate,
   remarkRemoveHiddenImages,
   remarkNormalizeImageAlt,
@@ -418,9 +337,51 @@ export const remarkPlugins: any[] = [
   remarkMermaid,
 ]
 
+/**
+ * Match the source site's video-node contract before rehype-figure sees the
+ * original Markdown image. Autoplay-marked videos are driven by the
+ * IntersectionObserver enhancement instead of the HTML autoplay attribute.
+ */
+export function rehypeSourceVideos() {
+  return (tree: HastRoot) => {
+    visit(tree, 'element', (node: Element) => {
+      if (node.tagName !== 'img') return
+
+      const source = String(node.properties?.src ?? '')
+      if (!/^\/videos\//i.test(source)) return
+
+      const alt = String(node.properties?.alt ?? '')
+      const shouldAutoplay = /\bautoplay\b/i.test(alt)
+
+      node.tagName = 'video'
+      node.properties = {
+        className: ['post-video'],
+        src: source,
+        alt,
+        controls: !shouldAutoplay,
+        preload: 'none',
+        ...(shouldAutoplay
+          ? {
+              muted: true,
+              playsInline: true,
+              loop: true,
+              dataAutoplayVideo: true,
+            }
+          : {}),
+      }
+      node.children = []
+    })
+  }
+}
+
 export const rehypePlugins: any[] = [
   rehypeShiki,
   [rehypeKatex, { output: 'html' }],
+  rehypeSourceVideos,
   rehypeFigure,
+  // Parse trusted cached tweet-card HTML only after figure processing so its
+  // avatar and media images retain the source card structure.
+  rehypeTweetCards,
   rehypeGithubAlerts,
+  rehypeHeadingIds,
 ]

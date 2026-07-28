@@ -111,15 +111,15 @@ Examples:
 I use [Logseq](https://logseq.com) for daily journaling. I expand this template on my daily notes page:
 
 ```
-Morning Questions #daily
-  What Am I Grateful for?
-  What Would Make Today Great?
-  What Am I Worried About?
-Evening Questions #daily
-  How Am I feeling?
-  What's Something Good That Happened Today?
-  What Did I Do Well?
-  What Could I Have Done Better?
+[[Morning Questions]] #daily
+  [[What Am I Grateful for?]]
+  [[What Would Make Today Great?]]
+  [[What Am I Worried About?]]
+[[Evening Questions]] #daily
+  [[How Am I feeling?]]
+  [[What's Something Good That Happened Today?]]
+  [[What Did I Do Well?]]
+  [[What Could I Have Done Better?]]
 ```
 
 ---

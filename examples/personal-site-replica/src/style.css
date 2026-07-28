@@ -4,9 +4,22 @@
 @import "./styles/base.css";
 @import "./styles/utilities.css";
 @import "./styles/components.css";
+@import "./styles/katex.min.css";
 @import "./styles/prose.css";
+@import "./styles/alerts.css";
+@import "./styles/integrations/mermaid.css";
 @import "./styles/replica.css";
 @import "./styles/integrations/tweets.css";
+@import "leaflet/dist/leaflet.css";
+@import "photoswipe/dist/photoswipe.css";
+@import "./styles/integrations/gallery.css";
+@import "./styles/integrations/photos.css";
+@import "./styles/integrations/art.css";
+@import "./styles/integrations/travel.css";
+@import "./styles/integrations/bitcoin.css";
+/* PinCollectionPage is server-rendered, so its visual contract belongs in the
+   client stylesheet entry instead of a server-only page-module import. */
+@import "./styles/integrations/pin-collection.css";
 
 * { box-sizing: border-box; }
 html { background: var(--surface); scroll-behavior: smooth; }
@@ -15,6 +28,52 @@ a { color: inherit; text-decoration: none; }
 a:hover { color: var(--accent); }
 button, input, select { font: inherit; }
 button, a, input, select { outline-color: var(--accent); }
+
+.photos-replica,
+.art-replica {
+  margin: -1rem -0.5rem 0;
+}
+
+.photos-replica .page-hero::after,
+.art-replica .page-hero::after {
+  display: none;
+  content: none;
+}
+
+.photos-container {
+  max-width: 110rem;
+  margin-inline: auto;
+  padding-inline: 0.75rem;
+}
+
+.art-container {
+  max-width: 110rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+.art-index .page-hero {
+  margin-bottom: 2.5rem;
+}
+
+@media (min-width: 640px) {
+  .art-container {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .art-index .page-hero {
+    margin-bottom: 4rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .photos-container,
+  .art-container {
+    padding-inline: 2rem;
+  }
+}
 
 .site-frame { min-height: 100vh; display: flex; flex-direction: column; }
 .site-main { width: 100%; flex: 1; }
@@ -551,16 +610,6 @@ body {
 .animate-spin { animation: nib-spin 0.6s linear infinite; }
 .back-to-top { position: fixed; right: 1rem; bottom: 1rem; z-index: 25; width: 2.75rem; height: 2.75rem; border: 1px solid var(--color-border); border-radius: 999px; color: var(--color-surface); background: var(--color-ink); box-shadow: var(--shadow); font-size: 1.25rem; cursor: pointer; }
 .back-to-top:hover { background: var(--color-accent); }
-.bitcoin-page { display: flex; flex-direction: column; gap: 1rem; width: min(calc(100% - 2rem), 400px); margin-inline: auto; padding: 1.5rem 1rem; }
-.bitcoin-header { display: flex; align-items: center; gap: .85rem; }
-.bitcoin-icon { width: 3rem; height: 3rem; flex: 0 0 auto; }
-.bitcoin-page h1 { font-size: 1.75rem; font-weight: 600; letter-spacing: -.02em; }
-.bitcoin-subtitle { margin: .15rem 0 0; color: var(--color-ink-muted); font-size: .9rem; }
-.bitcoin-card { display: flex; flex-direction: column; align-items: center; gap: 1rem; width: min(100%, 28rem); margin-top: 1rem; padding: 1.25rem; border: 1px solid var(--color-border); border-radius: .9rem; background: var(--color-surface-elevated); box-shadow: var(--shadow); }
-.bitcoin-qr { display: block; padding: .75rem; border-radius: .65rem; background: white; }
-.bitcoin-qr-image { display: block; }
-.bitcoin-address { display: flex; align-items: center; gap: .75rem; width: 100%; justify-content: space-between; }
-.bitcoin-address code { overflow-wrap: anywhere; color: var(--color-ink-secondary); font-size: .78rem; }
 .travel-map { min-height: 30rem; margin: 1.5rem 0 2rem; overflow: hidden; border: 1px solid var(--color-border); border-radius: .7rem; background: var(--color-surface-subtle); }
 .pin-count { color: var(--color-ink-muted); font-size: .8em; font-variant-numeric: tabular-nums; }
 .privacy-page { max-width: 48rem; margin-inline: auto; padding: 3rem .75rem; }
@@ -586,14 +635,53 @@ body {
 .search-recent-list li { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--color-border); padding: .55rem 0; }
 .search-recent-list time { flex: 0 0 auto; color: var(--color-ink-muted); font-size: .8rem; }
 
-.project-filters { margin: 0 0 2.25rem; padding: 1rem 0 0; }
-.project-filter-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: .7rem; }
-.project-filter-hint { margin: 0; color: var(--color-ink-muted); font-size: .8rem; }
-.project-filter-rail { display: flex; gap: .5rem; overflow-x: auto; padding: .15rem 0 .55rem; scrollbar-width: thin; }
-.project-filter-chip { border: 1px solid var(--color-border); cursor: pointer; }
-.project-filter-chip.is-active { color: var(--color-surface); background: var(--color-ink); border-color: var(--color-ink); }
-.project-filter-chip span { color: var(--color-ink-muted); font-variant-numeric: tabular-nums; }
-.project-filter-chip.is-active span { color: inherit; opacity: .75; }
+.project-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding-block: 1.25rem;
+  border-block: 1px solid var(--color-border);
+}
+.project-filter-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.project-filter-heading p { margin: 0; }
+.project-filter-hint {
+  color: var(--color-ink-muted);
+  font-family: var(--font-serif);
+  font-size: 0.875rem;
+  font-style: italic;
+}
+.project-filter-scroll {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.project-filter-scroll::-webkit-scrollbar { display: none; }
+.project-filter-rail {
+  display: flex;
+  width: max-content;
+  gap: 0.5rem;
+}
+.project-filter-chip {
+  min-height: 2.75rem;
+  flex: none;
+  padding-inline: 0.875rem;
+  cursor: pointer;
+}
+@media (min-width: 640px) {
+  .project-filter-scroll { overflow: visible; }
+  .project-filter-rail {
+    width: auto;
+    flex-wrap: wrap;
+  }
+}
 .recipe-filter { margin: 0 0 1.5rem; }
 .recipe-filter__controls { display: flex; gap: .75rem; }
 .recipe-filter__search { display: block; width: min(100%, 32rem); }
@@ -756,12 +844,6 @@ body {
 .media-embed iframe { width: 100%; height: 100%; border: 0; }
 .tweet-embed-fallback { min-height: 4rem; margin: 1.5rem auto; padding: 1rem; border: 1px solid var(--color-border); border-radius: .6rem; font-family: var(--font-sans); }
 .tweet-embed-fallback a { color: var(--color-accent); text-decoration: underline; }
-.code-block-wrapper { margin: 1.5rem 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: .6rem; background: #24292e; }
-.code-block-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .45rem .7rem; color: #c9d1d9; background: #1f2428; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem; }
-.copy-button { padding: .2rem .45rem; border: 1px solid rgb(255 255 255 / .2); border-radius: .3rem; color: inherit; background: transparent; cursor: pointer; }
-.copy-button:hover { background: rgb(255 255 255 / .1); }
-.code-block-wrapper pre { margin: 0 !important; border: 0 !important; border-radius: 0 !important; }
-.mermaid { overflow-x: auto; margin: 1.5rem 0; padding: 1rem; border: 1px solid var(--color-border); border-radius: .6rem; background: var(--color-surface-elevated); text-align: center; }
 .prose-editorial a.pswp-zoomable { cursor: zoom-in; }
 @media (max-width: 639px) {
   .gallery-toolbar { top: 4rem; }

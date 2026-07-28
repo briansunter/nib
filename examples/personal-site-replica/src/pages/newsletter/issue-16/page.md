@@ -61,7 +61,7 @@ There's also a number of add ons you can make that make your meals much tastier 
 
 As I've become more experienced in cooking, I've discovered recipes that I enjoy and started customizing them. While AI and recipe sites provide a good starting point, after cooking a dish a few times, I begin adjusting it to my preferences, such as adjusting cooking times or ingredient amounts.
 
-To precisely store my recipes, I use a format called [cooklang](/cooklang) and manage them using Git, the same technology I use for my code. This allows me to carefully track modifications over time as I improve my cooking skills. See [this blog post on cooklang for for info](/cooklang)
+To precisely store my recipes, I use a format called [[cooklang]] and manage them using Git, the same technology I use for my code. This allows me to carefully track modifications over time as I improve my cooking skills. See [[cooklang|this blog post on cooklang for for info]]
 
 I even created an [AI ChatGPT bot that converts recipes into the Cooklang format](https://chat.openai.com/g/g-wCAG6LITN-cooklang-chef). It still isn't very reliable but it's a good starting point for writing recipes.
 

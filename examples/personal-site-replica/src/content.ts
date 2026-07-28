@@ -21,6 +21,9 @@ export const writingSchema = z.object({
   date: z.coerce.date(),
   tags: z.array(z.string()).default([]),
   cover: z.string().nullable().default(null),
+  lastMod: z.coerce.date().nullable().default(null),
+  math: z.boolean().default(false),
+  wordCount: z.number().int().nonnegative().default(0),
 })
 export type Writing = z.infer<typeof writingSchema>
 
@@ -51,18 +54,41 @@ export const projectSchema = z.object({
 export type Project = z.infer<typeof projectSchema>
 
 export const ingredientSchema = z.object({
+  type: z.literal('ingredient'),
   name: z.string(),
-  quantity: z.union([z.number(), z.string()]).optional(),
-  unit: z.string().optional(),
-  raw: z.string().optional(),
+  quantity: z.union([z.number(), z.string()]),
+  units: z.string(),
 })
 export type Ingredient = z.infer<typeof ingredientSchema>
+
+const cookwareSchema = z.object({
+  type: z.literal('cookware'),
+  name: z.string(),
+  quantity: z.union([z.number(), z.string()]),
+})
+
+const stepItemSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('text'), value: z.string() }),
+  ingredientSchema,
+  cookwareSchema,
+  z.object({
+    type: z.literal('timer'),
+    quantity: z.union([z.number(), z.string()]),
+    units: z.string(),
+  }),
+])
+
+const recipeBlockSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('step'), items: z.array(stepItemSchema) }),
+  z.object({ type: z.literal('note'), text: z.string() }),
+  z.object({ type: z.literal('section'), name: z.string() }),
+])
 
 const recipeMetadataSchema = z.looseObject({
   title: z.string(),
   description: z.string().default(''),
   tags: z.array(z.string()).default([]),
-  servings: z.number().optional(),
+  servings: z.string().optional(),
   source: z.string().optional(),
   cuisine: z.string().optional(),
   difficulty: z.string().optional(),
@@ -80,28 +106,18 @@ export const recipeSchema = z.object({
   slug: z.string(),
   metadata: recipeMetadataSchema,
   ingredients: z.array(ingredientSchema),
-  cookware: z.array(z.string()),
-  sections: z.array(z.object({
-    title: z.string().default(''),
-    steps: z.array(z.string()),
-  })),
-  sourceText: z.string(),
+  cookwares: z.array(cookwareSchema),
+  steps: z.array(z.array(stepItemSchema)),
+  blocks: z.array(recipeBlockSchema),
+  cooklang: z.string(),
 })
 export type Recipe = z.infer<typeof recipeSchema>
-
-export const tagEntrySchema = z.object({
-  kind: z.string(),
-  title: z.string(),
-  href: z.string(),
-  description: z.string().default(''),
-})
-export type TagEntry = z.infer<typeof tagEntrySchema>
 
 export const tagPageSchema = z.object({
   tag: z.string(),
   display: z.string(),
   count: z.number(),
-  entries: z.array(tagEntrySchema),
+  entries: z.array(writingSchema),
 })
 export type TagPage = z.infer<typeof tagPageSchema>
 
@@ -110,14 +126,18 @@ export const artworkSchema = z.object({
   description: z.string().default(''),
   medium: z.string().default(''),
   dimensions: z.string().default(''),
+  surface: z.string().default(''),
+  location: z.string().default(''),
   date: z.string().default(''),
   tags: z.array(z.string()).default([]),
   image: z.string().nullable(),
 })
 export const artCollectionSchema = z.object({
+  id: z.string(),
   name: z.string(),
   description: z.string().default(''),
   default: z.boolean().default(false),
+  date: z.string(),
   medium: z.string().default(''),
   tags: z.array(z.string()).default([]),
   cover: z.string().nullable(),
@@ -132,9 +152,12 @@ export const photoSchema = z.object({
   image: z.string().nullable(),
 })
 export const photoCollectionSchema = z.object({
+  id: z.string(),
   name: z.string(),
   description: z.string().default(''),
   location: z.string().default(''),
+  date: z.string(),
+  gps: z.object({ lat: z.number(), lng: z.number() }).optional(),
   tags: z.array(z.string()).default([]),
   cover: z.string().nullable(),
   photos: z.array(photoSchema),
@@ -146,7 +169,10 @@ export const pinSchema = z.object({
   name: z.string(),
   description: z.string().default(''),
   image: z.string().nullable(),
+  dateAcquired: z.string().default(''),
   acquiredAt: z.string().default(''),
+  gps: z.object({ lat: z.number(), lng: z.number() }).optional(),
+  source: z.string().default(''),
   category: z.string().default(''),
   tags: z.array(z.string()).default([]),
   maker: z.string().default(''),
@@ -183,7 +209,7 @@ export const art = defineCollection({
     file: 'src/content/art.json',
     load: (source) => {
       const data = parseJson<ArtCollection[]>(source, 'art.json')
-      return data.map((entry, index) => ({ id: String(index), data: entry }))
+      return data.map((entry) => ({ id: entry.id, data: entry }))
     },
   }),
   schema: artCollectionSchema,
@@ -194,7 +220,7 @@ export const photos = defineCollection({
     file: 'src/content/photos.json',
     load: (source) => {
       const data = parseJson<PhotoCollection[]>(source, 'photos.json')
-      return data.map((entry, index) => ({ id: String(index), data: entry }))
+      return data.map((entry) => ({ id: entry.id, data: entry }))
     },
   }),
   schema: photoCollectionSchema,

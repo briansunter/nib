@@ -25,13 +25,13 @@ The plugin inserts all spoken words from the video as text directly underneath t
 
 {{ tweet 1537107686973616128 }}
 
-Feeding the captions text into my [Logseq Openai](/ai-powered-notetaking-with-the-gpt-3-logseq-plugin) plugin works incredibly well to summarize the video and clean up the wording of the captions. I use it to get a video summary before watching it too.
+Feeding the captions text into my [[ai-powered-notetaking-with-the-gpt-3-logseq-plugin|Logseq Openai]] plugin works incredibly well to summarize the video and clean up the wording of the captions. I use it to get a video summary before watching it too.
 
 {{ tweet 1537115206412664833 }}
 
 {{ tweet 1537117777038757889 }}
 
-### [omnivore-logseq-guide](/omnivore-logseq-guide)
+### [[omnivore-logseq-guide]]
 
 If you read a lot of content online, you need a “read it later app” to save interesting links, then read and highlight everything all at once. Keeping the article for later is much more efficient than reading a link as soon as you find it.
 
@@ -57,7 +57,7 @@ My thought process went like this:
 
 I need to set up an about me page for my public graph, so people know who I am
 
-Instead of choosing a random page name, I make a page at a known location in my graph called `logseq-social/profile`
+Instead of choosing a random page name, I make a page at a known location in my graph called `[[logseq-social/profile]]`
 
 Instead of just writing plain text, I use logseq properties to add a little bit of structure. This means I add properties like
 
@@ -72,15 +72,15 @@ In the future, it would be cool to search others' graphs and have a plugin to ma
 I'm excited by the people who set this up already!
 {{ tweet 1539677453076922368 }}
 
-### [logseq-getting-started](/logseq-getting-started)
+### [[logseq-getting-started]]
 
 Logseq is still in beta, so there aren't many "getting started" guides, especially for nontechnical users.
 
-I [wrote a quick guide](/logseq-getting-started) on how you can get started with logseq and share your notes online in just 30 minutes.
+I [[logseq-getting-started|wrote a quick guide]] on how you can get started with logseq and share your notes online in just 30 minutes.
 
 I go over the bare minimum to install logseq and make a public website like mine with a hosting company called Netlify. This will help anyone reading this newsletter who hasn't tried logseq yet or wants to follow along with some of my note taking.
 
-All you need to do is download logseq from github and upload your site to Netlify. [I go over it in detail in this guide.](/logseq-getting-started) I highly recommend buying your own domain to go along with it.
+All you need to do is download logseq from github and upload your site to Netlify. [[logseq-getting-started|I go over it in detail in this guide.]] I highly recommend buying your own domain to go along with it.
 
 ## Productivity Toolkit 🛠️
 
@@ -182,4 +182,4 @@ On top of that, I've gained around 30 newsletters to a total of 60 in about two 
 
 I hope you enjoyed the newsletter! Next week I plan to talk more in-depth about using AI for notetaking using the latest next-generation database, AI, and NLP(Natural Language Processing) technology.
 
-Check out the [newsletter-roadmap](/newsletter-roadmap) to see what I have in mind for future issues. Let me know on [Twitter @bsunter](https://twitter.com)
+Check out the [[newsletter-roadmap]] to see what I have in mind for future issues. Let me know on [Twitter @bsunter](https://twitter.com)

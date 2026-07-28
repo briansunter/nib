@@ -1,7 +1,9 @@
 import { useEffect } from 'react'
 import { defineIsland } from '@briansunter/nib'
-import PhotoSwipeLightbox from 'photoswipe/lightbox'
-import 'photoswipe/dist/photoswipe.css'
+import {
+  destroyProseEnhancements,
+  initProseEnhancements,
+} from '../utils/proseEnhancementsInitializer'
 
 function textFrom(element: Element): string {
   return element.textContent?.trim() ?? ''
@@ -9,40 +11,57 @@ function textFrom(element: Element): string {
 
 function ContentEnhancements() {
   useEffect(() => {
-    const article = document.querySelector<HTMLElement>('.prose-editorial')
-    const imageAnchors: HTMLAnchorElement[] = []
-    let lightbox: PhotoSwipeLightbox | undefined
-    let cancelled = false
+    initProseEnhancements()
 
-    if (article) {
-      for (const image of article.querySelectorAll<HTMLImageElement>('img')) {
-        const existing = image.closest<HTMLAnchorElement>('a')
-        const anchor = existing ?? document.createElement('a')
-        if (!existing) {
-          image.parentElement?.insertBefore(anchor, image)
-          anchor.appendChild(image)
-        }
-        anchor.classList.add('pswp-zoomable')
-        anchor.href = image.currentSrc || image.getAttribute('src') || '#'
-        anchor.dataset.pswpWidth = String(image.naturalWidth || Number(image.getAttribute('width')) || 1200)
-        anchor.dataset.pswpHeight = String(image.naturalHeight || Number(image.getAttribute('height')) || 900)
-        anchor.dataset.caption = image.alt || ''
-        imageAnchors.push(anchor)
-      }
-    }
-
-    const copyButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-copy-button]')]
+    const copyButtons = [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '.code-block-wrapper [data-copy-button]',
+      ),
+    ]
     const copyHandlers = copyButtons.map((button) => {
-      const handler = () => {
+      let resetTimer: number | undefined
+      const label = button.querySelector<HTMLElement>('.copy-button-label')
+      const originalLabel = label?.textContent ?? 'Copy'
+      const originalAriaLabel =
+        button.getAttribute('aria-label') ?? 'Copy code to clipboard'
+
+      const reset = () => {
+        if (label) label.textContent = originalLabel
+        button.removeAttribute('data-copy-state')
+        button.setAttribute('aria-label', originalAriaLabel)
+      }
+      const showState = (state: 'copied' | 'failed') => {
+        window.clearTimeout(resetTimer)
+        if (label) {
+          label.textContent = state === 'copied' ? 'Copied!' : 'Copy failed'
+        }
+        button.dataset.copyState = state
+        button.setAttribute(
+          'aria-label',
+          state === 'copied' ? 'Copied to clipboard' : 'Copy failed',
+        )
+        resetTimer = window.setTimeout(reset, 2000)
+      }
+      const handler = async () => {
         const value = button.dataset.code ?? ''
-        void navigator.clipboard?.writeText(value).then(() => {
-          const prior = button.textContent
-          button.textContent = 'Copied'
-          window.setTimeout(() => { button.textContent = prior }, 1200)
-        })
+        if (!value) return
+        try {
+          if (!navigator.clipboard) throw new Error('Clipboard unavailable')
+          await navigator.clipboard.writeText(value)
+          showState('copied')
+        } catch {
+          showState('failed')
+        }
       }
       button.addEventListener('click', handler)
-      return { button, handler }
+      return {
+        button,
+        handler,
+        cleanup: () => {
+          window.clearTimeout(resetTimer)
+          reset()
+        },
+      }
     })
 
     const renderMermaid = async () => {
@@ -62,43 +81,13 @@ function ContentEnhancements() {
       }
     }
 
-    const setupLightbox = async () => {
-      if (!article || imageAnchors.length === 0) return
-      const instance = new PhotoSwipeLightbox({
-        gallery: article,
-        children: 'a.pswp-zoomable',
-        pswpModule: () => import('photoswipe'),
-        bgOpacity: 0.94,
-      })
-      instance.on('uiRegister', function (this: any) {
-        this.ui.registerElement({
-          name: 'caption',
-          order: 9,
-          isButton: false,
-          appendTo: 'root',
-          className: 'pswp__custom-caption',
-          onInit: (element: HTMLElement, pswp: any) => {
-            const update = () => {
-              const anchor = pswp.currSlide?.data?.element as HTMLElement | undefined
-              element.innerHTML = anchor?.getAttribute('data-caption') ?? ''
-            }
-            pswp.on('change', update)
-            update()
-          },
-        })
-      })
-      instance.init()
-      if (cancelled) instance.destroy()
-      else lightbox = instance
-    }
-
     void renderMermaid()
-    void setupLightbox()
     return () => {
-      cancelled = true
-      lightbox?.destroy()
-      for (const { button, handler } of copyHandlers) button.removeEventListener('click', handler)
-      for (const anchor of imageAnchors) anchor.classList.remove('pswp-zoomable')
+      destroyProseEnhancements()
+      for (const { button, handler, cleanup } of copyHandlers) {
+        button.removeEventListener('click', handler)
+        cleanup()
+      }
     }
   }, [])
 

@@ -56,7 +56,7 @@ They will behave similarly to Logseq templates, where you can define them in pla
 
 I'll eventually include these in a modal popup, like other AI tools.
 
-[See more thoughts on writing prompts and prompt templates here](/logseq-openai-prompt-template)
+[[logseq-openai-prompt-template|See more thoughts on writing prompts and prompt templates here]]
 
 ## Large Language Models
 
@@ -71,13 +71,13 @@ I think they're interesting for several reasons:
 3. They exhibit a property called "emergence," where as you train them on more data, they gain new abilities that the creators didn't anticipate
 4. They can search and classify text based on meaning instead of just by keywords that appear in the text. I'm really interested in using this for note-taking to find "similar" notes, even if they don't share any text in common, to uncover interesting connections and relationships.
 
-[See more of my thoughts on why large language models are interesting here](/why-large-language-models-are-interesting)
+[[why-large-language-models-are-interesting|See more of my thoughts on why large language models are interesting here]]
 
 ## Headphone Eyemask
 
 ![ ](/site-assets/image_1667858995655_0_1667859078784_0.jpeg)
 
-The [headphone-eye-mask](/headphone-eye-mask) is my new favorite sleep hack.
+The [[headphone-eye-mask]] is my new favorite sleep hack.
 
 It's an eye mask with built-in Bluetooth headphones, so you can listen to podcasts while falling asleep.
 
@@ -85,17 +85,17 @@ I often stayed up too late on my phone or computer, overstimulating my brain and
 
 The headphone eye mask helps slow down my brain with a nightly ritual I enjoy and helps me get to sleep earlier.
 
-I wrote about [how I use it and some podcast recommendations here.](/headphone-eye-mask)
+I wrote about [[headphone-eye-mask|how I use it and some podcast recommendations here.]]
 
 ## Alamack of Naval Ravikant
 
-I enjoyed this book called the [almanack-of-naval-ravikant](/almanack-of-naval-ravikant), which is a collection of philosophical[tweets by Naval(https://twitter.com/naval) on wealth creation, learning, mindset, and health.
+I enjoyed this book called the [[almanack-of-naval-ravikant]], which is a collection of philosophical[tweets by Naval(https://twitter.com/naval) on wealth creation, learning, mindset, and health.
 
 It's not a traditional book since it's a collection of tweets, but there's a good assortment of wisdom if you're OK with the format.
 
 The book is completely free and you can [download it here](https://www.navalmanack.com/)
 
-[Read my review and notes on the book here](/almanack-of-naval-ravikant)
+[[almanack-of-naval-ravikant|Read my review and notes on the book here]]
 
 ## Brain Food 🧠
 
@@ -103,7 +103,7 @@ The book is completely free and you can [download it here](https://www.navalmana
 
 > Specific knowledge is knowledge you cannot be trained for. If society can train you, it can train someone else and replace you.
 
-[Naval Ravikant](https://twitter.com/naval) (from [almanack-of-naval-ravikant](/almanack-of-naval-ravikant) )
+[Naval Ravikant](https://twitter.com/naval) (from [[almanack-of-naval-ravikant]] )
 
 ### Link of the Week
 

@@ -1,15 +1,5 @@
 import { siteHref } from '@briansunter/nib'
-
-function tagToSlug(tag: string): string {
-  return tag
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
-function stripPageSuffix(tag: string): string {
-  return tag.replace(/[/_-]?page$/i, '').trim() || tag
-}
+import { stripPageSuffix, tagToSlug } from '../lib/content-queries'
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
@@ -19,10 +9,12 @@ function formatDate(date: Date): string {
 export function PostCardMeta({
   date,
   tags,
+  analyticsSource,
   className,
 }: {
   date?: Date
   tags: string[]
+  analyticsSource: string
   className?: string
 }) {
   if (!date && tags.length === 0) return null
@@ -35,6 +27,9 @@ export function PostCardMeta({
             <a
               key={tag}
               href={siteHref(`/tags/${tagToSlug(tag)}`)}
+              data-umami-event="tag_click"
+              data-umami-event-source={analyticsSource}
+              data-umami-event-tag={stripPageSuffix(tag)}
               className="tag-link tag-mono relative z-10 text-xs text-ink-secondary transition-colors hover:text-ink"
             >
               {stripPageSuffix(tag)}

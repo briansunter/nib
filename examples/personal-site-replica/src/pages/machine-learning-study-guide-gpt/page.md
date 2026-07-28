@@ -8,7 +8,7 @@ tags:
   - "programming"
 layout: article
 ---
-This page contains GPT-3 prompts and responses used to generate the [Machine Learning Study Guide](/machine-learning-study-guide).
+This page contains GPT-3 prompts and responses used to generate the [[machine-learning-study-guide|Machine Learning Study Guide]].
 
 ---
 

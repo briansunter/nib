@@ -40,16 +40,16 @@ Companies also ask algorithm questions in technical interviews. Even if you don'
 
 #### Intro to Algorithms, Sorting, and Time Complexity
 
-[intro-to-algorithms](/intro-to-algorithms)
+[[intro-to-algorithms]]
 
 
 - What is an algorithm?
 - Data structures 101
 - Sorting and bubble sort
 
-[time-complexity](/time-complexity)
+[[time-complexity]]
 
-- [A posteriori vs a priori analysis](/posteriori-vs-a-priori-analysis-of-algorithms)
+- [[posteriori-vs-a-priori-analysis-of-algorithms|A posteriori vs a priori analysis]]
 - Big O notation
 - Worst, average, and best case analysis
 - Recurrence relations

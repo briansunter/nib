@@ -1,8 +1,6 @@
 // Legacy URL redirects ported from the source Astro site's
-// config/redirects.ts so backlinks continue to resolve. Two stale entries
-// (/tags/openai and /tags/logseq-openai/project) are dropped because those
-// tags now have generated pages in this replica. /notes -> /pages and
-// /rss.xml -> /index.xml are declared in nib.config.ts directly.
+// config/redirects.ts so backlinks continue to resolve. Nib's sitemap path is
+// the only adapter-specific addition.
 
 export const sourceRedirects: Readonly<Record<string, string>> = {
   // Newsletter redirects
@@ -17,6 +15,14 @@ export const sourceRedirects: Readonly<Record<string, string>> = {
   '/pages/newsletter-issue-8': '/newsletter/issue-8',
   '/pages/newsletter-issue-9': '/newsletter/issue-9',
   '/pages/newsletter/issue-1': '/newsletter/issue-1',
+  '/pages/newsletter/issue-2': '/newsletter/issue-2',
+  '/pages/newsletter/issue-3': '/newsletter/issue-3',
+  '/pages/newsletter/issue-4': '/newsletter/issue-4',
+  '/pages/newsletter/issue-5': '/newsletter/issue-5',
+  '/pages/newsletter/issue-6': '/newsletter/issue-6',
+  '/pages/newsletter/issue-7': '/newsletter/issue-7',
+  '/pages/newsletter/issue-8': '/newsletter/issue-8',
+  '/pages/newsletter/issue-9': '/newsletter/issue-9',
   '/pages/newsletter/issue-10': '/newsletter/issue-10',
   '/pages/newsletter/issue-11': '/newsletter/issue-11',
   '/pages/newsletter/issue-12': '/newsletter/issue-12',
@@ -136,8 +142,10 @@ export const sourceRedirects: Readonly<Record<string, string>> = {
 
   // RSS/XML feeds
   '/pages/index.xml': '/index.xml',
+  '/rss.xml': '/index.xml',
 
   // Legacy tag/category variants that do not have generated tag pages
+  '/tags/openai': '/pages',
   '/tags/large%20language%20models': '/tags/large-language-models',
   '/categories/logseq': '/pages',
   '/category/functional': '/pages',
@@ -189,11 +197,13 @@ export const sourceRedirects: Readonly<Record<string, string>> = {
   // Pure-prefix legacy roots
   '/archives': '/pages',
   '/categories': '/pages',
+  '/notes': '/pages',
 
   // Additional /tags/* collapses surfaced by GSC
   '/tags/abdul-bari-algorithms': '/pages',
   '/tags/course': '/pages',
   '/tags/recipe': '/pages',
+  '/tags/logseq-openai/project': '/tags/logseq-openai-project',
 
   // Typo / variant paths crawled by Google
   '/blog/gtp3-openai-logseq-notetaking': '/ai-powered-notetaking-with-the-gpt-3-logseq-plugin',

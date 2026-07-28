@@ -26,7 +26,7 @@ export const SOCIAL_PROFILES: SocialProfile[] = [
   profile('X', 'https://twitter.com/bsunter', 'x'),
   profile('GitHub', 'https://github.com/briansunter', 'github'),
   profile('LinkedIn', 'https://www.linkedin.com/in/briansunter/', 'linkedin'),
-  profile('RSS', siteHref('/index.xml'), 'rss'),
+  profile('RSS', 'https://briansunter.com/index.xml', 'rss'),
   profile('YouTube', 'https://www.youtube.com/channel/UC4Nu4dncIcTC1DyOG5XG2Vg', 'youtube'),
   profile('Instagram', 'https://www.instagram.com/bsunter/', 'instagram'),
   profile('Threads', 'https://threads.net/@bsunter', 'threads'),

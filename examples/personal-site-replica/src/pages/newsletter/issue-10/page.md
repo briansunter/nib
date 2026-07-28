@@ -118,7 +118,7 @@ From here, you can either insert the AI output underneath the current block, or 
 
 You can also hit "regenerate" to rerun the command and get a new output. The result of the AI commands differs each time, and sometimes the first try doesn't give the best result.
 
-I wrote a full blog post on the plugin here if you want to learn more
+I wrote a [[issue-10|full blog post on the plugin here]] if you want to learn more
 
 ## Logseq YouTube captions plugin updates
 

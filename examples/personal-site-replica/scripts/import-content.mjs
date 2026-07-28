@@ -13,6 +13,12 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
 import { marked } from 'marked'
+import {
+  cookware_display_name,
+  ingredient_display_name,
+  Parser,
+  quantity_display,
+} from '@cooklang/cooklang'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const REPLICA = path.resolve(__dirname, '..')
@@ -30,12 +36,16 @@ const SRC_TRAVEL = path.join(SOURCE, 'src/data/travel')
 const SRC_IMAGES = path.join(SOURCE, 'src/assets/images')
 const SRC_VIDEOS = path.join(SOURCE, 'src/assets/videos')
 const SRC_PUBLIC = path.join(SOURCE, 'public')
+const SRC_DIST = path.join(SOURCE, 'dist')
 
 const OUT_PAGES = path.join(REPLICA, 'src/pages')
 const OUT_CONTENT = path.join(REPLICA, 'src/content')
 const OUT_ASSETS = path.join(REPLICA, 'src/assets/site-assets')
 const OUT_VIDEOS = path.join(REPLICA, 'public/videos')
 const OUT_CURATED = path.join(REPLICA, 'src/assets/images/curated')
+const OUT_PUBLIC = path.join(REPLICA, 'public')
+const OUT_INTEGRATION_STYLES = path.join(REPLICA, 'src/styles/integrations')
+const OUT_UTILS = path.join(REPLICA, 'src/utils')
 
 const copiedImages = new Set()
 const copiedVideos = new Set()
@@ -103,6 +113,28 @@ function cleanSlug(value) {
   return String(value ?? '').trim().toLowerCase().replace(/\s+/g, '-')
 }
 
+function stripPageSuffix(tag) {
+  return String(tag).replace(/-page$/i, '')
+}
+
+function normalizePageTag(tag) {
+  return stripPageSuffix(tag).toLowerCase().trim()
+}
+
+function slugify(value) {
+  return String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/[\s/\\_]+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function tagToSlug(tag) {
+  return slugify(stripPageSuffix(tag))
+}
+
 // Rewrite writing markdown: image URLs to /site-assets, Obsidian embeds and
 // wikilinks resolved against the writing slug set.
 function normalizeImageRef(ref) {
@@ -131,33 +163,17 @@ function rewriteVideoEmbeds(body) {
   )
 }
 
-function rewriteIframeEmbeds(body) {
-  return body.replace(/<iframe\b([^>]*)><\/iframe>/gi, (_full, attributes) => {
-    const source = attributes.match(/\bsrc=["']([^"']+)["']/i)?.[1]
-    if (!source) return ''
-    const escaped = source.replaceAll('&', '&amp;').replaceAll('"', '&quot;')
-    return `<iframe src="${escaped}" title="Embedded media"></iframe>`
-  })
-}
-
-function rewriteWritingMarkdown(body, writingSlugs) {
-  let out = rewriteIframeEmbeds(rewriteVideoEmbeds(body))
+export function rewriteWritingMarkdown(body) {
+  let out = rewriteVideoEmbeds(body)
   // Obsidian embeds: ![[File.png]] or ![[File.png|alt]]
   out = out.replace(/!\[\[([^\]]+)\]\]/g, (_full, inner) => {
     const [file, alt] = inner.split('|')
     const target = normalizeImageRef(file.trim())
     return `![${alt ?? ''}](/site-assets/${target})`
   })
-  // Wikilinks: [[slug]] or [[slug|Label]]
-  out = out.replace(/\[\[([^\]]+)\]\]/g, (_full, inner) => {
-    const [rawSlug, label] = inner.split('|')
-    const slug = cleanSlug(rawSlug)
-    if (writingSlugs.has(slug)) {
-      const text = label ? label.trim() : slug
-      return `[${text}](/${slug})`
-    }
-    return label ? label.trim() : rawSlug.trim()
-  })
+  // Leave wikilinks intact. The target's remark-wiki-link pass resolves them
+  // from parsed Markdown nodes, which preserves literal [[...]] payloads in
+  // inline code and fenced code blocks.
   // Standard markdown images: ![alt](../../assets/images/X) -> /site-assets/X
   out = out.replace(/(!\[[^\]]*]\()([^)]+)(\))/g, (_m, head, url, tail) => {
     const trimmed = url.trim()
@@ -173,24 +189,24 @@ function rewriteWritingMarkdown(body, writingSlugs) {
 async function importWriting() {
   const files = (await readDir(SRC_PAGES)).filter((f) => f.endsWith('.md'))
   const entries = []
-  const slugSet = new Set()
   for (const file of files) {
     const source = await readFile(path.join(SRC_PAGES, file), 'utf8')
     const { data, body } = parseFrontmatter(source)
     const slug = cleanSlug(data.slug ?? file.replace(/\.md$/, ''))
-    slugSet.add(slug)
     entries.push({ file, data, body, slug })
   }
-  // Second pass: rewrite bodies now that the full slug set is known.
+  // Second pass: rewrite bodies after the complete source inventory is read.
   for (const entry of entries) {
     const { slug, data, body } = entry
     const title = (data.pageTitle || data.title || slug).toString().trim()
     const description = (data.description || '').toString().trim()
     const date = data.date ? new Date(data.date).toISOString() : null
+    const lastMod = data.lastMod ? new Date(data.lastMod).toISOString() : null
+    const math = Boolean(data.math)
     const tags = asArray(data.tags).map(String)
     const coverRel = data.coverImage ? normalizeImageRef(String(data.coverImage)) : null
     const cover = coverRel ? await copyImage(coverRel) : null
-    const rewritten = rewriteWritingMarkdown(body, slugSet)
+    const rewritten = rewriteWritingMarkdown(body)
     // Copy referenced images so the rewritten URLs resolve.
     for (const rel of [...rewritten.matchAll(/\/site-assets\/([^)\s"']+)/g)].map((m) => m[1])) {
       await copyImage(rel)
@@ -203,6 +219,8 @@ async function importWriting() {
       `title: ${JSON.stringify(title)}`,
       description ? `description: ${JSON.stringify(description)}` : null,
       date ? `date: ${date}` : null,
+      lastMod ? `lastMod: ${lastMod}` : null,
+      math ? 'math: true' : null,
       tags.length ? `tags:\n${tags.map((t) => `  - ${JSON.stringify(t)}`).join('\n')}` : null,
       'layout: article',
       '---',
@@ -211,7 +229,18 @@ async function importWriting() {
     const dir = path.join(OUT_PAGES, slug)
     await mkdir(dir, { recursive: true })
     await writeFile(path.join(dir, 'page.md'), `${frontmatter}${rewritten.trimEnd()}\n`)
-    entries[entries.indexOf(entry)] = { slug, title, description, date, tags, cover }
+    const wordCount = body.match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)?/gu)?.length ?? 0
+    entries[entries.indexOf(entry)] = {
+      slug,
+      title,
+      description,
+      date,
+      lastMod,
+      math,
+      tags,
+      cover,
+      wordCount,
+    }
   }
   // Sort newest first for the archive/RSS.
   entries.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
@@ -278,103 +307,168 @@ async function importProjects() {
   return projects
 }
 
-// Minimal Cooklang parser sufficient for the recipes in this collection.
-function parseCooklang(source) {
-  const { data, body } = parseFrontmatter(source)
-  const lines = body.split(/\r?\n/)
-  const sections = [{ title: '', steps: [] }]
-  const ingredients = []
-  const cookware = []
-
-  function humanizeToken(text) {
-    return text
-      .replace(/@([A-Za-z][\w'-]*(?:\s+[A-Za-z][\w'-]*)*)\s*\{([^%}]*)(?:%([^}]*))?\}(\([^)]*\))?/g, (_m, name, qty, unit, suf) => {
-        const quantity = qty.trim()
-        const u = unit ? unit.trim() : ''
-        const unitText = u ? ` ${u}` : ''
-        const suffixText = suf ?? ''
-        return `${quantity}${unitText} ${name}${suffixText}`.trim()
-      })
-      .replace(/@([A-Za-z][\w'-]*(?:\s+[A-Za-z][\w'-]*)*)/g, (_m, name) => name)
-      .replace(/#([A-Za-z][\w'-]*(?:\s+[A-Za-z][\w'-]*)*)\s*\{([^}]*)\}/g, (_m, name) => name)
-      .replace(/#([A-Za-z][\w'-]*(?:\s+[A-Za-z][\w'-]*)*)/g, (_m, name) => name)
-      .replace(/~([A-Za-z][\w'-]*(?:\s+[A-Za-z][\w'-]*)*)?\s*\{([^%}]*)(?:%([^}]*))?\}/g, (_m, name, qty, unit) => {
-        const quantity = qty.trim()
-        const u = unit ? unit.trim() : ''
-        const unitText = u ? ` ${u}` : ''
-        const labelText = name ? ` ${name}` : ''
-        return `${quantity}${unitText}${labelText}`.trim()
-      })
+function roundQuantity(quantity) {
+  if (typeof quantity === 'string') {
+    const value = quantity.trim()
+    if (!/^-?(?:\d+\.?\d*|\.\d+)$/.test(value)) return quantity
+    return Math.round(Number.parseFloat(value) * 100) / 100
   }
-
-  function extractTokens(text) {
-    const ingRe = /@([A-Za-z][\w'-]*(?:\s+[A-Za-z][\w'-]*)*)\s*\{([^%}]*)(?:%([^}]*))?\}/g
-    const ingReBare = /@([A-Za-z][\w'-]*(?:\s+[A-Za-z][\w'-]*)*)/g
-    const cookRe = /#([A-Za-z][\w'-]*(?:\s+[A-Za-z][\w'-]*)*)\s*\{([^}]*)\}/g
-    const cookReBare = /#([A-Za-z][\w'-]*(?:\s+[A-Za-z][\w'-]*)*)/g
-    const ingSeen = new Set()
-    function addIngredient(name, qtyRaw, unit) {
-      const key = name.toLowerCase()
-      if (ingSeen.has(key)) return
-      ingSeen.add(key)
-      const numeric = parseFloat((qtyRaw || '').replace(/[^0-9./-]/g, ''))
-      ingredients.push({
-        name,
-        ...(qtyRaw && qtyRaw.trim() ? { quantity: Number.isFinite(numeric) ? numeric : qtyRaw.trim() } : {}),
-        ...(unit && unit.trim() ? { unit: unit.trim() } : {}),
-        ...(qtyRaw && qtyRaw.trim() && !Number.isFinite(numeric) ? { raw: qtyRaw.trim() } : {}),
-      })
-    }
-    for (let m = ingRe.exec(text); m !== null; m = ingRe.exec(text)) {
-      addIngredient(m[1].trim(), m[2], m[3])
-    }
-    for (let m = ingReBare.exec(text); m !== null; m = ingReBare.exec(text)) {
-      addIngredient(m[1].trim(), '', '')
-    }
-    const cookSeen = new Set()
-    for (let m = cookRe.exec(text); m !== null; m = cookRe.exec(text)) {
-      const name = m[1].trim()
-      if (!cookSeen.has(name.toLowerCase())) { cookSeen.add(name.toLowerCase()); cookware.push(name) }
-    }
-    for (let m = cookReBare.exec(text); m !== null; m = cookReBare.exec(text)) {
-      const name = m[1].trim()
-      if (!cookSeen.has(name.toLowerCase())) { cookSeen.add(name.toLowerCase()); cookware.push(name) }
-    }
-  }
-
-  for (const raw of lines) {
-    const line = raw.trimEnd()
-    if (/^==.*==$/.test(line.trim())) {
-      const title = line.trim().replace(/^==+|==+$/g, '').trim()
-      sections.push({ title, steps: [] })
-      continue
-    }
-    if (/^--.*--$/.test(line.trim())) continue
-    extractTokens(line)
-    const human = humanizeToken(line)
-    sections[sections.length - 1].steps.push(human)
-  }
-
-  return { metadata: data, sections, ingredients, cookware, sourceText: body }
+  return typeof quantity === 'number' ? Math.round(quantity * 100) / 100 : quantity
 }
 
-function normalizeRecipeMetadata(meta, slug) {
+function parseNumericValue(value) {
+  if (!value || typeof value !== 'object') return null
+  if (value.type === 'regular') return typeof value.value === 'number' ? value.value : null
+  if (value.type === 'fraction') {
+    const fraction = value.value
+    if (fraction && fraction.den !== 0) return fraction.whole + fraction.num / fraction.den
+  }
+  return null
+}
+
+function legacyQuantity(quantity, fallback = 1) {
+  if (!quantity) return fallback
+  const value = quantity.value
+  if (value?.type === 'number') {
+    const numeric = parseNumericValue(value.value)
+    if (numeric !== null) return roundQuantity(numeric)
+  }
+  if (value?.type === 'range') {
+    const start = parseNumericValue(value.value?.start)
+    const end = parseNumericValue(value.value?.end)
+    if (start !== null && end !== null) {
+      const a = roundQuantity(start)
+      const b = roundQuantity(end)
+      return a === b ? a : `${a}-${b}`
+    }
+  }
+  if (value?.type === 'text' && typeof value.value === 'string') return value.value
+  return quantity_display(quantity) || fallback
+}
+
+function legacyIngredient(ingredient) {
+  return {
+    type: 'ingredient',
+    name: ingredient_display_name(ingredient),
+    quantity: legacyQuantity(ingredient.quantity),
+    units: typeof ingredient.quantity?.unit === 'string' ? ingredient.quantity.unit : '',
+  }
+}
+
+function legacyCookware(cookware) {
+  return {
+    type: 'cookware',
+    name: cookware_display_name(cookware),
+    quantity: legacyQuantity(cookware.quantity),
+  }
+}
+
+function legacyTimer(timer) {
+  return {
+    type: 'timer',
+    quantity: legacyQuantity(timer.quantity),
+    units: typeof timer.quantity?.unit === 'string' ? timer.quantity.unit : '',
+  }
+}
+
+function legacyStepItem(item, recipe) {
+  if (item.type === 'text') return { type: 'text', value: item.value }
+  if (item.type === 'ingredient') {
+    const ingredient = recipe.ingredients[item.index]
+    return ingredient ? legacyIngredient(ingredient) : null
+  }
+  if (item.type === 'cookware') {
+    const cookware = recipe.cookware[item.index]
+    return cookware ? legacyCookware(cookware) : null
+  }
+  if (item.type === 'timer') {
+    const timer = recipe.timers[item.index]
+    return timer ? legacyTimer(timer) : null
+  }
+  if (item.type === 'inlineQuantity') {
+    const quantity = recipe.inline_quantities[item.index]
+    return quantity ? { type: 'text', value: quantity_display(quantity) } : null
+  }
+  return null
+}
+
+function parseCooklang(source) {
+  const parsed = new Parser().parse(source).recipe
+  const blocks = []
+  for (const section of parsed.sections) {
+    const name = typeof section.name === 'string' ? section.name.trim() : ''
+    if (name) blocks.push({ type: 'section', name })
+    for (const content of section.content) {
+      if (content.type === 'step') {
+        blocks.push({
+          type: 'step',
+          items: content.value.items
+            .map((item) => legacyStepItem(item, parsed))
+            .filter(Boolean),
+        })
+      } else if (content.type === 'text') {
+        const text = content.value.trim()
+        if (text) blocks.push({ type: 'note', text })
+      }
+    }
+  }
+  const frontmatter = parseFrontmatter(source).data
+  return {
+    metadata: { ...parsed.raw_metadata.map, ...frontmatter },
+    ingredients: parsed.ingredients.map(legacyIngredient),
+    cookwares: parsed.cookware.map(legacyCookware),
+    steps: blocks.filter((block) => block.type === 'step').map((block) => block.items),
+    blocks,
+    cooklang: source,
+  }
+}
+
+export function calculateRecipeTime(steps) {
+  let minutes = 0
+  for (const step of steps) {
+    for (const item of step) {
+      if (item.type !== 'timer') continue
+      const quantity = typeof item.quantity === 'string' ? Number.parseFloat(item.quantity) : item.quantity
+      if (!(quantity > 0)) continue
+      const units = item.units.toLowerCase().trim()
+      if (units.startsWith('hour') || units === 'h' || units === 'hr') minutes += quantity * 60
+      else if (units.startsWith('second') || units === 's' || units === 'sec') minutes += quantity / 60
+      else minutes += quantity
+    }
+  }
+  if (minutes <= 0) return undefined
+  if (minutes < 1) return `${Math.round(minutes * 60)} seconds`
+  const hours = Math.floor(minutes / 60)
+  const rest = Math.round(minutes % 60)
+  if (hours === 0) return `${rest} min`
+  if (rest === 0) return hours === 1 ? '1 hour' : `${hours} hours`
+  return `${hours}h ${rest}m`
+}
+
+export function normalizeRecipeMetadata(meta, slug) {
   const metadata = {
     ...meta,
     title: String(meta.title || slug),
     description: String(meta.description || ''),
-    tags: asArray(meta.tags).map(String),
+    tags: (Array.isArray(meta.tags) ? meta.tags : String(meta.tags ?? '').split(','))
+      .map((tag) => String(tag).trim())
+      .filter(Boolean),
   }
   if (meta.servings != null && meta.servings !== '') {
-    const servings = Number(meta.servings)
-    if (Number.isFinite(servings)) metadata.servings = servings
+    metadata.servings = String(meta.servings)
   }
 
   const aliases = {
     prepTime: ['prepTime', 'prep time', 'prep-time'],
     cookTime: ['cookTime', 'cook time', 'cook-time'],
-    totalTime: ['totalTime', 'total time', 'time', 'time required'],
-    longDescription: ['longDescription', 'long_description'],
+    totalTime: ['totalTime', 'total time', 'total-time'],
+    bakeTime: ['bakeTime', 'bake time'],
+    restTime: ['restTime', 'rest time'],
+    marinateTime: ['marinateTime', 'marinate time', 'marinating time', 'marinade time'],
+    time: ['time', 'time required'],
+    servings: ['servings', 'serves'],
+    source: ['source', 'url'],
+    longDescription: ['longDescription', 'long description', 'long-description', 'long_description'],
   }
   for (const [canonical, keys] of Object.entries(aliases)) {
     const value = keys.map((key) => meta[key]).find((candidate) => candidate != null && candidate !== '')
@@ -383,7 +477,7 @@ function normalizeRecipeMetadata(meta, slug) {
   return metadata
 }
 
-async function importRecipes() {
+export async function importRecipes() {
   const files = (await readDir(SRC_RECIPES)).filter((f) => f.endsWith('.cook'))
   const recipes = []
   for (const file of files) {
@@ -391,13 +485,18 @@ async function importRecipes() {
     const slug = file.replace(/\.cook$/, '')
     const parsed = parseCooklang(source)
     const meta = parsed.metadata || {}
+    const metadata = normalizeRecipeMetadata(meta, slug)
+    if (!metadata.prepTime && !metadata.cookTime && !metadata.totalTime) {
+      metadata.totalTime = calculateRecipeTime(parsed.steps)
+    }
     recipes.push({
       slug,
-      metadata: normalizeRecipeMetadata(meta, slug),
+      metadata,
       ingredients: parsed.ingredients,
-      cookware: parsed.cookware,
-      sections: parsed.sections,
-      sourceText: parsed.sourceText,
+      cookwares: parsed.cookwares,
+      steps: parsed.steps,
+      blocks: parsed.blocks,
+      cooklang: parsed.cooklang,
     })
   }
   recipes.sort((a, b) => a.metadata.title.localeCompare(b.metadata.title))
@@ -425,6 +524,7 @@ async function importGalleries() {
   const art = []
   for (const file of artFiles) {
     const data = parseYaml(await readFile(path.join(SRC_ART, file), 'utf8'))
+    const id = file.replace(/\.yaml$/, '')
     const cover = await resolveImageField(data.cover)
     remember(cover)
     const artworks = []
@@ -436,15 +536,19 @@ async function importGalleries() {
         description: item.description || '',
         medium: item.medium || '',
         dimensions: item.dimensions || '',
+        surface: item.surface || '',
+        location: item.location || '',
         date: item.date ? new Date(item.date).toISOString().slice(0, 10) : '',
         tags: asArray(item.tags).map(String),
         image: img,
       })
     }
     art.push({
+      id,
       name: data.name,
       description: data.description || '',
       default: Boolean(data.default),
+      date: data.date ? new Date(data.date).toISOString().slice(0, 10) : '',
       medium: data.medium || '',
       tags: asArray(data.tags).map(String),
       cover,
@@ -459,6 +563,7 @@ async function importGalleries() {
   const photos = []
   for (const file of photoFiles) {
     const data = parseYaml(await readFile(path.join(SRC_PHOTOS, file), 'utf8'))
+    const id = file.replace(/\.yaml$/, '')
     const cover = await resolveImageField(data.cover)
     remember(cover)
     const items = []
@@ -473,9 +578,12 @@ async function importGalleries() {
       })
     }
     photos.push({
+      id,
       name: data.name,
       description: data.description || '',
       location: data.location || '',
+      date: data.date ? new Date(data.date).toISOString().slice(0, 10) : '',
+      ...(data.gps ? { gps: data.gps } : {}),
       tags: asArray(data.tags).map(String),
       cover,
       photos: items,
@@ -496,7 +604,10 @@ async function importGalleries() {
       name: pin.name || pin.id,
       description: pin.description || '',
       image: img,
+      dateAcquired: pin.date_acquired ? new Date(pin.date_acquired).toISOString().slice(0, 10) : '',
       acquiredAt: pin.acquired_at || '',
+      ...(pin.gps ? { gps: pin.gps } : {}),
+      source: pin.source || '',
       category: pin.category || '',
       tags: asArray(pin.tags).map(String),
       maker: pin.maker || '',
@@ -530,6 +641,58 @@ async function importGalleries() {
   return galleryImagePaths
 }
 
+async function importGalleryRuntime() {
+  const styleFiles = ['gallery.css', 'photos.css', 'art.css']
+  const utilityFiles = [
+    'artMasonryInitializer.ts',
+    'astroLifecycle.ts',
+    'dropdown.ts',
+    'lightbox-history.ts',
+    'mapInitializer.ts',
+    'masonryPacker.ts',
+    'photoMasonryInitializer.ts',
+    'photoNavInitializer.ts',
+    'photoSwipeInitializer.ts',
+    'pin-map-clustering.ts',
+  ]
+
+  await mkdir(OUT_INTEGRATION_STYLES, { recursive: true })
+  await mkdir(OUT_UTILS, { recursive: true })
+  for (const file of styleFiles) {
+    await copyFile(
+      path.join(SOURCE, 'src/styles/integrations', file),
+      path.join(OUT_INTEGRATION_STYLES, file),
+    )
+  }
+  for (const file of utilityFiles) {
+    const source = await readFile(path.join(SOURCE, 'src/utils', file), 'utf8')
+    const importsNormalized = source
+      .replaceAll("from '@/lib/", "from '../lib/")
+      .replaceAll('from "@/lib/', 'from "../lib/')
+      .replaceAll("from '@/utils/", "from './")
+      .replaceAll('from "@/utils/', 'from "./')
+    const normalized = file === 'mapInitializer.ts'
+      ? importsNormalized
+          .replaceAll("leaflet/dist/images/marker-icon.png';", "leaflet/dist/images/marker-icon.png?url';")
+          .replaceAll("leaflet/dist/images/marker-icon-2x.png';", "leaflet/dist/images/marker-icon-2x.png?url';")
+          .replaceAll("leaflet/dist/images/marker-shadow.png';", "leaflet/dist/images/marker-shadow.png?url';")
+          .replace('iconUrl: icon.src,', 'iconUrl: icon,')
+          .replace('iconRetinaUrl: icon2x.src,', 'iconRetinaUrl: icon2x,')
+          .replace('shadowUrl: markerShadow.src,', 'shadowUrl: markerShadow,')
+      : importsNormalized
+    await writeFile(path.join(OUT_UTILS, file), normalized)
+  }
+
+  for (const file of ['analytics.ts', 'analytics-config.ts', 'html-utils.ts']) {
+    const source = await readFile(path.join(SOURCE, 'src/lib', file), 'utf8')
+    const normalized = source
+      .replaceAll("from '@/utils/", "from '../utils/")
+      .replaceAll('from "@/utils/', 'from "../utils/')
+    await writeFile(path.join(REPLICA, 'src/lib', file), normalized)
+  }
+  console.log(`gallery runtime: ${styleFiles.length} styles and ${utilityFiles.length + 3} modules copied`)
+}
+
 // Static module of `?nib-image` imports for every gallery source file so the
 // photo/art/pin grids render <Image> with intrinsic dimensions and 1x/2x
 // responsive candidates instead of bare <img> tags.
@@ -553,25 +716,22 @@ async function buildGalleryImagesModule(paths) {
   return lines.join('\n')
 }
 
-async function buildTags(writing, projects, recipes) {
+async function buildTags(writing) {
+  const metaTags = new Set(['blog', 'newsletter'])
   const map = new Map()
   function add(tag, entry) {
-    const key = String(tag).toLowerCase().replace(/\s+/g, '-')
-    if (!map.has(key)) map.set(key, { tag: key, display: String(tag), entries: [] })
+    const display = normalizePageTag(tag)
+    if (!display || metaTags.has(display)) return
+    const key = tagToSlug(tag)
+    if (!map.has(key)) map.set(key, { tag: key, display, entries: [] })
     map.get(key).entries.push(entry)
   }
   for (const w of writing) {
-    for (const t of w.tags) add(t, { kind: 'Writing', title: w.title, href: `/${w.slug}`, description: w.description })
-  }
-  for (const p of projects) {
-    for (const t of p.tags) add(t, { kind: 'Project', title: p.title, href: `/projects/${p.slug}`, description: p.description })
-  }
-  for (const r of recipes) {
-    for (const t of r.metadata.tags) add(t, { kind: 'Recipe', title: r.metadata.title, href: `/recipes/${r.slug}`, description: r.metadata.description })
+    for (const t of w.tags) add(t, w)
   }
   const tags = [...map.values()]
     .map((t) => ({ ...t, count: t.entries.length }))
-    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+    .sort((a, b) => b.count - a.count || a.display.localeCompare(b.display))
   await mkdir(OUT_CONTENT, { recursive: true })
   await writeFile(path.join(OUT_CONTENT, 'tags.json'), `${JSON.stringify(tags, null, 2)}\n`)
   console.log(`tags: ${tags.length}`)
@@ -579,37 +739,198 @@ async function buildTags(writing, projects, recipes) {
 }
 
 async function buildImagesModule(projects) {
-  const featured = projects.filter((p) => p.featured && p.coverFile)
+  const covered = projects.filter((project) => project.cover?.startsWith('/site-assets/'))
+  const featured = projects.filter((project) => project.featured)
   const lines = [
     "import type { ImageSource } from '@briansunter/nib-images'",
     "import avatar from '../assets/avatar.jpg?nib-image'",
+    "import bitcoinQrCode from '../assets/site-assets/bitcoin/bitcoin-qr-code.svg?nib-image'",
     '',
   ]
-  for (const p of featured) {
-    const varName = `${p.slug.replace(/[^A-Za-z0-9]/g, '_')}Cover`
-    lines.push(`import ${varName} from '${p.coverFile}?nib-image'`)
-  }
+  covered.forEach((project, index) => {
+    lines.push(`import pi${index} from '../assets/site-assets/${project.cover.slice('/site-assets/'.length)}?nib-image'`)
+  })
   lines.push('')
   lines.push('export const imageMap: Record<string, ImageSource> = {')
   lines.push('  avatar,')
-  for (const p of featured) {
-    const varName = `${p.slug.replace(/[^A-Za-z0-9]/g, '_')}Cover`
-    lines.push(`  '${p.slug}': ${varName},`)
-  }
+  covered.forEach((project, index) => {
+    lines.push(`  ${JSON.stringify(project.slug)}: pi${index},`)
+  })
   lines.push('}')
   lines.push('')
   lines.push(`export const featuredProjectSlugs = ${JSON.stringify(featured.map((p) => p.slug))}`)
   lines.push('')
   lines.push('export { avatar }')
+  lines.push('export { bitcoinQrCode }')
+  lines.push('')
+  return lines.join('\n')
+}
+
+async function buildWritingImagesModule(writing) {
+  const covered = writing.filter((entry) => entry.cover?.startsWith('/site-assets/'))
+  const lines = [
+    "// Generated by scripts/import-content.mjs. Do not edit by hand.",
+    "import type { ImageSource } from '@briansunter/nib-images'",
+    '',
+  ]
+  covered.forEach((entry, index) => {
+    const relative = entry.cover.slice('/site-assets/'.length)
+    lines.push(`import wi${index} from '../assets/site-assets/${relative}?nib-image'`)
+  })
+  lines.push('')
+  lines.push('export const writingImageMap: Record<string, ImageSource> = {')
+  covered.forEach((entry, index) => {
+    lines.push(`  ${JSON.stringify(entry.slug)}: wi${index},`)
+  })
+  lines.push('}')
   lines.push('')
   return lines.join('\n')
 }
 
 async function importPublicAssets() {
-  const target = path.join(REPLICA, 'public')
-  await mkdir(target, { recursive: true })
-  await cp(SRC_PUBLIC, target, { recursive: true, force: true })
+  await mkdir(OUT_PUBLIC, { recursive: true })
+  await cp(SRC_PUBLIC, OUT_PUBLIC, { recursive: true, force: true })
   console.log('public: all static assets copied')
+}
+
+async function importTweetCache() {
+  const source = path.join(SOURCE, '.cache/tweet-cache.json')
+  const target = path.join(REPLICA, 'src/data/tweet-cache.json')
+  if (!(await exists(source))) {
+    throw new Error(`Canonical tweet cache not found: ${source}`)
+  }
+  await mkdir(path.dirname(target), { recursive: true })
+  await copyFile(source, target)
+  console.log('tweets: canonical cache copied')
+}
+
+async function filesUnder(directory) {
+  const files = []
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const file = path.join(directory, entry.name)
+    if (entry.isDirectory()) files.push(...await filesUnder(file))
+    else files.push(file)
+  }
+  return files
+}
+
+function decodeHtml(value = '') {
+  return value
+    .replace(/&#x([0-9a-f]+);/gi, (_match, code) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replace(/&#(\d+);/g, (_match, code) => String.fromCodePoint(Number(code)))
+    .replaceAll('&nbsp;', '\u00a0')
+    .replaceAll('&amp;', '&')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&apos;', "'")
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+}
+
+function htmlAttributes(tag) {
+  return Object.fromEntries(
+    [...tag.matchAll(/([\w:-]+)=(?:"([^"]*)"|'([^']*)')/g)]
+      .map((match) => [match[1].toLowerCase(), decodeHtml(match[2] ?? match[3] ?? '')]),
+  )
+}
+
+function htmlText(value = '') {
+  return decodeHtml(value).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function sourceRouteFromMarkdown(file) {
+  const relative = path.relative(SRC_DIST, file).split(path.sep).join('/')
+  const withoutExtension = relative.replace(/\.md$/, '')
+  if (withoutExtension === 'index') return '/'
+  return `/${withoutExtension.replace(/\/index$/, '')}`
+}
+
+function sourceHtmlFile(route) {
+  return route === '/'
+    ? path.join(SRC_DIST, 'index.html')
+    : path.join(SRC_DIST, `${route.slice(1)}.html`)
+}
+
+function sourceHeadRecord(html) {
+  const title = htmlText(html.match(/<title>([\s\S]*?)<\/title>/i)?.[1])
+  const metas = []
+  let description = ''
+  for (const tag of html.match(/<meta\b[^>]*>/gi) ?? []) {
+    const attributes = htmlAttributes(tag)
+    const attribute = attributes.property ? 'property' : attributes.name ? 'name' : null
+    const key = attribute ? attributes[attribute] : null
+    if (!attribute || !key) continue
+    if (key === 'description') {
+      description = attributes.content ?? ''
+      continue
+    }
+    if (
+      key === 'viewport'
+      || key === 'theme-color'
+      || key === 'generator'
+      || key === 'astro-view-transitions-enabled'
+      || key === 'astro-view-transitions-fallback'
+    ) continue
+    metas.push({ attribute, key, content: attributes.content ?? '' })
+  }
+
+  let canonical = ''
+  let markdownAlternate = ''
+  for (const tag of html.match(/<link\b[^>]*>/gi) ?? []) {
+    const attributes = htmlAttributes(tag)
+    if (attributes.rel === 'canonical') canonical = attributes.href ?? ''
+    if (attributes.rel === 'alternate' && attributes.type === 'text/markdown') {
+      markdownAlternate = attributes.href ?? ''
+    }
+  }
+
+  const structuredData = [...html.matchAll(
+    /<script\b[^>]*type=(?:"application\/ld\+json"|'application\/ld\+json')[^>]*>([\s\S]*?)<\/script>/gi,
+  )].map((match) => match[1].trim())
+
+  return { title, description, canonical, markdownAlternate, metas, structuredData }
+}
+
+async function importBuiltParityArtifacts() {
+  if (!(await exists(SRC_DIST))) {
+    throw new Error(`Source build not found at ${SRC_DIST}. Run the personal-site build before importing exact parity artifacts.`)
+  }
+
+  const sourceFiles = await filesUnder(SRC_DIST)
+  const markdownFiles = sourceFiles.filter((file) => file.endsWith('.md'))
+  const sourceHead = {}
+  for (const markdownFile of markdownFiles) {
+    const route = sourceRouteFromMarkdown(markdownFile)
+    const htmlFile = sourceHtmlFile(route)
+    if (!(await exists(htmlFile))) throw new Error(`Missing source HTML for ${route}: ${htmlFile}`)
+    const relative = path.relative(SRC_DIST, markdownFile)
+    const target = path.join(OUT_PUBLIC, relative)
+    await mkdir(path.dirname(target), { recursive: true })
+    await copyFile(markdownFile, target)
+    sourceHead[route] = sourceHeadRecord(await readFile(htmlFile, 'utf8'))
+  }
+
+  const sourceOg = path.join(SRC_DIST, 'og')
+  const targetOg = path.join(OUT_PUBLIC, 'og')
+  await rm(targetOg, { recursive: true, force: true })
+  if (await exists(sourceOg)) await cp(sourceOg, targetOg, { recursive: true, force: true })
+
+  const module = [
+    '// Generated by scripts/import-content.mjs from the canonical source build. Do not edit.',
+    'export interface SourceHeadRecord {',
+    '  title: string',
+    '  description: string',
+    '  canonical: string',
+    '  markdownAlternate: string',
+    "  metas: Array<{ attribute: 'name' | 'property'; key: string; content: string }>",
+    '  structuredData: string[]',
+    '}',
+    '',
+    `export const sourceHead: Record<string, SourceHeadRecord> = ${JSON.stringify(sourceHead, null, 2)}`,
+    '',
+  ].join('\n')
+  await mkdir(path.join(REPLICA, 'src/data'), { recursive: true })
+  await writeFile(path.join(REPLICA, 'src/data/source-head.ts'), module)
+  console.log(`parity artifacts: ${markdownFiles.length} Markdown alternates and ${Object.keys(sourceHead).length} source head records`)
 }
 
 async function importVideos() {
@@ -689,19 +1010,28 @@ async function main() {
     throw new Error(`Failed to parse generated recipes.json: ${error instanceof Error ? error.message : error}`)
   }
   const galleryImagePaths = await importGalleries()
-  await buildTags(writing, projects, recipes)
+  await importGalleryRuntime()
+  await buildTags(writing)
   await importPublicAssets()
+  await importTweetCache()
+  await importBuiltParityArtifacts()
   await importImageCatalog()
   await importVideos()
   await writeLlms(writing, projects, recipes)
   await mkdir(path.join(REPLICA, 'src/data'), { recursive: true })
   await writeFile(path.join(REPLICA, 'src/data/images.ts'), await buildImagesModule(projects))
+  await writeFile(path.join(REPLICA, 'src/data/writing-images.ts'), await buildWritingImagesModule(writing))
   await writeFile(path.join(REPLICA, 'src/data/gallery-images.ts'), await buildGalleryImagesModule(galleryImagePaths))
   console.log(`gallery images: ${galleryImagePaths.size} sources indexed`)
   console.log('import complete')
 }
 
-main().catch((error) => {
-  console.error(error)
-  process.exit(1)
-})
+const isDirectRun = process.argv[1]
+  && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+
+if (isDirectRun) {
+  main().catch((error) => {
+    console.error(error)
+    process.exit(1)
+  })
+}

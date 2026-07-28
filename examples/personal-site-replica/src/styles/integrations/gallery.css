@@ -1,0 +1,164 @@
+/* ============================================================
+   Shared photo/art gallery layout & interaction contract.
+
+   Imported by photos.astro and art.astro BEFORE their page-specific
+   styles (photos.css / art.css). The generic .gallery-* classes are
+   added ALONGSIDE the existing .photo-* / .art-* classes and data
+   attributes, so every masonryPacker, initializer, CSS, and test hook
+   keeps working unchanged.
+
+   What stays page-side (intentional differences):
+   - item-link background (photos: surface-subtle, art: surface-elevated)
+   - column gaps & mobile column counts
+   - overlay default display + inner padding & overlay typography
+   - item-image rules (photos animate on hover, art does not)
+   - toolbar / nav / map / PhotoSwipe specifics
+   - the masonry-ready container switch (see note below)
+   ============================================================ */
+
+/* ---------- Masonry column scaffolding ----------
+   Columns are injected by masonryPacker with only the .photo-column /
+   .art-column class (no generic hook), so both are targeted directly.
+   Only the flex scaffolding is shared; per-gallery gaps stay page-side. */
+.photo-column,
+.art-column {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* ---------- Gallery item wrapper ---------- */
+.gallery-item {
+  display: block;
+  margin: 0;
+}
+
+/* ---------- Item link (shared interaction) ---------- */
+.gallery-item-link {
+  position: relative;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.gallery-item-link:hover {
+  transform: scale(1.005);
+}
+
+.gallery-item-link:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+/* ---------- Hover overlay (shared gradient + reveal mechanics) ----------
+   Default display + inner padding differ per gallery (page-side). */
+.gallery-item-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(0, 0, 0, 0.5) 45%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.gallery-item-overlay-inner {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  font-family: var(--font-sans);
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  transform: translateY(0.5rem);
+  transition: transform 0.3s ease;
+}
+
+.gallery-item-link:hover .gallery-item-overlay,
+.gallery-item-link:focus-visible .gallery-item-overlay {
+  opacity: 1;
+}
+
+.gallery-item-link:hover .gallery-item-overlay-inner,
+.gallery-item-link:focus-visible .gallery-item-overlay-inner {
+  transform: translateY(0);
+}
+
+/* ---------- List view: flatten masonry into a stacked column ----------
+   The order variable (--photo-order / --art-order) differs and stays
+   page-side. */
+.gallery[data-view='list'] .gallery-items {
+  display: grid;
+  gap: 3.5rem;
+}
+
+.gallery[data-view='list'] .photo-column,
+.gallery[data-view='list'] .art-column {
+  display: contents;
+}
+
+.gallery[data-view='list'] .gallery-item {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+}
+
+@media (min-width: 1024px) {
+  .gallery[data-view='list'] .gallery-items {
+    gap: 5rem;
+  }
+}
+
+/* ---------- Mobile overflow protection (list view) ----------
+   Image drag/selection rules stay page-side (photos target any img to also
+   cover Leaflet map tiles; art targets .art-item-image). */
+@media (max-width: 767px) {
+  .gallery[data-view='list'],
+  .gallery[data-view='list'] .gallery-items,
+  .gallery[data-view='list'] .gallery-item,
+  .gallery[data-view='list'] .gallery-item-link {
+    max-width: 100%;
+    overflow-x: clip;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
+}
+
+/* ---------- Reduced motion ----------
+   Photo's image transition/scale is reduced in photos.css (art images
+   do not transition). */
+@media (prefers-reduced-motion: reduce) {
+  .gallery-item-link {
+    transition: none;
+  }
+  .gallery-item-link:hover {
+    transform: none;
+  }
+  .gallery-item-overlay,
+  .gallery-item-overlay-inner {
+    transition: none;
+  }
+  .gallery-item-link:hover .gallery-item-overlay-inner,
+  .gallery-item-link:focus-visible .gallery-item-overlay-inner {
+    transform: none;
+  }
+}
+
+/* NOTE: the masonry-ready container switch
+   (`display: flex; align-items: flex-start` on the ready data attribute)
+   is deliberately kept page-specific. Photos apply it unscoped, which
+   carries `align-items: flex-start` into list view (the ready attribute
+   stays "true" after flattening); art scopes it to grid view. A single
+   shared selector would alter one gallery's list-view alignment, so it
+   remains duplicated verbatim in photos.css and art.css. */

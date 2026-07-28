@@ -1,12 +1,20 @@
-export const meta = { title: 'Not found', description: 'That page does not exist.' }
+export const meta = {
+  title: '404: Page Not Found',
+  description: "Oops! The page you're looking for doesn't exist.",
+}
 
 export default function NotFoundPage() {
   return (
-    <div className="content-column empty-page">
-      <p className="eyebrow">404</p>
-      <h1>That page wandered off.</h1>
-      <p>Try the home page, writing archive, or projects index.</p>
-      <a className="button button--dark" href="/">Go home</a>
+    <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-16">
+      <div className="w-full max-w-2xl text-center">
+        <h1 className="mb-6 text-6xl font-bold text-ink">404</h1>
+        <div className="prose-editorial mx-auto mb-8">
+          <p>The page you are looking for does not exist.</p>
+        </div>
+        <a href="/" className="primary-button primary-button--lg">
+          Go back to the homepage
+        </a>
+      </div>
     </div>
   )
 }

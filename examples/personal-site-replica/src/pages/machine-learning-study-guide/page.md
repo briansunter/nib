@@ -142,4 +142,4 @@ Finding patterns in unlabeled data.
 
 ## Next steps
 
-See my [AI learning resources](/ai-learning-resources) for courses, books, and tutorials on these topics.
+See my [[ai-learning-resources|AI learning resources]] for courses, books, and tutorials on these topics.

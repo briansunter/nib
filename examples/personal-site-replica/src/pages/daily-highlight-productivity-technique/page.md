@@ -69,4 +69,4 @@ How much more could you do with 365 planned, focused sessions per year?
 
 #### Ali Abdaal The Best Productivity Hacks of All Time
 
-<iframe src="https://www.youtube.com/embed/4aYVLpY5FYU?start=397" title="Embedded media"></iframe>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/4aYVLpY5FYU?start=397" title="YouTube video player" loading="lazy" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>

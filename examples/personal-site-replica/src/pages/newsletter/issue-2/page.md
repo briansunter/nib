@@ -39,7 +39,7 @@ In this newsletter, I'll share some of the community's reactions to my new AI pl
 
 Here is some feedback for users on Twitter
 
-## Feedback on [Logseq Openai](/ai-powered-notetaking-with-the-gpt-3-logseq-plugin) plugin
+## Feedback on [[ai-powered-notetaking-with-the-gpt-3-logseq-plugin|Logseq Openai]] plugin
 
 This user summed up how I feel perfectly. Now that AI is part of my workflow, I want to keep it.
 
@@ -95,7 +95,7 @@ https://notes.pinchlime.com/snapshots/what-i-tried-today/tried-to-use-logseq-plu
 
 In this section, I'll share a productivity tip I've learned recently.
 
-One of my favorite productivity techniques is the [daily-highlight-productivity-technique](/daily-highlight-productivity-technique)
+One of my favorite productivity techniques is the [[daily-highlight-productivity-technique]]
 
 For a long time, I always had a sinking feeling I didn't accomplish "enough" at the end of the day.
 
@@ -105,7 +105,7 @@ Now, I pick one thing I want to accomplish in the morning.
 
 This technique helps me focus on what will truly move my life forward and end each day with a sense of accomplishment.
 
-See my post on the subject here: [daily-highlight-productivity-technique](/daily-highlight-productivity-technique)
+See my post on the subject here: [[daily-highlight-productivity-technique]]
 
 ## Brain Food 🧠
 
@@ -154,4 +154,4 @@ Thanks for reading! This week I announced my new plugin and shared some feedback
 
 Next week I plan on writing about some productivity techniques in Logseq and how I manage "projects" in my life, using this newsletter as an example.
 
-Check out the [newsletter-roadmap](/newsletter-roadmap) to see what I have in mind for future issues. Let me know on [twitter @bsunter](https://twitter.com)
+Check out the [[newsletter-roadmap]] to see what I have in mind for future issues. Let me know on [twitter @bsunter](https://twitter.com)

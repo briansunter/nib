@@ -14,7 +14,7 @@ Here's what we'll cover:
 
 1. Download Logseq
 2. Start taking notes in your daily notes
-3. Create pages using backlinks (surrounded with double square brackets like `backlink`)
+3. Create pages using backlinks (surrounded with double square brackets like `[[backlink]]`)
 4. Make a few pages public
 5. Share your pages with the world
 
@@ -40,7 +40,7 @@ Create a folder called `Logseq` in iCloud Drive, then make a subfolder for your 
 
 ## Start writing in daily notes
 
-You'll see an empty page with today's date. This is your "daily notes" page. It's usually my starting place for ideas. I type some thoughts and create `backlinks` for important concepts so I can find my notes later when writing or researching.
+You'll see an empty page with today's date. This is your "daily notes" page. It's usually my starting place for ideas. I type some thoughts and create `[[backlinks]]` for important concepts so I can find my notes later when writing or researching.
 
 Spend some time experimenting: write some notes, make backlinks, click the backlinks to see how pages connect.
 
@@ -50,7 +50,7 @@ Spend some time experimenting: write some notes, make backlinks, click the backl
 
 Now let's create a home for you on the internet.
 
-Create a homepage by typing `homepage` then clicking on it. This creates the page and navigates you to it.
+Create a homepage by typing `[[homepage]]` then clicking on it. This creates the page and navigates you to it.
 
 Write some text about yourself and your interests.
 

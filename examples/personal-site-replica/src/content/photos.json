@@ -1,8 +1,14 @@
 [
   {
+    "id": "hawaii-2024",
     "name": "Hawaii 2024",
     "description": "Our second year living on Oahu, exploring the island's incredible beaches, hiking trails, and local culture. From sunrise surf sessions to sunset luaus, Hawaii continues to amaze us every day.",
     "location": "Honolulu, HI",
+    "date": "2024-12-12",
+    "gps": {
+      "lat": 21.3069,
+      "lng": -157.8583
+    },
     "tags": [
       "travel",
       "hawaii",
@@ -937,9 +943,15 @@
     ]
   },
   {
+    "id": "london-2015",
     "name": "London 2015",
     "description": "Visiting London on the first stop of our backpacking trip through Europe. A week exploring one of the world's most historic and vibrant cities.",
     "location": "London, England",
+    "date": "2023-02-01",
+    "gps": {
+      "lat": 51.5081,
+      "lng": -0.0876
+    },
     "tags": [
       "travel",
       "europe",
@@ -996,9 +1008,15 @@
     ]
   },
   {
+    "id": "los-angeles-2015",
     "name": "Los Angeles 2015",
     "description": "Exploring Los Angeles on our backpacking trip through California. We spent a week soaking up the sun, surf culture, and iconic landmarks of the City of Angels.",
     "location": "Los Angeles, USA",
+    "date": "2023-03-01",
+    "gps": {
+      "lat": 34.0522,
+      "lng": -118.2437
+    },
     "tags": [
       "travel",
       "california",

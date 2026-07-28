@@ -74,7 +74,7 @@ Here's the template I use in Logseq. You can copy this into your own graph:
 ```markdown
 template:: project
 template-including-parent:: false
-type:: project
+type:: [[project]]
 status::
 start::
 milestone::

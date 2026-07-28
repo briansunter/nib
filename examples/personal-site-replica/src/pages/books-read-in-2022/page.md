@@ -28,7 +28,7 @@ I incorporated many ideas from his book into my system, like focusing on project
 
 > What’s the point of knowing something if it doesn’t positively impact anyone, not even yourself?
 
-[Read my full summary here](/building-a-second-brain)
+[[building-a-second-brain|Read my full summary here]]
 
 ### The Untethered Soul by Michael Singer
 
@@ -191,7 +191,7 @@ Collection of tweets by naval on entrepreneurship, happiness, and health. Lots o
 
 > Wealth is the thing you want. Wealth is assets that earn while you sleep. Wealth is the factory, the robots, cranking out things. Wealth is the computer program that’s running at night, serving other customers. Wealth is even money in the bank that is being reinvested into other assets, and into other businesses.
 
-See my [full notes on the book here](/almanack-of-naval-ravikant)
+See my [[almanack-of-naval-ravikant|full notes on the book here]]
 
 ### Man's Search for Meaning Viktor E. Frankl
 
@@ -442,7 +442,7 @@ John Steinbeck sets out on a road trip across 1960s America with his standard po
 
 This book does a great job of capturing the spirit of the American road trip and has the exceptional lyricism in plain English of all Steinbeck books.
 
-[Read my full summary here](/travels-with-charley)
+[[travels-with-charley|Read my full summary here]]
 
 <!-- lint-disable no-em-dash -->
 

@@ -2,6 +2,7 @@
 title: "Python Setup with pyenv and poetry"
 description: "How to set up a Python project with the latest tools and best practices"
 date: 2022-02-13T00:00:00.000Z
+lastMod: 2025-01-31T00:00:00.000Z
 tags:
   - "programming"
   - "python"

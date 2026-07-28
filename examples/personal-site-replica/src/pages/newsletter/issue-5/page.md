@@ -9,21 +9,21 @@ layout: article
 ---
 ## Summary and Reflection 🤔
 
-I'm starting a 3(+) month-long ["Algorithms Boot Camp"](/algorithms-boot-camp). I've been collecting notes on this topic for some time.
+I'm starting a 3(+) month-long [[algorithms-boot-camp|"Algorithms Boot Camp"]]. I've been collecting notes on this topic for some time.
 
 ## Updates 🆕
 
-### [algorithms-boot-camp](/algorithms-boot-camp)
+### [[algorithms-boot-camp]]
 
 ![image_1657488579000_0.png | hidden](/site-assets/image_1657488579000_0_1672131763262_0.png)
 
-[This](/algorithms-boot-camp) is the 3-month curriculum for the [algorithms-boot-camp](/algorithms-boot-camp).
+[[algorithms-boot-camp|This]] is the 3-month curriculum for the [[algorithms-boot-camp]].
 
 It's a weekly series of guides that will help beginner and intermediate programmers learn the basics of algorithms.
 
 Hopefully, my process for making the guide and annotating code in logseq will also be interesting to non-programmers.
 
-I wrote a [comprehensive outline of all the algorithms I plan to learn](/algorithms-boot-camp). This "boot camp" project will build up this outline as a series of guides, one week at a time.
+I wrote a [[algorithms-boot-camp|comprehensive outline of all the algorithms I plan to learn]]. This "boot camp" project will build up this outline as a series of guides, one week at a time.
 
 I'm not writing this guide from an expert's perspective but rather from a student's perspective. I'll be learning along with you and solidifying my knowledge.
 
@@ -51,4 +51,4 @@ Everyone has been talking about Elon Musk buying Twitter and the controversy aro
 
 ## Outro
 
-Check out the [newsletter-roadmap](/newsletter-roadmap) to see what I have in mind for future issues. Let me know on [twitter @bsunter](https://twitter.com)
+Check out the [[newsletter-roadmap]] to see what I have in mind for future issues. Let me know on [twitter @bsunter](https://twitter.com)

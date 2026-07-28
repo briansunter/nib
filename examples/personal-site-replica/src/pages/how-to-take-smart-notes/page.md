@@ -2,6 +2,7 @@
 title: "How to Take Smart Notes"
 description: "By focusing on what is interesting and keeping written track of your own intellectual development, topics, questions, and arguments will naturally emerge without force."
 date: 2021-02-08T00:00:00.000Z
+lastMod: 2025-01-31T00:00:00.000Z
 tags:
   - "blog"
   - "productivity"
@@ -62,7 +63,7 @@ When creating backlinks, we should consider under what circumstances we would wa
 
 Examples of backlinks:
 
-> `writing` `productivity` `[how-to-take-smart-notes](/how-to-take-smart-notes)`
+> `[[writing]]` `[[productivity]]` `[[how-to-take-smart-notes]]`
 
 Logseq makes it easy to discover backlinks later with the linked references view.
 

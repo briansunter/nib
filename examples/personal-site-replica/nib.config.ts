@@ -5,7 +5,6 @@ import {
   definePageSource,
   fromPageSource,
   markdownMedia,
-  metadata,
   pageRenderer,
   search,
 } from '@briansunter/nib'
@@ -31,6 +30,8 @@ import {
 import { SiteShell } from './src/site-shell'
 import { generateThemeScript } from './src/lib/theme'
 import { cooklangToPlainText, htmlToPlainText, markdownToPlainText } from './src/lib/search-text'
+import { sourceRedirects } from './src/redirects'
+import { sourceMetadata } from './src/lib/source-metadata'
 
 function parseJson<T>(raw: string, file: string): T {
   try {
@@ -89,7 +90,10 @@ const tagPages = definePageSource({
       path: `/tags/${tag.tag}`,
       collectionId: tag.tag,
       data: tag,
-      meta: { title: `#${tag.display}`, description: `${tag.count} item${tag.count === 1 ? '' : 's'} tagged ${tag.display}` },
+      meta: {
+        title: `Posts tagged #${tag.display}`,
+        description: `All posts tagged with #${tag.display}`,
+      },
     }))
   },
   component: pageRenderer<TagPage>('./src/data-pages', 'TagDetailPage'),
@@ -116,15 +120,22 @@ export default defineConfig({
     ],
     head: {
       elements: [
-        { tag: 'link', attributes: { rel: 'alternate', type: 'application/rss+xml', href: '/index.xml' } },
+        { tag: 'link', attributes: { rel: 'alternate', type: 'application/rss+xml', title: 'Brian Sunter', href: '/index.xml' } },
+        { tag: 'link', attributes: { rel: 'dns-prefetch', href: 'https://a.briansunter.com' } },
+        { tag: 'link', attributes: { rel: 'dns-prefetch', href: 'https://subs.briansunter.com' } },
+        { tag: 'link', attributes: { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' } },
+        { tag: 'link', attributes: { rel: 'icon', type: 'image/png', sizes: '48x48', href: '/favicon-48x48.png' } },
+        { tag: 'link', attributes: { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32x32.png' } },
+        { tag: 'link', attributes: { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' } },
         { tag: 'link', attributes: { rel: 'manifest', href: '/manifest.webmanifest' } },
         { tag: 'meta', attributes: { name: 'theme-color', 'data-site-theme-color': '', content: '#f5f4f1' } },
         // FOUC-safe theme controller: resolves the effective theme before paint.
-        { tag: 'script', content: generateThemeScript() },
+        { tag: 'script', attributes: { 'data-cfasync': 'false' }, content: generateThemeScript() },
       ],
     },
   },
   redirects: {
+    ...sourceRedirects,
     // Legacy archive URL now lives at /pages; writing entries moved to root.
     '/notes': '/pages',
     // Canonical RSS feed is /index.xml; keep the legacy path as a redirect.
@@ -169,10 +180,6 @@ export default defineConfig({
         widths: [320, 640, 1280],
         sizes: '(min-width: 900px) 860px, 100vw',
       }],
-    }),
-    metadata({
-      image: '/blog-placeholder-about.jpg',
-      siteName: 'Brian Sunter',
     }),
     search({
       items: async ({ root }) => {
@@ -222,11 +229,12 @@ export default defineConfig({
             href: `/recipes/${entry.slug}`,
             kind: 'Recipe',
             tags: entry.metadata.tags,
-            text: cooklangToPlainText(entry.sourceText) || entry.metadata.description,
+            text: cooklangToPlainText(entry.cooklang) || entry.metadata.description,
           })),
         ]
       },
     }),
+    sourceMetadata(),
     sitemap({
       filter: (route) => (
         route.path !== '/404'

@@ -1,35 +1,39 @@
 import type { PageProps } from '@briansunter/nib'
 import type config from '../../../nib.config'
+import { PageHero } from '../../components/PageHero'
+import { tagCounts } from '../../lib/content-queries'
 
 export const meta = {
   title: 'Tags',
-  description: 'Browse all topics used across the writing, projects, and recipes.',
+  description: 'Browse all topics and tags',
 }
 
 export default function TagsPage({ collections }: PageProps<typeof config>) {
-  const counts = new Map<string, { display: string; count: number }>()
-  function bump(tag: string) {
-    const key = tag.toLowerCase().replace(/\s+/g, '-')
-    const existing = counts.get(key)
-    if (existing) existing.count += 1
-    else counts.set(key, { display: tag, count: 1 })
-  }
-  for (const entry of collections.writing) for (const tag of entry.data.tags) bump(tag)
-  for (const entry of collections.projects) for (const tag of entry.data.tags) bump(tag)
-  for (const entry of collections.recipes) for (const tag of entry.data.metadata.tags) bump(tag)
-  const tags = [...counts.entries()]
-    .map(([key, value]) => ({ key, ...value }))
-    .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
+  const tags = tagCounts(collections.writing.map((entry) => entry.data))
+  const tierClass = (count: number) => count >= 10
+    ? 'text-base font-medium'
+    : count >= 3 ? 'text-sm' : 'text-xs'
 
   return (
-    <div className="content-column tag-page">
-      <p className="eyebrow">Browse the archive</p>
-      <h1>Tags</h1>
-      <p className="lead">{tags.length} topics across writing, projects, and recipes.</p>
-      <div className="tag-cloud">
-        {tags.map((tag) => (
-          <a className="tag tag--pill" href={`/tags/${tag.key}`} key={tag.key}>
-            {tag.display} <span>{tag.count}</span>
+    <div className="py-16 sm:py-20" data-pagefind-ignore>
+      <PageHero title="Tags">
+        Every topic on the site, from programming to cooking.
+        <span className="mt-2 block font-sans text-base md:text-lg">
+          <span className="font-semibold text-ink tabular-nums">{tags.length}</span> topics.
+        </span>
+      </PageHero>
+      <div className="flex flex-wrap gap-x-5 gap-y-3">
+        {tags.map(([slug, tag]) => (
+          <a
+            className={[
+              'tag-item tag-mono focus-accent inline-flex items-baseline gap-1.5 text-ink-secondary transition-colors hover:text-ink',
+              tierClass(tag.count),
+            ].join(' ')}
+            href={`/tags/${slug}`}
+            key={slug}
+          >
+            <span>{tag.displayName}</span>
+            <span className="text-xs text-ink-muted tabular-nums">{tag.count}</span>
           </a>
         ))}
       </div>

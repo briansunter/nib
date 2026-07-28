@@ -59,7 +59,7 @@ On the open road in 1960s America
 
 ![ ](/site-assets/image_1660803645375_0.png)
 
-<iframe src="https://www.google.com/maps/d/embed?mid=1VTg1qhHkc105luSUdD3wTTa2VX0&amp;hl=en&amp;ehbc=2E312F" title="Embedded media"></iframe>
+<iframe src="https://www.google.com/maps/d/embed?mid=1VTg1qhHkc105luSUdD3wTTa2VX0&hl=en&ehbc=2E312F" width="640" height="480" title="Travels with Charley route map" loading="lazy"></iframe>
 
 ![ ](/site-assets/image_1660803669308_0.png)
 

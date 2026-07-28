@@ -4,45 +4,45 @@ description: "Roadmap and plans for the newsletter"
 date: 2022-07-10T00:00:00.000Z
 layout: article
 ---
-This is the content plan for my newsletter
+This is the content plan for my [[newsletter]]
 
 The dates are only rough guidelines, this is more of a content ordering and flow
 
 ## Roadmap #.ol-nested
 
-### intro issue-1 Jun 12th, 2022
+### intro [[issue-1]] Jun 12th, 2022
 
-Intro newsletter
+Intro [[newsletter]]
 
 More about what I'm doing
 
 Starting my public graph homepage
 
-Introducing my [Logseq Openai](/ai-powered-notetaking-with-the-gpt-3-logseq-plugin)
+Introducing my [[ai-powered-notetaking-with-the-gpt-3-logseq-plugin|Logseq Openai]]
 
-### Newsletter Project issue-2 Jun 19th, 2022
+### Newsletter Project [[issue-2]] Jun 19th, 2022
 
-feedback on [Logseq Openai](/ai-powered-notetaking-with-the-gpt-3-logseq-plugin)
+feedback on [[ai-powered-notetaking-with-the-gpt-3-logseq-plugin|Logseq Openai]]
 
 launching my [Logseq YouTube captions](https://github.com/briansunter/logseq-get-youtube-captions) plugin
 
-### Getting started with logseq issue-3 Jun 26th, 2022
+### Getting started with logseq [[issue-3]] Jun 26th, 2022
 
 [Logseq YouTube captions](https://github.com/briansunter/logseq-get-youtube-captions)
 
-[omnivore-logseq-guide](/omnivore-logseq-guide)
+[[omnivore-logseq-guide]]
 
 Launching a Logseq social profile
 
-[logseq-getting-started](/logseq-getting-started)
+[[logseq-getting-started]]
 
-[building-a-second-brain](/building-a-second-brain)
+[[building-a-second-brain]]
 
-### Newsletter intro and Productivity with AI issue-4 Jul 3rd, 2022
+### Newsletter intro and Productivity with AI [[issue-4]] Jul 3rd, 2022
 
 logseq-tasks
 
-[notetaking-with-ai](/notetaking-with-ai)
+[[notetaking-with-ai]]
 
 summarize
 
@@ -68,13 +68,13 @@ Fine Tune
 
 CoAuthor
 
-### Algorithms Bootcamp and Elon Musk Jul 10th, 2022 issue-5
+### Algorithms Bootcamp and Elon Musk Jul 10th, 2022 [[issue-5]]
 
 Updates
 
-[algorithms-boot-camp](/algorithms-boot-camp)
+[[algorithms-boot-camp]]
 
-[Algorithms Boot Camp](/algorithms-boot-camp)
+[[algorithms-boot-camp|Algorithms Boot Camp]]
 
 Productivity Toolkit
 
@@ -118,15 +118,15 @@ Link
 
 [Elon Musk Rejects Twitter Deal](https://www.sec.gov/Archives/edgar/data/1418091/000110465922078413/tm2220599d1_ex99-p.htm)
 
-### Intro to Algorithms issue-6
+### Intro to Algorithms [[issue-6]]
 
 Updates
 
-[intro-to-algorithms](/intro-to-algorithms)
+[[intro-to-algorithms]]
 
 Productivity Toolkit
 
-[logseq-projects](/logseq-projects)
+[[logseq-projects]]
 
 tour of my project template
 
@@ -164,11 +164,11 @@ two sum
 
 Productivity Toolkit
 
-[100-newsletter-subscribers](/100-newsletter-subscribers)
+[[100-newsletter-subscribers]]
 
 Brain Food
 
-[you-and-your-research](/you-and-your-research)
+[[you-and-your-research]]
 
 Quote
 
@@ -190,7 +190,7 @@ types patterns and generics
 
 Productivity Toolkit
 
-Capture [building-a-second-brain](/building-a-second-brain)
+Capture [[building-a-second-brain]]
 
 information diet
 
@@ -220,7 +220,7 @@ Updates
 
 Productivity Toolkit
 
-[building-a-second-brain](/building-a-second-brain)
+[[building-a-second-brain]]
 
 organize
 
@@ -248,7 +248,7 @@ merge sort
 
 Productivity Toolkit
 
-[building-a-second-brain](/building-a-second-brain)
+[[building-a-second-brain]]
 
 distill
 
@@ -270,7 +270,7 @@ dutch national flag problem
 
 Productivity Toolkit
 
-[building-a-second-brain](/building-a-second-brain)
+[[building-a-second-brain]]
 
 express
 

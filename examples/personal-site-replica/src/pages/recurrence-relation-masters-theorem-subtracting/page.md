@@ -2,6 +2,7 @@
 title: "Recurrence Relation and Master's Theorem for Subtracting Functions"
 description: "The math behind figuring out time complexity for recursive algorithms using recurrence relations."
 date: 2023-01-05T00:00:00.000Z
+math: true
 tags:
   - "algorithms"
   - "data-structures"
@@ -107,7 +108,7 @@ For each iteration, it takes $n$ units of time, then calls itself -1.
 
 We can see the amount of work is $n + (n-1) + (n-2) ... + 1$
 
-To find the total amount of work we can use the [integer-sum-formula](/integer-sum-formula)
+To find the total amount of work we can use the [[integer-sum-formula]]
 
 $$\sum_{i=1}^n i = \frac{n(n + 1)}{2}$$
 
@@ -126,7 +127,7 @@ $$T(n) = T(n-k) + (n-k+1) + (n-k+2) + \cdots + (n-1) + n$$
 Assuming $n-k=0$ (so $k=n$):
 $$T(n)=T(0) + 1 + 2 + 3 + \cdots + n$$
 
-Using the [integer sum formula](/integer-sum-formula) $\sum_{i=1}^n i = \frac{n(n + 1)}{2}$ and $T(0)=1$:
+Using the [[integer-sum-formula|integer sum formula]] $\sum_{i=1}^n i = \frac{n(n + 1)}{2}$ and $T(0)=1$:
 $$T(n) = 1 + \frac{n(n + 1)}{2} = O(n^2)$$
 
 ## Subtraction Recurrence Relation 3

@@ -2,6 +2,7 @@
 title: "Algorithms and Data Structures"
 description: "My notes on algorithms and data structures, from Big O basics to heaps and sorting."
 date: 2022-10-04T00:00:00.000Z
+math: true
 tags:
   - "algorithms"
   - "data-structures"
@@ -13,17 +14,17 @@ A collection of notes on fundamental algorithms and data structures, covering ti
 
 ## Foundations
 
-### [Time Complexity](/time-complexity)
+### [[time-complexity|Time Complexity]]
 
 Understanding how to analyze algorithm efficiency.
 
 - What is an algorithm?
-- [A Priori vs A Posteriori Analysis](/posteriori-vs-a-priori-analysis-of-algorithms)
+- [[posteriori-vs-a-priori-analysis-of-algorithms|A Priori vs A Posteriori Analysis]]
 - Frequency count method
 - Asymptotic notation: Big O, Omega, and Theta
 - Best, worst, and average case analysis
 
-### [Recurrence Relations (Subtracting Functions)](/recurrence-relation-masters-theorem-subtracting)
+### [[recurrence-relation-masters-theorem-subtracting|Recurrence Relations (Subtracting Functions)]]
 
 Analyzing algorithms where subproblems reduce by $n-b$.
 
@@ -32,7 +33,7 @@ Analyzing algorithms where subproblems reduce by $n-b$.
 - Tree method
 - Master's Theorem for $T(n)=aT(n-b)+f(n)$
 
-### [Recurrence Relations (Dividing Functions)](/recurrence-relation-masters-theorem-dividing)
+### [[recurrence-relation-masters-theorem-dividing|Recurrence Relations (Dividing Functions)]]
 
 Analyzing algorithms where subproblems reduce by $n/b$.
 
@@ -42,7 +43,7 @@ Analyzing algorithms where subproblems reduce by $n/b$.
 
 ## Searching
 
-### [Binary Search](/binary-search)
+### [[binary-search|Binary Search]]
 
 Efficient searching in sorted arrays with $O(\log n)$ time complexity.
 
@@ -52,7 +53,7 @@ Efficient searching in sorted arrays with $O(\log n)$ time complexity.
 
 ## Data Structures
 
-### [Heap](/heap)
+### [[heap|Heap]]
 
 A complete binary tree that satisfies the heap property.
 
@@ -80,4 +81,4 @@ An efficient in-place sorting algorithm with average $O(n \log n)$ time complexi
 
 ## More Resources
 
-See also my [Data Structures and Algorithms Guide](/data-structures-algorithms-guide) for a comprehensive overview of topics and problems.
+See also my [[data-structures-algorithms-guide|Data Structures and Algorithms Guide]] for a comprehensive overview of topics and problems.

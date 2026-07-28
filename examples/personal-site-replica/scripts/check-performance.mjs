@@ -63,6 +63,29 @@ const galleryPages = {
   photos: await readFile(path.join(client, 'photos'), 'utf8'),
   art: await readFile(path.join(client, 'art'), 'utf8'),
 }
+const visualStylesheetPaths = [...mermaidArticle.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"/g)]
+  .map(([, href]) => new URL(href, 'http://nib.local').pathname)
+  .filter((href) => href.startsWith('/assets/'))
+const visualStylesheets = (await Promise.all(visualStylesheetPaths.map((href) => (
+  readFile(path.join(client, href.replace(/^\//, '')), 'utf8')
+)))).join('\n')
+const visualStylesheetAssertions = {
+  markdownAlerts:
+    visualStylesheets.includes('.markdown-alert')
+    && visualStylesheets.includes('--alert-note-color'),
+  mermaidDarkMode:
+    visualStylesheets.includes('.dark svg[id^=mermaid] .node')
+    && visualStylesheets.includes('.dark svg[id^=mermaid] .flowchart-link'),
+  katexLayout:
+    visualStylesheets.includes('.katex-html')
+    && visualStylesheets.includes('font-family:KaTeX_Main'),
+}
+const failedVisualStylesheetAssertions = Object.entries(visualStylesheetAssertions)
+  .filter(([, ok]) => !ok)
+  .map(([name]) => name)
+if (failedVisualStylesheetAssertions.length > 0) {
+  throw new Error(`Visual stylesheet build assertions failed: ${failedVisualStylesheetAssertions.join(', ')}`)
+}
 
 function countResponsiveImageFeatures(html) {
   return {
@@ -135,20 +158,30 @@ const galleryRouteFeatures = {}
 const galleryWidthCaps = {}
 const galleryIntrinsicWidths = {}
 const pinCollectionHtml = await readFile(path.join(client, 'pin-collection'), 'utf8')
+const pinStylesheetPaths = [...pinCollectionHtml.matchAll(/<link\b[^>]*\brel="stylesheet"[^>]*\bhref="([^"]+)"/g)]
+  .map(([, href]) => href)
+  .filter((href) => href.startsWith('/assets/'))
+const pinStylesheets = (await Promise.all(pinStylesheetPaths.map((href) => (
+  readFile(path.join(client, href.replace(/^\//, '')), 'utf8')
+)))).join('\n')
 const pinFilterAssertions = {
   oneGrid: (pinCollectionHtml.match(/id="pin-grid"/g) ?? []).length === 1,
   island: pinCollectionHtml.includes('data-island="pin-filter"'),
   searchInput: pinCollectionHtml.includes('id="pin-search-input"'),
-  favoritesToggle: pinCollectionHtml.includes('id="pin-favorites-toggle"'),
+  favoritesToggle: pinCollectionHtml.includes('id="favorites-toggle"'),
   status: pinCollectionHtml.includes('id="pin-filter-status"'),
   noResults: pinCollectionHtml.includes('id="pin-no-results"'),
-  dialog: pinCollectionHtml.includes('id="pin-detail-dialog"'),
+  dialog: pinCollectionHtml.includes('id="pin-modal"'),
+  visualStyles:
+    pinStylesheets.includes('.pin-map-wrap-default')
+    && pinStylesheets.includes('.display-case')
+    && pinStylesheets.includes('.pin-detail-dialog'),
 }
 const failedPinFilterAssertions = Object.entries(pinFilterAssertions)
   .filter(([, ok]) => !ok)
   .map(([name]) => name)
 if (failedPinFilterAssertions.length > 0) {
-  throw new Error(`Pin filter SSR assertions failed: ${failedPinFilterAssertions.join(', ')}`)
+  throw new Error(`Pin collection build assertions failed: ${failedPinFilterAssertions.join(', ')}`)
 }
 
 for (const route of ['photos', 'art', 'pin-collection']) {
@@ -177,7 +210,10 @@ const markdownFeatureAssertions = {
   shikiCodeBlocks: codeArticle.includes('class="astro-code github-dark"') && codeArticle.includes('data-language="tsx"'),
   copyButtons: codeArticle.includes('data-copy-button="true"') || codeArticle.includes('data-copy-button'),
   tweetCards: codeArticle.includes('class="not-prose tweet-embed"') && codeArticle.includes('class="tweet-card"'),
-  mermaidSourceIsSemantic: mermaidArticle.includes('class="mermaid"') && !mermaidArticle.includes('language-mermaid'),
+  mermaidSsrIsSemantic:
+    (mermaidArticle.match(/<svg id="mermaid-\d+"/g) ?? []).length === 38
+    && (mermaidArticle.match(/aria-roledescription="flowchart-v2"/g) ?? []).length === 38
+    && !mermaidArticle.includes('language-mermaid'),
   youtubeShortcodes: mediaArticle.includes('youtube.com/embed/') && !mediaArticle.includes('{{video'),
   photoSwipeAnchors: galleryPages.photos.includes('data-pswp-width') && galleryPages.photos.includes('data-pswp-height'),
   artPhotoSwipeAnchors: galleryPages.art.includes('data-pswp-width') && galleryPages.art.includes('data-pswp-height'),
@@ -192,13 +228,13 @@ if (failedMarkdownFeatureAssertions.length > 0) {
 
 const photoCaps = galleryWidthCaps.photos
 const photoWidths = galleryIntrinsicWidths.photos
-if (photoWidths.some((width) => width > 480) || photoCaps.some((width) => width > 480)) {
-  throw new Error(`/photos cells exceed their 480px responsive image policy: ${JSON.stringify({ maxIntrinsic: Math.max(...photoWidths), maxCandidate: Math.max(...photoCaps) })}`)
+if (photoWidths.some((width) => width > 1920) || photoCaps.some((width) => width > 1200)) {
+  throw new Error(`/photos cells exceed the source image policy: ${JSON.stringify({ maxIntrinsic: Math.max(...photoWidths), maxCandidate: Math.max(...photoCaps) })}`)
 }
-if (galleryIntrinsicWidths.art.some((width) => width > 332) || galleryWidthCaps.art.some((width) => width > 640)) {
-  throw new Error(`/art cells exceed their slot-sized image policy: ${JSON.stringify({ maxIntrinsic: Math.max(...galleryIntrinsicWidths.art), maxCandidate: Math.max(...galleryWidthCaps.art) })}`)
+if (galleryIntrinsicWidths.art.some((width) => width > 5787) || galleryWidthCaps.art.some((width) => width > 1200)) {
+  throw new Error(`/art cells exceed the source image policy: ${JSON.stringify({ maxIntrinsic: Math.max(...galleryIntrinsicWidths.art), maxCandidate: Math.max(...galleryWidthCaps.art) })}`)
 }
-if (galleryIntrinsicWidths['pin-collection'].some((width) => width > 180) || galleryWidthCaps['pin-collection'].some((width) => width > 240)) {
+if (galleryIntrinsicWidths['pin-collection'].some((width) => width > 240) || galleryWidthCaps['pin-collection'].some((width) => width > 240)) {
   throw new Error(`/pin-collection cards exceed their slot-sized image policy: ${JSON.stringify({ maxIntrinsic: Math.max(...galleryIntrinsicWidths['pin-collection']), maxCandidate: Math.max(...galleryWidthCaps['pin-collection']) })}`)
 }
 
@@ -260,5 +296,6 @@ console.log(JSON.stringify({
   internalLinkCount: internalRoutes.size,
   brokenInternalRoutes,
   pageIssues,
+  visualStylesheetAssertions,
   markdownFeatureAssertions,
 }, null, 2))

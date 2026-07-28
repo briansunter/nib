@@ -23,15 +23,17 @@ export function SocialProfiles() {
             target={social.external ? '_blank' : undefined}
             rel={social.external ? 'noopener noreferrer' : undefined}
             aria-label={`Visit ${social.name}`}
+            data-umami-event="social"
+            data-umami-event-platform={social.name.toLowerCase().replace(/\s+/g, '-')}
             className="social-link group"
           >
             <SocialGlyph name={social.icon} className="social-icon" />
-            <span className="social-label">{social.label}</span>
+            <span className="social-label">{social.label}</span>{' '}
           </a>
         ))}
         {hidden.length > 0 && (
           <>
-            <div id={HIDDEN_GROUP_ID} className="social-hidden-group" hidden>
+            <div id={HIDDEN_GROUP_ID} className="social-hidden-group" hidden data-social-hidden>
               {hidden.map((social) => (
                 <a
                   key={social.name}
@@ -39,10 +41,12 @@ export function SocialProfiles() {
                   target={social.external ? '_blank' : undefined}
                   rel={social.external ? 'noopener noreferrer' : undefined}
                   aria-label={`Visit ${social.name}`}
+                  data-umami-event="social"
+                  data-umami-event-platform={social.name.toLowerCase().replace(/\s+/g, '-')}
                   className="social-link group"
                 >
                   <SocialGlyph name={social.icon} className="social-icon" />
-                  <span className="social-label">{social.label}</span>
+                  <span className="social-label">{social.label}</span>{' '}
                 </a>
               ))}
             </div>

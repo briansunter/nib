@@ -1,82 +1,86 @@
-import { type PageProps, siteHref } from '@briansunter/nib'
+import { siteHref, type PageProps } from '@briansunter/nib'
+import { Fragment } from 'react'
 import type config from '../../../nib.config'
+import { PageHero } from '../../components/PageHero'
 import Search from '../../islands/search'
+import { tagCounts, titledPages } from '../../lib/content-queries'
 
 export const meta = {
   title: 'Search | Brian Sunter',
-  description: 'Search the writing, projects, and recipes on this site.',
+  description: 'Search the website of Brian Sunter',
 }
 
 export default function SearchPage({ collections }: PageProps<typeof config>) {
-  const tagCounts = new Map<string, number>()
-  for (const entry of collections.writing) for (const tag of entry.data.tags) tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1)
-  for (const entry of collections.projects) for (const tag of entry.data.tags) tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1)
-  const popularTopics = [...tagCounts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0])).slice(0, 10)
-  const recentWriting = [...collections.writing].sort((left, right) => right.data.date.valueOf() - left.data.date.valueOf()).slice(0, 5)
-  const entries = [
-    ...collections.writing.map(({ data }) => ({
-      title: data.title,
-      description: data.description,
-      href: siteHref(`/${data.slug}`),
-      kind: 'Writing',
-      tags: data.tags,
-    })),
-    ...collections.projects.map(({ data }) => ({
-      title: data.title,
-      description: data.description,
-      href: siteHref(`/projects/${data.slug}`),
-      kind: 'Project',
-      tags: data.tags,
-    })),
-    ...collections.recipes.map(({ data }) => ({
-      title: data.metadata.title,
-      description: data.metadata.description,
-      href: siteHref(`/recipes/${data.slug}`),
-      kind: 'Recipe',
-      tags: data.metadata.tags,
-    })),
-  ].slice(0, 24)
+  const writing = collections.writing.map((entry) => entry.data)
+  const popularTopics = tagCounts(writing).slice(0, 10)
+  const recentWriting = titledPages(writing).slice(0, 5)
 
   return (
-    <div className="page-stack">
-      <header className="page-hero content-column">
-        <p className="eyebrow">Find a thread</p>
-        <h1>Search</h1>
-        <p className="lead">Search across the writing, projects, and recipes. The full index is a static resource; only the input and result list hydrate.</p>
-      </header>
-      <div className="content-column">
-        <Search listId="search-list" indexUrl={siteHref('/search.json')} hydrate="load" />
-        <ul className="search-results search-results--page" id="search-list" aria-label="Search results">
-          {entries.map((entry, index) => (
-            <li
-              className="search-result"
-              data-search-item
-              data-order={index}
-              data-title={entry.title}
-              data-description={entry.description}
-              data-kind={entry.kind}
-              data-tags={entry.tags.join(' ')}
-              data-search={`${entry.title} ${entry.description} ${entry.kind} ${entry.tags.join(' ')}`}
-              key={entry.href}
-            >
-              <a href={entry.href}>
-                <span className="eyebrow">{entry.kind}</span>
-                <strong>{entry.title}</strong>
-                <span>{entry.description}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-        <section className="search-discovery" aria-label="Search discovery">
-          <h2>Popular Topics</h2>
-          <div className="search-topic-list">
-            {popularTopics.map(([tag, count]) => <a href={siteHref(`/search?tag=${encodeURIComponent(tag)}`)} className="search-topic" key={tag}><span>#{tag}</span><b>{count}</b></a>)}
-          </div>
-          <h2>Recent Writing</h2>
-          <ul className="search-recent-list">
-            {recentWriting.map((entry) => <li key={entry.data.slug}><a href={siteHref(`/${entry.data.slug}`)}>{entry.data.title}</a><time dateTime={entry.data.date.toISOString()}>{new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(entry.data.date)}</time></li>)}
-          </ul>
-        </section>
+    <div className="mx-auto max-w-6xl px-3 lg:px-8">
+      <div className="search-page py-16 sm:py-20" data-pagefind-ignore>
+        <PageHero title="Search" className="mb-12">
+          Find articles, projects, recipes, and more across the entire site.
+        </PageHero>
+
+        <div className="search-container">
+          <Search hydrate="load" />
+        </div>
+
+        <div data-search-empty-state className="search-empty-state">
+          <section aria-labelledby="popular-topics-heading">
+            <div className="search-section-head">
+              <h2 id="popular-topics-heading" className="search-section-title">
+                Popular Topics
+              </h2>
+              <div className="search-section-rule" aria-hidden="true" />
+            </div>
+
+            <div className="topic-list">
+              {popularTopics.map(([slug, { displayName, count }], index) => (
+                <Fragment key={slug}>
+                  <a href={siteHref(`/tags/${slug}`)} className="topic-link focus-accent">
+                    <span className="topic-hash" aria-hidden="true">#</span>{' '}
+                    <span>{displayName}</span>{' '}
+                    <span className="topic-count">{count}</span>
+                  </a>
+                  {index < popularTopics.length - 1 ? ' ' : null}
+                </Fragment>
+              ))}
+            </div>
+          </section>
+
+          <section aria-labelledby="recent-writing-heading">
+            <div className="search-section-head">
+              <h2 id="recent-writing-heading" className="search-section-title">
+                Recent Writing
+              </h2>
+              <div className="search-section-rule" aria-hidden="true" />
+            </div>
+
+            <ol className="recent-writing-list">
+              {recentWriting.map((post) => (
+                <li className="recent-writing-item" key={post.slug}>
+                  <a
+                    href={siteHref(`/${post.slug}`)}
+                    className="recent-writing-link focus-accent"
+                  >
+                    {post.title}
+                  </a>
+                  <time
+                    className="mt-2 block font-sans text-sm leading-[1.4] text-ink-muted"
+                    dateTime={post.date.toISOString()}
+                  >
+                    {post.date.toLocaleDateString('en-us', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </time>
+                </li>
+              ))}
+            </ol>
+          </section>
+        </div>
       </div>
     </div>
   )

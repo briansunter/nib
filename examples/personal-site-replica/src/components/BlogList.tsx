@@ -2,23 +2,33 @@ import { siteHref } from '@briansunter/nib'
 import { Image } from '@briansunter/nib-images'
 import type { Writing } from '../content'
 import { writingImageMap } from '../data/writing-images'
+import { visiblePageTags } from '../lib/content-queries'
 import { randomGradient } from '../lib/randomGradient'
 import { PostCardMeta } from './PostCardMeta'
 
-function visibleTags(tags: readonly string[], limit = 3): string[] {
-  return tags.slice(0, limit)
-}
-
 function featuredLabel(post: Writing): string {
-  const first = visibleTags(post.tags, 1)[0]
+  const first = visiblePageTags(post, 1)[0]
   return first ? `Latest · ${first}` : 'Latest'
 }
 
-function FeaturedPost({ post }: { post: Writing }) {
+function FeaturedPost({
+  post,
+  analyticsSource = 'homepage',
+}: {
+  post: Writing
+  analyticsSource?: string
+}) {
   const cover = writingImageMap[post.slug]
   return (
     <article className="featured-post thumb-hover">
-      <a href={siteHref(`/${post.slug}`)} className="card-link flex flex-col gap-5">
+      <a
+        href={siteHref(`/${post.slug}`)}
+        data-umami-event="post_card_click"
+        data-umami-event-slug={post.slug}
+        data-umami-event-source={analyticsSource}
+        data-umami-event-target="featured"
+        className="card-link flex flex-col gap-5"
+      >
         <div className="thumb aspect-feature w-full overflow-hidden rounded-xl">
           {cover ? (
             <Image
@@ -44,12 +54,25 @@ function FeaturedPost({ post }: { post: Writing }) {
           )}
         </div>
       </a>
-      <PostCardMeta date={post.date} tags={visibleTags(post.tags)} className="mt-3" />
+      <PostCardMeta
+        date={post.date}
+        tags={visiblePageTags(post)}
+        analyticsSource={analyticsSource}
+        className="mt-3"
+      />
     </article>
   )
 }
 
-function PostListItem({ post }: { post: Writing }) {
+export function PostListItem({
+  post,
+  headingTag: Heading = 'h3',
+  analyticsSource = 'post-list',
+}: {
+  post: Writing
+  headingTag?: 'h2' | 'h3' | 'h4'
+  analyticsSource?: string
+}) {
   const cover = writingImageMap[post.slug]
   return (
     <article className="post-item card-outdent thumb-hover bordered">
@@ -58,6 +81,10 @@ function PostListItem({ post }: { post: Writing }) {
           href={siteHref(`/${post.slug}`)}
           tabIndex={-1}
           aria-hidden="true"
+          data-umami-event="post_card_click"
+          data-umami-event-slug={post.slug}
+          data-umami-event-source={analyticsSource}
+          data-umami-event-target="thumbnail"
           className="card-link w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg sm:w-32 sm:h-32"
         >
           {cover ? (
@@ -75,15 +102,27 @@ function PostListItem({ post }: { post: Writing }) {
           )}
         </a>
         <div className="flex min-w-0 flex-1 flex-col">
-          <a href={siteHref(`/${post.slug}`)} className="card-link block">
-            <h3 className="mb-1.5 text-lg font-bold leading-[1.2] tracking-tight text-ink line-clamp-2 sm:text-2xl">
+          <a
+            href={siteHref(`/${post.slug}`)}
+            className="card-link block"
+            data-umami-event="post_card_click"
+            data-umami-event-slug={post.slug}
+            data-umami-event-source={analyticsSource}
+            data-umami-event-target="content"
+          >
+            <Heading className="mb-1.5 text-lg font-bold leading-[1.2] tracking-tight text-ink line-clamp-2 sm:text-2xl">
               {post.title}
-            </h3>
+            </Heading>
             {post.description && (
               <p className="dek line-clamp-4 max-w-[62ch] text-base sm:text-lg">{post.description}</p>
             )}
           </a>
-          <PostCardMeta date={post.date} tags={visibleTags(post.tags)} className="mt-auto pt-2" />
+          <PostCardMeta
+            date={post.date}
+            tags={visiblePageTags(post)}
+            analyticsSource={analyticsSource}
+            className="mt-auto pt-2"
+          />
         </div>
       </div>
     </article>
@@ -99,15 +138,16 @@ export function BlogList({ posts }: { posts: readonly Writing[] }) {
         <h2 className="text-h2 font-bold tracking-tight text-ink">Writing</h2>
         <a
           href={siteHref('/pages')}
+          data-umami-event="home_archive_click"
           className="text-sm font-medium text-ink-secondary transition-colors hover:text-accent"
         >
           View archive →
         </a>
       </div>
       <div className="post-list flex flex-col">
-        {featured && <FeaturedPost post={featured} />}
+        {featured && <FeaturedPost post={featured} analyticsSource="homepage" />}
         {rest.map((post) => (
-          <PostListItem key={post.slug} post={post} />
+          <PostListItem key={post.slug} post={post} analyticsSource="homepage" />
         ))}
       </div>
     </section>

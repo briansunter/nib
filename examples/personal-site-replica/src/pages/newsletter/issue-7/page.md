@@ -16,9 +16,9 @@ Mark Zuckerberg as the girl with the pearl earring generated using Stable Diffus
 
 ## Summary and Reflection 🤔
 
-This week I wrote a post announcing my [new personal website](/new-website-on-logseq-hugo).
+This week I wrote a post announcing my [[new-website-on-logseq-hugo|new personal website]].
 
-I also wrote a post on [analysis of algorithms](/posteriori-vs-a-priori-analysis-of-algorithms) for the algorithms-boot-camp.
+I also wrote a post on [[posteriori-vs-a-priori-analysis-of-algorithms|analysis of algorithms]] for the algorithms-boot-camp.
 
 This post focuses on the different ways of measuring algorithms theoretically and on actual hardware.
 
@@ -26,7 +26,7 @@ For some “brain food,” I share one of my favorite talks, “You and your Res
 
 ## Updates 🆕
 
-#### [new-website-on-logseq-hugo](/new-website-on-logseq-hugo)
+#### [[new-website-on-logseq-hugo]]
 
 I launched a “beta” version of my website that’s built almost entirely in Logseq using the [Hugo Plugin](https://github.com/sawhney17/logseq-schrodinger?utm_campaign=newsletter-email&utm_medium=email&utm_source=Revue%20newsletter).
 
@@ -34,25 +34,25 @@ I write all my posts in Logseq and then push a button to export them to files co
 
 I’m still migrating my old pages and customizing them, but I’m pleased with the results.
 
-[Read my post on it here](/new-website-on-logseq-hugo).
+[[new-website-on-logseq-hugo|Read my post on it here]].
 
 The site,logseq graph, and AWS CDK deployment tooling[ is on Github.](https://github.com/briansunter/graph?utm_campaign=newsletter-email&utm_medium=email&utm_source=Revue%20newsletter)
 
-#### [algorithms](/algorithms)
+#### [[algorithms]]
 
 I'm studying algorithms and data structures.
 
-[See my notes on time complexity here](/time-complexity)
+[[time-complexity|See my notes on time complexity here]]
 
-[I wrote a post on posterior vs a priori analysis of algorithms](/posteriori-vs-a-priori-analysis-of-algorithms)
+[[posteriori-vs-a-priori-analysis-of-algorithms|I wrote a post on posterior vs a priori analysis of algorithms]]
 
-As I watch various courses, I’ll [link to the concepts on the algorithms boot camp page](/algorithms-boot-camp) as a learning roadmap
+As I watch various courses, I’ll [[algorithms-boot-camp|link to the concepts on the algorithms boot camp page]] as a learning roadmap
 
 ## Productivity Toolkit 🛠️
 
 In this section, I'll share a productivity tip I've learned recently.
 
-#### [five-minute-journal](/five-minute-journal)
+#### [[five-minute-journal]]
 
 The five-minute journal is one of the best places to start with journaling and productivity.
 
@@ -66,7 +66,7 @@ Here are the prompts I use:
 
 > What Am I Worried About?
 
-[Read my post about it here](/five-minute-journal)
+[[five-minute-journal|Read my post about it here]]
 
 ## Brain Food 🧠
 
@@ -74,7 +74,7 @@ In this section, I'll share some interesting articles and "food for thought"
 
 ### Quote
 
-#### [you-and-your-research](/you-and-your-research)
+#### [[you-and-your-research]]
 
 [My notes on this talk from 1986](https://briansunter.com/you-and-your-research?utm_campaign=newsletter-email&utm_medium=email&utm_source=Revue%20newsletter) about what it takes to do Nobel prize-level work.
 
@@ -98,7 +98,7 @@ When pressed, many of his fellow scientists admitted they didn’t believe the p
 
 I highly recommend reading [his full talk](https://www.cs.virginia.edu/~robins/YouAndYourResearch.html) if you consider yourself a scientist or researcher.
 
-[See my notes here](/you-and-your-research)
+[[you-and-your-research|See my notes here]]
 
 ### Link of the week - Stable Diffusion
 
@@ -126,4 +126,4 @@ I’m sure we’ll see a lot of crazy stuff with this soon, but I can’t wait f
 
 ## Outro
 
-Check out the [newsletter-roadmap](/newsletter-roadmap) to see what I have in mind for future issues. Let me know on [twitter @bsunter](https://twitter.com)
+Check out the [[newsletter-roadmap]] to see what I have in mind for future issues. Let me know on [twitter @bsunter](https://twitter.com)

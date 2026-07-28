@@ -25,7 +25,7 @@ become financially independent
 
 ### Desired output
 
-Gain 100 newsletter followers in the next 3 months.
+Gain 100 [[newsletter]] followers in the next 3 months.
 
 ### Tasks
 
@@ -43,11 +43,11 @@ Write first newsletter
 
 Announce newsletter
 
-ask for feedback on [newsletter-roadmap](/newsletter-roadmap)
+ask for feedback on [[newsletter-roadmap]]
 
 {{ tweet 1536775128175915009 }}
 
-create initial [newsletter-roadmap](/newsletter-roadmap) for first 6 weeks
+create initial [[newsletter-roadmap]] for first 6 weeks
 
 ### Templates
 
@@ -75,7 +75,7 @@ SCHEDULED: <2022-07-06 Wed .+2d>
 newsletter research
 SCHEDULED: <2022-06-29 Wed .+1w>
 
-update and tune [newsletter-roadmap](/newsletter-roadmap)
+update and tune [[newsletter-roadmap]]
 SCHEDULED: <2022-06-28 Tue .+1d>
 
 weekly review
@@ -85,7 +85,7 @@ analytics
 
 status
 
-[newsletter-roadmap](/newsletter-roadmap) research
+[[newsletter-roadmap]] research
 SCHEDULED: <2022-06-30 Thu .+1d>
 
 ### Notes

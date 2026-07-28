@@ -28,6 +28,7 @@ describe('consumer project Vite adapter', () => {
     const server = load(serverId)
     expect(client).toContain("import.meta.glob('/src/islands/**/*.tsx')")
     expect(client).toContain('@briansunter/nib/internal/client')
+    expect(client).toContain('window.__nibStartIslandRuntime = start')
     expect(server).toContain(path.resolve('/site/nib.config.ts'))
     expect(server).toContain('"/src/pages/**/page.tsx"')
     expect(server).toContain('"/src/pages/**/page.yaml"')

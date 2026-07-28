@@ -1,7 +1,7 @@
 import { Image } from '@briansunter/nib-images'
 import { avatar } from '../data/images'
 
-const ABOUT_HEADER = 'Software Engineer, Entrepreneur, AI Enthusiast'
+const ABOUT_HEADER = 'Software Engineer, Entrepreneur, AI Enthusiast'
 const ABOUT_BODY =
   "I'm a software engineer experienced in web development, mobile apps, public cloud architecture, and DevOps. I'm currently learning about AI and building AI products."
 

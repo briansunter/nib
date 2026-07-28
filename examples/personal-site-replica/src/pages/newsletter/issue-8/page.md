@@ -10,9 +10,9 @@ layout: article
 ---
 ## Summary and Reflection 🤔
 
-I'm continuing to work on the [algorithms-boot-camp](/algorithms-boot-camp) section of this site.
+I'm continuing to work on the [[algorithms-boot-camp]] section of this site.
 
-I'm working through a few courses now including [Stanford's algorithms course](https://stanford-cs161.github.io/winter2021/lectures/). See my notes on [time-complexity](/time-complexity)
+I'm working through a few courses now including [Stanford's algorithms course](https://stanford-cs161.github.io/winter2021/lectures/). See my notes on [[time-complexity]]
 
 I'm going over some math in Volume 1 of The Art of Computer Programming by Donald Knuth. I included a funny anecdote about his approach to email, and how he stays focused on writing his book.
 
@@ -20,19 +20,19 @@ I also am interested in Werner Herzog's new movie about consciousness and brain-
 
 ## Updates 🆕
 
-#### [integer-sum-formula](/integer-sum-formula)
+#### [[integer-sum-formula]]
 
 ![ ](/site-assets/image_1665465573710_0.png)
 
 How do you find the sum of the numbers 1 through 100?
 
-There's a [legend about the mathematician Carl Gauss](https://web.archive.org/web/20250924104428/https://www.americanscientist.org/article/gausss-day-of-reckoning) coming up with the [integer-sum-formula](/integer-sum-formula) as a child in school. Supposedly the teacher asked the class to do a tedious assignment of adding numbers 1 through 100. Gauss could come up with the answer instantly, whereas the other students took 30 minutes to find the answer.
+There's a [legend about the mathematician Carl Gauss](https://web.archive.org/web/20250924104428/https://www.americanscientist.org/article/gausss-day-of-reckoning) coming up with the [[integer-sum-formula]] as a child in school. Supposedly the teacher asked the class to do a tedious assignment of adding numbers 1 through 100. Gauss could come up with the answer instantly, whereas the other students took 30 minutes to find the answer.
 
 You can use the formula sum = n(n+1)/2 to find the sum of 1 to n numbers.
 
 This is a good problem for studying math proofs because this equation has many different proofs and variations. I linked a video in the note that includes 12+ proofs.
 
-For more, see my note on [integer-sum-formula](/integer-sum-formula)
+For more, see my note on [[integer-sum-formula]]
 
 ## Productivity Toolkit 🛠️
 
@@ -84,7 +84,7 @@ In this section, I'll share some interesting articles and "food for thought"
 
 Werner Herzog is a german filmmaker who has produced, written, and directed more than sixty feature and documentary films. I appreciate his unconventional creativity and the sound of his voice.
 
-#### [werner-herzog-rules-for-filmmaking](/werner-herzog-rules-for-filmmaking)
+#### [[werner-herzog-rules-for-filmmaking]]
 
 He just released a new movie about consciousness and brain-computer interfaces called "Theatre of Thought."
 
@@ -92,10 +92,10 @@ He interviews people working on technology that lets your brain communicate dire
 
 > Werner Herzog sets his sights on yet another mysterious landscape (the human brain) for clues as to why a hunk of tissue can produce profound thoughts and feelings while considering the philosophical, ethical, and social implications of fast-advancing neural technology.
 
-<iframe src="https://www.youtube.com/embed/9P0nHSKwWMU" title="Embedded media"></iframe>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/9P0nHSKwWMU" title="YouTube video player" loading="lazy" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
-I've taken some [notes on Herzog's creative approach to filmmaking here](/werner-herzog-rules-for-filmmaking).
+I've taken some [[werner-herzog-rules-for-filmmaking|notes on Herzog's creative approach to filmmaking here]].
 
 ## Outro
 
-Check out the [newsletter-roadmap](/newsletter-roadmap) to see what I have in mind for future issues. Get in touch with me on [twitter @bsunter](https://twitter.com) if you have any questions or comments!
+Check out the [[newsletter-roadmap]] to see what I have in mind for future issues. Get in touch with me on [twitter @bsunter](https://twitter.com) if you have any questions or comments!

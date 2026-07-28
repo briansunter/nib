@@ -55,10 +55,10 @@ export function responsiveWidths(
 ): number[] {
   const cappedMaximum = Math.min(source.width, maximum)
   const required = new Set(requiredWidths.map((width) => Math.min(width, cappedMaximum)))
-  required.add(cappedMaximum)
   const candidates = [...new Set([...widths, ...required])]
     .filter((width) => width <= cappedMaximum && width > 0)
     .sort((left, right) => left - right)
+  if (candidates.length === 0) candidates.push(cappedMaximum)
   return removeNearDuplicates(candidates, required)
 }
 
@@ -151,7 +151,7 @@ export function planImageCandidates(options: ImageCandidatePlanOptions): ImageCa
           ? options.defaultWidths
           : normalizedWidths(options.widths, 'widths'),
         candidateMaximum!,
-        [displayWidth],
+        options.widths === undefined ? [displayWidth, candidateMaximum!] : [],
       )
   if (widths.length === 0) {
     throw new Error('@briansunter/nib-images: no usable image candidates were generated')

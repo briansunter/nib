@@ -1,6 +1,8 @@
 import { siteHref, type SiteShellProps } from '@briansunter/nib'
 import { GLYPHS, Icon, SocialGlyph } from './components/icons'
 import type { Writing } from './content'
+import ShellBehavior from './islands/shell-behavior'
+import { blogPosts } from './lib/content-queries'
 import {
   footerSocials,
   isExternalLink,
@@ -16,7 +18,7 @@ function normalizePath(path: string): string {
 
 function isActive(href: string, current: string): boolean {
   if (isExternalLink(href)) return false
-  if (href === '/') return current === '/'
+  if (href === '/') return false
   const base = href.replace(/\/+$/, '')
   return current === base || current.startsWith(`${base}/`)
 }
@@ -41,10 +43,10 @@ function ThemeToggle() {
       type="button"
       aria-label="Toggle theme"
       title="Toggle light/dark mode"
-      className="icon-button"
+      className="relative flex h-11 min-h-11 w-11 min-w-11 items-center justify-center rounded-lg text-ink-muted transition-colors duration-200 hover:bg-surface-hover hover:text-ink focus-accent"
     >
-      <Icon path={GLYPHS.sun} className="hidden w-5 h-5" dataThemeIcon="light" />
-      <Icon path={GLYPHS.moon} className="hidden w-5 h-5" dataThemeIcon="dark" />
+      <Icon path={GLYPHS.sun} viewBox="0 0 20 20" className="hidden h-5 w-5" dataThemeIcon="light" />
+      <Icon path={GLYPHS.moon} viewBox="0 0 20 20" className="hidden h-5 w-5" dataThemeIcon="dark" />
     </button>
   )
 }
@@ -60,28 +62,30 @@ function Spinner({ className }: { className?: string }) {
 
 function NewsletterForm({ site }: { site: string }) {
   return (
-    <form className="flex flex-col gap-3" data-api-url={NEWSLETTER_API} data-site={site} data-newsletter-form>
-      <input
-        type="email"
-        name="email"
-        placeholder="you@example.com"
-        required
-        autoComplete="email"
-        aria-label="Email address"
-        data-newsletter-email
-        className="form-input"
-      />
-      <button type="submit" data-newsletter-submit className="primary-button w-full">
-        <span data-newsletter-button-text>Subscribe</span>
-        <Spinner className="hidden w-4 h-4 animate-spin" />
-      </button>
-      <div data-newsletter-success role="status" aria-live="polite" className="hidden status-success text-sm">
+    <>
+      <form className="flex flex-col gap-3" data-api-url={NEWSLETTER_API} data-site={site} data-newsletter-form>
+        <input
+          type="email"
+          name="email"
+          placeholder="you@example.com"
+          required
+          autoComplete="email"
+          aria-label="Email address"
+          data-newsletter-email
+          className="form-input"
+        />
+        <button type="submit" data-newsletter-submit className="primary-button w-full">
+          <span data-newsletter-button-text>Subscribe</span>
+          <Spinner className="hidden h-4 w-4 animate-spin" />
+        </button>
+      </form>
+      <div data-newsletter-success role="status" aria-live="polite" className="hidden font-sans text-footnote status-success">
         You&apos;re on the list.
       </div>
-      <div data-newsletter-error role="alert" className="hidden status-danger text-sm">
+      <div data-newsletter-error role="alert" className="hidden font-sans text-footnote status-danger">
         <span data-newsletter-error-message>Please try again.</span>
       </div>
-    </form>
+    </>
   )
 }
 
@@ -90,48 +94,53 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
   const navigation = site.navigation ?? []
   const year = new Date().getFullYear()
   const writing = (collections as { writing: Array<{ data: Writing }> }).writing
-  const latestWriting = [...writing]
-    .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
-    .slice(0, 3)
+  const latestWriting = blogPosts(writing.map((entry) => entry.data)).slice(0, 3)
   const elsewhere = footerSocials()
   // The homepage already has the primary newsletter CTA; the reference
   // suppresses its footer form there to avoid repeating the same conversion.
-  const hideFooterNewsletter = current === '/'
+  const hideFooterNewsletter = current === '/' || writing.some((entry) => `/${entry.data.slug}` === current)
   const labelClass = 'overline-label m-0'
+  const isStandalone = ['/art', '/photos', '/pin-collection', '/travel-map'].includes(current)
 
   return (
     <div className="site-frame min-h-screen flex flex-col">
       <a
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-white"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-white"
         href="#main-content"
       >
         Skip to main content
       </a>
 
-      <header className="sticky top-0 z-30">
+      <header
+        className={`${isStandalone ? 'relative' : 'sticky top-0'} z-30`}
+        data-pagefind-ignore=""
+      >
         <div
           data-site-header
           data-scroll-y="50"
           className="header-glass border-b border-border transition-[padding,background-color,border-color,box-shadow] duration-300 py-4"
         >
-          <div className="mx-auto flex w-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <div className="flex w-full items-center justify-between px-4 sm:px-6 lg:px-8">
             <a
               href={siteHref('/')}
+              data-astro-prefetch="hover"
               className="focus-accent rounded-sm text-h3 font-semibold tracking-tight text-ink transition-colors duration-200 hover:text-accent"
             >
               {site.title}
             </a>
 
-            <nav aria-label="Primary navigation" className="hidden items-center gap-8 lg:flex">
+            <nav
+              aria-label="Primary navigation"
+              className={`hidden items-center ${isStandalone ? 'gap-10' : 'gap-8'} lg:!flex`}
+            >
               {navigation.map((item) => {
                 const active = isActive(item.href, current)
                 return (
                   <a
                     key={item.href}
                     href={navHref(item.href)}
+                    data-astro-prefetch={!isExternalLink(item.href) ? 'hover' : undefined}
                     aria-current={active ? 'page' : undefined}
-                    target={isExternalLink(item.href) ? '_blank' : undefined}
-                    rel={isExternalLink(item.href) ? 'noopener noreferrer' : undefined}
                     className={navLinkClass(active)}
                   >
                     {item.label}
@@ -153,8 +162,24 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
                 aria-label="Open menu"
                 className="mobile-menu-toggle inline-flex h-12 w-12 min-h-12 min-w-12 items-center justify-center rounded-xl p-2 text-ink transition-[color,background-color,opacity] duration-200 hover:bg-surface-hover focus-accent"
               >
-                <Icon path={GLYPHS.menu} className="h-6 w-6" />
-                <Icon path={GLYPHS.close} className="hidden h-6 w-6" />
+                <svg
+                  data-mobile-menu-open-icon
+                  className="h-6 w-6"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path fillRule="evenodd" d={GLYPHS.menu} clipRule="evenodd" />
+                </svg>
+                <svg
+                  data-mobile-menu-close-icon
+                  className="hidden h-6 w-6"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path fillRule="evenodd" d={GLYPHS.close} clipRule="evenodd" />
+                </svg>
               </button>
             </div>
           </div>
@@ -173,9 +198,8 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
                   <a
                     key={item.href}
                     href={navHref(item.href)}
+                    data-astro-prefetch={!isExternalLink(item.href) ? 'hover' : undefined}
                     aria-current={active ? 'page' : undefined}
-                    target={isExternalLink(item.href) ? '_blank' : undefined}
-                    rel={isExternalLink(item.href) ? 'noopener noreferrer' : undefined}
                     className={[
                       'flex min-h-12 items-center rounded-lg px-4 py-3 text-lg font-medium transition-colors duration-200 focus-accent active:bg-surface-hover',
                       active ? 'bg-surface-hover text-ink' : 'text-ink-secondary hover:bg-surface-hover/50 hover:text-ink',
@@ -190,37 +214,44 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
         </div>
       </header>
 
-      <main id="main-content" className="mx-auto w-full flex-1 overflow-x-hidden px-2 py-4">
-        {children}
-      </main>
+      {isStandalone ? (
+        <div id="main-content" tabIndex={-1} className="w-full flex-1">
+          {children}
+        </div>
+      ) : (
+        <main id="main-content" className="mx-auto w-full flex-1 overflow-x-hidden px-2 py-4">
+          {children}
+        </main>
+      )}
 
-      <button id="back-to-top" data-back-to-top type="button" aria-label="Back to top" className="back-to-top" hidden>
-        ↑
-      </button>
-
-      <footer className="mt-24 border-t border-border bg-surface lg:mt-32">
+      <footer
+        className="mt-24 border-t border-border bg-surface lg:mt-32"
+        data-pagefind-ignore=""
+      >
         <div className="mx-auto w-full max-w-5xl px-6 pb-7 pt-14 sm:px-10">
           <div className={[
-            'grid grid-cols-1 gap-10 sm:grid-cols-2 sm:gap-12',
+            'grid grid-cols-1 items-start gap-10 sm:grid-cols-2 sm:gap-12',
             hideFooterNewsletter ? 'md:grid-cols-3' : 'md:grid-cols-4',
           ].join(' ')}>
-            <section aria-label="Site identity" className="flex flex-col gap-4">
+            <section data-footer-column="brand" aria-label="Site identity" className="flex flex-col gap-4">
               <div className="flex items-center gap-3">
                 <span className="bs-mark bs-mark--sm" aria-hidden="true">BS</span>
-                <span className="text-sm font-semibold leading-none tracking-tight text-ink">{site.title}</span>
+                <span className="font-sans text-sm font-semibold leading-none tracking-tight text-ink">{site.title}</span>
               </div>
-              <p className="m-0 text-sm font-normal italic leading-snug text-ink-muted">{SITE_TAGLINE}</p>
+              <p className="m-0 font-serif text-sm font-normal italic leading-snug text-ink-muted">{SITE_TAGLINE}</p>
             </section>
 
-            <section aria-labelledby="footer-latest-heading" className="flex flex-col gap-4">
-              <h2 className={labelClass}>Latest writing</h2>
+            <section data-footer-column="latest" aria-labelledby="footer-latest-heading" className="flex flex-col gap-4">
+              <h2 id="footer-latest-heading" className={labelClass}>Latest writing</h2>
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
-                {latestWriting.map((entry) => {
-                  const post = entry.data
+                {latestWriting.map((post) => {
                   return (
                     <li key={post.slug} className="flex flex-col gap-0.5">
                       <a
                         href={siteHref(`/${post.slug}`)}
+                        data-astro-prefetch="hover"
+                        data-umami-event="footer_latest_click"
+                        data-umami-event-slug={post.slug}
                         title={post.title}
                         className="focus-accent rounded-sm font-serif text-sm leading-snug text-ink-secondary transition-colors duration-200 line-clamp-1 hover:text-ink"
                       >
@@ -233,6 +264,9 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
               </ul>
               <a
                 href={siteHref('/pages')}
+                data-astro-prefetch="hover"
+                data-umami-event="footer_nav_click"
+                data-umami-event-target="archive"
                 className="focus-accent group inline-flex items-center gap-1 text-sm font-medium text-ink-secondary transition-colors duration-200 hover:text-accent rounded-sm"
               >
                 All writing
@@ -240,8 +274,8 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
               </a>
             </section>
 
-            <section aria-labelledby="footer-elsewhere-heading" className="flex flex-col gap-4">
-              <h2 className={labelClass}>Elsewhere</h2>
+            <section data-footer-column="elsewhere" aria-labelledby="footer-elsewhere-heading" className="flex flex-col gap-4">
+              <h2 id="footer-elsewhere-heading" className={labelClass}>Elsewhere</h2>
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {elsewhere.map((social) => (
                   <li key={social.name}>
@@ -250,6 +284,8 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
                       target={social.external ? '_blank' : undefined}
                       rel={social.external ? 'noopener noreferrer' : undefined}
                       aria-label={`Visit ${social.name}`}
+                      data-umami-event="outbound"
+                      data-umami-event-platform={social.name.toLowerCase()}
                       className="focus-accent rounded-sm inline-flex items-center gap-2 text-sm text-ink-secondary transition-colors duration-200 hover:text-ink"
                     >
                       <SocialGlyph name={social.icon} className="w-3.5 h-3.5" />
@@ -261,14 +297,18 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
             </section>
 
             {!hideFooterNewsletter && (
-              <section aria-labelledby="footer-subscribe-heading" className="flex flex-col gap-4">
-                <h2 className={labelClass}>Subscribe</h2>
-                <p className="m-0 text-sm leading-relaxed text-ink-muted">
+              <section
+                data-footer-column="subscribe"
+                aria-labelledby="footer-subscribe-heading"
+                className="newsletter-signup flex flex-col gap-4"
+              >
+                <h2 id="footer-subscribe-heading" className={labelClass}>Subscribe</h2>
+                <p className="m-0 font-sans text-footnote leading-relaxed text-ink-muted">
                   Occasional emails on what I&apos;m building and reading.{' '}
                   <a
                     href={NEWSLETTER_LINK}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    data-umami-event="newsletter_substack_click"
+                    data-umami-event-source="footer"
                     className="focus-accent rounded-sm underline underline-offset-2 transition-colors hover:text-ink-secondary"
                   >
                     Read on Substack →
@@ -279,145 +319,44 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
             )}
           </div>
 
-          <div className="mt-14 flex flex-wrap items-center gap-3.5 border-t border-border pt-6 text-sm text-ink-muted">
+          <div className="mt-14 flex flex-wrap items-center gap-3.5 border-t border-border pt-6 font-sans text-footnote text-ink-muted">
             <span>© {year} {site.title}</span>
             <span className="mx-1 select-none text-border" aria-hidden="true">·</span>
-            <a href={siteHref('/index.xml')} className="focus-accent rounded-sm transition-colors duration-200 hover:text-ink">
+            <a
+              href={siteHref('/index.xml')}
+              data-astro-prefetch="hover"
+              data-umami-event="footer_nav_click"
+              data-umami-event-target="rss"
+              className="focus-accent rounded-sm transition-colors duration-200 hover:text-ink"
+            >
               RSS
             </a>
             <span className="mx-1 select-none text-border" aria-hidden="true">·</span>
-            <a href={siteHref('/privacy')} className="focus-accent rounded-sm transition-colors duration-200 hover:text-ink">
+            <a
+              href={siteHref('/privacy')}
+              data-astro-prefetch="hover"
+              data-umami-event="footer_nav_click"
+              data-umami-event-target="privacy"
+              className="focus-accent rounded-sm transition-colors duration-200 hover:text-ink"
+            >
               Privacy
             </a>
           </div>
         </div>
       </footer>
 
-      <ShellBehaviorScript />
+      <button
+        id="back-to-top"
+        type="button"
+        className="fixed bottom-6 right-6 z-40 hidden h-11 min-h-11 w-11 min-w-11 items-center justify-center rounded-full border border-border bg-surface-elevated text-ink-secondary shadow-float transition-[background-color,color,opacity,transform] duration-200 hover:bg-surface-hover hover:text-ink focus-accent"
+        aria-label="Back to top"
+      >
+        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+        </svg>
+      </button>
+
+      <ShellBehavior />
     </div>
   )
-}
-
-/**
- * Inline behavior for the static shell: mobile menu, social "more/less", and
- * the newsletter signup flow. Mirrors the reference site's vanilla-JS
- * initializers (Header, SocialProfiles, NewsletterSignup). Runs once per full
- * page load — Nib is a multi-page static site, so every navigation re-parses
- * the document and re-executes this script.
- */
-function ShellBehaviorScript() {
-  const script = `
-(function () {
-  function ready(fn) { if (document.readyState !== 'loading') fn(); else document.addEventListener('DOMContentLoaded', fn); }
-
-  function initHeader() {
-    var header = document.querySelector('[data-site-header]');
-    if (!header || header.__nibHeader) return;
-    header.__nibHeader = true;
-    var toggle = header.querySelector('[data-mobile-menu-toggle]');
-    var menu = header.querySelector('[data-mobile-menu]');
-    var openIcon = toggle && toggle.querySelectorAll('svg')[0];
-    var closeIcon = toggle && toggle.querySelectorAll('svg')[1];
-    function setOpen(open, restoreFocus) {
-      if (!toggle || !menu) return;
-      toggle.setAttribute('aria-expanded', String(open));
-      toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-      menu.setAttribute('aria-hidden', String(!open));
-      menu.classList.toggle('hidden', !open);
-      if (openIcon) openIcon.classList.toggle('hidden', open);
-      if (closeIcon) closeIcon.classList.toggle('hidden', !open);
-      toggle.classList.toggle('is-active', open);
-      if (!open && restoreFocus) toggle.focus();
-    }
-    toggle && toggle.addEventListener('click', function () {
-      setOpen(toggle.getAttribute('aria-expanded') !== 'true');
-    });
-    menu && menu.addEventListener('click', function (event) {
-      if (event.target instanceof Element && event.target.closest('a')) setOpen(false);
-    });
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' && toggle && toggle.getAttribute('aria-expanded') === 'true') setOpen(false, true);
-    });
-    window.addEventListener('resize', function () {
-      if (window.matchMedia('(min-width: 1024px)').matches) setOpen(false);
-    });
-  }
-
-  function initSocial() {
-    var button = document.querySelector('[data-social-more]');
-    if (!button || button.__nibSocial) return;
-    button.__nibSocial = true;
-    button.addEventListener('click', function () {
-      var groupId = button.getAttribute('aria-controls');
-      var group = groupId && document.getElementById(groupId);
-      if (!group) return;
-      var next = button.getAttribute('aria-expanded') !== 'true';
-      group.hidden = !next;
-      button.setAttribute('aria-expanded', String(next));
-      button.textContent = next ? (button.dataset.lessLabel || 'Less') : (button.dataset.moreLabel || 'More');
-    });
-  }
-
-  function initNewsletterForms() {
-    document.querySelectorAll('[data-newsletter-form]').forEach(function (form) {
-      if (form.__nibNewsletter) return;
-      form.__nibNewsletter = true;
-      form.addEventListener('submit', function (event) {
-        event.preventDefault();
-        var api = form.getAttribute('data-api-url');
-        var emailInput = form.querySelector('[data-newsletter-email]') || form.querySelector('input[type="email"]');
-        var email = emailInput && emailInput.value;
-        if (!email) return;
-        var submit = form.querySelector('[data-newsletter-submit]');
-        var text = form.querySelector('[data-newsletter-button-text]');
-        var spinner = form.querySelector('[data-newsletter-button-spinner]');
-        var success = form.querySelector('[data-newsletter-success]');
-        var errorBox = form.querySelector('[data-newsletter-error]');
-        var errorMsg = form.querySelector('[data-newsletter-error-message]');
-        var root = form.closest('.newsletter-signup') || form.parentElement;
-        var priorSuccess = root && root.querySelector('[data-newsletter-success]');
-        var priorError = root && root.querySelector('[data-newsletter-error]');
-        function show(el) { el && el.classList.remove('hidden'); }
-        function hide(el) { el && el.classList.add('hidden'); }
-        hide(success); hide(priorSuccess); hide(errorBox); hide(priorError);
-        if (submit) submit.disabled = true;
-        if (text) text.classList.add('hidden');
-        if (spinner) spinner.classList.remove('hidden');
-        var body = new URLSearchParams();
-        body.append('email', email);
-        fetch(api, { method: 'POST', body: body, headers: { 'Accept': 'application/json' } })
-          .then(function (res) { if (!res.ok) throw new Error('status ' + res.status); return res.text().then(function () {}); })
-          .then(function () {
-            hide(priorError); hide(errorBox);
-            if (success) show(success); else show(priorSuccess);
-            form.reset();
-          })
-          .catch(function () {
-            hide(priorSuccess); hide(success);
-            if (errorMsg) errorMsg.textContent = 'Something went wrong. Please try again.';
-            if (errorBox) show(errorBox); else show(priorError);
-          })
-          .finally(function () {
-            if (submit) submit.disabled = false;
-            if (text) text.classList.remove('hidden');
-            if (spinner) spinner.classList.add('hidden');
-          });
-      });
-    });
-  }
-
-  function initBackToTop() {
-    var button = document.querySelector('[data-back-to-top]');
-    if (!button || button.__nibBackToTop) return;
-    button.__nibBackToTop = true;
-    function update() { button.hidden = window.scrollY < 500; }
-    window.addEventListener('scroll', update, { passive: true });
-    button.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
-    update();
-  }
-
-  ready(function () { initHeader(); initSocial(); initNewsletterForms(); initBackToTop(); });
-})();
-`
-  return <script dangerouslySetInnerHTML={{ __html: script }} />
 }

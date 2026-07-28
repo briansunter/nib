@@ -2,6 +2,7 @@
 title: "Time Complexity Analysis"
 description: "What Big O notation actually means, how to compare algorithm efficiency, and the difference between O, Theta, and Omega."
 date: 2022-08-22T00:00:00.000Z
+math: true
 tags:
   - "algorithms"
   - "data-structures"
@@ -22,7 +23,7 @@ layout: article
 
 ## Priori vs posteriori analysis
 
-See my detailed notes on [a posteriori vs a priori analysis](/posteriori-vs-a-priori-analysis-of-algorithms).
+See my detailed notes on [[posteriori-vs-a-priori-analysis-of-algorithms|a posteriori vs a priori analysis]].
 
 **A priori analysis** is theoretical, hardware independent, and language independent. We analyze time and space as mathematical functions.
 
@@ -204,7 +205,7 @@ Let's trace the values:
 
 How many times does `stmt` execute? This is equivalent to $1 + 2 + 3 + ... + n$.
 
-Using the [integer sum formula](/integer-sum-formula):
+Using the [[integer-sum-formula|integer sum formula]]:
 
 $$f(n) = \frac{n(n+1)}{2} = \frac{n^2 + n}{2}$$
 
@@ -230,7 +231,7 @@ Let's trace the values:
 | 4 | 10 |
 | k | 1+2+...+k |
 
-Using the [integer sum formula](/integer-sum-formula), $p = \frac{k(k+1)}{2}$.
+Using the [[integer-sum-formula|integer sum formula]], $p = \frac{k(k+1)}{2}$.
 
 The loop stops when $p > n$:
 
@@ -458,7 +459,7 @@ If the element is at position 1, we do 1 comparison. At position 2, 2 comparison
 
 Total comparisons: $1 + 2 + 3 + ... + n$
 
-Using the [integer sum formula](/integer-sum-formula): $\frac{n(n+1)}{2}$
+Using the [[integer-sum-formula|integer sum formula]]: $\frac{n(n+1)}{2}$
 
 Dividing by n cases: $\frac{n+1}{2}$
 

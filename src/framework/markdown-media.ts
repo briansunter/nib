@@ -27,6 +27,11 @@ function attributeValue(attributes: string, name: string): string | undefined {
   return match?.[2]
 }
 
+function hasBooleanAttribute(attributes: string, name: string): boolean {
+  return new RegExp(`(?:^|\\s)${name}(?:\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]+))?(?=\\s|$)`, 'i')
+    .test(attributes)
+}
+
 function allowedIframeSource(value: string, hosts: ReadonlySet<string>): boolean {
   try {
     const url = new URL(value)
@@ -42,13 +47,40 @@ function rawIframe(
 ): HastNode | undefined {
   const match = value.match(/^\s*<iframe\b([\s\S]*?)>\s*<\/iframe>\s*$/i)
   if (!match) return undefined
-  const source = attributeValue(match[1]!, 'src')
+  const attributes = match[1]!
+  const source = attributeValue(attributes, 'src')
   if (!source || !allowedIframeSource(source, options.iframeHosts)) return undefined
   return element('iframe', {
     src: source,
-    title: attributeValue(match[1]!, 'title') ?? options.iframeTitle,
-    loading: attributeValue(match[1]!, 'loading') ?? 'lazy',
-    allowFullScreen: true,
+    title: attributeValue(attributes, 'title') ?? options.iframeTitle,
+    loading: attributeValue(attributes, 'loading') ?? 'lazy',
+    ...(attributeValue(attributes, 'width') === undefined
+      ? {}
+      : { width: attributeValue(attributes, 'width') }),
+    ...(attributeValue(attributes, 'height') === undefined
+      ? {}
+      : { height: attributeValue(attributes, 'height') }),
+    ...(attributeValue(attributes, 'frameborder') === undefined
+      ? {}
+      : { frameBorder: attributeValue(attributes, 'frameborder') }),
+    ...(attributeValue(attributes, 'allow') === undefined
+      ? {}
+      : { allow: attributeValue(attributes, 'allow') }),
+    ...(attributeValue(attributes, 'style') === undefined
+      ? {}
+      : { style: attributeValue(attributes, 'style') }),
+    ...(attributeValue(attributes, 'referrerpolicy') === undefined
+      ? {}
+      : { referrerPolicy: attributeValue(attributes, 'referrerpolicy') }),
+    ...(attributeValue(attributes, 'sandbox') === undefined
+      ? {}
+      : { sandbox: attributeValue(attributes, 'sandbox') }),
+    ...(attributeValue(attributes, 'class') === undefined
+      ? {}
+      : { className: attributeValue(attributes, 'class') }),
+    ...(hasBooleanAttribute(attributes, 'allowfullscreen')
+      ? { allowFullScreen: true }
+      : {}),
   })
 }
 

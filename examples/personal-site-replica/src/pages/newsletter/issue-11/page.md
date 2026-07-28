@@ -37,7 +37,7 @@ I've started getting into stand-up paddleboarding, which is a ton of fun (though
 
 I'm looking forward to trying my hand at surfing soon. There are tons of surfers out at the beach, and watching them is entertaining, especially the people hydrofoil surfing, gliding on top of the water using a hydrofoil under the board.
 
-<iframe src="https://www.youtube.com/embed/uz7NN1osyHw" title="Embedded media"></iframe>
+<iframe width="515" height="915" src="https://www.youtube.com/embed/uz7NN1osyHw" title="Hydrofoil Surfing in Waikiki - Honolulu Hawaii" loading="lazy" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 
 We've been road-tripping around the island, discovering new beaches and unique scenery in every area. It's an incredible place to live if you're a fan of the outdoors, and there's always something new to explore. Living in Hawaii has been a dream, and I'm incredibly grateful to be here.
 

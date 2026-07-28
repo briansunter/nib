@@ -116,7 +116,7 @@ Correct this to standard English:
 
 The new [insert capability](https://platform.openai.com/docs/guides/text-generation) adds the contextually relevant text in the middle of existing content.
 
-Allows you to specify where the text should be injected by writing `insert` in the prompt.
+Allows you to specify where the text should be injected by writing `[[insert]]` in the prompt.
 
 #### Additional GPT-3 Configuration Options
 

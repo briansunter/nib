@@ -10,13 +10,13 @@ layout: article
 ---
 ## Summary and Reflection 🤔
 
-This week I wrote the first section [intro-to-algorithms](/intro-to-algorithms) from the [algorithms-boot-camp](/algorithms-boot-camp) which focuses on a simple introduction to what algorithms are and why they're important
+This week I wrote the first section [[intro-to-algorithms]] from the [[algorithms-boot-camp]] which focuses on a simple introduction to what algorithms are and why they're important
 
 For some "brain food" I share some thoughts from my all time favorite tech talk and an interesting paper on AI playing Stratego.
 
 ## Updates 🆕
 
-### [intro-to-algorithms](/intro-to-algorithms)
+### [[intro-to-algorithms]]
 
 The first section in the bootcamp focuses on introducing what an algorithm is.
 
@@ -30,9 +30,9 @@ I go through some examples of algorithms, what they can do, and why they're usef
 
 In this section, I'll share a productivity tip I've learned recently.
 
-### [logseq-projects](/logseq-projects)
+### [[logseq-projects]]
 
-I manage almost everything I do with [logseq-projects](/logseq-projects) . I use them to group tasks across different initiatives, prioritize them, and make progress on them. See this guide for an explanation or jump straight to my [logseq-projects](/logseq-projects)
+I manage almost everything I do with [[logseq-projects]] . I use them to group tasks across different initiatives, prioritize them, and make progress on them. See this guide for an explanation or jump straight to my [[logseq-projects]]
 
 ## Brain Food 🧠
 
@@ -120,4 +120,4 @@ Still amazed at the res pins
 
 ## Outro
 
-Check out the [newsletter-roadmap](/newsletter-roadmap) to see what I have in mind for future issues. Let me know on [twitter @bsunter](https://twitter.com)
+Check out the [[newsletter-roadmap]] to see what I have in mind for future issues. Let me know on [twitter @bsunter](https://twitter.com)

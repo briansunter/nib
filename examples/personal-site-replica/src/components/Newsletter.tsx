@@ -50,7 +50,12 @@ export function Newsletter() {
 
         <p className="mt-2.5 text-center text-xs text-ink-muted">
           By subscribing, you agree to our{' '}
-          <a href={siteHref('/privacy')} className="underline transition-colors hover:text-ink-secondary">
+          <a
+            href={siteHref('/privacy')}
+            data-umami-event="newsletter_privacy_click"
+            data-umami-event-source="newsletter"
+            className="underline transition-colors hover:text-ink-secondary"
+          >
             Privacy Policy
           </a>
           .

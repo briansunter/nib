@@ -1,149 +1,203 @@
 import { defineIsland } from '@briansunter/nib'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
+import '../styles/integrations/pagefind.css'
+import '../styles/integrations/search.css'
 
-interface SearchItem {
-  title: string
-  description?: string
-  href: string
-  kind?: string
-  tags?: string[]
-  text?: string
+interface PagefindUIInstance {
+  destroy(): void
+  triggerSearch(query: string): void
 }
 
-function normalized(value: string | undefined): string {
-  return (value ?? '').trim().toLowerCase()
+interface PagefindUIOptions {
+  element: HTMLElement
+  bundlePath: string
+  showImages: boolean
+  showSubResults: boolean
+  debounceTimeoutMs: number
+  translations?: Record<string, string>
 }
 
-function scoreResult(item: HTMLElement, terms: string[]): number | undefined {
-  const title = normalized(item.dataset.title)
-  const description = normalized(item.dataset.description)
-  const kind = normalized(item.dataset.kind)
-  const tags = normalized(item.dataset.tags)
-  const text = normalized(item.dataset.text)
-  let score = 0
-
-  for (const term of terms) {
-    if (!title.includes(term) && !tags.includes(term) && !description.includes(term)
-      && !kind.includes(term) && !text.includes(term)) {
-      return undefined
-    }
-
-    if (title === term) score += 1000
-    else if (title.startsWith(term)) score += 700
-    else if (title.includes(term)) score += 500
-    if (tags.includes(term)) score += 300
-    if (description.includes(term)) score += 150
-    if (kind.includes(term)) score += 100
-    if (text.includes(term)) score += 50
+declare global {
+  interface Window {
+    PagefindUI?: new (options: PagefindUIOptions) => PagefindUIInstance
+    __personalSitePagefindScript?: Promise<void>
   }
-
-  return score
 }
 
-function applySearch(list: HTMLElement, query: string): number {
-  const items = Array.from(list.querySelectorAll<HTMLElement>('li[data-search-item]'))
-  const terms = normalized(query).split(/\s+/).filter(Boolean)
-  const ranked = items
-    .map((item, index) => {
-      if (item.dataset.order === undefined) item.dataset.order = String(index)
-      const score = terms.length === 0 ? 0 : scoreResult(item, terms)
-      return { item, score, order: Number(item.dataset.order) }
-    })
-    .sort((left, right) => (
-      (right.score ?? -1) - (left.score ?? -1) || left.order - right.order
-    ))
-
-  for (const result of ranked) {
-    const matches = result.score !== undefined
-    result.item.hidden = !matches
-    if (matches) list.append(result.item)
-  }
-  return ranked.filter(({ score }) => score !== undefined).length
+function cleanResultUrl(raw: string): string {
+  const url = new URL(raw, window.location.origin)
+  url.pathname = url.pathname
+    .replace(/\/index\.html$/, '/')
+    .replace(/\.html$/, '')
+  return `${url.pathname}${url.search}${url.hash}`
 }
 
-// Filters a server-rendered #search-list by toggling `hidden` on its <li>
-// children. The full entry collection is never serialized into the island.
-function SearchComponent({ listId, indexUrl }: { listId: string; indexUrl: string }) {
-  const [query, setQuery] = useState('')
-  const [visible, setVisible] = useState<number | null>(null)
-  const [loaded, setLoaded] = useState(false)
+function loadPagefindUI(): Promise<void> {
+  if (window.PagefindUI) return Promise.resolve()
+  if (window.__personalSitePagefindScript) return window.__personalSitePagefindScript
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const tag = params.get('tag')
-    if (tag) setQuery(tag)
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    void fetch(indexUrl)
-      .then((response) => response.ok ? response.json() as Promise<{ items?: SearchItem[] }> : Promise.reject(new Error('Search index unavailable')))
-      .then((index) => {
-        if (cancelled || !Array.isArray(index.items)) return
-        const list = document.getElementById(listId)
-        if (!list) return
-        const fragment = document.createDocumentFragment()
-        for (const [order, item] of index.items.entries()) {
-          if (!item || typeof item.title !== 'string' || typeof item.href !== 'string') continue
-          const result = document.createElement('li')
-          result.className = 'search-result'
-          result.dataset.searchItem = ''
-          result.dataset.order = String(order)
-          result.dataset.title = item.title
-          result.dataset.description = item.description ?? ''
-          result.dataset.kind = item.kind ?? ''
-          result.dataset.tags = (item.tags ?? []).join(' ')
-          result.dataset.text = item.text ?? ''
-          result.dataset.search = [item.title, item.description, item.kind, ...(item.tags ?? [])]
-            .filter(Boolean)
-            .join(' ')
-          const link = document.createElement('a')
-          link.href = item.href
-          const kind = document.createElement('span')
-          kind.className = 'eyebrow'
-          kind.textContent = item.kind ?? 'Page'
-          const title = document.createElement('strong')
-          title.textContent = item.title
-          const description = document.createElement('span')
-          description.textContent = item.description ?? ''
-          link.append(kind, title, description)
-          result.append(link)
-          fragment.append(result)
-        }
-        list.replaceChildren(fragment)
-        setLoaded(true)
+  window.__personalSitePagefindScript = new Promise((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[data-personal-site-pagefind]',
+    )
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true })
+      existing.addEventListener('error', () => reject(new Error('Unable to load Pagefind UI')), {
+        once: true,
       })
-      .catch(() => undefined)
-    return () => { cancelled = true }
-  }, [indexUrl, listId])
-
-  useEffect(() => {
-    const list = document.getElementById(listId)
-    if (!list) {
-      setVisible(0)
       return
     }
 
-    setVisible(applySearch(list, query))
-  }, [query, listId, loaded])
+    const script = document.createElement('script')
+    script.src = '/pagefind/pagefind-ui.js'
+    script.async = true
+    script.dataset.personalSitePagefind = ''
+    script.addEventListener('load', () => resolve(), { once: true })
+    script.addEventListener('error', () => reject(new Error('Unable to load Pagefind UI')), {
+      once: true,
+    })
+    document.head.append(script)
+  })
+
+  return window.__personalSitePagefindScript
+}
+
+function SearchComponent() {
+  const root = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const { signal } = controller
+    let instance: PagefindUIInstance | undefined
+    let observer: MutationObserver | undefined
+    let input: HTMLInputElement | null = null
+    let inputRetryTimer = 0
+    let queryTimer = 0
+    let disposed = false
+
+    const emptyState = document.querySelector<HTMLElement>('[data-search-empty-state]')
+
+    const updateEmptyState = (query: string) => {
+      const hasQuery = Boolean(query.trim())
+      if (!emptyState) return
+      emptyState.hidden = hasQuery
+      if (hasQuery) {
+        emptyState.setAttribute('aria-hidden', 'true')
+        emptyState.setAttribute('inert', '')
+      } else {
+        emptyState.removeAttribute('aria-hidden')
+        emptyState.removeAttribute('inert')
+      }
+    }
+
+    const enhanceResults = () => {
+      root.current
+        ?.querySelectorAll<HTMLAnchorElement>('.pagefind-ui__result-link')
+        .forEach((link) => {
+          link.href = cleanResultUrl(link.getAttribute('href') ?? link.href)
+          link.dataset.astroPrefetch = 'hover'
+        })
+    }
+
+    const bindInput = (attempt = 0) => {
+      if (disposed) return
+      input = root.current?.querySelector<HTMLInputElement>('.pagefind-ui__search-input') ?? null
+      if (!input) {
+        if (attempt < 50) {
+          inputRetryTimer = window.setTimeout(() => bindInput(attempt + 1), 100)
+        }
+        return
+      }
+
+      const applyQuery = (query: string, dispatch = false) => {
+        if (!input) return
+        input.value = query
+        updateEmptyState(query)
+        if (dispatch) input.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+
+      const initialQuery = new URLSearchParams(window.location.search).get('q') ?? ''
+      applyQuery(initialQuery, Boolean(initialQuery))
+
+      input.addEventListener(
+        'input',
+        () => {
+          const query = input?.value.trim() ?? ''
+          updateEmptyState(query)
+          window.clearTimeout(queryTimer)
+          queryTimer = window.setTimeout(() => {
+            const url = new URL(window.location.href)
+            if (query) url.searchParams.set('q', query)
+            else url.searchParams.delete('q')
+            window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
+          }, 150)
+        },
+        { signal },
+      )
+
+      window.addEventListener(
+        'popstate',
+        () => {
+          const query = new URLSearchParams(window.location.search).get('q') ?? ''
+          applyQuery(query, true)
+        },
+        { signal },
+      )
+
+      observer = new MutationObserver(enhanceResults)
+      observer.observe(root.current ?? input, { childList: true, subtree: true })
+      enhanceResults()
+    }
+
+    document.addEventListener(
+      'error',
+      (event) => {
+        const target = event.target as HTMLElement
+        if (target?.classList?.contains('pagefind-ui__result-image')) {
+          target.style.display = 'none'
+        }
+      },
+      { capture: true, signal },
+    )
+
+    void loadPagefindUI()
+      .then(() => {
+        if (disposed || !root.current || !window.PagefindUI) return
+        instance = new window.PagefindUI({
+          element: root.current,
+          bundlePath: '/pagefind/',
+          showImages: true,
+          showSubResults: true,
+          debounceTimeoutMs: 150,
+        })
+        bindInput()
+      })
+      .catch(() => {
+        // The generated Pagefind bundle is available after a production build.
+        // Keep the discovery content usable if a dev server has not built it yet.
+      })
+
+    return () => {
+      disposed = true
+      controller.abort()
+      observer?.disconnect()
+      instance?.destroy()
+      window.clearTimeout(inputRetryTimer)
+      window.clearTimeout(queryTimer)
+    }
+  }, [])
 
   return (
-    <div className="search-tool">
-      <label htmlFor="site-search">Search the site</label>
-      <div className="search-tool__input-row">
-        <input
-          id="site-search"
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Try “algorithms”, “recipe”, or a tag"
-        />
-        {query && <button type="button" className="search-clear" onClick={() => setQuery('')}>Clear</button>}
-      </div>
-      <p className="search-status" aria-live="polite">
-        {visible === null ? 'Search the archive' : `${visible} result${visible === 1 ? '' : 's'}`}
-      </p>
-    </div>
+    <>
+      <link rel="stylesheet" href="/pagefind/pagefind-ui.css" />
+      <div
+        id="search"
+        ref={root}
+        className="search-widget"
+        data-pagefind-ui
+        data-bundle-path="/pagefind/"
+      />
+    </>
   )
 }
 
