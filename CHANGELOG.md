@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/briansunter/nib/compare/v0.16.0...v0.17.0) (2026-07-28)
+
+
+### Features
+
+* discover srcset references during source inspection ([a2047bf](https://github.com/briansunter/nib/commit/a2047bf8fea31f31202c1754e626060f83add9ec))
+
 ## [0.16.0](https://github.com/briansunter/nib/compare/v0.15.1...v0.16.0) (2026-07-28)
 
 

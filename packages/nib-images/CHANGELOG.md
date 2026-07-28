@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/briansunter/nib/compare/nib-images-v0.5.1...nib-images-v0.6.0) (2026-07-28)
+
+
+### Features
+
+* **images:** support srcset, imagesrcset, and picture elements ([85be004](https://github.com/briansunter/nib/commit/85be004d00cd89117409eb86d3309f9d8a787206))
+
 ## [0.5.1](https://github.com/briansunter/nib/compare/nib-images-v0.5.0...nib-images-v0.5.1) (2026-07-28)
 
 
