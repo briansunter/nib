@@ -25,6 +25,7 @@ export {
   markdownBody,
 } from './framework/markdown-content'
 export { metadata } from './metadata'
+export { siteMetadata } from './site-metadata'
 export { search } from './search'
 export { siteHref } from './framework/urls'
 export { z } from 'zod'
@@ -97,5 +98,6 @@ export type {
   PublicationManifestRoute,
 } from './framework/publication'
 export type { MetadataOptions } from './metadata'
+export type { SiteMetadataOptions } from './site-metadata'
 export type { MarkdownMediaOptions } from './framework/markdown-media'
 export type { SearchItem, SearchItems, SearchOptions } from './search'

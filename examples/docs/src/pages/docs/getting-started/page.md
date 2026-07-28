@@ -36,6 +36,27 @@ export const site = {
 Import this value from the site shell, footer, feed setup, or anywhere else
 that needs it. Nib does not assign meaning to its keys.
 
+If you want site-wide title and description policy, opt into the metadata
+plugin from `nib.config.ts`:
+
+```ts
+import { defineConfig, siteMetadata } from '@briansunter/nib'
+import { site } from './src/site'
+
+export default defineConfig({
+  plugins: [
+    siteMetadata({
+      title: site.name,
+      description: site.description,
+      titleTemplate: `%s | ${site.name}`,
+    }),
+  ],
+})
+```
+
+Without this plugin, each page's metadata is emitted unchanged. Navigation
+stays app-owned in either case.
+
 ## 3. Add an optional Vite adapter
 
 Nib owns Vite’s entries, SSR, base path, and output settings. Add project-owned

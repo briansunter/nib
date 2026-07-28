@@ -14,6 +14,7 @@ import {
 } from '../src/framework/verify'
 import { metadata } from '../src/metadata'
 import { search } from '../src/search'
+import { siteMetadata } from '../src/site-metadata'
 
 const temporaryDirectories: string[] = []
 
@@ -31,6 +32,53 @@ function pageOutput(html = '<title>Page</title>') {
 }
 
 describe('publication integrations', () => {
+  it('applies optional site metadata without owning page metadata', async () => {
+    const plugin = siteMetadata({
+      title: 'Nib',
+      description: 'Site description',
+      titleTemplate: '%s | Nib',
+      head: {
+        elements: [{
+          tag: 'link',
+          attributes: { rel: 'alternate', href: '/rss.xml' },
+        }],
+      },
+    })
+    const extension = await plugin.renderer?.({
+      command: 'build', mode: 'production', root: '/site', base: '/',
+    })
+    const home = extension?.head?.({
+      command: 'build', mode: 'production', root: '/site', base: '/',
+      route: {
+        kind: 'page', path: '/', source: 'test', status: 200,
+        meta: { title: 'Home' },
+      },
+    })
+    const page = extension?.head?.({
+      command: 'build', mode: 'production', root: '/site', base: '/',
+      route: {
+        kind: 'page', path: '/docs/', source: 'test', status: 200,
+        meta: { title: 'Docs', description: 'Page description' },
+      },
+    })
+
+    expect(home).toMatchObject({
+      title: 'Nib',
+      description: 'Site description',
+      elements: [{ tag: 'link' }],
+    })
+    expect(page).toMatchObject({ title: 'Docs | Nib' })
+    expect(page).not.toHaveProperty('description')
+    expect(() => siteMetadata({ title: '' })).toThrow('non-empty')
+    expect(() => siteMetadata({ title: 'Nib', titleTemplate: 'Nib' }))
+      .toThrow('exactly one')
+    expect(() => siteMetadata({
+      title: 'Nib',
+      // @ts-expect-error title overrides belong to the typed site metadata fields.
+      head: { title: 'Wrong seam' },
+    })).toThrow('only structured elements')
+  })
+
   it('generates hosting companions from one trailing-slash manifest', async () => {
     const manifest = createPublicationManifest('/docs/', 'always', [
       { routePath: '/', artifact: 'index.html', output: pageOutput() },

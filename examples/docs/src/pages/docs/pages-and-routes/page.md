@@ -41,9 +41,9 @@ export default function AboutPage() {
 
 The page title is required and is the document title by default. Description
 and other metadata fields are optional. `draft: true` prevents a page from
-entering the route map or generated output. Applications that want title
-templates or metadata defaults can implement that policy with a local renderer
-plugin.
+entering the route map or generated output. Applications that want a site title,
+title template, fallback description, or shared head elements can opt into
+`siteMetadata()` from `@briansunter/nib`.
 
 TSX pages, layouts, and ordinary components produce static HTML. Put state and event handlers in a [React island](../react-islands/) so only that boundary loads browser JavaScript.
 

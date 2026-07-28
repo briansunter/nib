@@ -144,13 +144,13 @@ describe('published package consumer', () => {
       generatedConfigPath,
       generatedConfig
         .replace(
-          "import { defineConfig } from '@briansunter/nib'",
-          "import { defineConfig } from '@briansunter/nib'\n"
+          "import { defineConfig, siteMetadata } from '@briansunter/nib'",
+          "import { defineConfig, siteMetadata } from '@briansunter/nib'\n"
           + "import { clientNavigation } from '@briansunter/nib/navigation'",
         )
         .replace(
-          '  plugins: [siteMetadata],',
-          '  plugins: [siteMetadata, clientNavigation()],',
+          '  plugins: [',
+          '  plugins: [\n    clientNavigation(),',
         ),
     )
     await execute(
@@ -158,10 +158,18 @@ describe('published package consumer', () => {
       ['install', '--no-audit', '--no-fund', '--ignore-scripts', tarball],
       { cwd: site },
     )
-    await execute('npm', ['run', 'typecheck'], {
-      cwd: site,
-      env: consumerEnvironment,
-    })
+    try {
+      await execute('npm', ['run', 'typecheck'], {
+        cwd: site,
+        env: consumerEnvironment,
+      })
+    } catch (error) {
+      const output = error as { stdout?: string; stderr?: string }
+      throw new Error(
+        `Packed consumer typecheck failed:\n${output.stdout ?? ''}${output.stderr ?? ''}`,
+        { cause: error },
+      )
+    }
     await execute('npm', ['run', 'build'], {
       cwd: site,
       env: consumerEnvironment,

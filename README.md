@@ -195,14 +195,33 @@ export const meta = {
 } satisfies PageMeta
 ```
 
-There is no `resolveHead` phase. If an application wants a title template or a
-default description, it may express that optional policy as a small local
-renderer plugin; otherwise Nib emits page metadata directly. Renderer plugins
-can also contribute the same `HeadContribution` shape from their typed
-`renderer().head(context)` hook. Nib emits page metadata followed by plugin
-contributions; later `title` and `description` overrides win. Head attributes
-are escaped, event-handler attributes are rejected, and script/style text is
-protected from closing its raw-text element.
+There is no `resolveHead` phase. Without a plugin, Nib emits page metadata
+directly. Applications that want site-wide document policy can opt into the
+typed first-party plugin:
+
+```ts
+import { defineConfig, siteMetadata } from '@briansunter/nib'
+import { site } from './src/site'
+
+export default defineConfig({
+  plugins: [
+    siteMetadata({
+      title: site.name,
+      description: site.description,
+      titleTemplate: `%s | ${site.name}`,
+    }),
+  ],
+})
+```
+
+The plugin uses its title for `/`, applies `titleTemplate` to non-home page
+titles, and uses its description only when a page omits one. It can also add
+shared structured head elements. Navigation remains ordinary app data.
+Renderer plugins can contribute the same `HeadContribution` shape from their
+typed `renderer().head(context)` hook. Nib emits page metadata followed by
+plugin contributions; later `title` and `description` overrides win. Head
+attributes are escaped, event-handler attributes are rejected, and script/style
+text is protected from closing its raw-text element.
 When the `metadata()` plugin is enabled, a page's `image`, `type`, and
 `twitterCard` metadata override the plugin defaults independently, so article
 pages can use their own social preview without duplicating or replacing

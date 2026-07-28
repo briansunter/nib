@@ -3,6 +3,7 @@ import {
   fromCollection,
   metadata,
   search,
+  siteMetadata,
 } from '@briansunter/nib'
 import { images } from '@briansunter/nib-images/plugin'
 import { clientNavigation } from '@briansunter/nib/navigation'
@@ -15,7 +16,7 @@ import {
   topics,
 } from './src/content'
 import { SiteShell } from './src/site-shell'
-import { site, siteMetadata } from './src/site'
+import { site } from './src/site'
 
 const postFeed = fromCollection(posts, (entries) => entries.map(({ data }) => ({
   title: data.title,
@@ -47,7 +48,31 @@ export default defineConfig({
     adapters: ['netlify', 's3'],
   },
   plugins: [
-    siteMetadata,
+    siteMetadata({
+      title: site.name,
+      description: site.description,
+      titleTemplate: `%s · ${site.name}`,
+      head: {
+        elements: [
+          {
+            tag: 'link',
+            attributes: {
+              rel: 'icon',
+              type: 'image/svg+xml',
+              href: '/favicon.svg',
+            },
+          },
+          {
+            tag: 'link',
+            attributes: {
+              rel: 'alternate',
+              type: 'application/rss+xml',
+              href: '/rss.xml',
+            },
+          },
+        ],
+      },
+    }),
     images({
       widths: [320, 640, 960],
       content: [{
