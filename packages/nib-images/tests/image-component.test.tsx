@@ -760,7 +760,7 @@ describe('static Image component', () => {
     await fs.mkdir(clientDirectory, { recursive: true })
     await fs.writeFile(pageFile, [
       '<figure>',
-      '<img src="/site-assets/photo.jpg" alt="A photo" data-nib-widths="480, 800, 1200" sizes="(min-width: 1280px) 25vw, 100vw" loading="lazy" decoding="async">',
+      '<img src="/site-assets/photo.jpg" alt="A photo" data-nib-widths="480, 800, 1200" sizes="(min-width: 1280px) 25vw, 100vw" loading="lazy" decoding="async" fetchpriority="low" style="--pin-ratio: 2; max-width: 18rem; max-height: 22rem">',
       '</figure>',
     ].join('\n'))
     const replacements = await optimizeContentImages(
@@ -788,6 +788,8 @@ describe('static Image component', () => {
     expect(rewritten).not.toContain(' 1600w')
     // The internal hint attribute does not leak into the optimized output.
     expect(rewritten).not.toContain('data-nib-widths')
+    expect(rewritten).toContain('fetchPriority="low"')
+    expect(rewritten).toContain('--pin-ratio: 2; max-width: 18rem; max-height: 22rem')
   })
 
   it('content image rewriter separates display width from its responsive ladder', async () => {
@@ -839,6 +841,7 @@ describe('static Image component', () => {
     await sharp({
       create: { width: 80, height: 40, channels: 3, background: '#336699' },
     }).jpeg().toFile(path.join(publicDir, 'photo.jpg'))
+    await fs.writeFile(path.join(publicDir, 'art-directed.jpg'), 'art-directed-source')
     const options = normalizeImagesOptions(root, {
       formats: ['webp'],
       widths: [40],
@@ -859,8 +862,11 @@ describe('static Image component', () => {
       '<img src="https://cdn.example/site-assets/photo.jpg" alt="External">',
       '<img src="//cdn.example/site-assets/photo.jpg" alt="Protocol relative">',
     ]
+    const artDirectedMarkup =
+      '<picture><source srcset="data:image/svg+xml,%3Csvg%3E 1x, /site-assets/art-directed.jpg 2x"><img src="/site-assets/photo.jpg" alt="Art directed"></picture>'
     await fs.writeFile(pageFile, [
       ...protectedMarkup,
+      artDirectedMarkup,
       '<img src="/site-assets/photo.jpg" alt="Local">',
     ].join('\n'))
 
@@ -874,8 +880,16 @@ describe('static Image component', () => {
 
     const rewritten = await fs.readFile(pageFile, 'utf8')
     for (const markup of protectedMarkup) expect(rewritten).toContain(markup)
-    expect(rewritten.match(/<picture>/g)).toHaveLength(1)
+    expect(rewritten.match(/<picture>/g)).toHaveLength(2)
+    expect(rewritten).toContain(
+      '<picture><source srcset="data:image/svg+xml,%3Csvg%3E 1x, /journal/site-assets/art-directed.jpg 2x"><img src="/journal/site-assets/photo.jpg" alt="Art directed"></picture>',
+    )
+    expect(rewritten).not.toContain('<picture><source srcset="data:image/svg+xml,%3Csvg%3E 1x, /journal/site-assets/art-directed.jpg 2x"><picture>')
     expect(rewritten).toContain('/journal/assets/nib/')
+    await expect(fs.readFile(
+      path.join(clientDirectory, 'site-assets/art-directed.jpg'),
+      'utf8',
+    )).resolves.toBe('art-directed-source')
   })
 
   it('keeps non-root content URLs and physical artifacts aligned without duplicating the base', async () => {

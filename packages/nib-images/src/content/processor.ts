@@ -13,6 +13,7 @@ import {
   applyTextReplacements,
   attributesFor,
   parseHtmlElements,
+  srcsetUrls,
   type HtmlAttributes,
   type ParsedHtmlAttribute,
   type ParsedHtmlElement,
@@ -106,6 +107,10 @@ async function copyReferencedContentSources(
     const html = await fs.readFile(file, 'utf8')
     for (const element of parseHtmlElements(html)) {
       for (const attribute of element.attributes) {
+        if (attribute.localName === 'srcset' || attribute.localName === 'imagesrcset') {
+          for (const candidate of srcsetUrls(attribute.value)) references.add(candidate.value)
+          continue
+        }
         if (
           (attribute.localName === 'src' || attribute.localName === 'href')
           && attribute.value !== ''
@@ -180,6 +185,18 @@ function reactAttributes(input: HtmlAttributes): Record<string, string> {
   return result
 }
 
+function mergeAuthoredStyle(markup: string, authoredStyle: string | undefined): string {
+  if (authoredStyle === undefined || authoredStyle.trim() === '') return markup
+  const image = parseHtmlElements(markup).find((element) => element.tagName === 'img')
+  const style = image?.attributes.find((attribute) => attribute.localName === 'style')
+  if (style === undefined) return markup
+  const generated = style.value.trim()
+  const separator = generated === '' || generated.endsWith(';') ? '' : ';'
+  return applyTextReplacements(markup, [
+    replaceAttributeValue(markup, style, `${generated}${separator}${authoredStyle.trim()}`),
+  ])
+}
+
 /** Parses and validates a per-use `data-nib-widths` ladder (e.g. "480, 800, 1200"). */
 function parseAuthoredWidths(value: string | undefined): readonly number[] | undefined {
   if (value === undefined || value === '') return undefined
@@ -242,12 +259,25 @@ function normalizeContentReferences(
   const replacements: TextReplacement[] = []
   for (const element of parseHtmlElements(html)) {
     for (const attribute of element.attributes) {
-      if (
-        attribute.localName !== 'src'
-        && attribute.localName !== 'href'
-      ) {
+      if (attribute.localName === 'srcset' || attribute.localName === 'imagesrcset') {
+        const candidates = srcsetUrls(attribute.value).flatMap((candidate): TextReplacement[] => {
+          if (sourceForUrl(candidate.value, base, options) === undefined) return []
+          return [{
+            startOffset: candidate.start,
+            endOffset: candidate.end,
+            value: publicContentUrl(candidate.value, base),
+          }]
+        })
+        if (candidates.length > 0) {
+          replacements.push(replaceAttributeValue(
+            html,
+            attribute,
+            applyTextReplacements(attribute.value, candidates),
+          ))
+        }
         continue
       }
+      if (attribute.localName !== 'src' && attribute.localName !== 'href') continue
       if (sourceForUrl(attribute.value, base, options) === undefined) continue
       replacements.push(replaceAttributeValue(
         html,
@@ -272,8 +302,14 @@ async function rewriteFile(
   const normalizedHtml = normalizeContentReferences(html, base, options)
   let replacements = 0
   const imageReplacements: TextReplacement[] = []
-  for (const element of parseHtmlElements(normalizedHtml)) {
+  const elements = parseHtmlElements(normalizedHtml)
+  const pictures = elements.filter((element) => element.tagName === 'picture')
+  for (const element of elements) {
     if (element.tagName !== 'img') continue
+    if (pictures.some((picture) => (
+      picture.startOffset < element.startOffset
+      && element.endOffset <= picture.endOffset
+    ))) continue
     const input = attributesFor(element)
     const src = input.src
     if (!src) continue
@@ -297,7 +333,13 @@ async function rewriteFile(
       console.warn(`nib-images: preserving ${src} after source inspection failure: ${detail}`)
       continue
     }
-    const highPriority = input.fetchpriority?.toLowerCase() === 'high'
+    const authoredFetchPriority = input.fetchpriority?.toLowerCase()
+    const fetchPriority = (
+      authoredFetchPriority === 'high'
+      || authoredFetchPriority === 'low'
+      || authoredFetchPriority === 'auto'
+    ) ? authoredFetchPriority : undefined
+    const highPriority = fetchPriority === 'high'
     const loading = input.loading === 'lazy' || input.loading === 'eager' ? input.loading : undefined
     let authoredWidth: number | undefined
     let authoredWidths: readonly number[] | undefined
@@ -343,16 +385,22 @@ async function rewriteFile(
       ...(hardMaximum === undefined ? {} : { maxWidth: Math.min(source.width, hardMaximum) }),
       ...(widths === undefined ? {} : { widths }),
       ...(authoredSizes === undefined ? {} : { sizes: authoredSizes }),
-      ...(highPriority ? { priority: true as const } : loading === undefined ? {} : { loading }),
+      ...(highPriority
+        ? { priority: true as const }
+        : {
+            ...(loading === undefined ? {} : { loading }),
+            ...(fetchPriority === undefined ? {} : { fetchPriority }),
+          }),
     } as ImageProps
     replacements += 1
+    const optimized = renderToStaticMarkup(createElement(
+      ImageRegistryProvider,
+      { registry, children: createElement(Image, props) },
+    ))
     imageReplacements.push({
       startOffset: element.startOffset,
       endOffset: element.startTagEndOffset,
-      value: renderToStaticMarkup(createElement(
-        ImageRegistryProvider,
-        { registry, children: createElement(Image, props) },
-      )),
+      value: mergeAuthoredStyle(optimized, input.style),
     })
   }
   const rewritten = applyTextReplacements(normalizedHtml, imageReplacements)
