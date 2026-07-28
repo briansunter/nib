@@ -2,6 +2,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build, createServer, type Plugin } from 'vite'
 import { describe, expect, it } from 'vitest'
+import { cleanModuleId, moduleTarget } from '../src/framework/module-target'
 import { targetBoundaryGuard } from '../src/framework/target-boundary'
 
 const fixtureRoot = fileURLToPath(new URL('./fixtures/target-boundary', import.meta.url))
@@ -52,6 +53,24 @@ function resolvedAliasPlugin(): Plugin {
 }
 
 describe('client and server module boundaries', () => {
+  it('classifies the supported JavaScript and TypeScript suffixes consistently', () => {
+    expect([
+      'map.client',
+      'map.client.js',
+      'map.client.jsx',
+      'map.client.mjs',
+      'map.client.cjs',
+      'map.client.ts',
+      'map.client.tsx',
+      'map.client.mts',
+      'map.client.cts',
+    ].map(moduleTarget)).toEqual(Array.from({ length: 9 }, () => 'client'))
+    expect(moduleTarget('storage.server.ts?raw')).toBe('server')
+    expect(moduleTarget('ordinary.ts')).toBeUndefined()
+    expect(cleanModuleId('C:\\site\\map.client.ts?raw#part'))
+      .toBe('C:/site/map.client.ts')
+  })
+
   it('rejects server modules from the client graph with an import chain', () => {
     expect(() => resolve('client', '../data/posts.server.ts'))
       .toThrow(/client graph cannot import server-only module:[\s\S]*page\.tsx[\s\S]*posts\.server\.ts/)

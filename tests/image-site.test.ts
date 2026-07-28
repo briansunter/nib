@@ -1,15 +1,16 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import sharp from 'sharp'
-import { afterAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   buildSite,
   previewSite,
   siteViteConfig,
   startDevSite,
 } from '../src/framework/site'
+import { copyFixture, removeFixture } from './helpers/fixtures'
 
-const root = path.resolve('tests/fixtures/image-site')
+let root: string
 
 async function cacheArtifacts(directory: string): Promise<string[]> {
   const entries = await fs.readdir(directory, { withFileTypes: true }).catch(() => [])
@@ -30,9 +31,12 @@ async function imageRequest(origin: string): Promise<URL> {
   return new URL(image[1], origin)
 }
 
+beforeAll(async () => {
+  root = await copyFixture('image-site')
+})
+
 afterAll(async () => {
-  await fs.rm(path.join(root, 'dist'), { recursive: true, force: true })
-  await fs.rm(path.join(root, '.nib'), { recursive: true, force: true })
+  await removeFixture(root)
 })
 
 describe('optional image plugin', () => {
@@ -116,12 +120,7 @@ describe('optional image plugin', () => {
   }, 30_000)
 
   it('content-addresses the dev cache and refreshes optimized images through HMR', async () => {
-    const temporaryRoot = await fs.mkdtemp(path.join(path.resolve('tests'), '.image-hmr-'))
-    await fs.cp(root, temporaryRoot, { recursive: true })
-    await Promise.all([
-      fs.rm(path.join(temporaryRoot, 'dist'), { recursive: true, force: true }),
-      fs.rm(path.join(temporaryRoot, '.nib'), { recursive: true, force: true }),
-    ])
+    const temporaryRoot = await copyFixture('image-site', 'nib-image-hmr-')
     const sourceFile = path.join(temporaryRoot, 'src/hero.png')
     const server = await startDevSite({ root: temporaryRoot, host: '127.0.0.1', port: 0 })
     try {
@@ -186,7 +185,7 @@ describe('optional image plugin', () => {
       expect(await cacheArtifacts(path.join(temporaryRoot, '.nib/cache/images'))).toHaveLength(2)
     } finally {
       await server.close()
-      await fs.rm(temporaryRoot, { recursive: true, force: true })
+      await removeFixture(temporaryRoot)
     }
   }, 30_000)
 

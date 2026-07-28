@@ -1,5 +1,9 @@
 # Plugin content and routing
 
+Status: current
+
+Last reviewed: 2026-07-28
+
 ## Goal
 
 Allow optional packages to add data formats and virtual static routes without

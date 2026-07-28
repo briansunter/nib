@@ -2,7 +2,12 @@
 
 Status: Implemented, including lifecycle controllers and non-React behaviors
 
-This rationale record describes the current island architecture. The concise implementation contract lives in [`docs/architecture.md`](architecture.md); keep both documents synchronized when the runtime changes.
+Last reviewed: 2026-07-28
+
+This rationale record describes the current island architecture. The concise
+implementation contract lives in
+[`docs/reference/architecture.md`](../reference/architecture.md); keep both
+documents synchronized when the runtime changes.
 
 ## Summary
 
@@ -271,7 +276,7 @@ Generating Vite's SSR manifest is optional for the initial implementation. It ca
 
 Arbitrary components inside Markdown should be a separate `page.mdx` feature if it becomes necessary. MDX can compile to the same React page tree and use the same `defineIsland` boundaries. Adding JSX-like syntax directly to the existing Remark HTML pipeline would create a second, less standard component compiler and should be avoided.
 
-A separate proposal evaluates [`page.html` with typed layout and island bindings](html-pages-layouts-and-islands.md). It keeps HTML declarative and moves React imports and props to a companion TypeScript file instead of inventing component imports inside HTML.
+A separate proposal evaluates [`page.html` with typed layout and island bindings](../design/html-pages-layouts-and-islands.md). It keeps HTML declarative and moves React imports and props to a companion TypeScript file instead of inventing component imports inside HTML.
 
 ## State and composition rules
 

@@ -20,7 +20,7 @@ Nib is a self-contained static-site framework for React, Markdown, data pages, a
 8. [Plugin content and routing](./plugin-content-and-routing/) — add formats, virtual routes, redirects, sitemap XML, and route inspection.
 9. [GitHub Pages](./github-pages/) — deploy the static output with the correct base path.
 
-Maintainers can use [Releases](./releases/) for versioning and npm publishing. The repository [architecture document](https://github.com/briansunter/nib/blob/master/docs/architecture.md) explains the complete rendering pipeline, and the [island design record](https://github.com/briansunter/nib/blob/master/docs/interactive-react-islands.md) captures the rationale. A separate [HTML pages proposal](https://github.com/briansunter/nib/blob/master/docs/html-pages-layouts-and-islands.md) records a possible future markup-first route format; it is not implemented in the current release.
+Maintainers can use [Releases](./releases/) for versioning and npm publishing. The repository [architecture reference](https://github.com/briansunter/nib/blob/master/docs/reference/architecture.md) explains the complete rendering pipeline, and the [island design record](https://github.com/briansunter/nib/blob/master/docs/decisions/interactive-react-islands.md) captures the rationale. A separate [HTML pages proposal](https://github.com/briansunter/nib/blob/master/docs/design/html-pages-layouts-and-islands.md) records a possible future markup-first route format; it is not implemented in the current release.
 
 ## Three building blocks
 

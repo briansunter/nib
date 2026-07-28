@@ -2,6 +2,8 @@
 
 Status: accepted
 
+Last reviewed: 2026-07-28
+
 Nib applications may suffix modules with `.client.ts`, `.client.tsx`,
 `.server.ts`, or `.server.tsx` to state which build graph owns them. Production
 client builds reject server modules and production server builds reject client

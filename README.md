@@ -465,12 +465,13 @@ for layouts, cache behavior, and the current SVG/animated-image limits.
 
 For implementation details and design rationale:
 
-- [Architecture](docs/architecture.md)
-- [React islands](docs/interactive-react-islands.md)
-- [Optional client navigation ADR](docs/adr-optional-client-navigation.md)
-- [HTML pages proposal](docs/html-pages-layouts-and-islands.md) — proposed, not
+- [Architecture](docs/reference/architecture.md)
+- [React islands](docs/decisions/interactive-react-islands.md)
+- [Optional client navigation ADR](docs/decisions/optional-client-navigation.md)
+- [HTML pages proposal](docs/design/html-pages-layouts-and-islands.md) — proposed, not
   part of the current API
-- [Type-safe plugins and image optimization](docs/type-safe-plugins-and-image-optimization.md)
+- [Type-safe plugins and image optimization](docs/reference/type-safe-plugins-and-image-optimization.md)
+- [Licensing](docs/reference/licensing.md)
   — implemented design, APIs, and validation matrix
 
 ## Contributing

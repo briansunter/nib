@@ -2,24 +2,11 @@ import { builtinModules } from 'node:module'
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import { frameworkPackageEntries } from './package-entries'
 
-const entries = {
-  cli: path.resolve('src/cli.ts'),
-  index: path.resolve('src/index.ts'),
-  plugin: path.resolve('src/plugin.ts'),
-  sitemap: path.resolve('src/sitemap.ts'),
-  rss: path.resolve('src/rss.ts'),
-  verify: path.resolve('src/verify.ts'),
-  testing: path.resolve('src/testing.ts'),
-  hosting: path.resolve('src/hosting.ts'),
-  client: path.resolve('src/client.ts'),
-  'client/islands': path.resolve('src/client-islands.ts'),
-  'client/behaviors': path.resolve('src/client-behaviors.ts'),
-  'client/navigation': path.resolve('src/client-navigation.ts'),
-  navigation: path.resolve('src/navigation.ts'),
-  server: path.resolve('src/server.ts'),
-  'internal/server': path.resolve('src/runtime/server.ts'),
-}
+const entries = Object.fromEntries(
+  frameworkPackageEntries.map((entry) => [entry.name, path.resolve(entry.source)]),
+)
 
 const builtins = new Set([...builtinModules, ...builtinModules.map((name) => `node:${name}`)])
 

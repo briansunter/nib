@@ -3,6 +3,7 @@
   "version": "0.15.0",
   "packageManager": "bun@1.3.3",
   "description": "A static-site framework for React, Markdown, data pages, and opt-in islands.",
+  "license": "UNLICENSED",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/briansunter/nib.git"
@@ -44,15 +45,15 @@
       "import": "./dist/framework/client.js"
     },
     "./client/islands": {
-      "types": "./dist/framework/client-islands.d.ts",
+      "types": "./dist/framework/client/islands.d.ts",
       "import": "./dist/framework/client/islands.js"
     },
     "./client/behaviors": {
-      "types": "./dist/framework/client-behaviors.d.ts",
+      "types": "./dist/framework/client/behaviors.d.ts",
       "import": "./dist/framework/client/behaviors.js"
     },
     "./client/navigation": {
-      "types": "./dist/framework/client-navigation.d.ts",
+      "types": "./dist/framework/client/navigation.d.ts",
       "import": "./dist/framework/client/navigation.js"
     },
     "./navigation": {
@@ -64,7 +65,7 @@
       "import": "./dist/framework/server.js"
     },
     "./internal/server": {
-      "types": "./dist/framework/runtime/server.d.ts",
+      "types": "./dist/framework/internal/server.d.ts",
       "import": "./dist/framework/internal/server.js"
     },
     "./package.json": "./package.json"

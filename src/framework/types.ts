@@ -1,7 +1,11 @@
 import type { ComponentType, ReactNode } from 'react'
 import type { Pluggable } from 'unified'
 import type { PluginOption } from 'vite'
-import type { Awaitable, NibPlugin, NibVitePluginContext } from './plugin'
+import type {
+  Awaitable,
+  NibPlugin,
+  NibVitePluginContext,
+} from './extensions/contracts'
 import type { ContentRenderer, MarkdownContent } from './markdown-content'
 
 export interface PageMeta {

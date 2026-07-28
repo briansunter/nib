@@ -82,4 +82,4 @@ A top-level island owns its own state and context tree. An island may render ano
 
 The component must produce the same initial markup on the server and in the browser. Read from `window`, storage, media queries, or other browser-only APIs in an event handler or `useEffect`, not while rendering. This preserves the static fallback and avoids hydration mismatches.
 
-Read the repository's [`docs/architecture.md`](https://github.com/briansunter/nib/blob/master/docs/architecture.md) for the rendering pipeline and design constraints. The separate [HTML pages proposal](https://github.com/briansunter/nib/blob/master/docs/html-pages-layouts-and-islands.md) explores typed island bindings for a future `page.html` route format; it is not part of the current API.
+Read the repository's [architecture reference](https://github.com/briansunter/nib/blob/master/docs/reference/architecture.md) for the rendering pipeline and design constraints. The separate [HTML pages proposal](https://github.com/briansunter/nib/blob/master/docs/design/html-pages-layouts-and-islands.md) explores typed island bindings for a future `page.html` route format; it is not part of the current API.

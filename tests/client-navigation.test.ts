@@ -17,7 +17,7 @@ import {
   type ClientNavigationController,
   type NavigationBeforeSwapDetail,
   type NavigationLifecycleDetail,
-} from '../src/client-navigation'
+} from '../src/client/navigation'
 
 function page(
   pathname: string,

@@ -48,6 +48,8 @@ describe('page stylesheet ownership', () => {
       .resolves.toBeNull()
     await expect(resolveEdge('server', './map.css', '/site/src/behaviors/map.client.ts'))
       .resolves.toBeNull()
+    await expect(resolveEdge('server', './legacy.css', '/site/src/behaviors/legacy.client.js'))
+      .resolves.toBeNull()
     await expect(resolveEdge('server', './tokens.css', '/site/src/style.css'))
       .resolves.toBeNull()
     await expect(resolveEdge('server', './plugin.css', '/plugin/index.ts'))

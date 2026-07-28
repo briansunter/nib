@@ -12,7 +12,7 @@ React islands.
 ## Read the right source
 
 - Read `README.md` for the user-facing model and commands.
-- Read `docs/architecture.md` before changing routing, rendering, Markdown,
+- Read `docs/reference/architecture.md` before changing routing, rendering, Markdown,
   islands, document output, or base paths.
 - Read the relevant page under `examples/docs/src/pages/docs` when changing a documented
   behavior.
@@ -112,7 +112,7 @@ When behavior or names change, update all affected layers:
 
 1. `README.md`;
 2. the relevant `examples/docs/src/pages/docs/**/page.md`;
-3. `docs/architecture.md` for implementation contracts;
+3. `docs/reference/architecture.md` for implementation contracts;
 4. this skill;
 5. package metadata and customer-facing site copy.
 

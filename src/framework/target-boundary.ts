@@ -1,26 +1,16 @@
 import path from 'node:path'
 import type { Plugin } from 'vite'
 import type { NibViteTarget } from './plugin'
-
-type ModuleTarget = Exclude<NibViteTarget, 'development'>
-
-const CLIENT_MODULE = /\.client(?:\.[cm]?[jt]sx?)?$/
-const SERVER_MODULE = /\.server(?:\.[cm]?[jt]sx?)?$/
-
-function cleanId(id: string): string {
-  const query = id.indexOf('?')
-  const fragment = id.indexOf('#', id.startsWith('#') ? 1 : 0)
-  const end = Math.min(
-    query === -1 ? id.length : query,
-    fragment === -1 ? id.length : fragment,
-  )
-  return id.slice(0, end).replaceAll('\\', '/')
-}
+import {
+  cleanModuleId,
+  moduleTarget as explicitModuleTarget,
+  type ModuleTarget,
+} from './module-target'
 
 function resolvedImport(id: string, importer: string | undefined): string {
-  const clean = cleanId(id)
+  const clean = cleanModuleId(id)
   if (importer === undefined || !clean.startsWith('.')) return clean
-  return path.resolve(path.dirname(cleanId(importer)), clean).replaceAll('\\', '/')
+  return path.resolve(path.dirname(cleanModuleId(importer)), clean).replaceAll('\\', '/')
 }
 
 function chainFor(
@@ -29,7 +19,7 @@ function chainFor(
   parents: ReadonlyMap<string, string>,
 ): string {
   const chain = [source]
-  let current = importer === undefined ? undefined : cleanId(importer)
+  let current = importer === undefined ? undefined : cleanModuleId(importer)
   const seen = new Set<string>()
   while (current !== undefined && !seen.has(current)) {
     seen.add(current)
@@ -51,8 +41,9 @@ function forbiddenBoundary(
   target: ModuleTarget,
   id: string,
 ): 'client-only' | 'server-only' | undefined {
-  if (target === 'client' && SERVER_MODULE.test(cleanId(id))) return 'server-only'
-  if (target === 'server' && CLIENT_MODULE.test(cleanId(id))) return 'client-only'
+  const ownership = explicitModuleTarget(id)
+  if (target === 'client' && ownership === 'server') return 'server-only'
+  if (target === 'server' && ownership === 'client') return 'client-only'
   return undefined
 }
 
@@ -75,7 +66,7 @@ function assertAllowed(
   const boundary = forbiddenBoundary(target, id)
   if (boundary === undefined) return
   throw new Error(
-    `Nib ${target} graph cannot import ${boundary} module:\n  ${chainFor(cleanId(id), importer, parents)}`,
+    `Nib ${target} graph cannot import ${boundary} module:\n  ${chainFor(cleanModuleId(id), importer, parents)}`,
   )
 }
 
@@ -93,7 +84,7 @@ export function targetBoundaryGuard(target: NibViteTarget): Plugin {
       if (activeTarget === undefined) return null
       const graphParents = parents[activeTarget]
       const resolved = resolvedImport(source, importer)
-      if (importer !== undefined) graphParents.set(resolved, cleanId(importer))
+      if (importer !== undefined) graphParents.set(resolved, cleanModuleId(importer))
       assertAllowed(activeTarget, resolved, importer, graphParents)
       return null
     },
@@ -101,7 +92,7 @@ export function targetBoundaryGuard(target: NibViteTarget): Plugin {
       const activeTarget = moduleTarget(target, environmentConsumer(this))
       if (activeTarget === undefined) return null
       const graphParents = parents[activeTarget]
-      const resolved = cleanId(id)
+      const resolved = cleanModuleId(id)
       assertAllowed(activeTarget, resolved, graphParents.get(resolved), graphParents)
       return null
     },

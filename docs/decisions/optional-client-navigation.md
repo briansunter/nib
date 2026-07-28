@@ -1,6 +1,8 @@
 # ADR: opt-in static client navigation
 
-Status: accepted — approved for implementation on 2026-07-27
+Status: accepted and implemented
+
+Last reviewed: 2026-07-28
 
 ## Context
 

@@ -1,17 +1,18 @@
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { afterAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   buildSite,
   manifestModulePreloads,
 } from '../src/framework/site'
+import { copyFixture, removeFixture } from './helpers/fixtures'
 
-const root = path.resolve('tests/fixtures/basic-site')
-const output = path.join(root, 'dist')
-const publicSentinel = path.join(root, 'public/ssr-copy-sentinel.txt')
-const publicCollisionDirectory = path.join(root, 'public/about')
-const preservedOutputSentinel = path.join(output, 'preserved-output.txt')
+let root: string
+let output: string
+let publicSentinel: string
+let publicCollisionDirectory: string
+let preservedOutputSentinel: string
 
 interface BuildManifestEntry {
   css?: string[]
@@ -37,10 +38,16 @@ function runtimePreloads(
   })
 }
 
+beforeAll(async () => {
+  root = await copyFixture('basic-site')
+  output = path.join(root, 'dist')
+  publicSentinel = path.join(root, 'public/ssr-copy-sentinel.txt')
+  publicCollisionDirectory = path.join(root, 'public/about')
+  preservedOutputSentinel = path.join(output, 'preserved-output.txt')
+})
+
 afterAll(async () => {
-  await fs.rm(output, { recursive: true, force: true })
-  await fs.rm(publicSentinel, { force: true })
-  await fs.rm(publicCollisionDirectory, { recursive: true, force: true })
+  await removeFixture(root)
 })
 
 describe('framework-owned site builds', () => {

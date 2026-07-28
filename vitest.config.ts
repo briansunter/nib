@@ -16,9 +16,10 @@ export default defineConfig({
         'src/cli.ts',
         // This controller is exercised in a DOM suite and the replica's real
         // browser matrix; V8's Node coverage cannot observe browser execution.
-        'src/client-navigation.ts',
+        'src/client/navigation.ts',
+        'src/navigation/**/*.ts',
         'src/framework/types.ts',
-        'src/runtime/server.ts',
+        'src/internal/server.ts',
         'packages/**',
         'examples/**',
       ],

@@ -1,11 +1,11 @@
 import path from 'node:path'
 import { builtinModules } from 'node:module'
 import { defineConfig } from 'vite'
+import { imagePackageEntries } from './package-entries'
 
-const entries = {
-  index: path.resolve('src/index.ts'),
-  plugin: path.resolve('src/plugin.ts'),
-}
+const entries = Object.fromEntries(
+  imagePackageEntries.map((entry) => [entry.name, path.resolve(entry.source)]),
+)
 const builtins = new Set([...builtinModules, ...builtinModules.map((name) => `node:${name}`)])
 
 export default defineConfig({

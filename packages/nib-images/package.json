@@ -2,6 +2,7 @@
   "name": "@briansunter/nib-images",
   "version": "0.5.0",
   "description": "Static, responsive image optimization for Nib.",
+  "license": "UNLICENSED",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/briansunter/nib.git"

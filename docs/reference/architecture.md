@@ -1,12 +1,16 @@
 # Nib architecture
 
+Status: current
+
+Last reviewed: 2026-07-28
+
 Nib is a static-first framework with a deliberately small authoring interface.
 Consumers install `@briansunter/nib`; they do not copy its routing, Vite, SSR,
 document, prerender, or hydration implementation.
 
 This document describes the current implementation. `page.html` is not a
 current route format; the forward-looking
-[HTML pages, layouts, and islands proposal](html-pages-layouts-and-islands.md)
+[HTML pages, layouts, and islands proposal](../design/html-pages-layouts-and-islands.md)
 remains explicitly proposed.
 The [type-safe plugins and image optimization design](type-safe-plugins-and-image-optimization.md)
 documents the implemented plugin lifecycle and optional image package.
@@ -421,7 +425,7 @@ rendered inside another island is composed as an ordinary child component in
 the same root, so the outer hydration strategy controls the subtree. Island
 props must survive an exact JSON round trip; only top-level props are serialized
 into boundary metadata. See the
-[interactive island design](interactive-react-islands.md) for rationale and
+[interactive island design](../decisions/interactive-react-islands.md) for rationale and
 trade-offs.
 
 ## Base paths

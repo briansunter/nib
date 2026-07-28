@@ -2,6 +2,8 @@
 
 Status: Proposed
 
+Last reviewed: 2026-07-28
+
 This is a forward-looking proposal, not a feature of the current release. The current route formats remain `page.tsx` and `page.md`; do not describe `page.html` as implemented until the acceptance criteria below are met.
 
 ## Decision

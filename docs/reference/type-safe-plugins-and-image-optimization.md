@@ -2,6 +2,8 @@
 
 Status: Implemented and performance-audited
 
+Last reviewed: 2026-07-28
+
 This document is the design and implementation record for the current generic
 plugin API and optional local-image optimizer. The non-goals remain deliberate:
 remote images, relative-path Markdown resolution, SVG rasterization, and

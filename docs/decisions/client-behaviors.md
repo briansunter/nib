@@ -2,6 +2,8 @@
 
 Status: accepted
 
+Last reviewed: 2026-07-28
+
 Nib will support non-React progressive enhancement through an explicit,
 server-safe behavior descriptor. A descriptor identifies a browser
 implementation and JSON-serializable props without importing that

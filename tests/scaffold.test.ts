@@ -33,7 +33,13 @@ describe('site scaffolding', () => {
     await expect(fs.readFile(path.join(target, 'nib.config.ts'), 'utf8')).resolves
       .toContain("from '@briansunter/nib'")
     await expect(fs.readFile(path.join(target, '.gitignore'), 'utf8')).resolves
-      .toContain('node_modules')
+      .toBe([
+        'node_modules',
+        'dist',
+        '.nib',
+        '.DS_Store',
+        '',
+      ].join('\n'))
     await expect(fs.stat(path.join(target, 'gitignore'))).rejects.toMatchObject({
       code: 'ENOENT',
     })
