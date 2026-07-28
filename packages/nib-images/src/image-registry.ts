@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises'
 import path from 'node:path'
 import { linkOrCopy } from './cache'
 import { ImageTransformExecutor } from './image-executor'
@@ -28,6 +29,20 @@ export interface ContentImageFallback {
 
 export interface FailedContentImageFallback extends ContentImageFallback {
   readonly outputUrl: string
+}
+
+interface ImageProvenanceCandidate {
+  readonly source: string
+  readonly output: string
+  readonly width: number
+  readonly height: number
+  readonly format: ImageFormat | SourceImageFormat
+  readonly quality: number
+  readonly passthrough: boolean
+  readonly sourceWidth: number
+  readonly sourceHeight: number
+  readonly sourceFormat: SourceImageFormat
+  readonly maxWidth: number
 }
 
 async function mapWithConcurrency<Value>(
@@ -79,9 +94,10 @@ export class ImageBuildRegistry {
       throw new Error('@briansunter/nib-images: invalid image source')
     }
     const request = createImageTransformRequest(source, width, format, quality, passthrough)
-    if (!this.#requests.has(request.key)) this.#requests.set(request.key, request)
+    const canonicalRequest = this.#requests.get(request.key) ?? request
+    if (!this.#requests.has(request.key)) this.#requests.set(request.key, canonicalRequest)
     if (this.mode === 'development') return developmentImageUrl(this.base, request)
-    return `${this.base}assets/nib/${request.filename}`
+    return `${this.base}assets/nib/${canonicalRequest.filename}`
   }
 
   /** Associates authored content with a safe original-url fallback. */
@@ -143,6 +159,39 @@ export class ImageBuildRegistry {
         `nib-images: ${this.#stats.coldTransforms} transformed, ${this.#stats.cacheHits} cached, ${this.#stats.bytesWritten} bytes (${elapsed}ms)`,
       )
     }
+    const successfulRequests = this.requests()
+      .filter((request) => !this.#failedContentFallbacks.has(request.key))
+    const maxWidths = new Map<string, number>()
+    for (const request of successfulRequests) {
+      maxWidths.set(
+        request.source.fingerprint,
+        Math.max(maxWidths.get(request.source.fingerprint) ?? 0, request.width),
+      )
+    }
+    const candidates = successfulRequests
+      .map((request): ImageProvenanceCandidate => ({
+        source: request.source.fingerprint.slice(0, 24),
+        output: `assets/nib/${request.filename}`,
+        width: request.width,
+        height: Math.max(
+          1,
+          Math.round(request.source.height * request.width / request.source.width),
+        ),
+        format: request.format,
+        quality: request.quality,
+        passthrough: request.passthrough,
+        sourceWidth: request.source.width,
+        sourceHeight: request.source.height,
+        sourceFormat: request.source.format,
+        maxWidth: maxWidths.get(request.source.fingerprint) ?? request.width,
+      }))
+      .sort((left, right) => left.output.localeCompare(right.output))
+    const provenanceDirectory = path.join(clientDirectory, '.nib')
+    await fs.mkdir(provenanceDirectory, { recursive: true })
+    await fs.writeFile(
+      path.join(provenanceDirectory, 'images.json'),
+      `${JSON.stringify({ version: 1, candidates }, null, 2)}\n`,
+    )
   }
 
   failedContentImageFallbacks(): readonly FailedContentImageFallback[] {

@@ -295,6 +295,12 @@ artifact ownership remain built-in checks.
 links, and structural counts; `nib-typography-v1` retains curly quote
 differences. These are content-parity helpers, not visual-equivalence claims.
 
+When `@briansunter/nib-images` participates in a production build it writes a
+deterministically sorted `.nib/images.json` candidate report. It contains only
+content-derived source identities, output-relative files, formats, dimensions,
+quality, and width caps—never authoring paths. The core inspector validates the
+report and also rejects leaked `data-nib-width` authoring hints.
+
 Development and preview bind to loopback by default. To expose a server through
 a known hostname such as a Tailscale name, bind explicitly and allow only that
 host; repeat the option for more than one hostname:

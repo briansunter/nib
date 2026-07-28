@@ -6,6 +6,8 @@ export {
   verifySite,
 } from './framework/verify'
 export type {
+  ImageProvenanceCandidate,
+  ImageProvenanceReport,
   InspectedPage,
   InspectedReference,
   InspectedSiteFile,

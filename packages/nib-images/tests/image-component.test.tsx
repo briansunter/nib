@@ -333,6 +333,27 @@ describe('static Image component', () => {
     expect(first.stats()).toMatchObject({ coldTransforms: 1, cacheHits: 0 })
     const output = await fs.readdir(path.join(root, 'dist/client/assets/nib'))
     expect(output).toHaveLength(1)
+    const provenance = JSON.parse(await fs.readFile(
+      path.join(root, 'dist/client/.nib/images.json'),
+      'utf8',
+    )) as {
+      version: number
+      candidates: Array<Record<string, unknown>>
+    }
+    expect(provenance).toMatchObject({
+      version: 1,
+      candidates: [{
+        output: `assets/nib/${output[0]}`,
+        width: 40,
+        height: 20,
+        format: 'webp',
+        sourceWidth: 80,
+        sourceHeight: 40,
+        maxWidth: 40,
+      }],
+    })
+    expect(JSON.stringify(provenance)).not.toContain(root)
+    expect(JSON.stringify(provenance)).not.toContain('__nibFile')
 
     const second = new ImageBuildRegistry(options, '/base/', 'production')
     second.register(source as any, 40, 'webp', 75)
@@ -469,6 +490,35 @@ describe('static Image component', () => {
     })
     await expect(registry.finalize(path.join(root, 'dist/again')))
       .rejects.toThrow('only finalize once')
+  })
+
+  it('reuses one materialized URL for content-identical source aliases', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-alias-'))
+    temporaryDirectories.push(root)
+    const source = await fixtureSource()
+    const alias = createImageSource({
+      __nibImage: true,
+      __nibFile: path.join(root, 'renamed.png'),
+      __nibSourceId: 'fedcba9876543210fedcba98',
+      __nibStem: 'renamed',
+      width: source.width,
+      height: source.height,
+      format: source.format,
+      hasAlpha: source.hasAlpha,
+      animated: source.animated,
+      fingerprint: source.fingerprint,
+    })
+    const registry = new ImageBuildRegistry(
+      normalizeImagesOptions(root, { widths: [40], formats: ['webp'] }),
+      '/',
+      'production',
+    )
+
+    const first = registry.register(source as any, 40, 'webp', 75)
+    const second = registry.register(alias as any, 40, 'webp', 75)
+
+    expect(second).toBe(first)
+    expect(registry.requests()).toHaveLength(1)
   })
 
   it('detects and replaces a non-empty corrupt cache artifact', async () => {
