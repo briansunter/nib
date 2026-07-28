@@ -6,6 +6,11 @@ import { startDevSite } from '../src/framework/site'
 
 const servers: ViteDevServer[] = []
 const temporaryRoots: string[] = []
+const generatedFixtureDirectory = /^(?:\.nib(?:-build-.+)?|dist|node_modules)$/
+
+function authoredFixturePath(source: string): boolean {
+  return !generatedFixtureDirectory.test(path.basename(source))
+}
 
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => server.close()))
@@ -90,7 +95,10 @@ describe('framework-owned development server', () => {
     const fixtureParent = path.resolve('tests/fixtures')
     const root = await fs.mkdtemp(path.join(fixtureParent, 'no-style-site-'))
     temporaryRoots.push(root)
-    await fs.cp(path.resolve('tests/fixtures/basic-site'), root, { recursive: true })
+    await fs.cp(path.resolve('tests/fixtures/basic-site'), root, {
+      recursive: true,
+      filter: authoredFixturePath,
+    })
     await fs.rm(path.join(root, 'src/style.css'))
 
     const server = await startDevSite({
