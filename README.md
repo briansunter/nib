@@ -76,8 +76,10 @@ and `twitterCard`) by default; `defineMarkdown` can replace that schema.
 `definePageSource` handles custom page formats, while
 `defineCollection` loads typed data shared across routes. Use
 `fromPageSource(source)` when an index should reuse the same validated entries
-that generated its data pages. If a page renderer imports a plugin-transformed
-module (for example `?nib-image`), declare it with
+that generated its data pages. Use `fromPages()` or `fromMarkdownPages()` when
+the pages themselves are authoritative and an index, archive, feed, or search
+resource needs selected route metadata and validated frontmatter. If a page
+renderer imports a plugin-transformed module (for example `?nib-image`), declare it with
 `pageRenderer('./src/data-pages', 'ProjectPage')`; Nib imports that module from
 its configured Vite page-source graph rather than while loading `nib.config.ts`.
 
@@ -231,9 +233,11 @@ Plugins can also contribute typed page-source adapters, virtual React pages,
 static resources, and redirects. `@briansunter/nib/rss` is a first-party RSS
 2.0 resource-route helper: item `link` values may be absolute URLs or Nib route
 paths, which are resolved with the configured `base`. Its `items` option can
-also be an async function receiving the immutable initial route manifest, so a
-feed can draw from any project-specific typed data source. The generic resource
-route API remains available for Atom, JSON Feed, or another custom format.
+also be an async function receiving the immutable initial route manifest, or an
+explicit `fromCollection(collection, mapper)` capability. A capability grants
+that resource access to only the named collection and returns deeply frozen
+build data. The generic resource route API remains available for Atom, JSON
+Feed, or another custom format.
 After registrations are merged, inspection hooks receive an immutable resolved-
 route manifest. Nib retains path normalization, collision detection, base paths,
 and output-file ownership.

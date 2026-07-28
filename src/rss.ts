@@ -4,6 +4,16 @@ import {
   deployedOrigin,
   deployedRouteUrl,
 } from './framework/deployed-url'
+import type { CollectionCapability } from './framework/types'
+
+function isCollectionCapability<Result>(
+  value: unknown,
+): value is CollectionCapability<Result> {
+  return value !== null
+    && typeof value === 'object'
+    && !Array.isArray(value)
+    && (value as { kind?: unknown }).kind === 'collection-capability'
+}
 
 /** A single item in an RSS 2.0 feed. Route paths are resolved against Nib's base. */
 export interface RssItem {
@@ -27,7 +37,7 @@ export interface RssItem {
 /** Context passed to a dynamic item provider. It is the same immutable route snapshot as routes(). */
 export type RssItemsContext = Readonly<Pick<
   NibRoutesPluginContext,
-  'command' | 'mode' | 'root' | 'base' | 'site' | 'routes'
+  'command' | 'mode' | 'root' | 'base' | 'site' | 'routes' | 'readCollection'
 >>
 
 export interface RssOptions {
@@ -48,7 +58,10 @@ export interface RssOptions {
   /** Path to an XSL stylesheet, emitted as an xml-stylesheet processing instruction. */
   readonly stylesheet?: string
   /** Static items or an async provider using the immutable initial route manifest. */
-  readonly items: readonly RssItem[] | ((context: RssItemsContext) => Awaitable<readonly RssItem[]>)
+  readonly items:
+    | readonly RssItem[]
+    | CollectionCapability<readonly RssItem[]>
+    | ((context: RssItemsContext) => Awaitable<readonly RssItem[]>)
 }
 
 function escapeXml(value: string): string {
@@ -145,8 +158,12 @@ export function rss(options: RssOptions) {
   if (options.description !== undefined) requiredText(options.description, 'description')
   const routePath = options.path ?? '/rss.xml'
   if (!routePath.startsWith('/')) throw new Error('Nib RSS path must be an absolute route path')
-  if (!Array.isArray(options.items) && typeof options.items !== 'function') {
-    throw new Error('Nib RSS items must be an array or a function')
+  if (
+    !Array.isArray(options.items)
+    && typeof options.items !== 'function'
+    && !isCollectionCapability(options.items)
+  ) {
+    throw new Error('Nib RSS items must be an array, function, or collection capability')
   }
   if (options.ttl !== undefined && (!Number.isInteger(options.ttl) || options.ttl < 0)) {
     throw new Error('Nib RSS ttl must be a non-negative integer')
@@ -170,7 +187,9 @@ export function rss(options: RssOptions) {
       const description = requiredText(options.description ?? context.site.description, 'description')
       const items = typeof options.items === 'function'
         ? await options.items(context)
-        : options.items
+        : isCollectionCapability<readonly RssItem[]>(options.items)
+          ? context.readCollection(options.items)
+          : options.items
       if (!Array.isArray(items)) throw new Error('Nib RSS items provider must return an array')
 
       const channelUrl = deployedRouteUrl(site, context.base, '/')

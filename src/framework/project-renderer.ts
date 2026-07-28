@@ -2,6 +2,7 @@ import { createElement, type ReactNode } from 'react'
 import { loadCollections } from './content-server'
 import { DefaultSiteShell } from './default-shell'
 import { normalizeHeadContribution, renderHead } from './meta'
+import { deepFreeze } from './freeze'
 import { renderReactPage } from './render-page'
 import { validateIslandModules, type IslandModule } from './islands'
 import {
@@ -34,6 +35,8 @@ import type {
   ResolvedPageRoute,
   ResolvedRoute,
   SiteShellProps,
+  PageDescriptor,
+  CollectionCapability,
 } from './types'
 
 export interface ProjectRendererOptions {
@@ -60,6 +63,21 @@ function pageSourceCollectionEntries(
     }
   }
   return entries
+}
+
+function pageDescriptors(routes: Iterable<ResolvedRoute>): readonly PageDescriptor[] {
+  return Object.freeze(
+    [...routes]
+      .filter((route): route is ResolvedPageRoute => route.kind === 'page')
+      .sort((left, right) => left.path.localeCompare(right.path) || left.source.localeCompare(right.source))
+      .map((route) => Object.freeze({
+        path: route.path,
+        source: route.source,
+        meta: deepFreeze({ ...route.meta }),
+        frontmatter: deepFreeze(route.frontmatter),
+        data: deepFreeze(route.data),
+      })),
+  )
 }
 
 export interface ProjectRenderer {
@@ -145,7 +163,33 @@ export async function createProjectRenderer(
     options.config.collections,
     options.root,
     pageSourceCollectionEntries(options.pages),
+    pageDescriptors(routes.values()),
   )
+  const collectionDefinitions = new Map<object, string>()
+  for (const [name, definition] of Object.entries(options.config.collections ?? {})) {
+    const priorName = collectionDefinitions.get(definition)
+    if (priorName !== undefined) {
+      throw new Error(
+        `Collection definition is registered as both ${priorName} and ${name}; `
+        + 'each capability collection must have one site identity',
+      )
+    }
+    collectionDefinitions.set(definition, name)
+  }
+  const readCollection = <Result>(capability: CollectionCapability<Result>): Result => {
+    if (
+      capability?.kind !== 'collection-capability'
+      || typeof capability.map !== 'function'
+    ) {
+      throw new Error('Invalid Nib collection capability')
+    }
+    const name = collectionDefinitions.get(capability.collection)
+    if (name === undefined) {
+      throw new Error('Collection capability references a collection not registered by this site')
+    }
+    const entries = (collections as Record<string, readonly CollectionEntry[]>)[name] ?? []
+    return deepFreeze(capability.map(entries))
+  }
   addConfiguredRedirects(
     routes,
     options.config.redirects,
@@ -154,7 +198,7 @@ export async function createProjectRenderer(
   const initialRoutes = resolvedRouteSnapshots(routes.values())
   const contributedRoutes = await resolvePluginRouteContributions(
     configuredPlugins,
-    rendererContext,
+    Object.freeze({ ...rendererContext, readCollection }),
     initialRoutes,
   )
   addPluginRoutes(

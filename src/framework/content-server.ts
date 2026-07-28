@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { glob as findFiles } from 'tinyglobby'
 import { parseData, validateDataDefinition } from './content'
+import { deepFreeze } from './freeze'
 import type {
   CollectionDefinition,
   CollectionEntry,
@@ -11,6 +12,8 @@ import type {
   LoadedCollectionDefinitions,
   PageSourceCollectionDefinition,
   PageSourceDefinition,
+  PageCollectionDefinition,
+  PageDescriptor,
 } from './types'
 
 function collectionEntries(result: CollectionLoaderResult): Array<{ id: string; data: unknown }> {
@@ -29,11 +32,15 @@ async function safeProjectFile(root: string, file: string): Promise<string> {
 }
 
 export async function loadCollections<
-  const Definitions extends Record<string, CollectionDefinition<any> | PageSourceCollectionDefinition<any>>,
+  const Definitions extends Record<
+    string,
+    CollectionDefinition<any> | PageSourceCollectionDefinition<any> | PageCollectionDefinition<any>
+  >,
 >(
   definitions: Definitions | undefined,
   root: string,
   pageSourceEntries: ReadonlyMap<PageSourceDefinition<any>, readonly CollectionEntry[]> = new Map(),
+  pageDescriptors: readonly PageDescriptor[] = [],
 ): Promise<LoadedCollectionDefinitions<Definitions>> {
   const collections: Record<string, CollectionEntry[]> = {}
   const context: CollectionLoaderContext = {
@@ -44,13 +51,32 @@ export async function loadCollections<
   }
 
   for (const [name, definition] of Object.entries(definitions ?? {})) {
+    if ('pages' in definition) {
+      const pageDefinition = definition as PageCollectionDefinition
+      const seen = new Set<string>()
+      const matchedPages = pageDescriptors
+        .filter((page) => !pageDefinition.markdownOnly || /\.md(?:#\d+)?$/.test(page.source))
+        .filter(pageDefinition.match)
+      if (pageDefinition.sort) matchedPages.sort(pageDefinition.sort)
+      collections[name] = matchedPages
+        .map((page) => {
+          const id = pageDefinition.id(page)
+          if (typeof id !== 'string' || id.trim() === '') {
+            throw new Error(`Collection ${name} page id must be a non-empty string`)
+          }
+          if (seen.has(id)) throw new Error(`Duplicate collection entry ${name}/${id}`)
+          seen.add(id)
+          return deepFreeze({ id, data: pageDefinition.select(page) })
+        })
+      continue
+    }
     if ('source' in definition) {
       const entries = pageSourceEntries.get(definition.source) ?? []
       const seen = new Set<string>()
       collections[name] = entries.map((entry) => {
         if (seen.has(entry.id)) throw new Error(`Duplicate collection entry ${name}/${entry.id}`)
         seen.add(entry.id)
-        return { id: entry.id, data: entry.data }
+        return deepFreeze({ id: entry.id, data: entry.data })
       })
       continue
     }
@@ -68,7 +94,7 @@ export async function loadCollections<
         throw new Error(`Duplicate collection entry ${name}/${entry.id}`)
       }
       seen.add(entry.id)
-      return {
+      return deepFreeze({
         id: entry.id,
         data: parseData(entry.data, {
           ...(definition.schema ? { schema: definition.schema as DataSchema } : {}),
@@ -77,11 +103,14 @@ export async function loadCollections<
             : {}),
           label: `Collection ${name}/${entry.id}`,
         }),
-      }
+      })
     })
   }
 
-  return collections as LoadedCollectionDefinitions<Definitions>
+  for (const [name, entries] of Object.entries(collections)) {
+    collections[name] = deepFreeze(entries) as CollectionEntry[]
+  }
+  return Object.freeze(collections) as LoadedCollectionDefinitions<Definitions>
 }
 
 export interface GlobLoaderFile {

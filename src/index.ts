@@ -9,6 +9,9 @@ export {
   defineMarkdown,
   definePageSource,
   fromPageSource,
+  fromMarkdownPages,
+  fromPages,
+  fromCollection,
   pageRenderer,
 } from './framework/content'
 // Compatibility exports. Prefer @briansunter/nib/server for filesystem loaders.
@@ -36,7 +39,10 @@ export type {
 } from './framework/islands'
 export type {
   CollectionDefinition,
+  CollectionCapability,
   PageSourceCollectionDefinition,
+  PageCollectionDefinition,
+  PageDescriptor,
   CollectionEntry,
   CollectionLoaderContext,
   CollectionLoaderResult,

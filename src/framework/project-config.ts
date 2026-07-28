@@ -131,6 +131,22 @@ export function validateNibConfig(value: unknown): NibConfig {
         pageSourceExtensions([definition.source as PageSourceDefinition])
         continue
       }
+      if ('pages' in definition) {
+        if (
+          definition.pages !== true
+          || typeof definition.markdownOnly !== 'boolean'
+          || typeof definition.match !== 'function'
+          || typeof definition.id !== 'function'
+          || typeof definition.select !== 'function'
+          || (definition.sort !== undefined && typeof definition.sort !== 'function')
+        ) {
+          throw new Error(
+            `Collection ${name} page selector must define match, id, select, `
+            + 'and an optional sort function',
+          )
+        }
+        continue
+      }
       if (typeof definition.loader !== 'function') {
         throw new Error(`Collection ${name} must define a loader function`)
       }

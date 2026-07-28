@@ -143,9 +143,30 @@ export interface PageSourceCollectionDefinition<
   readonly source: PageSourceDefinition<Validator>
 }
 
+export interface PageDescriptor<Frontmatter = unknown, Data = unknown> {
+  readonly path: string
+  readonly source: string
+  readonly meta: ResolvedPageMeta
+  readonly frontmatter: Frontmatter | undefined
+  readonly data: Data | undefined
+}
+
+/** Derives immutable collection entries from validated page descriptors. */
+export interface PageCollectionDefinition<Selected = unknown> {
+  readonly pages: true
+  readonly markdownOnly: boolean
+  readonly match: (page: PageDescriptor) => boolean
+  readonly id: (page: PageDescriptor) => string
+  readonly select: (page: PageDescriptor) => Selected
+  readonly sort?: (left: PageDescriptor, right: PageDescriptor) => number
+}
+
 export type AnyCollectionDefinition<
   Validator extends DataValidator = DataValidator,
-> = CollectionDefinition<Validator> | PageSourceCollectionDefinition<Validator>
+> =
+  | CollectionDefinition<Validator>
+  | PageSourceCollectionDefinition<Validator>
+  | PageCollectionDefinition<unknown>
 
 export interface MarkdownDefinition<
   Validator extends DataValidator = DataValidator,
@@ -219,6 +240,8 @@ export type CollectionData<Definition> =
     ? InferDataValidator<Validator>
     : Definition extends PageSourceCollectionDefinition<infer Validator>
       ? InferDataValidator<Validator>
+      : Definition extends PageCollectionDefinition<infer Selected>
+        ? Selected
     : never
 
 export type LoadedCollections<Config extends NibConfig> =
@@ -231,6 +254,13 @@ export type LoadedCollectionDefinitions<Definitions> = {
     Definitions[Name] extends AnyCollectionDefinition<any>
       ? Array<CollectionEntry<CollectionData<Definitions[Name]>>>
       : never
+}
+
+/** Explicit least-privilege grant for a build-time resource provider. */
+export interface CollectionCapability<Result = unknown> {
+  readonly kind: 'collection-capability'
+  readonly collection: AnyCollectionDefinition<any>
+  readonly map: (entries: readonly CollectionEntry[]) => Result
 }
 
 export interface PageProps<Config extends NibConfig = NibConfig> {

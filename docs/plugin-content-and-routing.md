@@ -29,7 +29,8 @@ Inside the server renderer, Nib:
 
 1. creates file and data-page routes;
 2. adds configured redirects;
-3. invokes route providers against the same immutable initial-route snapshot;
+3. resolves explicitly granted collection capabilities and invokes route
+   providers against the same immutable initial-route snapshot;
 4. merges provider results in plugin order and rejects duplicate paths;
 5. freezes public resolved-route snapshots;
 6. invokes resolved-route inspectors in plugin order;
@@ -52,8 +53,12 @@ as `/rss.xml` is emitted as that exact file rather than
 It accepts typed channel fields and items; internal item paths are resolved with
 Nib's `base`, while absolute HTTP(S) links remain unchanged. Its item provider
 can asynchronously read the immutable initial route manifest, but applications
-keep ownership of their content data model. The generic resource route remains
-the extension point for Atom, JSON Feed, or a custom XML/JSON output.
+keep ownership of their content data model. It can alternatively accept
+`fromCollection(collection, mapper)`. That capability resolves only when the
+exact collection is registered by the site; the mapper receives deeply frozen
+entries and its result is frozen before the resource provider sees it. Search
+resources support the same capability. The generic resource route remains the
+extension point for Atom, JSON Feed, or a custom XML/JSON output.
 
 Redirect routes provide a destination and one of `301`, `302`, `307`, or `308`.
 Development sends the status and `Location` header. Static output uses safe
@@ -100,3 +105,7 @@ destinations, status codes, and duplicate routes before rendering.
 Resolved-route inspectors receive no React implementation, page data, route
 handler, or mutable internal object. They can build indexes and diagnostics
 without gaining authority over rendering.
+
+Route providers likewise do not receive a general collection registry. An
+application must hand a provider a `fromCollection()` capability explicitly,
+which prevents unrelated plugins from enumerating page-backed content.

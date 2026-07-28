@@ -8,6 +8,8 @@ import {
   defineCollection,
   definePageSource,
   fromPageSource,
+  fromMarkdownPages,
+  fromPages,
   pageRenderer,
   pageSourceExtensions,
   pageSourceIndex,
@@ -105,6 +107,72 @@ describe('generic content', () => {
       new Map([[source, [{ id: first!.collectionId!, data: first!.data }]]]),
     )
     expect(collections.items).toEqual([{ id: 'items/one', data: { slug: 'one', count: 1 } }])
+  })
+
+  it('derives deterministic immutable collections from validated pages', async () => {
+    const descriptors = [
+      Object.freeze({
+        path: '/notes/second',
+        source: '/src/pages/notes/second/page.md',
+        meta: Object.freeze({ title: 'Second', description: '' }),
+        frontmatter: Object.freeze({ slug: 'second', draft: false }),
+        data: undefined,
+      }),
+      Object.freeze({
+        path: '/projects/one',
+        source: '/src/pages/projects/page.json#0',
+        meta: Object.freeze({ title: 'Project', description: '' }),
+        frontmatter: undefined,
+        data: Object.freeze({ slug: 'project' }),
+      }),
+      Object.freeze({
+        path: '/notes/first',
+        source: '/src/pages/notes/first/page.md',
+        meta: Object.freeze({ title: 'First', description: '' }),
+        frontmatter: Object.freeze({ slug: 'first', draft: false }),
+        data: undefined,
+      }),
+    ]
+    const notes = fromMarkdownPages({
+      match: (page) => page.path.startsWith('/notes/'),
+      id: (page) => (page.frontmatter as { slug: string }).slug,
+      select: (page) => ({
+        title: page.meta.title,
+        path: page.path,
+      }),
+    })
+    const allPages = fromPages({
+      match: () => true,
+      id: (page) => page.path,
+      select: (page) => page.source,
+    })
+    const collections = await loadCollections(
+      { notes, allPages },
+      process.cwd(),
+      new Map(),
+      descriptors,
+    )
+    expect(collections.notes).toEqual([
+      { id: 'second', data: { title: 'Second', path: '/notes/second' } },
+      { id: 'first', data: { title: 'First', path: '/notes/first' } },
+    ])
+    expect(collections.allPages).toHaveLength(3)
+    expect(Object.isFrozen(collections)).toBe(true)
+    expect(Object.isFrozen(collections.notes)).toBe(true)
+    expect(Object.isFrozen(collections.notes[0])).toBe(true)
+    expect(Object.isFrozen(collections.notes[0]?.data)).toBe(true)
+
+    const duplicateIds = fromPages({
+      match: () => true,
+      id: () => 'same',
+      select: (page) => page.path,
+    })
+    await expect(loadCollections(
+      { duplicateIds },
+      process.cwd(),
+      new Map(),
+      descriptors,
+    )).rejects.toThrow('Duplicate collection entry duplicateIds/same')
   })
 
   it('rejects ambiguous matches and unsafe page source configuration', () => {
