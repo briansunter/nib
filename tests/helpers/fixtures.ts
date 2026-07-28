@@ -27,8 +27,10 @@ async function linkRepositoryDependencies(root: string): Promise<void> {
   const modules = path.join(root, 'node_modules')
   await linkDirectoryEntries(repositoryModules, modules)
   const scope = path.join(modules, '@briansunter')
+  const frameworkLink = path.join(scope, 'nib')
   await fs.mkdir(scope, { recursive: true })
-  await fs.symlink(repositoryRoot, path.join(scope, 'nib'), 'dir')
+  await fs.rm(frameworkLink, { recursive: true, force: true })
+  await fs.symlink(repositoryRoot, frameworkLink, 'dir')
 }
 
 /** Copies a checked-in fixture to an isolated temporary project directory. */
@@ -52,6 +54,7 @@ export async function copyFixture(
   return root
 }
 
-export async function removeFixture(root: string): Promise<void> {
+export async function removeFixture(root: string | undefined): Promise<void> {
+  if (root === undefined) return
   await fs.rm(root, { recursive: true, force: true })
 }
