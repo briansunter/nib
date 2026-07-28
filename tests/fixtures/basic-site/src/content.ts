@@ -1,4 +1,5 @@
-import { defineCollection, defineMarkdown, glob, z } from '@briansunter/nib'
+import { defineCollection, defineMarkdown, z } from '@briansunter/nib'
+import { glob } from '@briansunter/nib/server'
 import { parse as parseYaml } from 'yaml'
 
 export const markdownSchema = z.object({

@@ -125,7 +125,8 @@ Collections load build-time data for indexes, navigation, related-content lists,
 
 ```tsx
 // src/content.ts
-import { defineCollection, glob, z } from '@briansunter/nib'
+import { defineCollection, z } from '@briansunter/nib'
+import { glob } from '@briansunter/nib/server'
 import { parse } from 'yaml'
 
 export const posts = defineCollection({

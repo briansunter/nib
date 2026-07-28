@@ -11,6 +11,8 @@ const entries = {
   rss: path.resolve('src/rss.ts'),
   verify: path.resolve('src/verify.ts'),
   hosting: path.resolve('src/hosting.ts'),
+  client: path.resolve('src/client.ts'),
+  server: path.resolve('src/server.ts'),
   'internal/client': path.resolve('src/runtime/client.ts'),
   'internal/server': path.resolve('src/runtime/server.ts'),
 }

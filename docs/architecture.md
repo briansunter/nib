@@ -53,6 +53,14 @@ make the route, collection, frontmatter, and layout-data contract explicit at
 the page module seam. Runtime route/module types remain behind the internal
 server entry; public page code sees immutable route snapshots instead.
 
+Public imports are split by execution target. Universal definitions and types
+come from `@briansunter/nib`; filesystem-backed loaders come from
+`@briansunter/nib/server`; browser lifecycle contracts come from
+`@briansunter/nib/client`. The root `file` and `glob` exports are deprecated
+lazy compatibility wrappers. Application modules may use `.client.ts(x)` and
+`.server.ts(x)` suffixes; production graphs reject cross-target imports with an
+import-chain diagnostic.
+
 The repository’s `templates/default` directory is an initializer input, not
 framework source in a generated project. `examples/docs` is a consumer of the
 same published interface and doubles as the GitHub Pages site.
@@ -274,8 +282,9 @@ and transformed values are passed directly to the page as `data`.
 
 `defineCollection` pairs an async build-time loader with the same validation
 seam. Loaders return `{ id, data }` entries or an ID-keyed record. The built-in
-`glob()` and `file()` helpers cover recursive file collections and aggregate
-data files; arbitrary loader functions can use project-root `read()`.
+`glob()` and `file()` from `@briansunter/nib/server` cover recursive file
+collections and aggregate data files; arbitrary loader functions can use
+project-root `read()`.
 
 Collections load before the route map and are passed to TSX pages, generated
 page components, layouts, and the site shell. `PageProps<typeof config>` maps

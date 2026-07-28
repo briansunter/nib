@@ -36,6 +36,7 @@ import {
 import { writeHostingArtifacts } from './hosting-writer'
 import type { RenderedOutput, TrailingSlash } from './types'
 import { nibDataPages, nibMarkdown } from './vite-plugin'
+import { targetBoundaryGuard } from './target-boundary'
 
 export interface SiteOperationOptions {
   root: string
@@ -170,6 +171,7 @@ export async function siteViteConfig(
         __NIB_TRAILING_SLASH__: JSON.stringify(loaded.config.trailingSlash ?? 'ignore'),
       },
       plugins: [
+        targetBoundaryGuard(target),
         nibMarkdown(loaded.configPath),
         nibDataPages(loaded.configPath, pageSources, pluginContext),
         ...appVitePlugins,

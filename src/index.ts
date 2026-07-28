@@ -8,11 +8,11 @@ export {
   defineCollection,
   defineMarkdown,
   definePageSource,
-  file,
   fromPageSource,
-  glob,
   pageRenderer,
 } from './framework/content'
+// Compatibility exports. Prefer @briansunter/nib/server for filesystem loaders.
+export { file, glob } from './framework/content-compat'
 export { defineIsland } from './framework/islands'
 export { markdownMedia } from './framework/markdown-media'
 export { metadata } from './metadata'
@@ -23,7 +23,7 @@ export type {
   FileLoaderOptions,
   GlobLoaderFile,
   GlobLoaderOptions,
-} from './framework/content'
+} from './framework/content-compat'
 export type {
   HydrationStrategy,
   IslandControlProps,

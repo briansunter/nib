@@ -7,15 +7,13 @@ import {
   compileDataPages,
   defineCollection,
   definePageSource,
-  file,
   fromPageSource,
-  glob,
-  loadCollections,
   pageRenderer,
   pageSourceExtensions,
   pageSourceIndex,
   pageSourcePatterns,
 } from '../src/framework/content'
+import { file, glob, loadCollections } from '../src/framework/content-server'
 import type { DataPageProps } from '../src/framework/types'
 import { nibDataPages } from '../src/framework/vite-plugin'
 
