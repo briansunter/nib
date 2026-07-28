@@ -6,6 +6,9 @@ defineIsland('valid', (_props: {
   options: Array<{ label: string; selected: boolean }>
 }) => null)
 
+// @ts-expect-error Nib's static server renderer requires synchronous island components.
+defineIsland('invalid-async', async () => null)
+
 // @ts-expect-error Functions cannot cross the static HTML serialization boundary.
 defineIsland('invalid-function', (_props: { onClick: () => void }) => null)
 

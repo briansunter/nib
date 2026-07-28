@@ -131,4 +131,10 @@ describe('hosting redirects', () => {
     expect(hostingArtifacts(unsupported, 'cloudflare')[0]?.body)
       .toContain('/docs/temporary/ /docs/about/ 307')
   })
+
+  it('rejects unknown adapters instead of silently emitting an S3 manifest', () => {
+    expect(() => hostingArtifacts(manifest, 'unknown' as never)).toThrow(
+      'Unsupported Nib hosting adapter: unknown',
+    )
+  })
 })

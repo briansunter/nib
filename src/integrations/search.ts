@@ -4,15 +4,7 @@ import type {
   NibRoutesPluginContext,
 } from '../framework/plugin'
 import type { CollectionCapability } from '../framework/types'
-
-function isCollectionCapability<Result>(
-  value: unknown,
-): value is CollectionCapability<Result> {
-  return value !== null
-    && typeof value === 'object'
-    && !Array.isArray(value)
-    && (value as { kind?: unknown }).kind === 'collection-capability'
-}
+import { isCollectionCapability, resourcePath } from './shared'
 
 export interface SearchItem {
   readonly title: string
@@ -83,10 +75,7 @@ function normalizeItem(value: SearchItem, index: number): SearchItem {
 
 /** Emits a static search resource route without shipping a search runtime. */
 export function search(options: SearchOptions = {}): NibPlugin {
-  const routePath = options.path ?? '/search.json'
-  if (!routePath.startsWith('/') || routePath.includes('?') || routePath.includes('#')) {
-    throw new Error('Nib search path must be an absolute route path without query or hash')
-  }
+  const routePath = resourcePath(options.path ?? '/search.json', 'Nib search')
   return {
     name: '@briansunter/nib-search',
     async routes(context) {

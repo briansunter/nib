@@ -18,6 +18,30 @@ function controller(overrides: Partial<{
 }
 
 describe('client runtime coordinator cleanup', () => {
+  it('unmounts and destroys runtimes in reverse registration order', () => {
+    const calls: string[] = []
+    const first = controller({
+      unmount: () => calls.push('first:unmount'),
+      destroy: () => calls.push('first:destroy'),
+    })
+    const second = controller({
+      unmount: () => calls.push('second:unmount'),
+      destroy: () => calls.push('second:destroy'),
+    })
+    registerClientRuntime(first)
+    registerClientRuntime(second)
+
+    unmountClientRuntimes({} as ParentNode)
+    destroyClientRuntimes()
+
+    expect(calls).toEqual([
+      'second:unmount',
+      'first:unmount',
+      'second:destroy',
+      'first:destroy',
+    ])
+  })
+
   it('attempts every unmount before throwing an aggregate error', () => {
     const first = controller({ unmount: () => { throw new Error('first') } })
     const second = controller()

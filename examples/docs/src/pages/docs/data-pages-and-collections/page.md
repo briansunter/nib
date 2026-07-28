@@ -61,7 +61,8 @@ name: Ada
 role: Engineer
 ```
 
-Omit `path` to use the containing folder. A descriptor may also provide `meta` and a named `layout`.
+Omit `path` to use the containing folder. Every descriptor provides `meta`
+with a non-empty title; it may also select a named `layout`.
 
 ## One CSV, many pages
 
@@ -212,4 +213,50 @@ export default function BlogLayout({
 }
 ```
 
-Data-page layouts receive the validated value as `data`; Markdown layouts receive it as `frontmatter`. Both also receive `route`, `site`, and typed `collections`.
+Data-page layouts receive the validated value as `data`; Markdown layouts receive it as `frontmatter`. Both also receive the immutable `route` and typed `collections`.
+
+## One source of truth for pages and lists
+
+When one data file generates both detail pages and an index, derive the
+collection from the page source instead of parsing the file twice:
+
+```tsx
+import {
+  defineCollection,
+  definePageSource,
+  fromPageSource,
+  pageRenderer,
+  z,
+} from '@briansunter/nib'
+
+export const projects = definePageSource({
+  extensions: ['json'],
+  patterns: ['/src/content/projects.json'],
+  schema: z.object({
+    slug: z.string(),
+    title: z.string(),
+  }),
+  load: ({ source }) => JSON.parse(source).map((data) => ({
+    path: `/projects/${data.slug}`,
+    collectionId: data.slug,
+    data,
+    meta: { title: data.title },
+  })),
+  component: pageRenderer('./src/data-pages', 'ProjectPage'),
+})
+
+export const projectIndex = defineCollection({
+  loader: fromPageSource(projects),
+})
+```
+
+`collectionId` must be a non-empty string and is the stable identity reused by
+the derived collection. Draft descriptors are excluded from both public routes
+and `fromPageSource()` collections, so a feed or index cannot accidentally
+publish them. `pageRenderer()` keeps a large shared renderer out of the config
+module and lets Vite load it in the server graph.
+
+Use `fromPages()` or `fromMarkdownPages()` when the list should be derived from
+the final route set. Use `fromCollection(collection, mapper)` to grant a feed
+or search plugin access to one registered collection without exposing the whole
+content registry.

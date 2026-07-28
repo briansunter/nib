@@ -106,23 +106,35 @@ function sourceImports(file: string): SourceImport[] {
     true,
   )
   const imports: SourceImport[] = []
-  for (const statement of source.statements) {
-    if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)) {
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
       imports.push({
-        specifier: statement.moduleSpecifier.text,
-        runtime: importIsRuntime(statement),
+        specifier: node.moduleSpecifier.text,
+        runtime: importIsRuntime(node),
       })
     } else if (
-      ts.isExportDeclaration(statement)
-      && statement.moduleSpecifier !== undefined
-      && ts.isStringLiteral(statement.moduleSpecifier)
+      ts.isExportDeclaration(node)
+      && node.moduleSpecifier !== undefined
+      && ts.isStringLiteral(node.moduleSpecifier)
     ) {
       imports.push({
-        specifier: statement.moduleSpecifier.text,
-        runtime: !statement.isTypeOnly,
+        specifier: node.moduleSpecifier.text,
+        runtime: !node.isTypeOnly,
+      })
+    } else if (
+      ts.isCallExpression(node)
+      && node.expression.kind === ts.SyntaxKind.ImportKeyword
+      && node.arguments.length === 1
+      && ts.isStringLiteral(node.arguments[0]!)
+    ) {
+      imports.push({
+        specifier: node.arguments[0].text,
+        runtime: true,
       })
     }
+    ts.forEachChild(node, visit)
   }
+  visit(source)
   return imports
 }
 

@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { markdownMedia } from '../src/framework/markdown-media'
+import { markdownMedia } from '../src/integrations/markdown-media'
 import { markdownToCompiledPage } from '../src/framework/markdown'
 import { hostingArtifacts } from '../src/framework/hosting'
 import { writeHostingArtifacts } from '../src/framework/hosting-writer'
@@ -12,9 +12,9 @@ import {
   SiteVerificationError,
   verifySite,
 } from '../src/framework/verify'
-import { metadata } from '../src/metadata'
-import { search } from '../src/search'
-import { siteMetadata } from '../src/site-metadata'
+import { metadata } from '../src/integrations/metadata'
+import { search } from '../src/integrations/search'
+import { siteMetadata } from '../src/integrations/site-metadata'
 
 const temporaryDirectories: string[] = []
 
@@ -339,7 +339,7 @@ describe('publication integrations', () => {
     ])
     await fs.mkdir(path.join(output, '.nib'), { recursive: true })
     await fs.writeFile(path.join(output, '.nib/publication.json'), JSON.stringify(manifest))
-    await fs.writeFile(path.join(output, 'index.html'), '<title>Home</title><a href="/about?x=1">About</a><a href="/feed.xml">Feed</a><a href="/assets/a">Image</a><img src="/assets/a"><script data-nib-islands src="/assets/islands.js"></script><nib-island></nib-island>')
+    await fs.writeFile(path.join(output, 'index.html'), '<title>Home</title><a href="/about?x=1">About</a><a href="/feed.xml">Feed</a><a href="/assets/a">Image</a><img src="/assets/a" srcset="data:image/svg+xml,%3Csvg%3E 1x, /assets/a 2x"><script data-nib-islands src="/assets/islands.js"></script><nib-island></nib-island>')
     await fs.writeFile(path.join(output, 'about'), '<title>About</title>')
     await fs.writeFile(path.join(output, 'feed.xml'), '<feed />')
     await fs.writeFile(path.join(output, 'old'), '<title>Redirect</title>')
@@ -348,7 +348,7 @@ describe('publication integrations', () => {
     await fs.writeFile(path.join(output, 'assets/islands.js'), 'runtime')
     const result = await verifySite({ root: output, output })
     expect(result.routeCount).toBe(4)
-    expect(result.checkedLinks).toBe(5)
+    expect(result.checkedLinks).toBe(6)
     expect(result.warnings).toEqual(['/: 1 image(s) missing alt text'])
 
     await fs.writeFile(
@@ -370,5 +370,49 @@ describe('publication integrations', () => {
     const failure = await verifySite({ root: output, output }).catch((error: unknown) => error)
     expect(failure).toBeInstanceOf(SiteVerificationError)
     expect((failure as SiteVerificationError).result.issues).toHaveLength(6)
+  })
+
+  it('rejects malformed manifests and references outside a configured base', async () => {
+    const output = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-check-base-'))
+    temporaryDirectories.push(output)
+    await fs.mkdir(path.join(output, '.nib'), { recursive: true })
+    await fs.mkdir(path.join(output, 'assets'))
+    await fs.mkdir(path.join(output, 'guide'))
+    await fs.writeFile(path.join(output, 'assets/app.js'), '')
+    await fs.writeFile(
+      path.join(output, 'index.html'),
+      '<title>Home</title><script src="/assets/app.js"></script>',
+    )
+    await fs.writeFile(
+      path.join(output, 'guide/index.html'),
+      '<title>Guide</title><script src="../../assets/app.js"></script>',
+    )
+    const manifest = createPublicationManifest('/docs/', 'never', [
+      { routePath: '/', artifact: 'index.html', output: pageOutput() },
+      { routePath: '/guide', artifact: 'guide/index.html', output: pageOutput() },
+    ])
+    await fs.writeFile(
+      path.join(output, '.nib/publication.json'),
+      JSON.stringify(manifest),
+    )
+
+    const basedInspection = await inspectSite({ root: output, output })
+    expect(basedInspection.issues).toContainEqual(expect.objectContaining({
+      code: 'LOCAL_REFERENCE_OUTSIDE_BASE',
+      reference: '/assets/app.js',
+    }))
+    expect(basedInspection.issues).toContainEqual(expect.objectContaining({
+      code: 'LOCAL_REFERENCE_OUTSIDE_BASE',
+      reference: '../../assets/app.js',
+    }))
+
+    await fs.writeFile(
+      path.join(output, '.nib/publication.json'),
+      JSON.stringify({ ...manifest, base: 'docs', trailingSlash: 'sometimes' }),
+    )
+    const malformedInspection = await inspectSite({ root: output, output })
+    expect(malformedInspection.issues).toContainEqual(expect.objectContaining({
+      code: 'MANIFEST_INVALID',
+    }))
   })
 })

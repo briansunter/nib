@@ -32,7 +32,7 @@ export function restorePersistedElements(
   ))
 
   for (const element of persisted) {
-    const key = element.getAttribute(PERSIST_ATTRIBUTE)!
+    const key = element.getAttribute(PERSIST_ATTRIBUTE)!.trim()
     const target = nextPersisted.get(key)
     if (!target || target.localName !== element.localName) continue
 

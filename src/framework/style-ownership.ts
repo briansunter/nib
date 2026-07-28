@@ -16,11 +16,19 @@ function sourceRoot(root: string): string {
   return `${canonical.replaceAll('\\', '/')}/`
 }
 
+function islandEntry(file: string): boolean {
+  return /\/src\/islands\/.*\.tsx$/.test(file)
+}
+
+function behaviorEntry(file: string): boolean {
+  return /\/src\/behaviors\/.*\.client\.(?:ts|tsx)$/.test(file)
+}
+
 function applicationModule(applicationRoot: string, id: string): boolean {
   const file = cleanModuleId(id)
   return file.startsWith(applicationRoot)
-    && !file.includes('/src/islands/')
-    && !file.includes('/src/behaviors/')
+    && !islandEntry(file)
+    && !behaviorEntry(file)
     && file !== `${applicationRoot}style.css`
     && moduleTarget(file) !== 'client'
 }
@@ -31,8 +39,8 @@ function clientOwnedModule(applicationRoot: string, id: string): boolean {
     || (
       file.startsWith(applicationRoot)
       && (
-        file.includes('/src/islands/')
-        || file.includes('/src/behaviors/')
+        islandEntry(file)
+        || behaviorEntry(file)
         || moduleTarget(file) === 'client'
       )
     )

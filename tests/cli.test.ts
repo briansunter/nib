@@ -22,6 +22,14 @@ describe('nib command', () => {
     expect(messages.join('\n')).toContain('--allowed-host host')
   })
 
+  it('rejects missing option values and unknown options', async () => {
+    await expect(runCli(['build', '--root'])).rejects.toThrow('--root requires a value')
+    await expect(runCli(['dev', '--host', '--port', '3000']))
+      .rejects.toThrow('--host requires a value')
+    await expect(runCli(['init', '--typo', 'field-notes', '--no-install']))
+      .rejects.toThrow('Unknown option for nib init: --typo')
+  })
+
   it('initializes a project through the command users run', async () => {
     const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-cli-'))
     temporaryDirectories.push(cwd)

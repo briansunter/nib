@@ -12,9 +12,30 @@ const RUNTIME_SCRIPT_SELECTOR = RUNTIME_SCRIPT_ATTRIBUTES
   .map((attribute) => `script[${attribute}][src]`)
   .join(',')
 
+const JAVASCRIPT_MIME_TYPES = new Set([
+  'application/ecmascript',
+  'application/javascript',
+  'application/x-ecmascript',
+  'application/x-javascript',
+  'text/ecmascript',
+  'text/javascript',
+  'text/javascript1.0',
+  'text/javascript1.1',
+  'text/javascript1.2',
+  'text/javascript1.3',
+  'text/javascript1.4',
+  'text/javascript1.5',
+  'text/jscript',
+  'text/livescript',
+  'text/x-ecmascript',
+  'text/x-javascript',
+])
+
 function scriptTypeIsExecutable(script: HTMLScriptElement): boolean {
   const type = (script.getAttribute('type') ?? '').trim().toLowerCase()
-  return type === '' || type === 'module' || type === 'text/javascript'
+  if (type === '' || type === 'module') return true
+  const essence = type.split(';', 1)[0]?.trim() ?? ''
+  return JAVASCRIPT_MIME_TYPES.has(essence)
 }
 
 function resolvedAttribute(
@@ -89,7 +110,8 @@ export async function executeNewScripts(signal: AbortSignal): Promise<void> {
     replacement.setAttribute(EXECUTED_SCRIPT_ATTRIBUTE, '')
 
     const source = replacement.getAttribute('src')
-    const waitsForLoad = source !== null || replacement.type === 'module'
+    const waitsForLoad = source !== null
+      || (replacement.getAttribute('type') ?? '').trim().toLowerCase() === 'module'
     const loaded = waitsForLoad
       ? new Promise<void>((resolve, reject) => {
           replacement.addEventListener('load', () => resolve(), { once: true })

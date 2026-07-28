@@ -6,6 +6,8 @@ layout: docs
 
 # Getting started
 
+Build a working Nib site, add one static route, and opt into browser interaction only where the page needs it.
+
 ## 1. Scaffold a site
 
 Run Nib’s scaffolding command with npm, Bun, pnpm, or another package runner:

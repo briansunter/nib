@@ -23,14 +23,37 @@ export function linkFromEvent(event: Event): Element | null {
   return link && elementHref(link) ? link : null
 }
 
+export function effectiveNavigationTarget(
+  element: Element,
+  override: string | null = null,
+): string {
+  const target = override
+    ?? element.getAttribute('target')
+    ?? element.ownerDocument.querySelector('base[target]')?.getAttribute('target')
+    ?? ''
+  return target.toLowerCase()
+}
+
 export function linkTarget(link: Element): string {
-  return (link.getAttribute('target') ?? '').trim().toLowerCase()
+  return effectiveNavigationTarget(link)
+}
+
+function relIncludes(link: Element, value: string): boolean {
+  return (link.getAttribute('rel') ?? '')
+    .split(/[\t\n\f\r ]+/)
+    .some((token) => token.toLowerCase() === value)
 }
 
 export function eligibleLink(link: Element): URL | null {
   const href = elementHref(link)
   if (!href) return null
-  if (link.hasAttribute('download') || link.hasAttribute('data-nib-navigation-reload')) {
+  if (
+    link.hasAttribute('download')
+    || link.hasAttribute('data-nib-navigation-reload')
+    || link.hasAttribute('ping')
+    || link.hasAttribute('referrerpolicy')
+    || relIncludes(link, 'noreferrer')
+  ) {
     return null
   }
   const target = linkTarget(link)

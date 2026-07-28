@@ -42,6 +42,17 @@ describe('urls', () => {
     expect(siteHref('/docs/')).toBe('/docs/')
   })
 
+  it('rejects external and relative inputs instead of silently rewriting them', () => {
+    expect(() => siteHref('https://cdn.example/image.png')).toThrow(
+      'absolute local route path',
+    )
+    expect(() => siteHref('mailto:hello@example.com')).toThrow(
+      'absolute local route path',
+    )
+    expect(() => siteHref('relative/path')).toThrow('absolute local route path')
+    expect(() => siteHref('//cdn.example/image.png')).toThrow('absolute local route path')
+  })
+
   it('canonicalizes the pathname without corrupting query strings or hashes', () => {
     expect(withBuildUrlConfig('/', 'always', () => (
       siteHref('/search?tag=web#results')

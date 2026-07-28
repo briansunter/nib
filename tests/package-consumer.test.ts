@@ -348,8 +348,13 @@ export default function Page() {
     await execute('npm', ['run', 'typecheck'], { cwd: consumer })
     await execute('npm', ['run', 'build'], { cwd: consumer })
     const packedHtml = await fs.readFile(path.join(consumer, 'dist/client/index.html'), 'utf8')
+    const packedManifest = JSON.parse(await fs.readFile(
+      path.join(consumer, 'dist/client/.vite/manifest.json'),
+      'utf8',
+    )) as Record<string, { name?: string }>
     expect(packedHtml).toContain('<picture>')
     expect(packedHtml).not.toContain('data-nib-islands')
+    expect(Object.values(packedManifest).some((entry) => entry.name === 'islands')).toBe(false)
     expect(await fs.readFile(path.join(consumer, 'dist/client/sitemap.xml'), 'utf8'))
       .toContain('https://packed.example/')
     expect(await fs.readFile(path.join(consumer, 'dist/client/rss.xml'), 'utf8'))

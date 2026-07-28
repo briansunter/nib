@@ -23,7 +23,7 @@ export function mountClientRuntimes(root: ParentNode = document): void {
 
 export function unmountClientRuntimes(root: ParentNode = document): void {
   const failures: unknown[] = []
-  for (const controller of controllers) {
+  for (const controller of [...controllers].reverse()) {
     try {
       controller.unmount(root)
     } catch (error) {
@@ -34,7 +34,7 @@ export function unmountClientRuntimes(root: ParentNode = document): void {
 }
 
 export function destroyClientRuntimes(): void {
-  const registered = [...controllers]
+  const registered = [...controllers].reverse()
   controllers.clear()
   const failures: unknown[] = []
   for (const controller of registered) {

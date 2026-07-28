@@ -81,6 +81,56 @@ describe('generic content', () => {
     expect(page.data).toBe('HELLO')
   })
 
+  it('rejects invalid page-source collection identities', async () => {
+    const source = definePageSource({
+      extensions: ['data'],
+      validate(value) {
+        if (typeof value !== 'string') throw new Error('expected a string')
+        return value
+      },
+      load: () => ({
+        data: 'hello',
+        meta: { title: 'Message' },
+        collectionId: '   ',
+      }),
+      component: ({ data }: DataPageProps<string>) => <p>{data}</p>,
+    })
+
+    await expect(compileDataPages(source, {
+      file: 'src/pages/message/page.data',
+      source: 'hello',
+      defaultPath: '/message',
+    })).rejects.toThrow('collectionId must be a non-empty string')
+  })
+
+  it('uses a stable collection identity for a generated root page', async () => {
+    const source = definePageSource({
+      extensions: ['data'],
+      validate(value) {
+        if (typeof value !== 'string') throw new Error('expected a string')
+        return value
+      },
+      load: () => [
+        { path: '/', data: 'home', meta: { title: 'Home' } },
+        {
+          path: '/explicit',
+          data: 'explicit',
+          meta: { title: 'Explicit' },
+          collectionId: 'custom-home',
+        },
+      ],
+      component: ({ data }: DataPageProps<string>) => <p>{data}</p>,
+    })
+
+    const pages = await compileDataPages(source, {
+      file: 'src/pages/page.data',
+      source: 'home',
+      defaultPath: '/',
+    })
+
+    expect(pages.map((page) => page.collectionId)).toEqual(['index', 'custom-home'])
+  })
+
   it('loads a deferred renderer once and reuses compiled entries as a collection', async () => {
     let rendererLoads = 0
     const source = definePageSource({
@@ -271,6 +321,45 @@ describe('generic content', () => {
     expect(collections.posts[0].id).toBe('hello')
     expect(collections.posts[0].data.published).toEqual(new Date('2026-07-18'))
     expect(collections.authors).toEqual([{ id: 'ada', data: { name: 'Ada' } }])
+  })
+
+  it('rejects collection file and glob symlinks that escape the project root', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-content-root-'))
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-content-outside-'))
+    temporaryDirectories.push(root, outside)
+    await fs.writeFile(path.join(outside, 'secret.json'), '{"secret":true}')
+    await fs.mkdir(path.join(outside, 'catalog'))
+    await fs.writeFile(path.join(outside, 'catalog/item.json'), '{"name":"private"}')
+    await fs.mkdir(path.join(root, 'src/content'), { recursive: true })
+    await fs.symlink(
+      path.join(outside, 'secret.json'),
+      path.join(root, 'src/content/secret.json'),
+    )
+    await fs.symlink(
+      path.join(outside, 'catalog'),
+      path.join(root, 'src/content/catalog'),
+    )
+
+    const linkedFile = defineCollection({
+      loader: file({
+        file: 'src/content/secret.json',
+        load: (source) => [{ id: 'secret', data: source }],
+      }),
+    })
+    const linkedDirectory = defineCollection({
+      loader: glob({
+        base: 'src/content/catalog',
+        pattern: '**/*.json',
+        load: ({ source }) => source,
+      }),
+    })
+
+    await expect(loadCollections({ linkedFile }, root)).rejects.toThrow(
+      'escapes the project root through a symbolic link',
+    )
+    await expect(loadCollections({ linkedDirectory }, root)).rejects.toThrow(
+      'escapes the project root through a symbolic link',
+    )
   })
 
   it('generates a watched Vite module for configured data extensions', async () => {

@@ -86,9 +86,10 @@ export default defineConfig({
 ```
 
 The supported policies are `ignore` (default), `always`, and `never`.
-Development redirects matched non-canonical URLs. Static builds remain
-directory-style because URL enforcement ultimately belongs to the deployment
-host.
+Development redirects matched non-canonical URLs. Static output uses directory
+indexes for `ignore` and `always`, and extensionless leaf artifacts for
+`never`. The deployment host remains responsible for mapping request URLs to
+those artifacts and enforcing the public spelling.
 
 Static redirects use immediate meta refresh HTML because a static file cannot
 choose its HTTP status. Development uses the configured `301`, `302`, `307`, or
@@ -110,4 +111,5 @@ export default defineConfig({
 Remark plugins run after GitHub-Flavored Markdown parsing. Rehype plugins run
 after Markdown-to-HTML-tree conversion and before serialization.
 
-Typed document/head updates are intentionally not part of the plugin interface.
+Renderer plugins can return typed `HeadContribution` values from
+`renderer().head(context)`.

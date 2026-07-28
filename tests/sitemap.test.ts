@@ -45,6 +45,8 @@ describe('sitemap plugin', () => {
     expect(() => sitemap({ origin: 'https://example.test/docs' })).toThrow('origin')
     expect(() => sitemap({ origin: 'https://example.test', path: 'sitemap.xml' }))
       .toThrow('absolute route path')
+    expect(() => sitemap({ origin: 'https://example.test', path: '/sitemap.xml#feed' }))
+      .toThrow('without query or hash')
   })
 
   it('uses the configured origin when no plugin-specific origin is supplied', async () => {

@@ -2,6 +2,9 @@ export { stripBasePath } from './publication'
 import { canonicalRoutePath } from './publication'
 
 export function siteHref(path: string): string {
+  if (typeof path !== 'string' || !path.startsWith('/') || path.startsWith('//')) {
+    throw new Error('siteHref() requires an absolute local route path')
+  }
   const base = configuredBasePath()
   const parsed = new URL(path, 'http://nib.local')
   const routePath = parsed.pathname.startsWith('/') ? parsed.pathname : `/${parsed.pathname}`

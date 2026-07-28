@@ -206,19 +206,49 @@ describe('optional client navigation', () => {
     expect(input.selectionEnd).toBe(7)
   })
 
-  it('leaves modified, external, download, target, reload, and non-GET actions native', () => {
+  it('normalizes matching persistence keys before replacement', async () => {
+    document.querySelector('#root')!.innerHTML = `
+      <input data-nib-navigation-persist=" search " value="preserved value">
+    `
+    const input = document.querySelector('input')!
+    vi.mocked(fetch).mockResolvedValue(page(
+      '/results',
+      'Results',
+      '<input data-nib-navigation-persist="search" value="replacement">',
+    ))
+    controller = createClientNavigation()
+    controller.mount()
+
+    await controller.navigate('/results')
+
+    expect(document.querySelector('input')).toBe(input)
+    expect(input.value).toBe('preserved value')
+  })
+
+  it('leaves links with native navigation semantics and non-GET actions native', () => {
     document.querySelector('#root')!.innerHTML = `
       <a id="external" href="https://example.test/">External</a>
       <a id="download" href="/file" download>Download</a>
       <a id="target" href="/target" target="_blank">Target</a>
       <a id="reload" href="/reload" data-nib-navigation-reload>Reload</a>
+      <a id="noreferrer" href="/private" rel="noopener noreferrer">No referrer</a>
+      <a id="referrerpolicy" href="/origin-only" referrerpolicy="origin">Origin only</a>
+      <a id="ping" href="/tracked" ping="/audit">Tracked</a>
       <a id="modified" href="/modified">Modified</a>
       <form id="post" action="/submit" method="post"><button>Submit</button></form>
     `
     controller = createClientNavigation()
     controller.mount()
 
-    for (const id of ['external', 'download', 'target', 'reload']) {
+    for (const id of [
+      'external',
+      'download',
+      'target',
+      'reload',
+      'noreferrer',
+      'referrerpolicy',
+      'ping',
+    ]) {
       let preventedByController = true
       document.addEventListener('click', (nativeEvent) => {
         preventedByController = nativeEvent.defaultPrevented
@@ -243,6 +273,78 @@ describe('optional client navigation', () => {
     })
     document.querySelector('#post')!.dispatchEvent(submit)
     expect(submit.defaultPrevented).toBe(false)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('uses the document base target for links and GET forms while honoring an override', async () => {
+    document.head.insertAdjacentHTML('beforeend', '<base target="_blank">')
+    document.querySelector('#root')!.innerHTML = `
+      <a id="base-link" href="/base-link">Base link</a>
+      <form id="base-form" action="/base-form" method="get">
+        <button>Base form</button>
+      </form>
+      <form id="self-form" action="/self-form" method="get">
+        <button formtarget="_self">Self form</button>
+      </form>
+    `
+    vi.mocked(fetch).mockResolvedValue(page(
+      '/self-form',
+      'Self form',
+      '<h1>Self form</h1>',
+    ))
+    controller = createClientNavigation()
+    controller.mount()
+
+    let linkPreventedByController = true
+    document.addEventListener('click', (event) => {
+      linkPreventedByController = event.defaultPrevented
+      event.preventDefault()
+    }, { once: true })
+    document.querySelector('#base-link')!.dispatchEvent(new MouseEvent('click', {
+      bubbles: true,
+      button: 0,
+      cancelable: true,
+    }))
+    expect(linkPreventedByController).toBe(false)
+
+    const baseForm = document.querySelector<HTMLFormElement>('#base-form')!
+    const baseSubmit = new SubmitEvent('submit', {
+      bubbles: true,
+      cancelable: true,
+      submitter: baseForm.querySelector('button'),
+    })
+    baseForm.dispatchEvent(baseSubmit)
+    expect(baseSubmit.defaultPrevented).toBe(false)
+    expect(fetch).not.toHaveBeenCalled()
+
+    const selfForm = document.querySelector<HTMLFormElement>('#self-form')!
+    const selfSubmit = new SubmitEvent('submit', {
+      bubbles: true,
+      cancelable: true,
+      submitter: selfForm.querySelector('button'),
+    })
+    selfForm.dispatchEvent(selfSubmit)
+    expect(selfSubmit.defaultPrevented).toBe(true)
+    await vi.waitFor(() => expect(document.title).toBe('Self form'))
+    expect(fetch).toHaveBeenCalledOnce()
+  })
+
+  it('dispatches hashchange for an intercepted same-document navigation', async () => {
+    document.querySelector('#root')!.innerHTML = '<h1 id="target">Target</h1>'
+    const oldURL = location.href
+    const newURL = new URL('/#target', oldURL).href
+    const changes: Array<{ newURL: string; oldURL: string }> = []
+    window.addEventListener('hashchange', (event) => {
+      changes.push({ oldURL: event.oldURL, newURL: event.newURL })
+    })
+    controller = createClientNavigation()
+    controller.mount()
+
+    await controller.navigate('/#target')
+    await controller.navigate('/#target')
+
+    expect(location.hash).toBe('#target')
+    expect(changes).toEqual([{ oldURL, newURL }])
     expect(fetch).not.toHaveBeenCalled()
   })
 
@@ -414,6 +516,24 @@ describe('optional client navigation', () => {
     expect(scripts[0]?.hasAttribute('data-nib-script-executed')).toBe(true)
     expect(scripts[1]?.type).toBe('application/ld+json')
     expect(scripts[1]?.getAttribute('nonce')).toBe('json')
+  })
+
+  it('executes a classic JavaScript MIME type with parameters after a swap', async () => {
+    vi.mocked(fetch).mockResolvedValue(page(
+      '/classic-script',
+      'Classic script',
+      '<h1>Classic script</h1>',
+      '<script type="application/javascript; charset=utf-8">window.__classic = true</script>',
+    ))
+    controller = createClientNavigation()
+    controller.mount()
+
+    await controller.navigate('/classic-script')
+
+    const script = document.querySelector<HTMLScriptElement>(
+      'script[type^="application/javascript"]',
+    )
+    expect(script?.hasAttribute('data-nib-script-executed')).toBe(true)
   })
 
   it('replaces matching head resources when their other attributes change', async () => {
@@ -895,6 +1015,35 @@ describe('optional client navigation', () => {
     expect(history.length).toBe(historyLength)
   })
 
+  it('repairs non-finite traversal indices before computing direction', async () => {
+    history.replaceState({
+      __nibNavigationIndex: 2,
+      __nibScrollX: 0,
+      __nibScrollY: 0,
+    }, '', '/two')
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = new URL(String(input), location.href)
+      return Promise.resolve(page(url.pathname, url.pathname, `<h1>${url.pathname}</h1>`))
+    })
+    controller = createClientNavigation()
+    controller.mount()
+
+    for (const [invalidIndex, pathname, expectedIndex] of [
+      [Number.NaN, '/one', 1],
+      [Number.POSITIVE_INFINITY, '/zero', 0],
+    ] as const) {
+      history.replaceState({
+        __nibNavigationIndex: invalidIndex,
+        __nibScrollX: 0,
+        __nibScrollY: 0,
+      }, '', pathname)
+      window.dispatchEvent(new PopStateEvent('popstate', { state: history.state }))
+      await vi.waitFor(() => expect(document.title).toBe(pathname))
+      expect(history.state.__nibNavigationIndex).toBe(expectedIndex)
+      expect(Number.isFinite(history.state.__nibNavigationIndex)).toBe(true)
+    }
+  })
+
   it('preloads new styles with security attributes and falls back on a load error', async () => {
     const appendedPreloads: HTMLLinkElement[] = []
     const originalAppend = document.head.append.bind(document.head)
@@ -1056,9 +1205,9 @@ describe('optional client navigation', () => {
     controller = createClientNavigation()
     controller.mount()
 
-    await controller.navigate('/redirect')
+    await controller.navigate('/redirect#requested')
 
-    expect(location.href).toBe('https://external.test/final')
+    expect(location.href).toBe('https://external.test/final#requested')
     expect(document.title).toBe('Home')
     expect(runtime.unmount).not.toHaveBeenCalled()
   })

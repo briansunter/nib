@@ -120,7 +120,7 @@ identical between file pages and generated prose.
 
 Layout names are flat filenames. `src/layouts/docs.tsx` works; nested layout paths are intentionally unsupported.
 
-For folder-based composition, create `src/pages/layout.tsx` or a nested `src/pages/docs/layout.tsx`. Nib wraps a page with every matching folder layout from root to leaf, then applies its optional named layout. Folder layouts receive the same `PageLayoutProps`, including validated `frontmatter`, `route`, `site`, and collections.
+For folder-based composition, create `src/pages/layout.tsx` or a nested `src/pages/docs/layout.tsx`. Nib wraps a page with every matching folder layout from root to leaf, then applies its optional named layout. Folder layouts receive the same `PageLayoutProps`, including validated `frontmatter`, the immutable `route`, and typed collections.
 
 ## Markdown page versus TSX page
 

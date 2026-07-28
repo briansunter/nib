@@ -90,7 +90,11 @@ function pageSourceCollectionEntries(
   const entries = new Map<PageSourceDefinition<any>, CollectionEntry[]>()
   for (const module of Object.values(modules)) {
     for (const page of module.pages ?? []) {
-      if (!page.sourceDefinition || page.collectionId === undefined) continue
+      if (
+        page.meta?.draft === true
+        || !page.sourceDefinition
+        || page.collectionId === undefined
+      ) continue
       const collection = entries.get(page.sourceDefinition) ?? []
       collection.push({ id: page.collectionId, data: page.data })
       entries.set(page.sourceDefinition, collection)

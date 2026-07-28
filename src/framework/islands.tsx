@@ -3,7 +3,6 @@ import {
   createElement,
   useContext,
   type ComponentClass,
-  type ComponentType,
   type ReactNode,
 } from 'react'
 import {
@@ -16,6 +15,8 @@ import type { JsonSerializableObject } from './island-serialization'
 export type { HydrationStrategy } from './hydration'
 
 const ISLAND_DEFINITION = Symbol.for('nib.island-definition')
+
+type SyncReactNode = Exclude<ReactNode, Promise<unknown>>
 
 export interface IslandControlProps {
   hydrate?: HydrationStrategy
@@ -30,14 +31,17 @@ type DefinitionGuard<Props extends object> = true extends HasHydrateKey<Props>
     ? []
     : [error: 'Island props must be JSON-serializable']
 
-type IslandFunctionComponent = (...args: any[]) => ReactNode | Promise<ReactNode>
+type IslandFunctionComponent<Props extends object = object> = (props: Props) => SyncReactNode
+type IslandComponent<Props extends object = object> =
+  | IslandFunctionComponent<Props>
+  | ComponentClass<Props>
 
-export type IslandDefinition<Props extends object = object> = ComponentType<
+export type IslandDefinition<Props extends object = object> = IslandFunctionComponent<
   Props & IslandControlProps
 > & {
   readonly [ISLAND_DEFINITION]: true
   readonly islandId: string
-  readonly Component: ComponentType<Props>
+  readonly Component: IslandComponent<Props>
 }
 
 export interface IslandRenderRequest {
@@ -47,17 +51,17 @@ export interface IslandRenderRequest {
 }
 
 export interface IslandRenderer {
-  render(request: IslandRenderRequest): ReactNode
+  render(request: IslandRenderRequest): SyncReactNode
 }
 
 export const IslandRenderContext = createContext<IslandRenderer | null>(null)
 
 export function defineIsland<Props extends object>(
   id: string,
-  Component: (props: Props) => ReactNode | Promise<ReactNode>,
+  Component: IslandFunctionComponent<Props>,
   ..._guard: DefinitionGuard<Props>
 ): IslandDefinition<Props>
-export function defineIsland<Component extends IslandFunctionComponent>(
+export function defineIsland<Component extends IslandFunctionComponent<Record<never, never>>>(
   id: string,
   Component: Component & (Parameters<Component> extends [] ? unknown : never),
 ): IslandDefinition<Record<never, never>>
@@ -68,7 +72,7 @@ export function defineIsland<Props extends object>(
 ): IslandDefinition<Props>
 export function defineIsland<Props extends object>(
   id: string,
-  Component: ComponentType<Props>,
+  Component: IslandComponent<Props>,
   ..._guard: unknown[]
 ): IslandDefinition<Props> {
   const islandId = validateIslandId(id)

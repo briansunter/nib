@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { createProjectRenderer } from '../src/framework/project-renderer'
-import { defineCollection, fromCollection } from '../src/framework/content'
+import {
+  defineCollection,
+  definePageSource,
+  fromCollection,
+  fromPageSource,
+} from '../src/framework/content'
 import { markdownBody, type ContentRenderer } from '../src/framework/markdown-content'
 import type {
   PageLayoutProps,
@@ -15,6 +20,65 @@ import { rss } from '../src/rss'
 const Page = () => <h1>Home</h1>
 
 describe('project renderer', () => {
+  it('keeps draft data pages out of page-source collections', async () => {
+    const source = definePageSource({
+      extensions: ['json'],
+      validate: (value) => value as { title: string },
+      load: () => [],
+      component: Page,
+    })
+    const posts = fromPageSource(source)
+    const titles = fromCollection(posts, (entries) => (
+      entries.map((entry) => entry.data.title)
+    ))
+    const renderer = await createProjectRenderer({
+      config: {
+        collections: { posts },
+        plugins: [{
+          name: 'collection-reader',
+          routes({ readCollection }) {
+            return {
+              kind: 'resource',
+              path: '/titles.json',
+              contentType: 'application/json',
+              body: JSON.stringify(readCollection(titles)),
+            }
+          },
+        }],
+      },
+      root: process.cwd(),
+      base: '/',
+      pages: {
+        '/src/content/posts.json': {
+          pages: [
+            {
+              path: '/published',
+              component: Page,
+              data: { title: 'Published' },
+              meta: { title: 'Published' },
+              sourceDefinition: source,
+              collectionId: 'published',
+            },
+            {
+              path: '/draft',
+              component: Page,
+              data: { title: 'Draft' },
+              meta: { title: 'Draft', draft: true },
+              sourceDefinition: source,
+              collectionId: 'draft',
+            },
+          ],
+        },
+      },
+      islandModules: {},
+    })
+
+    expect(renderer.render('/titles.json')).toMatchObject({
+      kind: 'resource',
+      body: '["Published"]',
+    })
+  })
+
   it('grants resource plugins mapped access to one immutable collection', async () => {
     const posts = defineCollection({
       loader: async () => [{ id: 'one', data: { title: 'One' } }],

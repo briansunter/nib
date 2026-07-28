@@ -1,5 +1,6 @@
 import { definePlugin, type NibResolvedPageRoute } from '../framework/plugin'
 import { deployedOrigin, deployedRouteUrl } from '../framework/deployed-url'
+import { escapeXml, resourcePath } from './shared'
 
 export interface SitemapOptions {
   /** Overrides the configured deployment origin. */
@@ -10,15 +11,6 @@ export interface SitemapOptions {
   filter?: (route: NibResolvedPageRoute) => boolean
 }
 
-function escapeXml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;')
-}
-
 export function sitemap(options: SitemapOptions = {}) {
   if (options === null || typeof options !== 'object') {
     throw new Error('Nib sitemap requires an options object')
@@ -26,10 +18,7 @@ export function sitemap(options: SitemapOptions = {}) {
   if (options.origin !== undefined) {
     deployedOrigin(options.origin, undefined, 'Nib sitemap origin')
   }
-  const routePath = options.path ?? '/sitemap.xml'
-  if (!routePath.startsWith('/')) {
-    throw new Error('Nib sitemap path must be an absolute route path')
-  }
+  const routePath = resourcePath(options.path ?? '/sitemap.xml', 'Nib sitemap')
 
   return definePlugin({
     name: '@briansunter/nib/sitemap',

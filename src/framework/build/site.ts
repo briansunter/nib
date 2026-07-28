@@ -13,6 +13,7 @@ import {
   type PreviewServer,
   type ViteDevServer,
 } from 'vite'
+import { glob } from 'tinyglobby'
 import { renderDocument, renderRedirectDocument } from '../document'
 import { pageSourceExtensions, pageSourcePatterns } from '../content'
 import { nibIslandsEntry } from '../island-vite-plugin'
@@ -165,6 +166,7 @@ export async function siteViteConfig(
 async function readBuildTemplate(
   clientDirectory: string,
   base: string,
+  hasIslands: boolean,
   hasEnhancements: boolean,
 ): Promise<string> {
   const manifest = JSON.parse(
@@ -174,7 +176,9 @@ async function readBuildTemplate(
   const islands = entries.find((entry) => entry.isEntry && entry.name === 'islands')
   const behaviors = entries.find((entry) => entry.isEntry && entry.name === 'behaviors')
   const enhancements = entries.find((entry) => entry.isEntry && entry.name === 'enhancements')
-  if (!islands) throw new Error('Nib client build did not produce an island runtime entry')
+  if (hasIslands && !islands) {
+    throw new Error('Nib client build did not produce its configured island runtime entry')
+  }
   if (!behaviors) throw new Error('Nib client build did not produce a behavior runtime entry')
   if (hasEnhancements && !enhancements) {
     throw new Error('Nib client build did not produce its configured enhancement entry')
@@ -192,10 +196,14 @@ async function readBuildTemplate(
     ])
     .filter((file, index, all) => all.indexOf(file) === index)
   return htmlTemplate({
-    island: {
-      source: baseHref(base, islands.file),
-      preloads: preloads(islands),
-    },
+    ...(islands === undefined
+      ? {}
+      : {
+          island: {
+            source: baseHref(base, islands.file),
+            preloads: preloads(islands),
+          },
+        }),
     behavior: {
       source: baseHref(base, behaviors.file),
       preloads: preloads(behaviors),
@@ -368,6 +376,10 @@ async function buildStagedSite(root: string, output: string): Promise<void> {
   const serverDirectory = path.join(output, 'server')
   const stylePath = path.join(root, 'src/style.css')
   const hasStyles = await fs.access(stylePath).then(() => true, () => false)
+  const hasIslands = (await glob('src/islands/**/*.tsx', {
+    cwd: root,
+    onlyFiles: true,
+  })).length > 0
 
   const {
     base,
@@ -384,7 +396,7 @@ async function buildStagedSite(root: string, output: string): Promise<void> {
       outDir: clientDirectory,
       rollupOptions: {
         input: {
-          islands: NIB_CLIENT_ENTRY,
+          ...(hasIslands ? { islands: NIB_CLIENT_ENTRY } : {}),
           behaviors: NIB_BEHAVIOR_ENTRY,
           ...(clientEntries.length > 0 ? { enhancements: NIB_ENHANCEMENT_ENTRY } : {}),
           ...(hasStyles ? { styles: stylePath } : {}),
@@ -412,7 +424,12 @@ async function buildStagedSite(root: string, output: string): Promise<void> {
     },
   })
 
-  const template = await readBuildTemplate(clientDirectory, base, clientEntries.length > 0)
+  const template = await readBuildTemplate(
+    clientDirectory,
+    base,
+    hasIslands,
+    clientEntries.length > 0,
+  )
   const serverEntry = path.join(serverDirectory, 'entry-server.js')
   const server = await import(`${pathToFileURL(serverEntry).href}?t=${Date.now()}`) as {
     paths: readonly string[]

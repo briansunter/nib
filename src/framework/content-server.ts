@@ -28,7 +28,17 @@ async function safeProjectFile(root: string, file: string): Promise<string> {
   if (resolved !== resolvedRoot && !resolved.startsWith(`${resolvedRoot}${path.sep}`)) {
     throw new Error(`Content file escapes the project root: ${file}`)
   }
-  return resolved
+  const [canonicalRoot, canonicalFile] = await Promise.all([
+    fs.realpath(resolvedRoot),
+    fs.realpath(resolved),
+  ])
+  if (
+    canonicalFile !== canonicalRoot
+    && !canonicalFile.startsWith(`${canonicalRoot}${path.sep}`)
+  ) {
+    throw new Error(`Content file escapes the project root through a symbolic link: ${file}`)
+  }
+  return canonicalFile
 }
 
 export async function loadCollections<
@@ -74,6 +84,9 @@ export async function loadCollections<
       const entries = pageSourceEntries.get(definition.source) ?? []
       const seen = new Set<string>()
       collections[name] = entries.map((entry) => {
+        if (typeof entry.id !== 'string' || entry.id.trim() === '') {
+          throw new Error(`Collection ${name} entry id must be a non-empty string`)
+        }
         if (seen.has(entry.id)) throw new Error(`Duplicate collection entry ${name}/${entry.id}`)
         seen.add(entry.id)
         return deepFreeze({ id: entry.id, data: entry.data })
@@ -136,12 +149,13 @@ export function glob(options: GlobLoaderOptions) {
       const file = path.posix.join(options.base.replaceAll('\\', '/'), relativeFile)
       const extension = path.posix.extname(relativeFile)
       const id = relativeFile.slice(0, extension ? -extension.length : undefined)
+      const sourceFile = await safeProjectFile(root, file)
       return {
         id,
         data: await options.load({
           id,
           file,
-          source: await fs.readFile(path.join(base, relativeFile), 'utf8'),
+          source: await fs.readFile(sourceFile, 'utf8'),
         }),
       }
     }))

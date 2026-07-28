@@ -37,7 +37,7 @@ interface HtmlTemplateEntry {
 }
 
 export interface HtmlTemplateEntries {
-  readonly island: HtmlTemplateEntry
+  readonly island?: HtmlTemplateEntry
   readonly behavior: HtmlTemplateEntry
   readonly enhancement?: HtmlTemplateEntry
   readonly stylesheets: readonly string[]
@@ -58,7 +58,9 @@ export function htmlTemplate(entries: HtmlTemplateEntries): string {
   const styles = entries.stylesheets
     .map((href) => `<link rel="stylesheet" href="${href}" />`)
     .join('\n    ')
-  const islandPreloads = modulePreloadLinks('islands', entries.island.preloads)
+  const islandPreloads = entries.island === undefined
+    ? ''
+    : modulePreloadLinks('islands', entries.island.preloads)
   const behaviorPreloads = modulePreloadLinks('behaviors', entries.behavior.preloads)
   return `<!doctype html>
 <html lang="en">
@@ -68,7 +70,9 @@ export function htmlTemplate(entries: HtmlTemplateEntries): string {
     <!--head-outlet-->
     ${styles}
     ${islandPreloads}
-    <!--nib-islands-entry--><script data-nib-islands type="module" src="${entries.island.source}"></script>
+    ${entries.island === undefined
+      ? ''
+      : `<!--nib-islands-entry--><script data-nib-islands type="module" src="${entries.island.source}"></script>`}
     ${behaviorPreloads}
     <!--nib-behaviors-entry--><script data-nib-behaviors type="module" src="${entries.behavior.source}"></script>
     ${entries.enhancement === undefined

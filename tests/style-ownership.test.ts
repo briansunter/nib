@@ -56,6 +56,19 @@ describe('page stylesheet ownership', () => {
       .resolves.toBeNull()
   })
 
+  it('does not mistake ordinary behavior and island helpers for client entries', async () => {
+    await expect(resolveEdge(
+      'server',
+      './helper.css',
+      '/site/src/behaviors/helper.ts',
+    )).rejects.toThrow('cannot deploy stylesheet')
+    await expect(resolveEdge(
+      'server',
+      './helper.css',
+      '/site/src/islands/helper.ts',
+    )).rejects.toThrow('cannot deploy stylesheet')
+  })
+
   it('tracks plugin-owned client-entry imports through their resolved graph', async () => {
     const plugin = pageStyleOwnershipGuard('/site', 'development')
     if (typeof plugin.resolveId !== 'function') throw new Error('Style guard has no resolveId hook')

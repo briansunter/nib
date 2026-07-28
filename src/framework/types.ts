@@ -341,7 +341,7 @@ export interface GeneratedPage {
   layout?: string
   /** @internal Links compiled entries to fromPageSource() collections. */
   sourceDefinition?: PageSourceDefinition<any>
-  /** @internal Defaults to the generated public path without leading slashes. */
+  /** @internal Defaults to the generated public path without slashes; "/" uses "index". */
   collectionId?: string
 }
 

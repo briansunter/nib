@@ -118,6 +118,9 @@ describe('RSS plugin', () => {
       origin: 'https://example.test', title: 'Journal', description: 'Entries', path: 'rss.xml', items: [],
     })).toThrow('absolute route path')
     expect(() => rss({
+      origin: 'https://example.test', title: 'Journal', description: 'Entries', path: '/rss.xml?draft=1', items: [],
+    })).toThrow('without query or hash')
+    expect(() => rss({
       origin: 'https://example.test', title: 'Journal', description: 'Entries', ttl: -1, items: [],
     })).toThrow('non-negative integer')
     expect(() => rss({
@@ -161,7 +164,7 @@ describe('RSS plugin', () => {
     if (!route || Array.isArray(route) || route.kind !== 'resource') {
       throw new Error('Expected an RSS resource route')
     }
-    expect(route.body).toContain('<?xml-stylesheet type="text/xsl" href="/rss/styles.xsl"?>')
+    expect(route.body).toContain('<?xml-stylesheet type="text/xsl" href="/journal/rss/styles.xsl"?>')
     expect(route.body).toContain('xmlns:dc="http://purl.org/dc/elements/1.1/"')
     expect(route.body).toContain('<language>en-us</language>')
     expect(route.body).toContain('<copyright>© 2026 Author</copyright>')
@@ -170,5 +173,44 @@ describe('RSS plugin', () => {
     expect(route.body).toContain('<dc:creator><![CDATA[Author]]></dc:creator>')
     expect(route.body).toContain('<content:encoded><![CDATA[<p>Body with <img src="https://example.test/cover.webp" alt=""></p>]]></content:encoded>')
     expect(route.body).toContain('href="https://example.test/journal/index.xml"')
+  })
+
+  it('resolves relative stylesheets beside the feed and keeps protocol-relative CDNs external', async () => {
+    const relative = rss({
+      origin: 'https://example.test',
+      title: 'Journal',
+      description: 'Entries',
+      path: '/feeds/index.xml',
+      stylesheet: 'styles/feed.xsl',
+      items: [],
+    })
+    const external = rss({
+      origin: 'https://example.test',
+      title: 'Journal',
+      description: 'Entries',
+      stylesheet: '//cdn.example.test/feed.xsl',
+      items: [],
+    })
+    if (!relative.routes || !external.routes) throw new Error('RSS plugin has no route provider')
+
+    const relativeRoute = await relative.routes(context)
+    const externalRoute = await external.routes(context)
+    if (
+      !relativeRoute
+      || Array.isArray(relativeRoute)
+      || relativeRoute.kind !== 'resource'
+      || !externalRoute
+      || Array.isArray(externalRoute)
+      || externalRoute.kind !== 'resource'
+    ) {
+      throw new Error('Expected RSS resource routes')
+    }
+
+    expect(relativeRoute.body).toContain(
+      '<?xml-stylesheet type="text/xsl" href="/journal/feeds/styles/feed.xsl"?>',
+    )
+    expect(externalRoute.body).toContain(
+      '<?xml-stylesheet type="text/xsl" href="https://cdn.example.test/feed.xsl"?>',
+    )
   })
 })

@@ -58,7 +58,7 @@ describe('Nib documentation site', () => {
     expect(home).toContain('Deploy a Nib site')
     expect(home).not.toContain('data-nib-islands')
     expect(overview).toContain('<aside class="docs-sidebar">')
-    expect(overview).toContain('<details class="docs-menu" open="">')
+    expect(overview).toContain('<details class="docs-menu">')
     expect(overview).toContain('START HERE')
     expect(overview).toContain('BUILD')
     expect(overview).toContain('SHIP')
@@ -68,8 +68,10 @@ describe('Nib documentation site', () => {
       '/docs/pages-and-routes/',
       '/docs/markdown-and-layouts/',
       '/docs/data-pages-and-collections/',
+      '/docs/image-optimization/',
       '/docs/plugin-content-and-routing/',
       '/docs/react-islands/',
+      '/docs/client-navigation/',
       '/docs/github-pages/',
       '/docs/releases/',
     ]) {
@@ -81,6 +83,8 @@ describe('Nib documentation site', () => {
     expect(overview).toContain('Read the docs')
     expect(overview).not.toContain('data-nib-islands')
     expect(gettingStarted).toContain('<aside class="docs-sidebar">')
+    expect(gettingStarted).toContain('aria-label="Guide pagination"')
+    expect(gettingStarted).toContain('Pages and routes')
     expect(gettingStarted).toMatch(/<link rel="stylesheet" href="[^"]*\/assets\/[^"]+\.css" \/>/)
     const dataPages = await fs.readFile(
       path.join(output, 'client/docs/data-pages-and-collections/index.html'),

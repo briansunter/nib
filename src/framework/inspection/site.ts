@@ -8,6 +8,7 @@ import type {
   PublicationManifest,
   PublicationManifestRoute,
 } from '../publication'
+import { srcsetUrls } from '../srcset'
 import type {
   ImageProvenanceCandidate,
   ImageProvenanceReport,
@@ -102,15 +103,41 @@ function isManifest(value: unknown): value is PublicationManifest {
   const candidate = value as Partial<PublicationManifest>
   return candidate.version === 1
     && typeof candidate.base === 'string'
+    && candidate.base.startsWith('/')
+    && !candidate.base.startsWith('//')
+    && candidate.base.endsWith('/')
+    && !/[?#\\]/.test(candidate.base)
+    && (
+      candidate.trailingSlash === 'always'
+      || candidate.trailingSlash === 'never'
+      || candidate.trailingSlash === 'ignore'
+    )
     && Array.isArray(candidate.routes)
     && candidate.routes.every((route) => {
       if (!route || typeof route !== 'object') return false
       const item = route as Partial<PublicationManifestRoute>
       return (item.kind === 'page' || item.kind === 'resource' || item.kind === 'redirect')
         && typeof item.path === 'string'
+        && item.path.startsWith('/')
+        && !item.path.startsWith('//')
+        && !/[?#\\]/.test(item.path)
         && typeof item.artifact === 'string'
+        && safeArtifact(item.artifact) !== undefined
         && typeof item.status === 'number'
+        && Number.isInteger(item.status)
+        && item.status >= 200
+        && item.status <= 599
         && typeof item.contentType === 'string'
+        && item.contentType.includes('/')
+        && !/[\r\n]/.test(item.contentType)
+        && (
+          item.kind !== 'redirect'
+          || (
+            (item.status === 301 || item.status === 302 || item.status === 307 || item.status === 308)
+            && typeof item.destination === 'string'
+            && item.destination !== ''
+          )
+        )
     })
 }
 
@@ -341,15 +368,12 @@ function documentFacts(document: ParsedInspectionDocument): DocumentFacts {
           value: attribute.value,
         }))
       } else if (attribute.name === 'srcset') {
-        for (const candidate of attribute.value.split(',')) {
-          const value = candidate.trim().split(/\s+/, 1)[0]
-          if (value) {
-            pageReferences.push(Object.freeze({
-              tagName: element.tagName,
-              attribute: 'srcset',
-              value,
-            }))
-          }
+        for (const candidate of srcsetUrls(attribute.value)) {
+          pageReferences.push(Object.freeze({
+            tagName: element.tagName,
+            attribute: 'srcset',
+            value: candidate.value,
+          }))
         }
       }
     }
@@ -367,11 +391,16 @@ function documentFacts(document: ParsedInspectionDocument): DocumentFacts {
   })
 }
 
+interface ResolvedReferencePath {
+  readonly pathname: string
+  readonly outsideBase: boolean
+}
+
 function referencePath(
   value: string,
   route: PublicationManifestRoute,
   base: string,
-): string | undefined {
+): ResolvedReferencePath | undefined {
   if (
     !value
     || value.startsWith('#')
@@ -379,21 +408,33 @@ function referencePath(
     || /^[A-Za-z][A-Za-z0-9+.-]*:/.test(value)
   ) return undefined
   try {
-    const routeSuffix = route.path !== '/' && route.artifact.endsWith('/index.html')
+    const normalizedBase = base.startsWith('/') ? base : `/${base}`
+    const publicRoutePath = route.path === '/'
+      ? normalizedBase
+      : `${normalizedBase}${route.path.replace(/^\/+/, '')}`
+    const routeSuffix = (
+      route.path !== '/'
+      && route.artifact.endsWith('/index.html')
+      && !publicRoutePath.endsWith('/')
+    )
       ? '/'
       : ''
-    const routeBase = `http://nib.local${route.path}${routeSuffix}`
-    const pathname = value.startsWith('/')
-      ? value.split(/[?#]/, 1)[0] || '/'
-      : new URL(value, routeBase).pathname
-    const normalizedBase = base.startsWith('/') ? base : `/${base}`
+    const routeBase = `http://nib.local${publicRoutePath}${routeSuffix}`
+    const pathname = new URL(value, routeBase).pathname
     const prefix = normalizedBase.replace(/\/+$/, '')
+    const withinBase = !prefix
+      || pathname === prefix
+      || pathname === `${prefix}/`
+      || pathname.startsWith(`${prefix}/`)
     const stripped = prefix && (pathname === prefix || pathname === `${prefix}/`)
       ? '/'
       : prefix && pathname.startsWith(`${prefix}/`)
         ? pathname.slice(prefix.length) || '/'
         : pathname
-    return decodeURIComponent(stripped)
+    return {
+      pathname: decodeURIComponent(stripped),
+      outsideBase: !withinBase,
+    }
   } catch {
     return undefined
   }
@@ -562,10 +603,19 @@ async function inspectPages(
       }))
     }
     for (const reference of facts.references) {
-      const pathname = referencePath(reference.value, route, inspection.manifest?.base ?? '/')
-      if (pathname === undefined) continue
+      const resolved = referencePath(reference.value, route, inspection.manifest?.base ?? '/')
+      if (resolved === undefined) continue
       inspection.checkedReferences += 1
-      if (!referenceExists(pathname, routesByPath, filesByPath)) {
+      if (resolved.outsideBase) {
+        inspection.issues.push(issue({
+          code: 'LOCAL_REFERENCE_OUTSIDE_BASE',
+          severity: 'error',
+          message: `Local ${reference.attribute} on ${route.path} escapes the configured base: ${reference.value}`,
+          route: route.path,
+          artifact,
+          reference: reference.value,
+        }))
+      } else if (!referenceExists(resolved.pathname, routesByPath, filesByPath)) {
         inspection.issues.push(issue({
           code: 'LOCAL_REFERENCE_MISSING',
           severity: 'error',
@@ -593,6 +643,10 @@ function isSiteIssue(value: unknown): value is SiteIssue {
   return typeof candidate.code === 'string'
     && (candidate.severity === 'error' || candidate.severity === 'warning')
     && typeof candidate.message === 'string'
+    && (candidate.route === undefined || typeof candidate.route === 'string')
+    && (candidate.artifact === undefined || typeof candidate.artifact === 'string')
+    && (candidate.reference === undefined || typeof candidate.reference === 'string')
+    && (candidate.owner === undefined || typeof candidate.owner === 'string')
 }
 
 async function extensionIssues(

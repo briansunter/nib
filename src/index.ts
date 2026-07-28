@@ -18,15 +18,15 @@ export {
 export { file, glob } from './framework/content-compat'
 export { defineIsland } from './framework/islands'
 export { defineClientBehavior } from './framework/behaviors'
-export { markdownMedia } from './framework/markdown-media'
+export { markdownMedia } from './integrations/markdown-media'
 export {
   Content,
   isMarkdownContent,
   markdownBody,
 } from './framework/markdown-content'
-export { metadata } from './metadata'
-export { siteMetadata } from './site-metadata'
-export { search } from './search'
+export { metadata } from './integrations/metadata'
+export { siteMetadata } from './integrations/site-metadata'
+export { search } from './integrations/search'
 export { siteHref } from './framework/urls'
 export { z } from 'zod'
 export type {
@@ -97,7 +97,7 @@ export type {
   PublicationManifest,
   PublicationManifestRoute,
 } from './framework/publication'
-export type { MetadataOptions } from './metadata'
-export type { SiteMetadataOptions } from './site-metadata'
-export type { MarkdownMediaOptions } from './framework/markdown-media'
-export type { SearchItem, SearchItems, SearchOptions } from './search'
+export type { MetadataOptions } from './integrations/metadata'
+export type { SiteMetadataOptions } from './integrations/site-metadata'
+export type { MarkdownMediaOptions } from './integrations/markdown-media'
+export type { SearchItem, SearchItems, SearchOptions } from './integrations/search'

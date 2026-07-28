@@ -15,6 +15,7 @@ import {
   requestPage,
 } from './page-cache'
 import {
+  effectiveNavigationTarget,
   eligibleLink,
   HOVER_PREFETCH_DELAY_MS,
   linkFromEvent,
@@ -393,11 +394,10 @@ class NibClientNavigation implements ClientNavigationController {
     ) {
       return
     }
-    const target = (
-      submitter?.getAttribute('formtarget')
-      ?? form.getAttribute('target')
-      ?? ''
-    ).trim().toLowerCase()
+    const target = effectiveNavigationTarget(
+      form,
+      submitter?.getAttribute('formtarget') ?? null,
+    )
     if (target && target !== '_self') return
 
     const method = (
@@ -458,13 +458,18 @@ class NibClientNavigation implements ClientNavigationController {
     if (!scrollToHash(to)) {
       window.scrollTo({ left: 0, top: 0, behavior: 'auto' })
     }
+    window.dispatchEvent(new HashChangeEvent('hashchange', {
+      oldURL: from.href,
+      newURL: to.href,
+    }))
   }
 
   private onPopState = (event: PopStateEvent) => {
     const state = event.state as NavigationHistoryState | null
-    const hasIndex = typeof state?.[HISTORY_INDEX] === 'number'
+    const storedIndex = stateNumber(state, HISTORY_INDEX, Number.NaN)
+    const hasIndex = Number.isFinite(storedIndex)
     const nextIndex = hasIndex
-      ? state[HISTORY_INDEX] as number
+      ? storedIndex
       : Math.max(0, this.currentIndex - 1)
     const direction: NavigationDirection = nextIndex < this.currentIndex
       ? 'back'
@@ -540,11 +545,11 @@ class NibClientNavigation implements ClientNavigationController {
       }
 
       const finalUrl = new URL(prepared.finalUrl, to)
+      finalUrl.hash = to.hash
       if (finalUrl.origin !== location.origin) {
         this.hardNavigate(finalUrl)
         return
       }
-      finalUrl.hash = to.hash
       fallbackUrl = finalUrl
 
       const nextDocument = new DOMParser().parseFromString(

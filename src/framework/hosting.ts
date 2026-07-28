@@ -114,5 +114,6 @@ export function hostingArtifacts(
     { path: '_redirects', body: redirectsFile(manifest) },
     { path: '_headers', body: headersFile(manifest) },
   ]
-  return [{ path: 's3-website.json', body: s3File(manifest) }]
+  if (adapter === 's3') return [{ path: 's3-website.json', body: s3File(manifest) }]
+  throw new Error(`Unsupported Nib hosting adapter: ${String(adapter)}`)
 }

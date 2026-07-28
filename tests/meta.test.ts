@@ -6,6 +6,14 @@ describe('metadata', () => {
     expect(resolveMeta({ title: 'About' })).toEqual({ title: 'About' })
     expect(() => resolveMeta(undefined)).toThrow('non-empty title')
     expect(() => resolveMeta({ title: '  ' })).toThrow('non-empty title')
+    expect(() => resolveMeta({
+      title: 'About',
+      head: { title: '  ' },
+    })).toThrow('head.title must be a non-empty string')
+    expect(() => renderHead(
+      resolveMeta({ title: 'About' }),
+      { title: '' },
+    )).toThrow('Renderer head contribution.title must be a non-empty string')
   })
   it('renders escaped title and description tags', () => {
     const head = renderHead(resolveMeta({ title: '<a "x">&\'', description: 'One & two' }))

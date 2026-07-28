@@ -100,7 +100,7 @@ export function createRoutes(
           }]
         : []
     )
-    if (pages.length === 0) {
+    if (pages.length === 0 && module.pages === undefined) {
       throw new Error(`Page module must export a default component or generated pages: ${file}`)
     }
 

@@ -67,6 +67,9 @@ export function normalizeHeadContribution(
       throw new Error(`${label}.${field} must be a string`)
     }
   }
+  if (typeof value.title === 'string' && value.title.trim() === '') {
+    throw new Error(`${label}.title must be a non-empty string`)
+  }
   if (value.elements !== undefined && !Array.isArray(value.elements)) {
     throw new Error(`${label}.elements must be an array`)
   }

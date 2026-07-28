@@ -160,7 +160,10 @@ boundary with `defineClientBehavior` and put its implementation under
 `src/behaviors/**/*.client.ts`. Import `defineBehaviorClient` from
 `@briansunter/nib/client/behaviors`; the implementation receives its scoped
 root, JSON props, and an `AbortSignal`. Behavior-only routes keep their complete
-static HTML and do not ship React DOM.
+static HTML and do not ship React DOM. When the project has no files under
+`src/islands`, the production client build omits the island entry and React
+hydration stack entirely. Runtime teardown runs in reverse registration order,
+so a behavior can clean up before an enclosing island releases its DOM.
 
 ### Site identity and document head
 

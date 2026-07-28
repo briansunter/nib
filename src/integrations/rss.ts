@@ -4,16 +4,9 @@ import {
   deployedOrigin,
   deployedRouteUrl,
 } from '../framework/deployed-url'
+import { publicRouteHref } from '../framework/publication'
 import type { CollectionCapability } from '../framework/types'
-
-function isCollectionCapability<Result>(
-  value: unknown,
-): value is CollectionCapability<Result> {
-  return value !== null
-    && typeof value === 'object'
-    && !Array.isArray(value)
-    && (value as { kind?: unknown }).kind === 'collection-capability'
-}
+import { escapeXml, isCollectionCapability, resourcePath } from './shared'
 
 /** A single item in an RSS 2.0 feed. Route paths are resolved against Nib's base. */
 export interface RssItem {
@@ -55,22 +48,13 @@ export interface RssOptions {
   readonly webMaster?: string
   readonly ttl?: number
   readonly lastBuildDate?: string | Date
-  /** Path to an XSL stylesheet, emitted as an xml-stylesheet processing instruction. */
+  /** Local route, feed-relative path, or HTTP(S) URL for an XSL stylesheet. */
   readonly stylesheet?: string
   /** Static items or an async provider using the current immutable route manifest. */
   readonly items:
     | readonly RssItem[]
     | CollectionCapability<readonly RssItem[]>
     | ((context: RssItemsContext) => Awaitable<readonly RssItem[]>)
-}
-
-function escapeXml(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;')
 }
 
 function cdata(value: string): string {
@@ -101,6 +85,35 @@ function channelElement(name: string, value: string | undefined): string | undef
 
 function itemElement(name: string, value: string | undefined): string | undefined {
   return value === undefined ? undefined : `      <${name}>${escapeXml(value)}</${name}>`
+}
+
+function stylesheetHref(
+  value: string,
+  origin: URL,
+  base: string,
+  feedPath: string,
+): string {
+  const authored = value.trim()
+  if (authored.startsWith('/') && !authored.startsWith('//')) {
+    return publicRouteHref(base, authored)
+  }
+  if (/^[A-Za-z][A-Za-z\d+.-]*:/.test(authored)) {
+    return deployedLinkUrl(authored, origin, base, 'Nib RSS stylesheet')
+  }
+
+  let resolved: URL
+  try {
+    resolved = new URL(authored, deployedRouteUrl(origin, base, feedPath))
+  } catch {
+    throw new Error('Nib RSS stylesheet must be a valid URL reference')
+  }
+  if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') {
+    throw new Error('Nib RSS stylesheet must use HTTP or HTTPS')
+  }
+  if (authored.startsWith('//') || resolved.origin !== origin.origin) {
+    return resolved.href
+  }
+  return `${resolved.pathname}${resolved.search}${resolved.hash}`
 }
 
 function itemXml(item: RssItem, index: number, origin: URL, base: string): string[] {
@@ -156,8 +169,7 @@ export function rss(options: RssOptions) {
   if (options.origin !== undefined) deployedOrigin(options.origin, undefined, 'Nib RSS origin')
   requiredText(options.title, 'title')
   requiredText(options.description, 'description')
-  const routePath = options.path ?? '/rss.xml'
-  if (!routePath.startsWith('/')) throw new Error('Nib RSS path must be an absolute route path')
+  const routePath = resourcePath(options.path ?? '/rss.xml', 'Nib RSS')
   if (
     !Array.isArray(options.items)
     && typeof options.items !== 'function'
@@ -194,6 +206,9 @@ export function rss(options: RssOptions) {
 
       const channelUrl = deployedRouteUrl(origin, context.base, '/')
       const feedUrl = deployedRouteUrl(origin, context.base, routePath)
+      const stylesheetUrl = options.stylesheet === undefined
+        ? undefined
+        : stylesheetHref(options.stylesheet, origin, context.base, routePath)
       const itemEntries = items.flatMap((item, index) => itemXml(item, index, origin, context.base))
       return {
         kind: 'resource',
@@ -201,9 +216,9 @@ export function rss(options: RssOptions) {
         contentType: 'application/rss+xml; charset=utf-8',
         body: [
           '<?xml version="1.0" encoding="UTF-8"?>',
-          options.stylesheet === undefined
+          stylesheetUrl === undefined
             ? undefined
-            : `<?xml-stylesheet type="text/xsl" href="${escapeXml(options.stylesheet)}"?>`,
+            : `<?xml-stylesheet type="text/xsl" href="${escapeXml(stylesheetUrl)}"?>`,
           '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">',
           '  <channel>',
           `    <title>${escapeXml(title)}</title>`,

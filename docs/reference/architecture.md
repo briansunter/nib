@@ -91,7 +91,8 @@ nib.config.ts + src/
                          dist/client
 ```
 
-`src/framework/site.ts` is the deep module behind the command interface. It
+`src/framework/build/site.ts` is the deep module behind the command interface;
+`src/framework/site.ts` is its compatibility re-export. The build module
 creates the Vite configuration, builds client and server environments,
 constructs the HTML template from the client manifest, executes the server
 entry, and writes route output. Consumer projects do not contain a Vite config,
@@ -150,6 +151,12 @@ static-import entry for the client/development graph. The declaration contains
 strings rather than imported browser functions, so `nib.config.ts` and the
 server graph remain server-safe. Sites without a contribution do not build or
 emit this entry.
+
+The production client graph includes the island entry only when
+`src/islands/**/*.tsx` contains a module. A behavior-only application therefore
+does not emit React DOM, hydration, or island-serialization chunks. Client
+runtime controllers tear down in reverse registration order so behavior
+cleanup runs before an enclosing React root is destroyed.
 
 Tailwind is optional rather than a framework dependency. The initializer adds
 `@tailwindcss/vite` and opts in through the narrow app-owned `vite` field in
@@ -383,17 +390,18 @@ objects to every plugin.
 
 `src/pages/layout.tsx` wraps every page and nested folder layouts wrap their
 subtree from root to leaf. An optional flat named layout from `src/layouts`
-wraps the page inside that folder stack. Layouts receive children, route and
-site information, collections, data-page `data`, Markdown `frontmatter`, and
-an optional bound Markdown `Content` renderer.
+wraps the page inside that folder stack. Layouts receive children, the immutable
+route snapshot, collections, data-page `data`, Markdown `frontmatter`, and an
+optional bound Markdown `Content` renderer. Deployment metadata remains in
+configuration and head plugins rather than being copied into every render prop.
 `PageLayoutProps` keeps its one-argument backwards-compatible form and accepts
 a third type argument when a layout needs different types for those two
 payloads.
 
 ## Page shell and documents
 
-The configured shell receives `children`, the resolved route, and site
-metadata. When omitted, Nib renders a small semantic header and main region.
+The configured shell receives `children`, the resolved route, and typed
+collections. When omitted, Nib renders a small semantic header and main region.
 This gives consumers full visual control without making them own the framework
 renderer.
 

@@ -21,6 +21,11 @@ describe('router', () => {
     })
     expect(routes.has('/draft')).toBe(false)
   })
+  it('allows a page source to produce no routes', () => {
+    expect(createRoutes({
+      '/src/content/empty.json': { pages: [] },
+    })).toEqual(new Map())
+  })
   it('rejects duplicate React and Markdown routes', () => {
     const modules: Record<string, PageModule> = {
       '../pages/about/page.tsx': { default: Page, meta: { title: 'About TSX' } },

@@ -31,11 +31,14 @@ Keep these names exact:
 
 1. Put a route at `src/pages/<route>/page.tsx`, `page.md`, or a configured
    `page.<extension>` file, never multiple page types in one folder.
-2. Export a default component from a TSX page; export typed `meta` when needed.
-3. Use only `title`, `description`, `draft`, and `layout` in Markdown
-   frontmatter.
+2. Export a default component and a typed `meta` object with a non-empty title
+   from every TSX page.
+3. Markdown frontmatter always has a title and may use `description`, `draft`,
+   `layout`, `image`, `type`, and `twitterCard`; custom fields belong in the
+   configured Markdown schema.
 4. Put flat Markdown layouts at `src/layouts/<name>.tsx`.
-5. Update `nib.config.ts` when navigation should expose a route.
+5. Keep navigation data app-owned and render links with `siteHref`; Nib derives
+   the route registry from pages and configured page sources.
 6. Use `siteHref` for internal TSX links so configured base paths are retained.
 7. Use `definePageSource` for one-to-one or one-to-many custom data routes and
    `defineCollection` for typed build-time lists.

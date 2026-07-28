@@ -24,7 +24,12 @@ export interface CliEnvironment {
 
 function option(args: string[], name: string): string | undefined {
   const index = args.indexOf(name)
-  return index >= 0 ? args[index + 1] : undefined
+  if (index < 0) return undefined
+  const value = args[index + 1]
+  if (value === undefined || value.startsWith('--')) {
+    throw new Error(`${name} requires a value`)
+  }
+  return value
 }
 
 function options(args: string[], name: string): string[] {
@@ -51,6 +56,26 @@ function positional(args: string[]): string[] {
     values.push(args[index])
   }
   return values
+}
+
+function assertKnownOptions(command: string, args: readonly string[]): void {
+  const allowed = new Set(
+    command === 'init'
+      ? ['--no-install']
+      : command === 'dev' || command === 'preview'
+        ? ['--root', '--host', '--port', '--allowed-host']
+        : command === 'inspect'
+          ? ['--root', '--json']
+          : command === 'build' || command === 'check'
+            ? ['--root']
+            : [],
+  )
+  const unknown = args.find((argument) => (
+    argument.startsWith('--') && !allowed.has(argument)
+  ))
+  if (unknown !== undefined) {
+    throw new Error(`Unknown option for nib ${command}: ${unknown}`)
+  }
 }
 
 async function packageRoot(start: string): Promise<string> {
@@ -129,6 +154,8 @@ export async function runCli(
     write(help())
     return 0
   }
+
+  assertKnownOptions(command, commandArgs)
 
   if (command === 'init') {
     const root = await packageRoot(path.dirname(fileURLToPath(import.meta.url)))

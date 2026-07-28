@@ -382,6 +382,13 @@ function getPageMeta(meta: unknown, label: string): PageMeta {
   }
 }
 
+function getCollectionId(value: unknown, label: string): string {
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(`${label} collectionId must be a non-empty string`)
+  }
+  return value
+}
+
 function isPageSourcePage(value: unknown): value is PageSourcePage {
   return value !== null && typeof value === 'object' && !Array.isArray(value) && 'data' in value
 }
@@ -413,6 +420,11 @@ export async function compileDataPages<
     const meta = getPageMeta(page.meta, label)
     const layout = getLayoutName(page.layout, label)
     const path = normalizePagePath(page.path ?? context.defaultPath, `${label} path`)
+    const defaultCollectionId = path.replace(/^\/+|\/+$/g, '') || 'index'
+    const collectionId = getCollectionId(
+      page.collectionId ?? defaultCollectionId,
+      label,
+    )
     return {
       path,
       component,
@@ -420,7 +432,7 @@ export async function compileDataPages<
       meta,
       ...(layout ? { layout } : {}),
       sourceDefinition: definition,
-      collectionId: page.collectionId ?? path.replace(/^\/+|\/+$/g, ''),
+      collectionId,
     }
   })
 }

@@ -117,4 +117,29 @@ describe('site verifier extensions', () => {
       },
     ])
   })
+
+  it('reports malformed optional issue fields as an invalid extension result', async () => {
+    const output = await publication()
+    const failure = await verifySite({
+      root: output,
+      output,
+      extensions: [{
+        name: 'malformed',
+        verify: () => [{
+          code: 'BAD_FIELD',
+          severity: 'error',
+          message: 'Bad field',
+          route: 42,
+        } as never],
+      }],
+    }).catch((error: unknown) => error)
+
+    expect(failure).toBeInstanceOf(SiteVerificationError)
+    expect((failure as SiteVerificationError).result.issues).toContainEqual({
+      code: 'EXTENSION_RESULT_INVALID',
+      severity: 'error',
+      message: 'Verifier extension malformed returned invalid issues',
+      owner: 'malformed',
+    })
+  })
 })

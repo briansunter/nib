@@ -67,12 +67,12 @@ file cannot select its HTTP status.
 
 ## Document head
 
-Site configuration and page metadata accept a structured `HeadContribution`
-with optional `title` and `description` overrides plus `meta`, `link`, `script`,
-and `style` elements. Renderer plugins can return the same shape from
-`renderer().head(context)`. Nib emits site elements, page elements, and plugin
-elements in that order. Later defined title and description overrides win, and
-the last plugin override wins within the plugin list.
+Page metadata accepts a structured `HeadContribution` with optional `title` and
+`description` overrides plus `meta`, `link`, `script`, and `style` elements.
+Shared site policy is an ordinary ordered `siteMetadata()` renderer plugin, and
+other renderer plugins can return the same shape from
+`renderer().head(context)`. Nib emits page elements followed by plugin elements
+in configuration order. Later non-empty title and description overrides win.
 
 Attributes are escaped, event-handler names are rejected, and script/style raw
 text is guarded against prematurely closing its element. The hook is
