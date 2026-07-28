@@ -1,0 +1,17 @@
+# ADR: typed client behaviors
+
+Status: accepted
+
+Nib will support non-React progressive enhancement through an explicit,
+server-safe behavior descriptor. A descriptor identifies a browser
+implementation and JSON-serializable props without importing that
+implementation into the server graph.
+
+Behavior roots use the same `load`, `idle`, and `visible` scheduling vocabulary
+as React islands. The browser implementation receives only its root,
+validated props, and an `AbortSignal`. Cleanup is driven by aborting the signal
+before a root is detached.
+
+Pages without an island or behavior remain runtime-free. Behavior-only pages do
+not import or ship `react-dom/client`. Essential content must remain in the
+server-rendered HTML.
