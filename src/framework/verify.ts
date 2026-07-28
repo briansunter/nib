@@ -54,6 +54,25 @@ export interface SiteInspectionMetrics {
   readonly checkedReferences: number
 }
 
+export interface ImageProvenanceCandidate {
+  readonly source: string
+  readonly output: string
+  readonly width: number
+  readonly height: number
+  readonly format: 'avif' | 'webp' | 'jpeg' | 'png' | 'gif' | 'svg'
+  readonly quality: number
+  readonly passthrough: boolean
+  readonly sourceWidth: number
+  readonly sourceHeight: number
+  readonly sourceFormat: 'avif' | 'webp' | 'jpeg' | 'png' | 'gif' | 'svg'
+  readonly maxWidth: number
+}
+
+export interface ImageProvenanceReport {
+  readonly version: 1
+  readonly candidates: readonly ImageProvenanceCandidate[]
+}
+
 export interface SiteInspection {
   readonly version: 1
   /** Root-relative output directory. Never an absolute authoring path. */
@@ -65,6 +84,7 @@ export interface SiteInspection {
   readonly filesByPath: Readonly<Record<string, InspectedSiteFile>>
   readonly pages: readonly InspectedPage[]
   readonly pagesByRoute: Readonly<Record<string, InspectedPage>>
+  readonly imageProvenance?: ImageProvenanceReport
   readonly metrics: SiteInspectionMetrics
   readonly issues: readonly SiteIssue[]
 }
@@ -122,9 +142,12 @@ interface MutableInspection {
   pages: InspectedPage[]
   issues: SiteIssue[]
   checkedReferences: number
+  imageProvenance?: ImageProvenanceReport
 }
 
 const MANIFEST_PATH = '.nib/publication.json'
+const IMAGE_PROVENANCE_PATH = '.nib/images.json'
+const IMAGE_FORMATS = new Set(['avif', 'webp', 'jpeg', 'png', 'gif', 'svg'])
 
 function record<T extends { readonly path: string }>(
   values: readonly T[],
@@ -192,6 +215,154 @@ function isManifest(value: unknown): value is PublicationManifest {
         && typeof item.status === 'number'
         && typeof item.contentType === 'string'
     })
+}
+
+function isImageProvenanceCandidate(value: unknown): value is ImageProvenanceCandidate {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Partial<ImageProvenanceCandidate>
+  return typeof candidate.source === 'string'
+    && typeof candidate.output === 'string'
+    && typeof candidate.width === 'number'
+    && typeof candidate.height === 'number'
+    && typeof candidate.format === 'string'
+    && typeof candidate.quality === 'number'
+    && typeof candidate.passthrough === 'boolean'
+    && typeof candidate.sourceWidth === 'number'
+    && typeof candidate.sourceHeight === 'number'
+    && typeof candidate.sourceFormat === 'string'
+    && typeof candidate.maxWidth === 'number'
+}
+
+async function inspectImageProvenance(
+  output: string,
+  inspection: MutableInspection,
+): Promise<void> {
+  const filesByPath = record(inspection.files)
+  if (filesByPath[IMAGE_PROVENANCE_PATH] === undefined) return
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(await fs.readFile(path.join(output, IMAGE_PROVENANCE_PATH), 'utf8'))
+  } catch (error) {
+    inspection.issues.push(issue({
+      code: 'IMAGE_PROVENANCE_INVALID',
+      severity: 'error',
+      message: `Could not parse ${IMAGE_PROVENANCE_PATH} (${errorCode(error)})`,
+      artifact: IMAGE_PROVENANCE_PATH,
+    }))
+    return
+  }
+  if (!parsed || typeof parsed !== 'object' || (parsed as { version?: unknown }).version !== 1) {
+    inspection.issues.push(issue({
+      code: 'IMAGE_PROVENANCE_VERSION_UNSUPPORTED',
+      severity: 'error',
+      message: `Unsupported image provenance report version in ${IMAGE_PROVENANCE_PATH}`,
+      artifact: IMAGE_PROVENANCE_PATH,
+    }))
+    return
+  }
+  const candidates = (parsed as { candidates?: unknown }).candidates
+  if (
+    !Array.isArray(candidates)
+    || candidates.some((candidate) => !isImageProvenanceCandidate(candidate))
+  ) {
+    inspection.issues.push(issue({
+      code: 'IMAGE_PROVENANCE_INVALID',
+      severity: 'error',
+      message: `Invalid image provenance report: ${IMAGE_PROVENANCE_PATH}`,
+      artifact: IMAGE_PROVENANCE_PATH,
+    }))
+    return
+  }
+  const frozenCandidates = Object.freeze(
+    candidates.map((candidate) => Object.freeze(candidate)),
+  )
+  inspection.imageProvenance = Object.freeze({
+    version: 1,
+    candidates: frozenCandidates,
+  })
+  const seenOutputs = new Set<string>()
+  for (const candidate of frozenCandidates) {
+    const artifact = safeArtifact(candidate.output)
+    if (artifact === undefined) {
+      inspection.issues.push(issue({
+        code: 'IMAGE_CANDIDATE_PATH_ESCAPE',
+        severity: 'error',
+        message: `Image candidate escapes output directory: ${candidate.output}`,
+        artifact: candidate.output,
+      }))
+      continue
+    }
+    if (seenOutputs.has(artifact)) {
+      inspection.issues.push(issue({
+        code: 'IMAGE_CANDIDATE_DUPLICATE',
+        severity: 'error',
+        message: `Duplicate image provenance candidate: ${artifact}`,
+        artifact,
+      }))
+    }
+    seenOutputs.add(artifact)
+    if (filesByPath[artifact] === undefined) {
+      inspection.issues.push(issue({
+        code: 'IMAGE_CANDIDATE_MISSING',
+        severity: 'error',
+        message: `Missing image candidate: ${artifact}`,
+        artifact,
+      }))
+    }
+    const extension = path.posix.extname(artifact).slice(1).toLowerCase()
+    if (!IMAGE_FORMATS.has(candidate.format) || extension !== candidate.format) {
+      inspection.issues.push(issue({
+        code: 'IMAGE_CANDIDATE_FORMAT_INVALID',
+        severity: 'error',
+        message: `Image candidate format does not match its output: ${artifact}`,
+        artifact,
+      }))
+    }
+    const dimensions = [
+      candidate.width,
+      candidate.height,
+      candidate.sourceWidth,
+      candidate.sourceHeight,
+      candidate.maxWidth,
+    ]
+    const expectedHeight = Math.max(
+      1,
+      Math.round(candidate.sourceHeight * candidate.width / candidate.sourceWidth),
+    )
+    if (
+      dimensions.some((value) => !Number.isSafeInteger(value) || value <= 0)
+      || Math.abs(candidate.height - expectedHeight) > 1
+    ) {
+      inspection.issues.push(issue({
+        code: 'IMAGE_CANDIDATE_DIMENSIONS_INVALID',
+        severity: 'error',
+        message: `Invalid image candidate dimensions: ${artifact}`,
+        artifact,
+      }))
+    }
+    if (candidate.width > candidate.maxWidth || candidate.maxWidth > candidate.sourceWidth) {
+      inspection.issues.push(issue({
+        code: 'IMAGE_CANDIDATE_CAP_EXCEEDED',
+        severity: 'error',
+        message: `Image candidate exceeds its recorded width cap: ${artifact}`,
+        artifact,
+      }))
+    }
+    if (
+      !Number.isSafeInteger(candidate.quality)
+      || candidate.quality < 1
+      || candidate.quality > 100
+      || !/^[a-f0-9]{24}$/.test(candidate.source)
+      || !IMAGE_FORMATS.has(candidate.sourceFormat)
+    ) {
+      inspection.issues.push(issue({
+        code: 'IMAGE_CANDIDATE_METADATA_INVALID',
+        severity: 'error',
+        message: `Invalid image candidate metadata: ${artifact}`,
+        artifact,
+      }))
+    }
+  }
 }
 
 async function readManifest(
@@ -396,6 +567,20 @@ async function inspectPages(
       islandCount,
     })
     inspection.pages.push(page)
+    for (const element of document.elements) {
+      const leaked = element.attrs.find((attribute) => (
+        attribute.name === 'data-nib-width' || attribute.name === 'data-nib-widths'
+      ))
+      if (leaked) {
+        inspection.issues.push(issue({
+          code: 'IMAGE_AUTHORING_HINT_LEAKED',
+          severity: 'error',
+          message: `Image authoring hint ${leaked.name} leaked into ${route.path}`,
+          route: route.path,
+          artifact,
+        }))
+      }
+    }
     for (const parseError of document.parseErrors) {
       if (parseError.code === 'missing-doctype') continue
       inspection.issues.push(issue({
@@ -529,6 +714,7 @@ export async function inspectSite(options: InspectSiteOptions): Promise<SiteInsp
   await readManifest(output, inspection)
   inspectRouteIndexes(inspection)
   if (inspection.manifest) await inspectPages(output, inspection)
+  await inspectImageProvenance(output, inspection)
   inspection.issues.sort(issueOrder)
 
   const pageCount = inspection.routes.filter((route) => route.kind === 'page').length
@@ -555,6 +741,9 @@ export async function inspectSite(options: InspectSiteOptions): Promise<SiteInsp
     filesByPath: record(files),
     pages,
     pagesByRoute: pageRecord(pages),
+    ...(inspection.imageProvenance === undefined
+      ? {}
+      : { imageProvenance: inspection.imageProvenance }),
     metrics,
     issues: Object.freeze(inspection.issues),
   })
