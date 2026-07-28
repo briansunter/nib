@@ -309,7 +309,7 @@ describe('publication integrations', () => {
       'TITLE_COUNT',
     ])
     expect(Object.isFrozen(inspection)).toBe(true)
-    expect(Object.isFrozen(inspection.pages[0]?.document.document)).toBe(true)
+    expect(Object.isFrozen(inspection.pages[0]?.document.elements)).toBe(true)
 
     const failure = await verifySite({ root: output, output }).catch((error: unknown) => error)
     expect(failure).toBeInstanceOf(SiteVerificationError)

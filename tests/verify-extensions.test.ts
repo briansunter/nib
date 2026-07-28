@@ -48,7 +48,7 @@ describe('site verifier extensions', () => {
       received = inspection
       expect(Object.isFrozen(inspection)).toBe(true)
       expect(inspection.pagesByRoute['/']).toBe(inspection.pages[0])
-      expect(Object.isFrozen(inspection.pages[0]?.document.document)).toBe(true)
+      expect(Object.isFrozen(inspection.pages[0]?.document.elements)).toBe(true)
       return [{
         code: 'SITE_POLICY_MISSING',
         severity: 'error' as const,

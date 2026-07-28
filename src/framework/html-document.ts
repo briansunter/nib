@@ -1,4 +1,12 @@
-import { parse, type DefaultTreeAdapterTypes, type ParserError } from 'parse5'
+import {
+  parse,
+  Tokenizer,
+  TokenizerMode,
+  type DefaultTreeAdapterTypes,
+  type ParserError,
+  type Token,
+  type TokenHandler,
+} from 'parse5'
 
 export type HtmlDocumentNode = DefaultTreeAdapterTypes.Document
 export type HtmlElementNode = DefaultTreeAdapterTypes.Element
@@ -6,6 +14,19 @@ export type HtmlElementNode = DefaultTreeAdapterTypes.Element
 export interface ParsedHtmlDocument {
   readonly document: HtmlDocumentNode
   readonly elements: readonly HtmlElementNode[]
+  readonly parseErrors: readonly ParserError[]
+}
+
+export interface InspectedHtmlElement {
+  readonly tagName: string
+  readonly attrs: readonly {
+    readonly name: string
+    readonly value: string
+  }[]
+}
+
+export interface ParsedInspectionDocument {
+  readonly elements: readonly InspectedHtmlElement[]
   readonly parseErrors: readonly ParserError[]
 }
 
@@ -56,8 +77,46 @@ export function parseHtmlDocument(html: string): ParsedHtmlDocument {
   })
 }
 
+/** Tokenizes inspection-relevant HTML without constructing a parent-linked DOM. */
+export function parseInspectionDocument(html: string): ParsedInspectionDocument {
+  const elements: InspectedHtmlElement[] = []
+  const parseErrors: ParserError[] = []
+  let tokenizer: Tokenizer
+  const handler: TokenHandler = {
+    onStartTag(token) {
+      for (const attribute of token.attrs) Object.freeze(attribute)
+      Object.freeze(token.attrs)
+      elements.push(Object.freeze(token))
+      if (token.tagName === 'script') tokenizer.state = TokenizerMode.SCRIPT_DATA
+      else if (['style', 'xmp', 'iframe', 'noembed', 'noframes'].includes(token.tagName)) {
+        tokenizer.state = TokenizerMode.RAWTEXT
+      } else if (token.tagName === 'title' || token.tagName === 'textarea') {
+        tokenizer.state = TokenizerMode.RCDATA
+      } else if (token.tagName === 'plaintext') {
+        tokenizer.state = TokenizerMode.PLAINTEXT
+      }
+    },
+    onEndTag(_token: Token.TagToken) {},
+    onComment(_token: Token.CommentToken) {},
+    onDoctype(_token: Token.DoctypeToken) {},
+    onEof(_token: Token.EOFToken) {},
+    onCharacter(_token: Token.CharacterToken) {},
+    onNullCharacter(_token: Token.CharacterToken) {},
+    onWhitespaceCharacter(_token: Token.CharacterToken) {},
+    onParseError(error) {
+      parseErrors.push(Object.freeze(error))
+    },
+  }
+  tokenizer = new Tokenizer({ sourceCodeLocationInfo: false }, handler)
+  tokenizer.write(html, true)
+  return Object.freeze({
+    elements: Object.freeze(elements),
+    parseErrors: Object.freeze(parseErrors),
+  })
+}
+
 export function htmlAttribute(
-  element: HtmlElementNode,
+  element: { readonly attrs: readonly { readonly name: string; readonly value: string }[] },
   name: string,
 ): string | undefined {
   return element.attrs.find((attribute) => attribute.name === name)?.value

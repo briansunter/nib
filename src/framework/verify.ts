@@ -1,15 +1,13 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import {
-  htmlAttribute,
-  parseHtmlDocument,
-  type ParsedHtmlDocument,
+  parseInspectionDocument,
+  type ParsedInspectionDocument,
 } from './html-document'
 import type {
   PublicationManifest,
   PublicationManifestRoute,
 } from './publication'
-import { normalizePath, stripBasePath } from './publication'
 
 export type SiteIssueSeverity = 'error' | 'warning'
 
@@ -25,7 +23,6 @@ export interface SiteIssue {
 
 export interface InspectedSiteFile {
   readonly path: string
-  readonly size: number
 }
 
 export interface InspectedReference {
@@ -36,7 +33,7 @@ export interface InspectedReference {
 
 export interface InspectedPage {
   readonly route: PublicationManifestRoute
-  readonly document: ParsedHtmlDocument
+  readonly document: ParsedInspectionDocument
   readonly references: readonly InspectedReference[]
   readonly titleCount: number
   readonly imageCount: number
@@ -182,22 +179,18 @@ function relativePath(value: string): string {
 
 async function indexFiles(
   directory: string,
-  relative = '',
 ): Promise<InspectedSiteFile[]> {
-  const entries = await fs.readdir(path.join(directory, relative), {
+  const entries = await fs.readdir(directory, {
     withFileTypes: true,
+    recursive: true,
   })
-  const files: InspectedSiteFile[] = []
-  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
-    const child = path.join(relative, entry.name)
-    if (entry.isDirectory()) {
-      files.push(...await indexFiles(directory, child))
-    } else if (entry.isFile()) {
-      const stats = await fs.stat(path.join(directory, child))
-      files.push(Object.freeze({ path: relativePath(child), size: stats.size }))
-    }
-  }
-  return files
+  const filePaths = entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => path.join(entry.parentPath, entry.name))
+    .sort((left, right) => left.localeCompare(right))
+  return filePaths.map((file) => Object.freeze({
+    path: relativePath(path.relative(directory, file)),
+  }))
 }
 
 function isManifest(value: unknown): value is PublicationManifest {
@@ -403,41 +396,71 @@ function safeArtifact(artifact: string): string | undefined {
   return normalized
 }
 
-function references(document: ParsedHtmlDocument): readonly InspectedReference[] {
-  const result: InspectedReference[] = []
+interface DocumentFacts {
+  readonly references: readonly InspectedReference[]
+  readonly titleCount: number
+  readonly imageCount: number
+  readonly missingAltCount: number
+  readonly hasIslandRuntime: boolean
+  readonly islandCount: number
+  readonly leakedImageHints: readonly string[]
+}
+
+function documentFacts(document: ParsedInspectionDocument): DocumentFacts {
+  const pageReferences: InspectedReference[] = []
+  const leakedImageHints: string[] = []
+  let titleCount = 0
+  let imageCount = 0
+  let missingAltCount = 0
+  let hasIslandRuntime = false
+  let islandCount = 0
   for (const element of document.elements) {
-    for (const attribute of ['href', 'src', 'poster'] as const) {
-      const value = htmlAttribute(element, attribute)
-      if (value !== undefined) {
-        result.push(Object.freeze({ tagName: element.tagName, attribute, value }))
+    if (element.tagName === 'title') titleCount += 1
+    if (element.tagName === 'nib-island') islandCount += 1
+    const image = element.tagName === 'img'
+    if (image) imageCount += 1
+    let hasAlt = false
+    let scriptSource = ''
+    for (const attribute of element.attrs) {
+      if (attribute.name === 'alt') hasAlt = true
+      if (element.tagName === 'script' && attribute.name === 'src') {
+        scriptSource = attribute.value
       }
-    }
-    const srcset = htmlAttribute(element, 'srcset')
-    if (srcset !== undefined) {
-      for (const candidate of srcset.split(',')) {
-        const value = candidate.trim().split(/\s+/, 1)[0]
-        if (value) {
-          result.push(Object.freeze({
-            tagName: element.tagName,
-            attribute: 'srcset',
-            value,
-          }))
+      if (attribute.name === 'data-nib-islands') hasIslandRuntime = true
+      if (attribute.name === 'data-nib-width' || attribute.name === 'data-nib-widths') {
+        leakedImageHints.push(attribute.name)
+      }
+      if (attribute.name === 'href' || attribute.name === 'src' || attribute.name === 'poster') {
+        pageReferences.push(Object.freeze({
+          tagName: element.tagName,
+          attribute: attribute.name,
+          value: attribute.value,
+        }))
+      } else if (attribute.name === 'srcset') {
+        for (const candidate of attribute.value.split(',')) {
+          const value = candidate.trim().split(/\s+/, 1)[0]
+          if (value) {
+            pageReferences.push(Object.freeze({
+              tagName: element.tagName,
+              attribute: 'srcset',
+              value,
+            }))
+          }
         }
       }
     }
+    if (image && !hasAlt) missingAltCount += 1
+    if (scriptSource.includes('assets/islands-')) hasIslandRuntime = true
   }
-  return Object.freeze(result)
-}
-
-function isLocalReference(value: string): boolean {
-  if (!value || value.startsWith('#') || value.startsWith('//')) return false
-  try {
-    const parsed = new URL(value, 'http://nib.local')
-    return parsed.origin === 'http://nib.local'
-      && !/^(?:data|mailto|tel|javascript):/i.test(value)
-  } catch {
-    return false
-  }
+  return Object.freeze({
+    references: Object.freeze(pageReferences),
+    titleCount,
+    imageCount,
+    missingAltCount,
+    hasIslandRuntime,
+    islandCount,
+    leakedImageHints: Object.freeze(leakedImageHints),
+  })
 }
 
 function referencePath(
@@ -445,21 +468,35 @@ function referencePath(
   route: PublicationManifestRoute,
   base: string,
 ): string | undefined {
-  if (!isLocalReference(value)) return undefined
+  if (
+    !value
+    || value.startsWith('#')
+    || value.startsWith('//')
+    || /^[A-Za-z][A-Za-z0-9+.-]*:/.test(value)
+  ) return undefined
   try {
     const routeSuffix = route.path !== '/' && route.artifact.endsWith('/index.html')
       ? '/'
       : ''
     const routeBase = `http://nib.local${route.path}${routeSuffix}`
-    const pathname = new URL(value, routeBase).pathname
-    return decodeURIComponent(stripBasePath(pathname, base).split(/[?#]/, 1)[0] || '/')
+    const pathname = value.startsWith('/')
+      ? value.split(/[?#]/, 1)[0] || '/'
+      : new URL(value, routeBase).pathname
+    const normalizedBase = base.startsWith('/') ? base : `/${base}`
+    const prefix = normalizedBase.replace(/\/+$/, '')
+    const stripped = prefix && (pathname === prefix || pathname === `${prefix}/`)
+      ? '/'
+      : prefix && pathname.startsWith(`${prefix}/`)
+        ? pathname.slice(prefix.length) || '/'
+        : pathname
+    return decodeURIComponent(stripped)
   } catch {
     return undefined
   }
 }
 
 function routeFileCandidates(pathname: string): readonly string[] {
-  const normalized = normalizePath(pathname)
+  const normalized = pathname === '/' ? '/' : pathname.replace(/\/+$/, '')
   if (normalized === '/') return ['index.html']
   const relative = normalized.replace(/^\/+/, '')
   return [relative, `${relative}/index.html`]
@@ -470,12 +507,13 @@ function referenceExists(
   routesByPath: Readonly<Record<string, PublicationManifestRoute>>,
   filesByPath: Readonly<Record<string, InspectedSiteFile>>,
 ): boolean {
-  const route = routesByPath[normalizePath(pathname)]
+  const normalized = pathname === '/' ? '/' : pathname.replace(/\/+$/, '')
+  const route = routesByPath[normalized]
   if (route) {
     const artifact = safeArtifact(route.artifact)
     return artifact !== undefined && filesByPath[artifact] !== undefined
   }
-  return routeFileCandidates(pathname).some((candidate) => filesByPath[candidate] !== undefined)
+  return routeFileCandidates(normalized).some((candidate) => filesByPath[candidate] !== undefined)
 }
 
 function inspectRouteIndexes(inspection: MutableInspection): void {
@@ -510,6 +548,17 @@ async function inspectPages(
 ): Promise<void> {
   const filesByPath = record(inspection.files)
   const routesByPath = record(inspection.routes)
+  const pageReads = new Map<PublicationManifestRoute, Promise<string>>()
+  for (const route of inspection.routes) {
+    const artifact = safeArtifact(route.artifact)
+    if (
+      route.kind === 'page'
+      && artifact !== undefined
+      && filesByPath[artifact] !== undefined
+    ) {
+      pageReads.set(route, fs.readFile(path.join(output, artifact), 'utf8'))
+    }
+  }
   for (const route of inspection.routes) {
     const artifact = safeArtifact(route.artifact)
     if (artifact === undefined) {
@@ -535,8 +584,11 @@ async function inspectPages(
     if (route.kind !== 'page') continue
     let html: string
     try {
-      html = await fs.readFile(path.join(output, artifact), 'utf8')
+      html = await pageReads.get(route)
+        ?? await fs.readFile(path.join(output, artifact), 'utf8')
+      pageReads.delete(route)
     } catch (error) {
+      pageReads.delete(route)
       inspection.issues.push(issue({
         code: 'PAGE_READ_FAILED',
         severity: 'error',
@@ -546,40 +598,27 @@ async function inspectPages(
       }))
       continue
     }
-    const document = parseHtmlDocument(html)
-    const pageReferences = references(document)
-    const titles = document.elements.filter((element) => element.tagName === 'title')
-    const images = document.elements.filter((element) => element.tagName === 'img')
-    const islandCount = document.elements.filter((element) => element.tagName === 'nib-island').length
-    const hasIslandRuntime = document.elements.some((element) =>
-      htmlAttribute(element, 'data-nib-islands') !== undefined
-      || (element.tagName === 'script' && (htmlAttribute(element, 'src') ?? '').includes('assets/islands-')),
-    )
-    const missingAltCount = images.filter((element) => htmlAttribute(element, 'alt') === undefined).length
+    const document = parseInspectionDocument(html)
+    const facts = documentFacts(document)
     const page = Object.freeze({
       route,
       document,
-      references: pageReferences,
-      titleCount: titles.length,
-      imageCount: images.length,
-      missingAltCount,
-      hasIslandRuntime,
-      islandCount,
+      references: facts.references,
+      titleCount: facts.titleCount,
+      imageCount: facts.imageCount,
+      missingAltCount: facts.missingAltCount,
+      hasIslandRuntime: facts.hasIslandRuntime,
+      islandCount: facts.islandCount,
     })
     inspection.pages.push(page)
-    for (const element of document.elements) {
-      const leaked = element.attrs.find((attribute) => (
-        attribute.name === 'data-nib-width' || attribute.name === 'data-nib-widths'
-      ))
-      if (leaked) {
-        inspection.issues.push(issue({
-          code: 'IMAGE_AUTHORING_HINT_LEAKED',
-          severity: 'error',
-          message: `Image authoring hint ${leaked.name} leaked into ${route.path}`,
-          route: route.path,
-          artifact,
-        }))
-      }
+    for (const leaked of facts.leakedImageHints) {
+      inspection.issues.push(issue({
+        code: 'IMAGE_AUTHORING_HINT_LEAKED',
+        severity: 'error',
+        message: `Image authoring hint ${leaked} leaked into ${route.path}`,
+        route: route.path,
+        artifact,
+      }))
     }
     for (const parseError of document.parseErrors) {
       if (parseError.code === 'missing-doctype') continue
@@ -591,25 +630,25 @@ async function inspectPages(
         artifact,
       }))
     }
-    if (titles.length !== 1) {
+    if (facts.titleCount !== 1) {
       inspection.issues.push(issue({
         code: 'TITLE_COUNT',
         severity: 'error',
-        message: `Page ${route.path} must contain exactly one title element (found ${titles.length})`,
+        message: `Page ${route.path} must contain exactly one title element (found ${facts.titleCount})`,
         route: route.path,
         artifact,
       }))
     }
-    if (missingAltCount > 0) {
+    if (facts.missingAltCount > 0) {
       inspection.issues.push(issue({
         code: 'IMAGE_ALT_MISSING',
         severity: 'warning',
-        message: `${route.path}: ${missingAltCount} image(s) missing alt text`,
+        message: `${route.path}: ${facts.missingAltCount} image(s) missing alt text`,
         route: route.path,
         artifact,
       }))
     }
-    if (hasIslandRuntime && islandCount === 0) {
+    if (facts.hasIslandRuntime && facts.islandCount === 0) {
       inspection.issues.push(issue({
         code: 'ISLAND_RUNTIME_UNUSED',
         severity: 'error',
@@ -618,7 +657,7 @@ async function inspectPages(
         artifact,
       }))
     }
-    for (const reference of pageReferences) {
+    for (const reference of facts.references) {
       const pathname = referencePath(reference.value, route, inspection.manifest?.base ?? '/')
       if (pathname === undefined) continue
       inspection.checkedReferences += 1
