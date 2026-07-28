@@ -118,8 +118,10 @@ head contributions, wrappers, and page transformations run in configuration
 order, while finalizers run once after every production route (including the
 generated 404) has rendered. Production writes route HTML with bounded
 concurrency, then gives finalizers the completed `dist/client` directory so
-output-aware extensions can inspect or enrich rendered documents. It then
-emits `.nib/publication.json` and any configured hosting companions;
+output-aware extensions can inspect or enrich rendered documents. Finalizers
+also receive the exact frozen route-to-artifact publication manifest, avoiding
+recursive output crawls and route reconstruction. Nib then emits that same data
+as `.nib/publication.json` plus any configured hosting companions;
 development does not run finalizers.
 
 The plugin host owns contribution resolution, renderer-extension construction,
@@ -170,8 +172,11 @@ re-inspects changed content, byte-identical rewrites retain their cache key and
 ETag, and editor overwrite races are retried. Internal absolute paths are
 non-enumerable on source metadata. In addition to explicit `?nib-image`
 imports, a project may declare content image roots in `images({ content: [...] })`;
-the finalizer then rewrites only matching image references that survived
-rendering, preserving the source catalog and avoiding an all-assets scan.
+the finalizer then rewrites only matching image references in the exact
+published page artifacts, preserving the source catalog and avoiding an
+all-assets scan. Public image URLs include the configured base while originals
+are written directly below `dist/client`, so non-root deployments do not
+duplicate the base in physical output.
 Remote URLs, SVG rasterization, and animated-image conversion are intentionally
 outside this release.
 

@@ -1,4 +1,3 @@
-import { createElement, type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 import { definePlugin } from '../src/plugin'
 import {
@@ -6,13 +5,26 @@ import {
   resolvePluginSetupContributions,
 } from '../src/framework/plugin'
 import { defineIsland } from '../src/framework/islands'
+import { defineClientBehavior } from '../src/framework/behaviors'
 import { clientNavigation } from '../src/navigation'
 import { validateNibConfig } from '../src/framework/project-config'
 import { createProjectRenderer } from '../src/framework/project-renderer'
+import { createPublicationManifest } from '../src/framework/publication'
 
 const Page = () => <h1>Home</h1>
 const Counter = defineIsland('counter', () => <button>Count</button>)
 const IslandPage = () => <Counter />
+const Reveal = defineClientBehavior<{ label: string }>('reveal')
+const BehaviorPage = () => (
+  <>
+    <Reveal props={{ label: 'outer' }}>
+      <div>
+        <Reveal props={{ label: 'inner' }}><button>Inner</button></Reveal>
+      </div>
+    </Reveal>
+    <Reveal props={{ label: 'second' }}><p>Second</p></Reveal>
+  </>
+)
 
 describe('Nib plugins', () => {
   it('labels the two deterministic page-source setup phases', async () => {
@@ -60,6 +72,14 @@ describe('Nib plugins', () => {
       initializer: 'startClientNavigation',
     }])
     expect(Object.isFrozen(client.clientEntries)).toBe(true)
+    const explicitClient = await resolvePluginSetupContributions(
+      [clientNavigation({ prefetch: 'explicit' })],
+      Object.freeze({ ...base, target: 'client' as const }),
+    )
+    expect(explicitClient.clientEntries).toEqual([{
+      module: '@briansunter/nib/client/navigation',
+      initializer: 'startExplicitClientNavigation',
+    }])
 
     const server = await resolvePluginSetupContributions(
       [clientNavigation()],
@@ -133,6 +153,8 @@ describe('Nib plugins', () => {
             expect(context.mode).toBe('production')
             expect(context.site.title).toBe('Site')
             expect(Object.isFrozen(context.renderedPaths)).toBe(true)
+            expect(Object.isFrozen(context.publication)).toBe(true)
+            expect(Object.isFrozen(context.publication.routes)).toBe(true)
             events.push(`first-finalize:${context.renderedPaths.join(',')}`)
           },
         }
@@ -172,6 +194,7 @@ describe('Nib plugins', () => {
     expect(output.page.head).toContain('name="first"')
     await renderer.finalize({
       clientDirectory: '/tmp/client',
+      publication: createPublicationManifest('/', 'ignore', []),
     })
     expect(events).toEqual([
       'second-wrap',
@@ -182,6 +205,7 @@ describe('Nib plugins', () => {
     ])
     await expect(renderer.finalize({
       clientDirectory: '/tmp/client',
+      publication: createPublicationManifest('/', 'ignore', []),
     })).rejects.toThrow('only finalize once')
     expect(() => renderer.render('/')).toThrow('cannot render after finalization')
   })
@@ -360,5 +384,75 @@ describe('Nib plugins', () => {
       islandModules: { '/src/islands/counter.tsx': { default: Counter } },
     })
     expect(() => invalidIslands.render('/')).toThrow('cannot change React island markup')
+  })
+
+  it('protects nested and repeated behavior subtrees with parser-backed ownership', async () => {
+    const renderer = await createProjectRenderer({
+      config: {
+        site: { title: 'Site' },
+        plugins: [definePlugin({
+          name: 'invalid-nested-behavior',
+          renderer: () => ({
+            transformPage: (page) => ({
+              ...page,
+              html: page.html.replace('>Inner</button>', '>Changed</button>'),
+            }),
+          }),
+        })],
+      },
+      root: process.cwd(),
+      base: '/',
+      pages: { '/src/pages/page.tsx': { default: BehaviorPage } },
+      islandModules: {},
+    })
+    expect(() => renderer.render('/')).toThrow(
+      'Nib plugin invalid-nested-behavior failed in transformPage() for route /',
+    )
+    expect(() => renderer.render('/')).toThrow('cannot change client behavior markup')
+  })
+
+  it('allows changes outside owned subtrees even when scripts contain marker-like text', async () => {
+    const renderer = await createProjectRenderer({
+      config: {
+        site: { title: 'Site' },
+        plugins: [definePlugin({
+          name: 'outside-only',
+          renderer: () => ({
+            transformPage: (page) => ({
+              ...page,
+              html: `${page.html}<script>const marker = "<nib-behavior></nib-behavior>"</script>`,
+            }),
+          }),
+        })],
+      },
+      root: process.cwd(),
+      base: '/',
+      pages: { '/src/pages/page.tsx': { default: BehaviorPage } },
+      islandModules: {},
+    })
+    const output = renderer.render('/')
+    expect(output.kind).toBe('page')
+  })
+
+  it('fails closed when a renderer removes an owned closing marker', async () => {
+    const renderer = await createProjectRenderer({
+      config: {
+        site: { title: 'Site' },
+        plugins: [definePlugin({
+          name: 'malformed-marker',
+          renderer: () => ({
+            transformPage: (page) => ({
+              ...page,
+              html: page.html.replace('</nib-behavior>', ''),
+            }),
+          }),
+        })],
+      },
+      root: process.cwd(),
+      base: '/',
+      pages: { '/src/pages/page.tsx': { default: BehaviorPage } },
+      islandModules: {},
+    })
+    expect(() => renderer.render('/')).toThrow('Malformed or implicitly closed')
   })
 })

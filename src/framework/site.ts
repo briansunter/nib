@@ -87,15 +87,16 @@ function baseHref(base: string, file: string): string {
   return `${base}${file.replace(/^\/+/, '')}`
 }
 
-function htmlTemplate(
-  base: string,
-  islandEntry: string,
-  behaviorEntry: string,
-  stylesheets: string[],
-  enhancementEntry?: string,
-): string {
-  const styles = stylesheets
-    .map((file) => `<link rel="stylesheet" href="${baseHref(base, file)}" />`)
+interface HtmlTemplateEntries {
+  readonly island: string
+  readonly behavior: string
+  readonly enhancement?: string
+  readonly stylesheets: readonly string[]
+}
+
+function htmlTemplate(entries: HtmlTemplateEntries): string {
+  const styles = entries.stylesheets
+    .map((href) => `<link rel="stylesheet" href="${href}" />`)
     .join('\n    ')
   return `<!doctype html>
 <html lang="en">
@@ -104,31 +105,11 @@ function htmlTemplate(
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--head-outlet-->
     ${styles}
-    <!--nib-islands-entry--><script data-nib-islands type="module" src="${baseHref(base, islandEntry)}"></script>
-    <!--nib-behaviors-entry--><script data-nib-behaviors type="module" src="${baseHref(base, behaviorEntry)}"></script>
-    ${enhancementEntry === undefined
+    <!--nib-islands-entry--><script data-nib-islands type="module" src="${entries.island}"></script>
+    <!--nib-behaviors-entry--><script data-nib-behaviors type="module" src="${entries.behavior}"></script>
+    ${entries.enhancement === undefined
       ? ''
-      : `<script data-nib-enhancements type="module" src="${baseHref(base, enhancementEntry)}"></script>`}
-  </head>
-  <body>
-    <div id="root"><!--ssr-outlet--></div>
-  </body>
-</html>`
-}
-
-function devHtmlTemplate(hasEnhancements: boolean): string {
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!--head-outlet-->
-    <link rel="stylesheet" href="/src/style.css" />
-    <!--nib-islands-entry--><script data-nib-islands type="module" src="/@id/${NIB_CLIENT_ENTRY}"></script>
-    <!--nib-behaviors-entry--><script data-nib-behaviors type="module" src="/@id/${NIB_BEHAVIOR_ENTRY}"></script>
-    ${hasEnhancements
-      ? `<script data-nib-enhancements type="module" src="/@id/${NIB_ENHANCEMENT_ENTRY}"></script>`
-      : ''}
+      : `<script data-nib-enhancements type="module" src="${entries.enhancement}"></script>`}
   </head>
   <body>
     <div id="root"><!--ssr-outlet--></div>
@@ -241,7 +222,14 @@ async function readBuildTemplate(
       ...(entry.isEntry && entry.file.endsWith('.css') ? [entry.file] : []),
     ])
     .filter((file, index, all) => all.indexOf(file) === index)
-  return htmlTemplate(base, islands.file, behaviors.file, styles, enhancements?.file)
+  return htmlTemplate({
+    island: baseHref(base, islands.file),
+    behavior: baseHref(base, behaviors.file),
+    ...(enhancements === undefined
+      ? {}
+      : { enhancement: baseHref(base, enhancements.file) }),
+    stylesheets: styles.map((file) => baseHref(base, file)),
+  })
 }
 
 function publicationPreviewPlugin(
@@ -339,7 +327,10 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
   const server = await import(`${pathToFileURL(serverEntry).href}?t=${Date.now()}`) as {
     paths: readonly string[]
     render(url: string): RenderedOutput
-    finalize(context: { clientDirectory: string }): Promise<void>
+    finalize(context: {
+      clientDirectory: string
+      publication: import('./publication').PublicationManifest
+    }): Promise<void>
   }
   const rendered = server.paths.map((routePath) => ({ routePath, output: server.render(routePath) }))
   const notFound = { routePath: '/404', output: server.render('/404') }
@@ -370,6 +361,7 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
   // sharing the same output directory as framework-owned artifacts.
   await server.finalize({
     clientDirectory,
+    publication: publicationManifest,
   })
   const publicationDirectory = path.join(clientDirectory, '.nib')
   await fs.mkdir(publicationDirectory, { recursive: true })
@@ -411,7 +403,15 @@ export async function startDevSite(options: DevSiteOptions): Promise<ViteDevServ
       preTransformRequests: false,
     },
   })
-  const template = devHtmlTemplate(clientEntries.length > 0)
+  const hasStyles = await fs.access(path.join(root, 'src/style.css')).then(() => true, () => false)
+  const template = htmlTemplate({
+    island: `/@id/${NIB_CLIENT_ENTRY}`,
+    behavior: `/@id/${NIB_BEHAVIOR_ENTRY}`,
+    ...(clientEntries.length === 0
+      ? {}
+      : { enhancement: `/@id/${NIB_ENHANCEMENT_ENTRY}` }),
+    stylesheets: hasStyles ? ['/src/style.css'] : [],
+  })
   vite.middlewares.use(async (request, response, next) => {
     try {
       const url = request.url ?? '/'

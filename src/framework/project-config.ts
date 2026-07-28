@@ -3,7 +3,6 @@ import { loadConfigFromFile, type ConfigEnv } from 'vite'
 import { pageSourceExtensions, validateDataDefinition } from './content'
 import { deployedOrigin } from './deployed-url'
 import { normalizeHeadContribution } from './meta'
-import type { NibPlugin } from './plugin'
 import type { NibConfig, PageSourceDefinition } from './types'
 
 function isRecord(value: unknown): value is Record<string, unknown> {

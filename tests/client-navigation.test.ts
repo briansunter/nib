@@ -620,6 +620,60 @@ describe('optional client navigation', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 
+  it('restores the prior browser scroll restoration mode on destroy', () => {
+    history.scrollRestoration = 'auto'
+    controller = createClientNavigation()
+    controller.mount()
+    expect(history.scrollRestoration).toBe('manual')
+
+    controller.destroy()
+    expect(history.scrollRestoration).toBe('auto')
+  })
+
+  it('supports annotation-only prefetch without changing navigation fallback', async () => {
+    vi.useFakeTimers()
+    document.querySelector('#root')!.innerHTML = `
+      <a id="ordinary" href="/ordinary">Ordinary</a>
+      <a id="hover" href="/hover" data-nib-prefetch="hover">Hover</a>
+    `
+    vi.mocked(fetch).mockImplementation((input) => {
+      const url = new URL(String(input), location.href)
+      return Promise.resolve(page(url.pathname, url.pathname, `<h1>${url.pathname}</h1>`))
+    })
+    controller = createClientNavigation({ prefetch: 'explicit' })
+    controller.mount()
+
+    document.querySelector('#ordinary')!.dispatchEvent(new Event('mouseover', { bubbles: true }))
+    vi.advanceTimersByTime(100)
+    expect(fetch).not.toHaveBeenCalled()
+
+    document.querySelector('#hover')!.dispatchEvent(new Event('mouseover', { bubbles: true }))
+    vi.advanceTimersByTime(100)
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce())
+  })
+
+  it('hard-navigates after runtime teardown fails', async () => {
+    vi.mocked(fetch).mockResolvedValue(page(
+      '/cleanup-failure',
+      'Cleanup failure',
+      '<h1>Cleanup failure</h1>',
+    ))
+    runtime.unmount.mockImplementationOnce(() => {
+      throw new AggregateError([new Error('runtime failed')])
+    })
+    const report = vi.spyOn(console, 'error').mockImplementation(() => {})
+    controller = createClientNavigation()
+    controller.mount()
+
+    await controller.navigate('/cleanup-failure')
+
+    expect(location.pathname).toBe('/cleanup-failure')
+    expect(report).toHaveBeenCalledWith(
+      '[nib-navigation] Navigation failed',
+      expect.any(AggregateError),
+    )
+  })
+
   it('hard-navigates to a cross-origin redirect without swapping fetched HTML', async () => {
     vi.mocked(fetch).mockResolvedValue({
       headers: new Headers({ 'content-type': 'text/html; charset=utf-8' }),

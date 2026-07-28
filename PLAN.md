@@ -1,490 +1,481 @@
-# Nib Base Library Improvement Plan
+# Nib Framework Cleanup Plan
 
-Status: completed
+Status: implemented and verified
 
-Baseline: `cb98aa7fedb243f8c1ebef18cc38bec197744296`
+Baseline: `08ef502d84d1f85669f82489aed0c45989719bd9`
 
-Scope: reusable framework improvements learned from the exhaustive
-`examples/personal-site-replica` implementation
+Reference implementation:
+`examples/personal-site-replica`, compared with `../personal-site` at
+`b10a973a677cee207d1258edf0d95170078829dd`
+
+Scope: correctness, simplification, and modularity improvements in the Nib
+framework and optional plugins. The personal-site implementation is evidence
+for real requirements, not a source of application-specific policy for core.
+
+Implementation was subsequently authorized. Publishing and releasing remain
+outside this plan.
 
 ## Outcome
 
-Make advanced static sites easier to build without weakening Nib's core
-contract:
+Keep Nib's existing static-first architecture while fixing the small number of
+confirmed correctness gaps and removing framework behavior that belongs to an
+application.
 
-- pages and layouts render complete static HTML;
-- routes without interactive boundaries ship no React client runtime;
-- server-only and browser-only code have explicit, enforceable boundaries;
-- content metadata and Markdown bodies have one authoritative graph;
-- unsupported styling and module-graph behavior fails during development or
-  build instead of producing incomplete output;
-- build inspection is structured, extensible, and reusable by migration tests.
+The completed result should:
 
-This plan does not authorize implementation, publishing, pushing, or releasing.
-Each batch ends at a local, validated commit unless separately approved.
+- preserve complete static HTML and normal browser navigation;
+- keep client navigation, image processing, and browser behaviors optional;
+- enforce server/client, stylesheet, island, and behavior ownership reliably;
+- support non-root deployment bases without mismatching URLs and artifacts;
+- make client teardown safe even when application cleanup throws;
+- give output plugins exact publication artifacts instead of requiring output
+  crawls and route reconstruction;
+- keep generated markup neutral and styling-policy-free;
+- avoid new abstractions unless they remove demonstrated duplication.
 
-## Evidence
+## Current evidence
 
-The personal-site replica required reusable infrastructure that should not need
-to be rebuilt by every advanced site:
+At the baseline:
 
-- `examples/personal-site-replica/src/utils/clientNavigationInitializer.ts`:
-  1,125 lines;
-- four `examples/personal-site-replica/scripts/check-*.mjs` parity and output
-  checkers: 1,770 lines;
-- `examples/personal-site-replica/scripts/import-content.mjs`: 1,037 lines;
-- parallel Markdown pages and `writing.json` metadata for the same 62 entries;
-- a second Markdown/prose renderer for 58 generated project pages;
-- manual dynamic imports that shield Leaflet from the SSR module graph;
-- a private `window.__nibStartIslandRuntime` restart hook;
-- global promotion of pin CSS after a page-only CSS import was absent from the
-  client build.
+- root typecheck passes;
+- the image package passes 22 tests;
+- the framework passes 208 tests;
+- packed-consumer tests pass;
+- the personal-site replica verifies 493 canonical route/meta/social
+  comparisons and 493 semantic page comparisons with zero differences;
+- `nib check` verifies 668 routes and 24,378 local references;
+- Pagefind indexes 440 pages;
+- performance and broken-route checks pass;
+- local `master` and `origin/master` are equal and clean.
 
-The following reusable fixes already landed in the baseline and must not be
-reimplemented:
+Focused probes nevertheless confirmed:
 
-- generated Markdown pages forward safe root attributes;
-- trusted iframe presentation attributes are retained;
-- explicitly authored responsive-image width ladders remain authoritative.
+1. content-image originals and failed-transform fallbacks are deployed to the
+   wrong physical location under a non-root base;
+2. nested behavior markers can make renderer ownership validation fail open;
+3. a throwing behavior cleanup leaves stale mounted state, and a throwing
+   runtime controller prevents later controllers from being cleaned up;
+4. stylesheet text in comments can trigger the page-style ownership error;
+5. development always links `src/style.css` even though that file is optional;
+6. navigation does not restore the previous `history.scrollRestoration`;
+7. finalizers repeatedly crawl output that the framework has already indexed.
 
 ## Required invariants
 
-Every batch must preserve these invariants:
+Every batch must preserve:
 
-1. Static pages contain complete, crawlable HTML and no island or behavior
-   runtime unless explicitly used.
-2. SSR output and the first browser render are structurally deterministic.
-3. Island IDs, behavior IDs, hydration strategies, and serialized props fail
+1. Static routes contain complete, crawlable HTML.
+2. Routes without islands, behaviors, or navigation ship no corresponding
+   client runtime.
+3. Island and behavior IDs, hydration strategies, props, and owned markup fail
    closed when invalid.
-4. Props crossing into browser code remain JSON-serializable and contain no
-   secrets.
-5. Dangerous Markdown HTML remains explicitly enabled and host-restricted
-   media retains the existing safety policy.
-6. Project-root traversal protections and output-path containment remain
-   fail-closed.
-7. Base paths, trailing-slash policies, development SSR, prerendering, and
-   static deployment continue to work.
-8. A failed client enhancement or optional navigation falls back to usable
-   server-rendered HTML.
-9. Visual and interaction testing remains required; static inspection is not
-   presented as visual equivalence.
-10. Capability-specific dependencies stay in optional packages or client-only
-    chunks rather than entering the universal core graph.
+4. Application cleanup cannot leave framework bookkeeping in a mounted state.
+5. Public URLs include the configured base exactly once; physical artifacts do
+   not duplicate the URL base inside the client output directory.
+6. Project-root traversal and output containment remain fail-closed.
+7. Page-only server CSS either has a supported client owner or produces a
+   deterministic source-oriented error.
+8. Optional navigation always retains a hard-navigation fallback.
+9. Generated framework markup contains no personal-site typography, color, or
+   image-sizing policy.
+10. Existing root-base, trailing-slash, static-output, and package-consumer
+    behavior remains compatible unless explicitly called out.
 
 ## Non-goals
 
-- Add Leaflet, Mermaid, PhotoSwipe, Pagefind, Cooklang, or Astro compatibility
-  code to Nib core.
-- Hydrate an entire page or infer interactivity from React hooks.
-- Add runtime server loaders, server actions, React Server Components, or
-  network-dependent builds.
-- Make SPA navigation a default behavior.
-- Encode personal-site selectors, route names, RSS identity fields, image caps,
-  or parity expectations in framework code.
-- Replace browser validation with generated reports.
-- Remove existing root exports without a separately approved major-version
-  migration.
+- Do not redesign Nib's plugin system.
+- Do not add route-scoped CSS.
+- Do not add Leaflet, Mermaid, PhotoSwipe, Pagefind, or Cooklang to core.
+- Do not move Sharp into the universal framework package.
+- Do not combine islands and behaviors into a generic lifecycle engine.
+- Do not add a generic JSON-page or integration framework.
+- Do not pass parsed DOM trees through public finalizer APIs.
+- Do not make client navigation mandatory.
+- Do not introduce dynamic imports where static client-only entries suffice.
+- Do not extract Pagefind into a package before a second real consumer exists.
 
 ## Dependency order
 
-1. Batch 0: contract fixtures and architecture decisions. Starts from the
-   baseline. Proposed commit: `test: capture advanced site boundary contracts`.
-2. Batch 1: public server/client package boundaries. Depends on Batch 0.
-   Proposed commit: `feat: expose server and client package boundaries`.
-3. Batch 2: lifecycle runtime and client behavior primitive. Depends on Batch
-   1. Proposed commit: `feat: add lifecycle-aware client behaviors`.
-4. Batch 3: server-only CSS diagnostics. Depends on Batch 0. Proposed commit:
-   `fix: reject undeployable page style imports`.
-5. Batch 4: page-backed collections and resource capabilities. Depends on
-   Batch 0. Proposed commit: `feat: derive collections from page metadata`.
-6. Batch 5: unified Markdown content and layout roots. Depends on Batch 4.
-   Proposed commit: `feat: add reusable markdown content slots`.
-7. Batch 6: indexed inspection, verifier extensions, and provenance. Depends
-   on Batch 0. Proposed commit: `feat: add structured publication inspection`.
-8. Batch 7: optional client-navigation package. Depends on Batch 2 and an
-   explicit decision. Proposed commit: `feat: add opt-in static site navigation`.
+1. Batch 1: base-safe content-image originals and fallbacks.
+2. Batch 2: parser-based renderer marker ownership.
+3. Batch 3: exception-safe client lifecycle teardown.
+4. Batch 4: resolved stylesheet ownership and one HTML template.
+5. Batch 5: neutral generated Markdown and image metadata.
+6. Batch 6: publication artifacts for finalizers.
+7. Batch 7: reference-aligned navigation prefetch and ordered verification.
 
-Batch 3 and Batch 6 are independent after Batch 0. Batch 4 can proceed in
-parallel with the client-runtime track only when separate worktrees and
-deterministic test aggregation are used.
+Batches 1 through 4 are correctness work and should land before the modularity
+cleanup in Batches 5 and 6. Batch 7 is small and can land with Batch 3 if doing
+so keeps the navigation change cohesive.
 
-## Batch 0: Freeze contracts and decisions
+Root and replica verification must run sequentially until their framework
+output directories are isolated.
 
-- **Purpose:** Establish behavioral fixtures before changing package graphs,
-  hydration lifecycle, content ordering, or verification.
-- **Non-goals:** No public API or production behavior changes.
-- **Owned areas:** `tests/fixtures`, framework tests, package-consumer tests,
-  architecture decision records under `docs/`.
-- **Interfaces and invariants:** Record current static-page output,
-  island-page output, package exports, Markdown defaults, base-path output, and
-  publication-manifest behavior.
-- **Sequence:**
-  1. Add a fixture with one static route, one island route, one Markdown route,
-     one data page, one resource, and one redirect.
-  2. Add negative fixtures for a top-level browser-global import, page-only CSS,
-     invalid cross-target imports, detached pending hydration, and malformed
-     publication artifacts.
-  3. Write an ADR for `.client`/`.server` discovery and a separate ADR for the
-     typed client-behavior marker.
-  4. Record whether route-scoped CSS is in scope; the minimum accepted behavior
-     is a deterministic build error.
-- **Focused validation:** Run only the new fixtures and package-consumer tests.
-- **Acceptance:** Every later batch has a failing test that describes its
-  intended behavior, while existing production snapshots remain unchanged.
-- **Commit boundary:** Test and ADR changes only.
-- **Rollback:** Revert the test commit without touching runtime code.
-- **Approval boundary:** ADRs may choose additive APIs. Removing or renaming
-  existing exports requires separate major-version approval.
+## Batch 1: Base-safe content images
 
-## Batch 1: Public server and client boundaries
+### Purpose
 
-- **Purpose:** Let server-only code use normal static Node imports and give
-  browser runtime contracts a supported public home.
-- **Non-goals:** Do not remove compatibility exports or change island loading.
-- **Owned areas:** `package.json` exports, `src/index.ts`,
-  `src/framework/content.ts`, new public server/client entry modules, Vite graph
-  guards, package-consumer fixtures.
-- **Interface:**
-  - `@briansunter/nib/server` for file/glob loaders, build-only content
-    operations, and server plugin contracts;
-  - `@briansunter/nib/client` for browser runtime and lifecycle contracts;
-  - universal definitions and types remain available from
-    `@briansunter/nib`.
-- **Sequence:**
-  1. Separate universal content definitions from filesystem-backed loaders.
-  2. Move `node:fs/promises`, `node:path`, and `tinyglobby` use behind the
-     server entry and convert them to static imports.
-  3. Add public client/server package exports and declaration output.
-  4. Preserve existing root loader exports through a documented compatibility
-     layer and mark their eventual removal as major-version work.
-  5. Add `.client` and `.server` graph guards with import-chain diagnostics.
-  6. Prove React and island context have one module identity across exports.
-- **Focused validation:** Content-loader traversal tests, client bundle fixture,
-  server package-consumer fixture, packed-package file assertions.
-- **Complete validation:** Root typecheck, root tests, framework build, docs
-  build, and `git diff --check`.
-- **Acceptance:**
-  - client consumers require no Node shims;
-  - client bundles contain no `node:` or `tinyglobby` implementation;
-  - server loaders use static imports;
-  - illegal target-crossing imports fail with their complete import chain;
-  - current consumer source continues to compile.
-- **Commit boundary:** One additive package-boundary commit.
-- **Rollback:** Revert the commit; no content or generated output migration is
-  allowed in this batch.
-- **Approval boundary:** Deprecation is allowed; removal waits for a major
-  release plan.
+Ensure authored content images, linked originals, and failed optimization
+fallbacks deploy correctly for both `/` and non-root bases.
 
-## Batch 2: Lifecycle runtime and client behaviors
+### Changes
 
-- **Purpose:** Support progressive enhancement and repeated document mounting
-  without private globals, empty React components, or app-authored SSR shields.
-- **Non-goals:** Do not add client routing or client-only essential content.
-- **Owned areas:** island scheduler/hydrator, public client runtime, generated
-  client entry, new behavior registry and marker, runtime tests, selected
-  replica behavior islands.
-- **Interfaces:**
+1. Separate public URL construction from physical artifact construction.
+2. Write an authored `/site-assets/image.png` to
+   `dist/client/site-assets/image.png`, regardless of a `/journal/` URL base.
+3. Emit `/journal/site-assets/image.png` for a `/journal/` deployment.
+4. Preserve URLs that already contain the configured base without duplicating
+   it.
+5. Apply the same normalization to `<img src>`, linked original `<a href>`, and
+   failed Sharp-transform restoration.
+6. Deduplicate source copies within one finalization run.
 
-  ```ts
-  const runtime = createIslandRuntime(modules)
-  runtime.mount(root)
-  runtime.unmount(root)
-  runtime.destroy()
-  ```
+### Tests
 
-  A typed server-safe descriptor registers a client implementation without
-  importing that implementation into SSR. The implementation receives a
-  scoped root, validated props, and an `AbortSignal`.
-- **Sequence:**
-  1. Make hydration scheduling cancellable.
-  2. Retain hydrated React roots and unmount them before their DOM is detached.
-  3. Build the loader registry once per runtime.
-  4. Add scoped mount, unmount, and destroy operations.
-  5. Replace `window.__nibStartIslandRuntime` with the public controller.
-  6. Add client behavior discovery that shares `load`, `idle`, and `visible`
-     scheduling but does not require `react-dom/client`.
-  7. Migrate behavior-only replica islands in a separate adoption commit.
-  8. Statically import Leaflet from the relevant client behavior and retain
-     Mermaid's conditional import only when bundle size still justifies it.
-- **Focused validation:** Scheduler cancellation, root cleanup, duplicate IDs,
-  invalid props, browser-global fixture, repeated mount, and no-React behavior
-  fixture.
-- **Complete validation:** Root suite, replica verification, and browser checks
-  for static → interactive → static transitions.
-- **Acceptance:**
-  - removed roots run React and behavior cleanup exactly once;
-  - pending idle/visible work cannot run on detached nodes;
-  - behavior-only pages do not ship React DOM;
-  - pages without islands or behaviors remain runtime-free;
-  - the pin behavior contains no application-authored dynamic import;
-  - the generated entry defines no private restart global.
-- **Commit boundary:** First commit the framework controller and behavior API;
-  then commit the replica migration separately.
-- **Rollback:** The replica migration can revert independently. Reverting the
-  framework commit restores the previous generated client entry.
-- **Approval boundary:** None for the controller or progressive enhancement.
-  Navigation remains Batch 7 and decision-gated.
+- Root-base optimized content image.
+- Non-root-base optimized content image.
+- Root- and non-root corrupt image fallback.
+- Linked original image under both bases.
+- Already-base-prefixed source URL.
+- Traversal and escaping-symlink rejection.
 
-## Batch 3: Make page-style ownership explicit
+### Acceptance
 
-- **Purpose:** Prevent silent production output that is structurally correct but
-  missing CSS reachable only from the server graph.
-- **Non-goals:** Do not design route-level code splitting unless a separate ADR
-  shows enough benefit to justify additional manifest and head complexity.
-- **Owned areas:** project Vite adapter, build diagnostics, page/layout
-  discovery tests, styling documentation.
-- **Interface:** In the first iteration, `src/style.css` remains the supported
-  deployable style entry. CSS reachable only through a page, layout, or
-  server-only data-page module is rejected with a source-oriented diagnostic.
-- **Sequence:**
-  1. Add the failing page-only CSS fixture from Batch 0.
-  2. Detect CSS edges owned exclusively by the server graph.
-  3. Fail with the importing module, stylesheet, and supported remediation.
-  4. Document global style ownership and optional plugin-owned CSS.
-  5. Record route-scoped CSS as a future proposal rather than silently
-     broadening this batch.
-- **Focused validation:** Page, layout, data page, island, global style, and
-  plugin-style fixtures in development and production.
-- **Complete validation:** Framework build, docs build, replica build, and
-  `git diff --check`.
-- **Acceptance:** Every authored stylesheet is either represented in the
-  deployed client graph or causes a deterministic development/build failure.
-- **Commit boundary:** One diagnostic and documentation commit.
-- **Rollback:** Revert the diagnostic if it rejects a supported Vite path; do
-  not weaken it to a warning without a passing deployed-style fixture.
-- **Approval boundary:** Route-scoped CSS support requires a new plan amendment.
+- Every emitted content-image URL maps to an existing artifact.
+- The configured base appears exactly once in public URLs.
+- The configured base does not appear as a redundant physical output segment.
+- Existing root-base snapshots remain unchanged.
 
-## Batch 4: Page-backed collections and resource capabilities
+### Commit
 
-- **Purpose:** Make validated page metadata queryable without a mirrored JSON
-  database or unrestricted plugin access to internal page data.
-- **Non-goals:** Do not make rendering depend on mutable plugin state or expose
-  all page data to every plugin.
-- **Owned areas:** content definitions, project-renderer ordering, route/page
-  descriptors, collection loading, RSS/search resource helpers, content docs.
-- **Interfaces:**
-  - `fromPages()` or `fromMarkdownPages()` with explicit `match`, `id`, and
-    `select` callbacks;
-  - `fromCollection(collection, mapper)` capability for resource providers.
-- **Sequence:**
-  1. Create immutable page descriptors after module/frontmatter validation and
-     before page-backed collection resolution.
-  2. Add pure typed selectors over route, source, resolved metadata, and
-     validated frontmatter.
-  3. Detect duplicate IDs and dependency cycles before rendering.
-  4. Add explicit immutable collection capabilities for RSS and search.
-  5. Migrate the replica writing collection away from `writing.json`.
-  6. Remove repeated filesystem parsing from RSS and search providers.
-- **Focused validation:** Type inference, duplicate IDs, draft/match filtering,
-  cycle diagnostics, collection least privilege, and deterministic ordering.
-- **Complete validation:** Root suite and full replica parity for all writing,
-  archive, tag, related-post, RSS, and search outputs.
-- **Acceptance:**
-  - deleting `writing.json` and its generator does not change any of the 62
-    writing entries or their consumers;
-  - editing one page's frontmatter updates every authorized consumer in one
-    build;
-  - resource providers perform no direct JSON or Markdown file parsing;
-  - plugins see only explicitly granted immutable collections.
-- **Commit boundary:** Commit the base API first, then the replica migration.
-- **Rollback:** Revert the replica migration to its metadata mirror without
-  reverting the additive framework API.
-- **Approval boundary:** Any generic plugin access to complete page data is out
-  of scope and requires a security review.
+`fix(images): make content originals and fallbacks base-safe`
 
-## Batch 5: Unified Markdown content and layout roots
+## Batch 2: Parser-based renderer marker ownership
 
-- **Purpose:** Reuse one Markdown pipeline for file pages and data-generated
-  pages while letting layouts control the semantic content root.
-- **Non-goals:** Do not add MDX, implicit raw HTML, network plugins, or
-  application-specific Shiki chrome.
-- **Owned areas:** Markdown compiler, generated Markdown module, data-page
-  types, layout props, HMR dependency tracking, replica project rendering,
-  Markdown documentation.
-- **Interfaces:**
-  - `markdownBody(source, options)` for generated pages;
-  - a typed `Content` component or `renderContent(rootProps)` layout contract;
-  - optional named Markdown profiles with deterministic plugin ordering.
-- **Sequence:**
-  1. Specify a content-body value that carries source identity and compile
-     options without pre-rendering HTML in the importer.
-  2. Compile it with the existing Markdown compiler and source-located errors.
-  3. Expose a framework-owned content renderer to data pages and layouts.
-  4. Let layouts set the root tag, class, and safe static attributes while Nib
-     retains ownership of compiled HTML.
-  5. Guarantee content renders exactly once through nested layouts.
-  6. Migrate project pages away from `marked`, `bodyHtml`, and
-     `project-prose.ts`.
-  7. Remove `cloneElement` from the article layout.
-- **Focused validation:** Raw-HTML policy, plugin order, source paths, heading
-  IDs, figures, smart typography, code highlighting, root attributes, nested
-  layouts, and HMR invalidation.
-- **Complete validation:** Root suite plus exact content parity for all 62
-  writing and 58 project pages.
-- **Acceptance:**
-  - projects and Markdown pages use one compiler seam;
-  - project prose/code/figure output remains exact;
-  - layouts apply Pagefind and class attributes without element introspection;
-  - existing default Markdown snapshots remain unchanged;
-  - no compilation step performs network access.
-- **Commit boundary:** Base content API and replica migration are separate
-  commits.
-- **Rollback:** The old project renderer remains usable until the migration
-  commit passes full parity, then is deleted in that same commit.
-- **Approval boundary:** Async Markdown compilation is backlog work. It requires
-  a separate cache, dependency, determinism, and performance design.
+### Purpose
 
-## Batch 6: Structured publication inspection
+Prevent renderer plugins from changing or deleting framework-owned island and
+behavior subtrees, including nested or malformed input.
 
-- **Purpose:** Replace repeated output crawling with one indexed, read-only
-  inspection model and structured issues.
-- **Non-goals:** Do not encode site-specific parity policy or claim visual
-  equivalence.
-- **Owned areas:** publication verifier, CLI `check`/`inspect`, plugin
-  post-build checks, testing subpath, `nib-images` provenance, negative
-  fixtures.
-- **Interfaces:**
-  - `inspectSite()` returns immutable route/file indexes, parsed pages, metrics,
-    and `SiteIssue[]`;
-  - `verifySite()` applies built-in checks and reports all issues together;
-  - read-only verifier extensions receive the shared parsed context;
-  - `@briansunter/nib/testing` provides standards-based semantic comparison;
-  - `.nib/images.json` records deterministic, non-sensitive image provenance.
-- **Sequence:**
-  1. Index publication routes and files once.
-  2. Parse HTML with a standards-based server-only parser.
-  3. Validate local `href`, `src`, `srcset`, `poster`, stylesheet, and script
-     references.
-  4. Aggregate stable issue codes instead of failing on the first error.
-  5. Make `nib inspect --json` distinct from `nib check`.
-  6. Add read-only extension checks with checker ownership in diagnostics.
-  7. Add semantic comparison helpers with explicit versioned normalizers.
-  8. Add image-use provenance and verify candidate existence, formats,
-     dimensions, caps, and leaked authoring hints.
-  9. Migrate the replica's generic checker logic while keeping personal policy
-     in its configuration.
-- **Focused validation:** Corrupted multi-issue fixture, malformed HTML,
-  entities, repeated metadata, hidden content, base paths, trailing slashes,
-  output containment, missing image candidates, and unknown report versions.
-- **Complete validation:** Root suite and complete 493-page replica comparison.
-- **Acceptance:**
-  - one corrupted fixture reports every injected issue in one run;
-  - no extension rereads the manifest or reparses a page;
-  - the 822-line content checker shrinks below 250 lines of adapters and site
-    policy;
-  - all existing canonical-page and metadata comparisons remain exact;
-  - same-machine warm inspection is at least three times faster than the
-    recorded approximately 2.52-second `nib check` median;
-  - reports contain no absolute source paths or secrets.
-- **Commit boundary:** Inspector core, extension API, testing helpers, image
-  provenance, and replica adoption should be separate reviewable commits.
-- **Rollback:** Each adoption commit can return to the existing checker without
-  reverting the additive inspection model.
-- **Approval boundary:** Site-specific checks remain project-owned. Adding a
-  dependency to the universal/browser package entry is prohibited.
+### Changes
 
-## Batch 7: Decision-gated optional client navigation
+1. Replace regular-expression marker extraction with the existing parse5 HTML
+   document machinery.
+2. Capture ordered island and behavior subtrees before renderer transforms.
+3. Compare the complete owned subtrees after every transform.
+4. Fail closed when marker structure is malformed or cannot be compared.
+5. Preserve plugin name, hook, and route attribution in diagnostics.
 
-- **Purpose:** Reuse the lifecycle runtime for sites that explicitly choose
-  document swapping, history management, and view transitions.
-- **Current constraint:** Client-side routing is a documented Nib non-goal.
-  This batch cannot begin until an ADR changes that statement for an optional
-  package or plugin.
-- **Non-goals:** Do not enable navigation by default or require JavaScript for
-  links.
-- **Owned areas:** A first-party optional package/plugin, lifecycle events,
-  browser fixtures, and replica router adoption. Core route rendering remains
-  unchanged.
-- **Interface:** An opt-in `clientNavigation()` plugin owns fetching,
-  cancellation, head/body/style/script synchronization, history, prefetching,
-  focus, scroll, persistence, lifecycle events, and runtime remounting.
-- **Sequence:**
-  1. Approve an ADR defining why an optional navigation package no longer
-     violates the core non-goal.
-  2. Extract only behavior proven by the replica; do not emulate Astro event
-     names as the public API.
-  3. Use typed `nib:*` lifecycle events and the Batch 2 runtime directly.
-  4. Preserve hard-navigation fallback for unsupported documents and failures.
-  5. Migrate the replica only after the package passes independent fixtures.
-- **Focused validation:** Abort races, redirects, base paths, head/style/script
-  order, static/island transitions, back/forward, scroll/focus restoration,
-  persistence, view-transition fallback, and failed fetch fallback.
-- **Complete validation:** Root and package suites plus the full replica browser
-  interaction matrix.
-- **Acceptance:**
-  - interactive → static → interactive navigation mounts and unmounts exactly
-    once;
-  - pending work never targets detached DOM;
-  - listeners and React roots do not accumulate;
-  - persisted elements retain intended state;
-  - disabling the plugin restores ordinary browser navigation and leaves
-    default generated output unchanged.
-- **Commit boundary:** Package introduction and replica adoption are separate
-  commits.
-- **Rollback:** Remove the optional plugin from site config to return to native
-  navigation; no content migration is required.
-- **Approval boundary:** Explicit product/API approval is required before this
-  batch. Publishing or releasing it requires a separate release request.
+### Tests
 
-## Complete validation gate
+- One and multiple island markers.
+- One and multiple behavior markers.
+- Nested behavior markup.
+- Nested markup containing similar tag text in attributes or scripts.
+- Missing or mismatched closing markers.
+- Allowed transformation outside owned subtrees.
+- Reordering, deleting, or editing an owned subtree.
 
-Run the following on the exact final revision after every batch that changes
-public framework behavior:
+### Acceptance
 
-```bash
-bun run typecheck
-bun run test
-bun run build
-bun run check:version-policy
+- No renderer transform can alter owned marker markup undetected.
+- Valid existing transforms produce identical output.
+- The implementation has one parser-backed ownership path rather than parallel
+  island and behavior regex logic.
 
-cd examples/personal-site-replica
-bun run verify
+### Commit
 
-cd /Volumes/Storage/code/nib
-git diff --check
-```
+`fix(plugin): fail closed on renderer-owned client markup`
 
-Also require:
+## Batch 3: Exception-safe client lifecycle teardown
 
-- packed-consumer tests for every new public subpath;
-- bundle inspection proving Node code is absent from client artifacts;
-- static-route inspection proving no unused runtime is shipped;
-- browser checks for hydration, cleanup, navigation, focus, and scroll whenever
-  the changed batch affects those behaviors;
-- exact local commit SHA and a clean worktree before any push or release;
-- separate authorization for push, pull request, merge, version change,
-  publication, or deployment.
+### Purpose
 
-## Documentation gate
+Guarantee that one application cleanup failure cannot retain stale framework
+state or prevent unrelated runtimes from cleaning up.
 
-Each public API batch must update:
+### Changes
 
-- `README.md`;
-- `docs/architecture.md`;
-- `docs/interactive-react-islands.md` when runtime behavior changes;
-- the relevant page under `examples/docs/src/pages/docs/`;
-- package export and consumer examples;
-- the changelog or release metadata only when a release is separately
-  authorized.
+1. Mark behavior state inactive and remove mounted bookkeeping even when the
+   application cleanup callback throws.
+2. Cancel scheduled work and abort the behavior signal before invoking
+   application cleanup.
+3. Attempt every controller during unmount and destroy.
+4. Collect failures and throw one `AggregateError` only after all cleanup
+   attempts finish.
+5. Preserve the navigation hard-reload fallback after teardown failures.
+6. Store and restore the previous `history.scrollRestoration` value.
+7. Remove navigation-owned temporary state and timers on destroy.
 
-Documentation must clearly distinguish:
+### Tests
 
-- universal, server-only, and client-only imports;
-- SSR islands from client behaviors;
-- static output inspection from browser/runtime proof;
-- default framework behavior from opt-in packages;
-- current APIs from proposals and decision-gated backlog.
+- Throwing behavior cleanup followed by a successful remount.
+- Two controllers where the first unmount throws.
+- Two controllers where the first destroy throws.
+- Pending idle or visible behavior during teardown.
+- Navigation teardown restores automatic or pre-existing scroll restoration.
+- Failed teardown attempts all remaining runtimes before hard navigation.
 
-## Progress tracking
+### Acceptance
 
-This file is the dependency and acceptance authority. When implementation
-begins, create `STATUS.md` containing only mutable state:
+- Framework state is clean after every teardown attempt.
+- Every registered runtime gets exactly one cleanup attempt.
+- A behavior can remount after its previous cleanup threw.
+- Navigation restart does not inherit stale global scroll behavior.
 
-- active batch and branch/worktree;
-- exact baseline and current SHA;
-- completed focused and complete gates;
-- remaining work and known failures;
-- current pause or approval boundary.
+### Commit
 
-Do not rewrite completed historical evidence in this plan to report progress.
-Update `STATUS.md` instead.
+`fix(client): make runtime teardown exception-safe`
+
+## Batch 4: Resolved stylesheet ownership and one HTML template
+
+### Purpose
+
+Retain the page-style ownership invariant without false positives, while
+removing development/production template drift.
+
+### Changes
+
+1. Enforce stylesheet ownership using Vite-resolved import edges rather than
+   regular-expression scans of source text.
+2. Preserve the existing diagnostic and remediation guidance.
+3. Cover aliases and query strings after resolution.
+4. Do not treat imports in comments or ordinary string literals as module
+   edges.
+5. Build development and production documents through one template function.
+6. Pass explicit island, behavior, enhancement, and stylesheet URLs to that
+   function.
+7. Include development `src/style.css` only when it exists.
+
+### Tests
+
+- Unsupported page, layout, and server data-page CSS imports.
+- Supported global, island, behavior, and plugin client-entry CSS.
+- Comments and strings containing import-like text.
+- Static and dynamic CSS imports.
+- Aliased CSS imports and query parameters.
+- Development with and without `src/style.css`.
+- Root and non-root entry URLs.
+
+### Acceptance
+
+- Every real unsupported stylesheet edge fails deterministically.
+- Non-import text never triggers the ownership error.
+- Development does not request a missing optional stylesheet.
+- Development and production share one document-template implementation.
+
+### Commit
+
+`refactor(styles): enforce ownership on resolved module edges`
+
+## Batch 5: Neutral generated presentation hooks
+
+### Purpose
+
+Keep framework output reusable by removing personal-site visual policy from
+generated Markdown and image markup.
+
+### Changes
+
+1. Replace generated Markdown's Tailwind typography/color class list with a
+   neutral `nib-markdown` hook or no default class.
+2. Move the replica's prose classes into its layout or stylesheet.
+3. Remove `--nib-image-comfort-width` from the image package.
+4. Retain only objective image metadata that has a demonstrated consumer.
+5. Rename ambiguous variables to source-specific names if retained, such as
+   `--nib-image-source-width` and `--nib-image-source-height`.
+6. Make orientation mathematically objective or move the near-square
+   categorization into the replica.
+7. Document every emitted image data attribute and CSS custom property.
+
+### Tests
+
+- Framework source contains no Tailwind typography or color policy.
+- Image markup snapshots contain only documented hooks.
+- Replica visual and semantic parity remains intact after styles move locally.
+- Consumer-defined `className` and `style` continue to override defaults.
+
+### Acceptance
+
+- Nib emits structural hooks, not a site's aesthetic decisions.
+- The personal-site replica retains its intended visual layout.
+- No undocumented DOM hook is accidentally promoted to public API.
+
+### Commit
+
+`refactor: move presentation policy out of generated markup`
+
+## Batch 6: Publication artifacts for finalizers
+
+### Purpose
+
+Let output plugins operate on exact framework-known artifacts without
+recursively crawling the build and reconstructing route semantics.
+
+### Interface
+
+Extend `NibFinalizeContext` with an immutable publication manifest or a minimal
+immutable page-artifact list containing:
+
+- route URL;
+- route kind;
+- artifact path relative to `clientDirectory`;
+- content type where relevant.
+
+Do not expose parsed page DOM or mutable framework state.
+
+### Changes
+
+1. Construct the publication data before finalizers run.
+2. Pass it through the generated server finalization boundary.
+3. Update content-image finalization to inspect exact page artifacts.
+4. Update the app-owned Pagefind plugin to consume exact page artifacts.
+5. Remove Pagefind's artifact-to-route reconstruction.
+6. Remove duplicate image output crawls and source copies.
+7. Write `.nib/publication.json` from the same immutable data after finalizers.
+
+### Tests
+
+- Root and non-root route URLs.
+- All trailing-slash policies.
+- Index, extensionless, resource, redirect, and 404 artifacts.
+- A finalizer sees immutable publication data.
+- Image and Pagefind finalizers perform no recursive client-output crawl.
+- Finalizer errors retain plugin attribution.
+
+### Acceptance
+
+- Finalizers consume the framework's authoritative route/artifact mapping.
+- Pagefind and image processing do not independently rediscover the build.
+- Publication JSON and finalizer data cannot drift.
+- The API remains small enough for current consumers.
+
+### Commit
+
+`feat(plugin): expose publication artifacts to finalizers`
+
+## Batch 7: Navigation parity and verification workflow
+
+### Purpose
+
+Match the reference site's bandwidth-conscious prefetch behavior and prevent
+shared build output from creating misleading validation failures.
+
+### Changes
+
+1. Add the smallest practical navigation prefetch policy:
+   `explicit` or `hover`.
+2. Keep the current behavior as the compatibility default unless a breaking
+   change is explicitly approved.
+3. Configure the personal-site replica for `explicit`, matching the reference
+   site's `prefetchAll: false`.
+4. Verify `tap`, `load`, `viewport`, and disabled link annotations.
+5. Add one ordered root command for framework plus replica verification, or
+   isolate their framework build directories.
+6. Keep the full replica verification cached, scheduled, or manually
+   invokable if its 5,880 generated image assets are too expensive for every
+   pull request.
+7. Add the focused regression fixtures from Batches 1 through 4 to normal CI.
+8. Enable or separately run unused-import checking and remove the currently
+   reported unused type imports.
+
+### Tests
+
+- Explicit mode performs no request for an unannotated link.
+- Annotated hover, tap, load, and viewport modes prefetch as requested.
+- Slow-connection suppression remains intact.
+- Navigation failure still performs a hard navigation.
+- The ordered verification command succeeds from a clean checkout.
+- Root and replica verification cannot overwrite each other's framework output.
+
+### Acceptance
+
+- The replica does not prefetch unannotated content routes.
+- Navigation remains opt-in and progressively enhanced.
+- One documented command produces trustworthy complete validation.
+- CI covers the newly fixed invariants without requiring the full replica image
+  corpus on every change.
+
+### Commit
+
+`fix(navigation): support explicit prefetch policy`
+
+Follow with a separate tooling commit if needed:
+
+`test: add ordered framework and replica verification`
+
+## Complete validation
+
+After each batch, run its focused tests and `git diff --check`.
+
+After Batches 1 through 4:
+
+1. `bun run typecheck`
+2. image-package tests
+3. framework tests
+4. packed-consumer tests
+5. production root-base fixture
+6. production non-root-base fixture
+
+After Batches 5 through 7, run the complete ordered gate:
+
+1. root typecheck;
+2. full root test suite;
+3. package-consumer verification;
+4. documentation build and link checks;
+5. personal-site replica `bun run verify`;
+6. targeted browser checks for navigation, images, behaviors, and code blocks;
+7. `git diff --check`;
+8. clean-worktree review.
+
+Do not run the root build and replica verification concurrently while they
+share `dist/framework`.
+
+## Completion criteria
+
+The plan is complete only when:
+
+- every confirmed bug has a regression test;
+- all seven batches meet their acceptance criteria;
+- no personal-site styling policy remains in framework-generated markup;
+- output plugins use authoritative publication artifacts;
+- the complete sequential validation gate passes;
+- the replica retains exact route, metadata, semantic-content, reference,
+  search, performance, and targeted visual behavior;
+- documentation explains the final public contracts;
+- commits remain independently reviewable and reversible.
+
+## Completion evidence
+
+Implemented across the framework, `@nib/images`, documentation, and the
+personal-site replica:
+
+- content-image public URLs and physical artifacts are base-safe, including
+  linked originals and failed-transform fallbacks;
+- renderer-owned island and behavior markup is validated through parse5;
+- behavior, island, coordinator, navigation, and HMR teardown is
+  exception-safe;
+- stylesheet ownership follows Vite-resolved module edges, and development and
+  production share one HTML template;
+- generated Markdown and image markup exposes neutral, documented hooks;
+- finalizers consume the immutable publication manifest instead of crawling
+  output;
+- client navigation supports explicit prefetch while retaining hover as the
+  compatibility default;
+- `bun run verify` runs the complete root, documentation, and replica gate in
+  the required order.
+
+Final verification:
+
+- 26 image-package tests pass;
+- 227 framework tests pass;
+- packed-consumer tests pass;
+- the docs build succeeds;
+- the replica matches 493 route/meta and 493 semantic-content references;
+- `nib check` validates 668 routes and 24,378 local references;
+- Pagefind indexes 440 pages;
+- performance, broken-route, image, code-block, tweet, and Markdown assertions
+  pass;
+- targeted desktop and mobile browser checks confirm centered, bounded article
+  media and code blocks, explicit client navigation, and no console errors;
+- `git diff --check` and unused-import checks pass.

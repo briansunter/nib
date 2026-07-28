@@ -96,6 +96,66 @@ describe('client behaviors', () => {
     expect(mount).not.toHaveBeenCalled()
   })
 
+  it('clears bookkeeping before a throwing cleanup and can remount', async () => {
+    const throwingCleanup = vi.fn(() => {
+      throw new Error('application cleanup failed')
+    })
+    const successfulCleanup = vi.fn()
+    const mount = vi.fn()
+      .mockReturnValueOnce(throwingCleanup)
+      .mockReturnValueOnce(successfulCleanup)
+    const element = behaviorElement({
+      behavior: 'reveal',
+      hydrate: 'load',
+      props: '{}',
+    })
+    const root = rootWith([element])
+    const runtime = createBehaviorRuntime({
+      '/src/behaviors/reveal.client.ts': async () => ({
+        default: defineBehaviorClient('reveal', mount),
+      }),
+    }, {
+      environment: { setTimeout: vi.fn(() => 1) },
+    })
+    runtime.mount(root)
+    await vi.waitFor(() => expect(mount).toHaveBeenCalledOnce())
+
+    expect(() => runtime.unmount(root)).toThrow(AggregateError)
+    expect(element.dataset.scheduled).toBeUndefined()
+    runtime.mount(root)
+    await vi.waitFor(() => expect(mount).toHaveBeenCalledTimes(2))
+    runtime.unmount(root)
+
+    expect(throwingCleanup).toHaveBeenCalledOnce()
+    expect(successfulCleanup).toHaveBeenCalledOnce()
+  })
+
+  it('attempts cleanup for every behavior when one callback throws', async () => {
+    const secondCleanup = vi.fn()
+    const mount = vi.fn()
+      .mockReturnValueOnce(() => {
+        throw new Error('first failed')
+      })
+      .mockReturnValueOnce(secondCleanup)
+    const root = rootWith([
+      behaviorElement({ behavior: 'reveal', hydrate: 'load', props: '{}' }),
+      behaviorElement({ behavior: 'reveal', hydrate: 'load', props: '{}' }),
+    ])
+    const runtime = createBehaviorRuntime({
+      '/src/behaviors/reveal.client.ts': async () => ({
+        default: defineBehaviorClient('reveal', mount),
+      }),
+    }, {
+      environment: { setTimeout: vi.fn(() => 1) },
+    })
+    runtime.mount(root)
+    await vi.waitFor(() => expect(mount).toHaveBeenCalledTimes(2))
+
+    expect(() => runtime.destroy()).toThrow(AggregateError)
+    expect(secondCleanup).toHaveBeenCalledOnce()
+    expect(() => runtime.destroy()).not.toThrow()
+  })
+
   it('rejects duplicate IDs and mismatched modules', async () => {
     expect(() => createBehaviorRuntime({
       '/src/behaviors/reveal.client.ts': async () => ({ default: null }),

@@ -81,7 +81,11 @@ describe('consumer project Vite adapter', () => {
       '}',
       '__nibRegisterClientCleanup(__nibClientInitializer0())',
       'if (import.meta.hot) import.meta.hot.dispose(() => {',
-      '  for (const cleanup of __nibClientCleanups.reverse()) cleanup()',
+      '  const failures = []',
+      '  for (const cleanup of __nibClientCleanups.reverse()) {',
+      '    try { cleanup() } catch (error) { failures.push(error) }',
+      '  }',
+      `  if (failures.length > 0) throw new AggregateError(failures, 'Nib client enhancement cleanup failed')`,
       '})',
     ].join('\n'))
   })

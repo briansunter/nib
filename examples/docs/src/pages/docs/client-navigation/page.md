@@ -57,6 +57,15 @@ The supported values are `hover`, `tap`, `load`, `viewport`, and `false`.
 Prefetching is same-origin, GET-only, short-lived, and bounded. It is disabled
 when the browser is offline, saving data, or reports a slow connection.
 
+For bandwidth-conscious sites, require those annotations globally:
+
+```ts
+plugins: [clientNavigation({ prefetch: 'explicit' })]
+```
+
+In explicit mode, unannotated links still use enhanced navigation when clicked
+but do not prefetch.
+
 ## Persistence and lifecycle
 
 Give an element a non-empty stable key to move that exact node into the next

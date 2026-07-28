@@ -1,12 +1,18 @@
+import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { ViteDevServer } from 'vite'
 import { afterEach, describe, expect, it } from 'vitest'
 import { startDevSite } from '../src/framework/site'
 
 const servers: ViteDevServer[] = []
+const temporaryRoots: string[] = []
 
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => server.close()))
+  await Promise.all(temporaryRoots.splice(0).map((root) => fs.rm(root, {
+    recursive: true,
+    force: true,
+  })))
 })
 
 describe('framework-owned development server', () => {
@@ -78,5 +84,28 @@ describe('framework-owned development server', () => {
     })
     expect(allowed.status).toBe(200)
     expect(server.config.server.allowedHosts).toContain('tail.example.test')
+  }, 30_000)
+
+  it('does not link an optional stylesheet that does not exist', async () => {
+    const fixtureParent = path.resolve('tests/fixtures')
+    const root = await fs.mkdtemp(path.join(fixtureParent, 'no-style-site-'))
+    temporaryRoots.push(root)
+    await fs.cp(path.resolve('tests/fixtures/basic-site'), root, { recursive: true })
+    await fs.rm(path.join(root, 'src/style.css'))
+
+    const server = await startDevSite({
+      root,
+      host: '127.0.0.1',
+      port: 0,
+    })
+    servers.push(server)
+    const origin = server.resolvedUrls?.local[0]
+    if (!origin) throw new Error('Development server did not expose a local URL')
+
+    const response = await fetch(new URL('/journal/', origin), {
+      headers: { connection: 'close' },
+    })
+    expect(response.status).toBe(200)
+    expect(await response.text()).not.toContain('/src/style.css')
   }, 30_000)
 })

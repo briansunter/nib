@@ -270,7 +270,9 @@ Builds also emit `dist/client/.nib/publication.json`. It records the manifest
 version, base path, trailing-slash policy, and each published route's kind,
 canonical path, artifact, status, content type, and redirect destination when
 applicable. Static-host adapters can use it instead of reimplementing Nib's
-extensionless and directory-index rules.
+extensionless and directory-index rules. Plugin finalizers receive this same
+frozen manifest as `context.publication`, so output integrations can open exact
+artifacts without recursively crawling `dist/client` or reconstructing routes.
 
 Run `nib check` after a build to validate publication artifacts, titles, image
 alt text, island-runtime ownership, and local `href`, `src`, `srcset`, and
@@ -378,6 +380,10 @@ export default defineConfig({
 })
 ```
 
+Hover intent remains the compatibility default. Sites that want only annotated
+prefetches can use `clientNavigation({ prefetch: 'explicit' })`; navigation
+itself still enhances every eligible link.
+
 The plugin contributes one static browser entry only when configured; no
 dynamic import or React DOM dependency is added by navigation. Links remain
 complete native fallbacks when JavaScript is disabled, a destination is
@@ -388,6 +394,10 @@ Use `data-nib-prefetch="hover|tap|load|viewport|false"` to control prefetching,
 `data-nib-navigation-persist="key"` to preserve a stable element across swaps.
 The browser controller and typed `nib:navigation-*` events are exported from
 `@briansunter/nib/client/navigation`.
+
+Generated Markdown uses the neutral `nib-markdown` class. Sites own typography,
+colors, widths, and other prose presentation through their layouts or global
+stylesheet.
 
 ## Scope
 
@@ -401,6 +411,11 @@ or a source of required content.
 
 The [documentation site](https://briansunter.github.io/nib/docs/) covers setup,
 pages, Markdown, layouts, data sources, collections, islands, and GitHub Pages.
+
+Repository maintainers can run `bun run verify` for the ordered framework,
+package-consumer, documentation, and personal-site replica gate. The command is
+sequential so the root and replica builds cannot overwrite shared framework
+output.
 
 ## Optional optimized images
 

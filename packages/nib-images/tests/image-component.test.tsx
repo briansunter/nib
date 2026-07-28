@@ -20,9 +20,17 @@ import {
   developmentImageUrl,
   parseDevelopmentImageRequest,
 } from '../src/image-request'
-import { optimizeContentImages } from '../src/content-images'
+import {
+  optimizeContentImages,
+  restoreFailedContentImages,
+} from '../src/content-images'
 
 const temporaryDirectories: string[] = []
+const pageArtifact = (artifact: string) => [{
+  kind: 'page',
+  artifact,
+  contentType: 'text/html; charset=utf-8',
+}] as const
 
 afterEach(async () => {
   await Promise.all(temporaryDirectories.splice(0).map((directory) => fs.rm(directory, {
@@ -83,6 +91,9 @@ describe('static Image component', () => {
     expect(() => normalizeImagesOptions(root, {
       content: [{ publicPath: '/site-assets/', directory: 'src/assets/site-assets', maxWidth: 0 }],
     } as any)).toThrow('content[0].maxWidth must contain positive integers')
+    expect(() => normalizeImagesOptions(root, {
+      content: [{ publicPath: '/../site-assets/', directory: 'src/assets/site-assets' }],
+    })).toThrow('publicPath must start and end')
     expect(() => images({ widths: [] } as any)).toThrow('widths must contain positive integers')
   })
 
@@ -186,9 +197,10 @@ describe('static Image component', () => {
     expect(html).toContain('loading="lazy"')
     expect(html).toContain('decoding="async"')
     expect(html).toContain('data-nib-orientation="landscape"')
-    expect(html).toContain('--nib-image-width:80px')
-    expect(html).toContain('--nib-image-height:40px')
-    expect(html).toContain('--nib-image-comfort-width:100px')
+    expect(html).toContain('--nib-image-source-width:80px')
+    expect(html).toContain('--nib-image-source-height:40px')
+    expect(html).toContain('--nib-image-source-aspect:2')
+    expect(html).not.toContain('--nib-image-comfort-width')
     expect(html).toContain('sizes="100vw"')
     expect(html).not.toContain('data-nib-islands')
   })
@@ -616,7 +628,13 @@ describe('static Image component', () => {
       '<img src="/site-assets/photo.jpg" alt="A photo" data-nib-widths="480, 800, 1200" sizes="(min-width: 1280px) 25vw, 100vw" loading="lazy" decoding="async">',
       '</figure>',
     ].join('\n'))
-    const replacements = await optimizeContentImages(clientDirectory, '/', options, registry)
+    const replacements = await optimizeContentImages(
+      clientDirectory,
+      '/',
+      options,
+      registry,
+      pageArtifact('photos'),
+    )
     expect(replacements).toBe(1)
     const rewritten = await fs.readFile(pageFile, 'utf8')
     expect(rewritten).toContain('<picture>')
@@ -661,7 +679,13 @@ describe('static Image component', () => {
       '<img src="/site-assets/photo.jpg" alt="A photo" width="504" data-nib-width="504" data-nib-widths="240, 320, 480, 640, 960" sizes="504px">',
     ].join('\n'))
 
-    const replacements = await optimizeContentImages(clientDirectory, '/', options, registry)
+    const replacements = await optimizeContentImages(
+      clientDirectory,
+      '/',
+      options,
+      registry,
+      pageArtifact('photos'),
+    )
     expect(replacements).toBe(1)
     const rewritten = await fs.readFile(pageFile, 'utf8')
     expect(rewritten).toContain('width="504"')
@@ -670,5 +694,121 @@ describe('static Image component', () => {
     expect(rewritten).not.toContain(' 1200w')
     expect(rewritten).toContain('sizes="504px"')
     expect(rewritten).not.toContain('data-nib-width')
+  })
+
+  it('keeps non-root content URLs and physical artifacts aligned without duplicating the base', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-base-content-'))
+    temporaryDirectories.push(root)
+    const publicDir = path.join(root, 'src/assets/site-assets')
+    await fs.mkdir(publicDir, { recursive: true })
+    await sharp({
+      create: { width: 80, height: 40, channels: 3, background: '#336699' },
+    }).jpeg().toFile(path.join(publicDir, 'photo.jpg'))
+    const options = normalizeImagesOptions(root, {
+      formats: ['webp'],
+      widths: [40, 80],
+      content: [{
+        publicPath: '/site-assets/',
+        directory: 'src/assets/site-assets',
+      }],
+    })
+    const registry = new ImageBuildRegistry(options, '/journal/', 'production')
+    const clientDirectory = path.join(root, 'dist/client')
+    const pageFile = path.join(clientDirectory, 'posts/index.html')
+    await fs.mkdir(path.dirname(pageFile), { recursive: true })
+    await fs.writeFile(pageFile, [
+      '<a href="/site-assets/photo.jpg">Original</a>',
+      '<img src="/site-assets/photo.jpg" alt="Photo">',
+      '<img src="/journal/site-assets/photo.jpg" alt="Already based">',
+    ].join('\n'))
+
+    expect(await optimizeContentImages(
+      clientDirectory,
+      '/journal/',
+      options,
+      registry,
+      pageArtifact('posts/index.html'),
+    )).toBe(2)
+    const rewritten = await fs.readFile(pageFile, 'utf8')
+    expect(rewritten).toContain('href="/journal/site-assets/photo.jpg"')
+    expect(rewritten).toContain('/journal/assets/nib/')
+    expect(rewritten).not.toContain('/journal/journal/')
+    await expect(fs.access(path.join(clientDirectory, 'site-assets/photo.jpg')))
+      .resolves.toBeUndefined()
+    await expect(fs.access(path.join(clientDirectory, 'journal/site-assets/photo.jpg')))
+      .rejects.toThrow()
+  })
+
+  it.each([
+    { base: '/', expected: '/site-assets/photo.jpg' },
+    { base: '/journal/', expected: '/journal/site-assets/photo.jpg' },
+  ])('restores a failed transform to a deployed original under $base', async ({ base, expected }) => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-fallback-'))
+    temporaryDirectories.push(root)
+    const publicDir = path.join(root, 'src/assets/site-assets')
+    await fs.mkdir(publicDir, { recursive: true })
+    const sourceFile = path.join(publicDir, 'photo.jpg')
+    await sharp({
+      create: { width: 80, height: 40, channels: 3, background: '#336699' },
+    }).jpeg().toFile(sourceFile)
+    const options = normalizeImagesOptions(root, {
+      formats: ['webp'],
+      widths: [40],
+      content: [{
+        publicPath: '/site-assets/',
+        directory: 'src/assets/site-assets',
+      }],
+    })
+    const registry = new ImageBuildRegistry(options, base, 'production')
+    const clientDirectory = path.join(root, 'dist/client')
+    const pageFile = path.join(clientDirectory, 'article')
+    await fs.mkdir(clientDirectory, { recursive: true })
+    await fs.writeFile(pageFile, '<img src="/site-assets/photo.jpg" alt="Photo">')
+    const routes = pageArtifact('article')
+    await optimizeContentImages(clientDirectory, base, options, registry, routes)
+    await fs.writeFile(sourceFile, 'corrupt after inspection')
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await registry.finalize(clientDirectory)
+    expect(await restoreFailedContentImages(clientDirectory, registry, routes)).toBeGreaterThan(0)
+
+    const restored = await fs.readFile(pageFile, 'utf8')
+    expect(restored).toContain(`src="${expected}"`)
+    expect(restored).not.toContain('/assets/nib/')
+    await expect(fs.access(path.join(clientDirectory, 'site-assets/photo.jpg')))
+      .resolves.toBeUndefined()
+    warning.mockRestore()
+  })
+
+  it('rejects traversal and escaping symlinks for authored content', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-content-boundary-'))
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-content-outside-'))
+    temporaryDirectories.push(root, outside)
+    const publicDir = path.join(root, 'src/assets/site-assets')
+    await fs.mkdir(publicDir, { recursive: true })
+    await fs.writeFile(path.join(outside, 'secret.jpg'), 'secret')
+    await fs.symlink(path.join(outside, 'secret.jpg'), path.join(publicDir, 'link.jpg'))
+    const options = normalizeImagesOptions(root, {
+      content: [{
+        publicPath: '/site-assets/',
+        directory: 'src/assets/site-assets',
+      }],
+    })
+    const clientDirectory = path.join(root, 'dist/client')
+    const pageFile = path.join(clientDirectory, 'article')
+    await fs.mkdir(clientDirectory, { recursive: true })
+    await fs.writeFile(pageFile, [
+      '<a href="/site-assets/%2e%2e/secret.jpg">Traversal</a>',
+      '<a href="/site-assets/link.jpg">Symlink</a>',
+    ].join('\n'))
+
+    await expect(optimizeContentImages(
+      clientDirectory,
+      '/',
+      options,
+      new ImageBuildRegistry(options, '/', 'production'),
+      pageArtifact('article'),
+    )).rejects.toThrow('escapes its configured directory')
+    await expect(fs.access(path.join(clientDirectory, 'secret.jpg'))).rejects.toThrow()
   })
 })

@@ -17,20 +17,23 @@ import {
 } from './navigation/page-cache'
 import type {
   ClientNavigationController,
+  ClientNavigationOptions,
   NavigateOptions,
   NavigationBeforeSwapDetail,
   NavigationContext,
   NavigationDirection,
   NavigationHistoryState,
   NavigationLifecycleDetail,
-  NavigationType,
+  NavigationPrefetchPolicy,
 } from './navigation/types'
 export type {
   ClientNavigationController,
+  ClientNavigationOptions,
   NavigateOptions,
   NavigationBeforeSwapDetail,
   NavigationDirection,
   NavigationLifecycleDetail,
+  NavigationPrefetchPolicy,
   NavigationType,
 } from './navigation/types'
 
@@ -90,12 +93,19 @@ function eligibleLink(link: Element): URL | null {
 
 type PrefetchMode = 'hover' | 'load' | 'tap' | 'viewport'
 
-function prefetchMode(link: Element): PrefetchMode | null {
+function prefetchMode(
+  link: Element,
+  policy: NavigationPrefetchPolicy,
+): PrefetchMode | null {
   const value = link.getAttribute('data-nib-prefetch')
   if (value === 'false') return null
-  if (value === 'tap' || value === 'load' || value === 'viewport') return value
-  // The opt-in plugin defaults ordinary eligible links to hover intent.
-  return 'hover'
+  if (
+    value === 'hover'
+    || value === 'tap'
+    || value === 'load'
+    || value === 'viewport'
+  ) return value
+  return policy === 'hover' ? 'hover' : null
 }
 
 function scriptTypeIsExecutable(script: HTMLScriptElement): boolean {
@@ -497,6 +507,9 @@ class NibClientNavigation implements ClientNavigationController {
   private readonly viewportTimers = new Map<Element, number>()
   private readonly announcementTimers = new Set<number>()
   private activeTransition: ViewTransition | undefined
+  private previousScrollRestoration: History['scrollRestoration'] | undefined
+
+  constructor(private readonly prefetchPolicy: NavigationPrefetchPolicy) {}
 
   mount = () => {
     if (this.mounted) return
@@ -520,6 +533,7 @@ class NibClientNavigation implements ClientNavigationController {
         behavior: 'auto',
       })
     }
+    this.previousScrollRestoration = history.scrollRestoration
     history.scrollRestoration = 'manual'
     seedExecutedScripts(this.executedScripts)
     this.bind(this.controller.signal)
@@ -570,12 +584,19 @@ class NibClientNavigation implements ClientNavigationController {
     this.announcementTimers.clear()
     this.pageCache.clear()
     this.executedScripts.clear()
+    document.querySelectorAll('[data-nib-navigation-preload]').forEach((node) => node.remove())
+    document.documentElement.removeAttribute('data-nib-navigation-direction')
+    document.documentElement.removeAttribute('data-nib-navigation-fallback')
+    if (this.previousScrollRestoration !== undefined) {
+      history.scrollRestoration = this.previousScrollRestoration
+    }
     this.controller = undefined
     this.navigationAbort = undefined
     this.viewportObserver = undefined
     this.activeTransition = undefined
     this.hoverTimer = 0
     this.scrollFrame = 0
+    this.previousScrollRestoration = undefined
     this.mounted = false
   }
 
@@ -634,7 +655,11 @@ class NibClientNavigation implements ClientNavigationController {
 
   private onHover = (event: Event) => {
     const link = linkFromEvent(event)
-    if (!link || prefetchMode(link) !== 'hover' || connectionIsSlow()) return
+    if (
+      !link
+      || prefetchMode(link, this.prefetchPolicy) !== 'hover'
+      || connectionIsSlow()
+    ) return
     const url = eligibleLink(link)
     if (!url) return
     const signal = this.controller?.signal
@@ -656,7 +681,7 @@ class NibClientNavigation implements ClientNavigationController {
 
   private onTouchPrefetch = (event: Event) => {
     const link = linkFromEvent(event)
-    if (!link || prefetchMode(link) !== 'tap') return
+    if (!link || prefetchMode(link, this.prefetchPolicy) !== 'tap') return
     const url = eligibleLink(link)
     const signal = this.controller?.signal
     if (url && signal) this.pageCache.prefetch(url, signal)
@@ -1072,19 +1097,34 @@ class NibClientNavigation implements ClientNavigationController {
 }
 
 /** Creates an unmounted navigation controller with no global ownership. */
-export function createClientNavigation(): ClientNavigationController {
-  return new NibClientNavigation()
+export function createClientNavigation(
+  options: ClientNavigationOptions = {},
+): ClientNavigationController {
+  const prefetch = options.prefetch ?? 'hover'
+  if (prefetch !== 'hover' && prefetch !== 'explicit') {
+    throw new Error(`Unsupported Nib navigation prefetch policy: ${String(prefetch)}`)
+  }
+  return new NibClientNavigation(prefetch)
 }
 
 let startedController: ClientNavigationController | undefined
 
-/** Starts the generated plugin entry exactly once and returns its controller. */
-export function startClientNavigation(): ClientNavigationController {
+function startNavigation(options: ClientNavigationOptions): ClientNavigationController {
   if (startedController === undefined) {
-    startedController = createClientNavigation()
+    startedController = createClientNavigation(options)
   }
   startedController.mount()
   return startedController
+}
+
+/** Starts the generated plugin entry with compatibility hover prefetching. */
+export function startClientNavigation(): ClientNavigationController {
+  return startNavigation({ prefetch: 'hover' })
+}
+
+/** Starts the generated plugin entry with annotation-only prefetching. */
+export function startExplicitClientNavigation(): ClientNavigationController {
+  return startNavigation({ prefetch: 'explicit' })
 }
 
 /** Destroys the generated plugin-owned controller, primarily for HMR and tests. */

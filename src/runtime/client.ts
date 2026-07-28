@@ -70,6 +70,31 @@ export function createIslandRuntime(
   const reportError = options.reportError ?? defaultReportError
   let destroyed = false
 
+  function cleanup(element: HTMLElement, state: MountedIsland) {
+    if (!state.active) return
+    state.active = false
+    state.scheduled?.cancel()
+    delete element.dataset.scheduled
+    mounted.delete(element)
+    const reactRoot = state.reactRoot
+    delete state.reactRoot
+    reactRoot?.unmount()
+  }
+
+  function cleanupAll(entries: readonly [HTMLElement, MountedIsland][]) {
+    const failures: unknown[] = []
+    for (const [element, state] of entries) {
+      try {
+        cleanup(element, state)
+      } catch (error) {
+        failures.push(error)
+      }
+    }
+    if (failures.length > 0) {
+      throw new AggregateError(failures, 'Nib island cleanup failed')
+    }
+  }
+
   const runtime: IslandRuntime = {
     mount(root = document) {
       if (destroyed) throw new Error('Cannot mount a destroyed Nib island runtime')
@@ -111,25 +136,14 @@ export function createIslandRuntime(
       }
     },
     unmount(root = document) {
-      for (const [element, state] of mounted) {
-        if (state.owner !== root && rootContains(root, element) === false) continue
-        state.active = false
-        state.scheduled?.cancel()
-        state.reactRoot?.unmount()
-        delete element.dataset.scheduled
-        mounted.delete(element)
-      }
+      cleanupAll([...mounted].filter(([element, state]) => (
+        state.owner === root || rootContains(root, element)
+      )))
     },
     destroy() {
       if (destroyed) return
-      for (const [element, state] of mounted) {
-        state.active = false
-        state.scheduled?.cancel()
-        state.reactRoot?.unmount()
-        delete element.dataset.scheduled
-      }
-      mounted.clear()
       destroyed = true
+      cleanupAll([...mounted])
     },
   }
   return runtime

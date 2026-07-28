@@ -35,6 +35,13 @@ bytes through HMR; unchanged content keeps its cache key and revalidates with
 creates a renderer. The build-only package entry is the only supported plugin
 authoring path; its internal benchmark utilities are not published as an import.
 
+Rendered `<img>` elements expose only objective source metadata for consumer
+styling: `data-nib-orientation` (`landscape`, `portrait`, or `square`) plus
+`--nib-image-source-width`, `--nib-image-source-height`, and
+`--nib-image-source-aspect`. Orientation compares the intrinsic width and
+height directly. Nib does not choose a visual comfort width or other
+site-specific sizing policy.
+
 Rendered content images can opt into the same optimizer without importing each
 file in a component. Configure a project-relative source directory and its
 public URL prefix; only matching `<img>` references in the completed HTML are

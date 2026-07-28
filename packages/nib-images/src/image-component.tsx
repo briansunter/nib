@@ -128,9 +128,8 @@ function formatDensity(value: number): string {
 }
 
 function imageOrientation(source: ImageSource): 'landscape' | 'portrait' | 'square' {
-  const ratio = source.width / source.height
-  if (ratio >= 1.2) return 'landscape'
-  if (ratio <= 0.8) return 'portrait'
+  if (source.width > source.height) return 'landscape'
+  if (source.width < source.height) return 'portrait'
   return 'square'
 }
 
@@ -178,10 +177,9 @@ export function Image(props: ImageProps) {
   }
   const userStyle = props.style
   const intrinsicStyle = {
-    '--nib-image-width': `${source.width}px`,
-    '--nib-image-height': `${source.height}px`,
-    '--nib-image-aspect': String(source.width / source.height),
-    '--nib-image-comfort-width': `${Math.round(source.width * 1.25)}px`,
+    '--nib-image-source-width': `${source.width}px`,
+    '--nib-image-source-height': `${source.height}px`,
+    '--nib-image-source-aspect': String(source.width / source.height),
   } as CSSProperties
   const layoutStyle: CSSProperties = layout === 'full'
     ? { ...intrinsicStyle, width: '100%', height: 'auto', ...userStyle }
