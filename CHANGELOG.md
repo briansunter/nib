@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.16.0](https://github.com/briansunter/nib/compare/v0.15.1...v0.16.0) (2026-07-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove config.site and site data from page and plugin contexts; deployment origin is now config.origin and RSS channel metadata is explicit.
+
+### Features
+
+* add optional site metadata plugin ([8bd6f38](https://github.com/briansunter/nib/commit/8bd6f38ad55f6ca16431d0eed208c296c3feb5a9))
+* simplify site configuration ([7b23283](https://github.com/briansunter/nib/commit/7b232833c8ef9669b6703bfea4996387de170c7e))
+
 ## [0.15.1](https://github.com/briansunter/nib/compare/v0.15.0...v0.15.1) (2026-07-28)
 
 
