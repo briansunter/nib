@@ -38,6 +38,7 @@ import { writeHostingArtifacts } from './hosting-writer'
 import type { RenderedOutput, TrailingSlash } from './types'
 import { nibDataPages, nibMarkdown } from './vite-plugin'
 import { targetBoundaryGuard } from './target-boundary'
+import { pageStyleOwnershipGuard } from './style-ownership'
 
 export interface SiteOperationOptions {
   root: string
@@ -180,6 +181,7 @@ export async function siteViteConfig(
       },
       plugins: [
         targetBoundaryGuard(target),
+        pageStyleOwnershipGuard(root, target),
         nibMarkdown(loaded.configPath),
         nibDataPages(loaded.configPath, pageSources, pluginContext),
         ...appVitePlugins,

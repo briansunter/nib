@@ -141,6 +141,13 @@ Tailwind is optional rather than a framework dependency. The initializer adds
 another styling adapter omit it. This field can contribute only Vite plugins;
 Nib continues to own entries, SSR, base-path, and output configuration.
 
+`src/style.css` is the application-owned deployable stylesheet entry. CSS
+imported by an island or `.client` behavior is also represented in a client
+entry, and a plugin may own its own client CSS. An import reachable only from a
+page, layout, data-page renderer, or other server-rendered application module
+fails in development and production with the importer and remediation. Nib
+does not currently infer route-scoped CSS chunks.
+
 `@briansunter/nib-images` is a separate workspace/package and the only package
 that depends on Sharp. Its `images()` plugin handles explicit local
 `?nib-image` imports and its static `Image` component registers transforms while

@@ -116,6 +116,12 @@ loaders, and `/client` owns browser lifecycle contracts. Nib also rejects a
 `.server.ts(x)` module imported by the production client graph or a
 `.client.ts(x)` module imported by the production server graph.
 
+Application-wide CSS belongs in `src/style.css`. CSS can also be owned by an
+island, a `.client` behavior, or a plugin's client entry. A stylesheet imported
+only by a page, layout, or server-rendered component cannot reach the deployed
+client graph, so Nib reports it as a build/development error instead of
+publishing an unstyled page.
+
 For progressive enhancement without React hydration, define a server-safe
 boundary with `defineClientBehavior` and put its implementation under
 `src/behaviors/**/*.client.ts`. Import `defineBehaviorClient` from
