@@ -1,6 +1,6 @@
 # Interactive React islands for TSX templates
 
-Status: Implemented
+Status: Implemented, including lifecycle controllers and non-React behaviors
 
 This rationale record describes the current island architecture. The concise implementation contract lives in [`docs/architecture.md`](architecture.md); keep both documents synchronized when the runtime changes.
 
@@ -9,6 +9,13 @@ This rationale record describes the current island architecture. The concise imp
 Nib uses TSX as its primary component-bearing templating language while hydrating only explicitly interactive React subtrees, or "islands," in the browser.
 
 Pages, layouts, and ordinary components remain server-rendered React. They produce complete static HTML and ship no page-level JavaScript. A component becomes interactive only when it is defined with `defineIsland` and placed under `src/islands`. Each island is server-rendered for useful initial HTML, emitted as an independent React root, and hydrated by a small client runtime according to an explicit strategy such as `load`, `idle`, or `visible`.
+
+Imperative progressive enhancement uses `defineClientBehavior` plus a matching
+`.client.ts` implementation under `src/behaviors`. It has a separate generated
+entry and does not import React DOM. Both runtimes expose `mount(root)`,
+`unmount(root)`, and `destroy()` controllers through the public client
+subpaths. Pending scheduling is cancellable and hydrated roots are retained so
+detached documents can be cleaned exactly once.
 
 This replaces whole-page hydration as Nib's default model. It keeps the framework small and static-hostable while letting authors build interactive controls in the same React/TSX component model used for the rest of the page.
 
@@ -39,7 +46,8 @@ The desired model is more precise: author all markup with TSX, render everything
 
 ## Non-goals
 
-- Client-side routing or SPA navigation.
+- Default client-side routing or SPA navigation. Optional navigation is a
+  separate, explicit plugin decision.
 - React Server Components.
 - Server actions or runtime server data loaders.
 - Sharing a React context across separate islands.
@@ -211,6 +219,12 @@ An island definition rendered inside another island is composed into the parent'
 ### Client runtime
 
 The current runtime replaces the former whole-page `entry-client.tsx` behavior with the framework-owned `virtual:nib/client-entry` runtime.
+
+Generated entries use `@briansunter/nib/client/islands` and
+`@briansunter/nib/client/behaviors`. The latter has no React DOM dependency.
+The shared public coordinator lets opt-in document navigation unmount old roots
+before detaching them and mount new roots afterward; no private `window` restart
+hook is defined.
 
 The runtime creates a lazy module registry with Vite glob imports (the current implementation uses a project-relative glob):
 

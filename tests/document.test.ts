@@ -3,14 +3,15 @@ import { renderDocument, renderRedirectDocument } from '../src/framework/documen
 import { renderHead } from '../src/framework/meta'
 import type { RenderedPage } from '../src/framework/types'
 
-const template = `<!doctype html><head><!--head-outlet--><script type="module">refresh()</script><script data-nib-islands type="module" src="/assets/islands.js"></script></head><body><!--ssr-outlet--></body>`
+const template = `<!doctype html><head><!--head-outlet--><script type="module">refresh()</script><script data-nib-islands type="module" src="/assets/islands.js"></script><script data-nib-behaviors type="module" src="/assets/behaviors.js"></script></head><body><!--ssr-outlet--></body>`
 
-function page(islands: string[]): RenderedPage {
+function page(islands: string[], behaviors: string[] = []): RenderedPage {
   return {
     status: 200,
     head: '<title>Page</title>',
     html: '<main>Page</main>',
     islands,
+    behaviors,
   }
 }
 
@@ -72,6 +73,12 @@ describe('HTML documents', () => {
 
   it('keeps the island entry on interactive pages', () => {
     expect(renderDocument(template, page(['counter']))).toContain('data-nib-islands')
+  })
+
+  it('keeps only the behavior entry on non-React enhanced pages', () => {
+    const html = renderDocument(template, page([], ['pin']))
+    expect(html).toContain('data-nib-behaviors')
+    expect(html).not.toContain('data-nib-islands')
   })
 
   it('requires a marked client entry when a page uses islands', () => {

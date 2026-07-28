@@ -33,7 +33,7 @@ export type NibPluginSiteConfig = Readonly<
 export type NibPluginRoute = PageRoute
 
 /** A plugin may alter static output, but hydration ownership remains with Nib. */
-export type NibRenderedPage = Readonly<Omit<RenderedPage, 'islands'>>
+export type NibRenderedPage = Readonly<Omit<RenderedPage, 'islands' | 'behaviors'>>
 
 export interface NibVitePluginContext {
   readonly command: NibCommand
@@ -240,6 +240,13 @@ function islandMarkup(html: string): string[] {
   return markup
 }
 
+function behaviorMarkup(html: string): string[] {
+  const openings = html.match(/<nib-behavior\b/gi) ?? []
+  const markup = html.match(/<nib-behavior\b[^>]*>[\s\S]*?<\/nib-behavior\s*>/gi) ?? []
+  if (openings.length !== markup.length) return []
+  return markup
+}
+
 export interface NibRendererPipeline {
   head(context: NibRenderPageContext): HeadContribution
   wrapPage(page: ReactNode, context: NibRenderPageContext): ReactNode
@@ -303,6 +310,7 @@ export async function createRendererPluginPipeline(
     transformPage(page, pageContext) {
       let transformed = page
       const expectedIslandMarkup = islandMarkup(page.html)
+      const expectedBehaviorMarkup = behaviorMarkup(page.html)
       for (const { plugin, extension } of extensions) {
         if (!extension.transformPage) continue
         try {
@@ -311,6 +319,15 @@ export async function createRendererPluginPipeline(
             plugin,
             expectedIslandMarkup,
           )
+          const actualBehaviorMarkup = behaviorMarkup(transformed.html)
+          if (
+            actualBehaviorMarkup.length !== expectedBehaviorMarkup.length
+            || actualBehaviorMarkup.some((markup, index) => markup !== expectedBehaviorMarkup[index])
+          ) {
+            throw new Error(
+              `Nib plugin ${plugin.name} transformPage() cannot change client behavior markup`,
+            )
+          }
         } catch (error) {
           throw pluginError(plugin, 'transformPage()', error, pageContext.route.path)
         }

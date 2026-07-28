@@ -24,7 +24,8 @@ The package owns:
 - development SSR and production prerendering;
 - document outlets, metadata, base paths, and 404 output;
 - structured document-head contributions and publication manifests;
-- island collection, serialization, client loading, and hydration.
+- island collection, serialization, client loading, hydration, and cleanup;
+- non-React client behaviors with a separate runtime-free-by-default entry.
 
 A consumer project owns:
 
@@ -36,6 +37,7 @@ src/pages/**/layout.tsx
 src/layouts/*.tsx
 src/content/              optional collection inputs
 src/islands/**/*.tsx
+src/behaviors/**/*.client.ts  optional non-React enhancement
 src/site-shell.tsx       optional
 src/style.css            optional
 public/                  optional
@@ -200,21 +202,23 @@ interactive 2FA publish, then configure OIDC and remove any CI token.
 
 ## Virtual modules
 
-`src/framework/project-vite-plugin.ts` generates two modules:
+`src/framework/project-vite-plugin.ts` generates three modules:
 
 - `virtual:nib/server-entry` discovers pages, layouts, and islands with literal
   Vite globs, then delegates route setup and document rendering to the deep
   `createProjectRenderer` module.
 - `virtual:nib/client-entry` discovers island modules lazily and starts the
   island runtime.
+- `virtual:nib/behavior-entry` discovers `.client.ts(x)` behavior modules
+  lazily and starts the non-React behavior runtime.
 
-Both use project-root `/src/...` globs. This keeps route and island discovery in
+All use project-root `/src/...` globs. This keeps route and client-module discovery in
 the framework while ensuring Vite still sees literal glob patterns and can
 split island chunks.
 
-The server and client virtual modules use separate package-internal exports.
-That avoids loading browser hydration code during SSR and keeps the public
-authoring interface small.
+The server and client virtual modules use separate public execution-target
+subpaths. That avoids loading browser hydration code during SSR and keeps React
+DOM out of behavior-only pages.
 
 ## File routing
 

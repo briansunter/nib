@@ -116,6 +116,13 @@ loaders, and `/client` owns browser lifecycle contracts. Nib also rejects a
 `.server.ts(x)` module imported by the production client graph or a
 `.client.ts(x)` module imported by the production server graph.
 
+For progressive enhancement without React hydration, define a server-safe
+boundary with `defineClientBehavior` and put its implementation under
+`src/behaviors/**/*.client.ts`. Import `defineBehaviorClient` from
+`@briansunter/nib/client/behaviors`; the implementation receives its scoped
+root, JSON props, and an `AbortSignal`. Behavior-only routes keep their complete
+static HTML and do not ship React DOM.
+
 ### Document head
 
 Site configuration and page metadata can add typed head elements without taking

@@ -34,6 +34,7 @@ describe('React islands', () => {
     expect(renderReactPage(<main>Static</main>)).toEqual({
       html: '<main>Static</main>',
       islands: [],
+      behaviors: [],
     })
   })
 

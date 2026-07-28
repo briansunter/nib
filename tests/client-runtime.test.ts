@@ -4,7 +4,7 @@ const hydrateRoot = vi.hoisted(() => vi.fn())
 
 vi.mock('react-dom/client', () => ({ hydrateRoot }))
 
-import { startIslandRuntime } from '../src/runtime/client'
+import { createIslandRuntime, startIslandRuntime } from '../src/runtime/client'
 import { defineIsland } from '../src/framework/islands'
 
 function rootWith(elements: HTMLElement[]): Document {
@@ -19,6 +19,7 @@ function islandElement(dataset: Record<string, string>): HTMLElement {
 
 beforeEach(() => {
   hydrateRoot.mockReset()
+  hydrateRoot.mockReturnValue({ unmount: vi.fn() })
   vi.stubGlobal('window', {})
 })
 
@@ -62,5 +63,55 @@ describe('island client entry', () => {
       expect.any(Error),
     )
     report.mockRestore()
+  })
+
+  it('unmounts hydrated roots once and cancels detached pending work', async () => {
+    const Counter = defineIsland('counter', () => null)
+    const immediate = islandElement({
+      hydrate: 'load',
+      island: 'counter',
+      instance: 'nib-0',
+      prefix: 'nib-0-',
+      props: '{}',
+    })
+    const root = rootWith([immediate])
+    const unmount = vi.fn()
+    hydrateRoot.mockReturnValue({ unmount })
+    const runtime = createIslandRuntime({
+      '/src/islands/counter.tsx': async () => ({ default: Counter }),
+    })
+    runtime.mount(root)
+    await vi.waitFor(() => expect(hydrateRoot).toHaveBeenCalledOnce())
+    runtime.unmount(root)
+    runtime.unmount(root)
+    expect(unmount).toHaveBeenCalledOnce()
+
+    let idle: (() => void) | undefined
+    const pending = islandElement({
+      hydrate: 'idle',
+      island: 'counter',
+      instance: 'nib-1',
+      prefix: 'nib-1-',
+      props: '{}',
+    })
+    const pendingRoot = rootWith([pending])
+    const cancelIdleCallback = vi.fn()
+    const pendingRuntime = createIslandRuntime({
+      '/src/islands/counter.tsx': async () => ({ default: Counter }),
+    }, {
+      environment: {
+        requestIdleCallback(callback) {
+          idle = callback
+          return 11
+        },
+        cancelIdleCallback,
+        setTimeout: vi.fn(),
+      },
+    })
+    pendingRuntime.mount(pendingRoot)
+    pendingRuntime.unmount(pendingRoot)
+    idle?.()
+    expect(cancelIdleCallback).toHaveBeenCalledWith(11)
+    expect(hydrateRoot).toHaveBeenCalledOnce()
   })
 })

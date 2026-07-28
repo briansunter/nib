@@ -18,6 +18,7 @@ import { pageSourceExtensions, pageSourcePatterns } from './content'
 import { nibIslandsEntry } from './island-vite-plugin'
 import {
   NIB_CLIENT_ENTRY,
+  NIB_BEHAVIOR_ENTRY,
   NIB_SERVER_ENTRY,
   nibProject,
 } from './project-vite-plugin'
@@ -84,7 +85,12 @@ function baseHref(base: string, file: string): string {
   return `${base}${file.replace(/^\/+/, '')}`
 }
 
-function htmlTemplate(base: string, islandEntry: string, stylesheets: string[]): string {
+function htmlTemplate(
+  base: string,
+  islandEntry: string,
+  behaviorEntry: string,
+  stylesheets: string[],
+): string {
   const styles = stylesheets
     .map((file) => `<link rel="stylesheet" href="${baseHref(base, file)}" />`)
     .join('\n    ')
@@ -96,6 +102,7 @@ function htmlTemplate(base: string, islandEntry: string, stylesheets: string[]):
     <!--head-outlet-->
     ${styles}
     <!--nib-islands-entry--><script data-nib-islands type="module" src="${baseHref(base, islandEntry)}"></script>
+    <!--nib-behaviors-entry--><script data-nib-behaviors type="module" src="${baseHref(base, behaviorEntry)}"></script>
   </head>
   <body>
     <div id="root"><!--ssr-outlet--></div>
@@ -112,6 +119,7 @@ function devHtmlTemplate(): string {
     <!--head-outlet-->
     <link rel="stylesheet" href="/src/style.css" />
     <!--nib-islands-entry--><script data-nib-islands type="module" src="/@id/${NIB_CLIENT_ENTRY}"></script>
+    <!--nib-behaviors-entry--><script data-nib-behaviors type="module" src="/@id/${NIB_BEHAVIOR_ENTRY}"></script>
   </head>
   <body>
     <div id="root"><!--ssr-outlet--></div>
@@ -203,14 +211,16 @@ async function readBuildTemplate(clientDirectory: string, base: string): Promise
   ) as ViteManifest
   const entries = Object.values(manifest)
   const islands = entries.find((entry) => entry.isEntry && entry.name === 'islands')
+  const behaviors = entries.find((entry) => entry.isEntry && entry.name === 'behaviors')
   if (!islands) throw new Error('Nib client build did not produce an island runtime entry')
+  if (!behaviors) throw new Error('Nib client build did not produce a behavior runtime entry')
   const styles = entries
     .flatMap((entry) => [
       ...(entry.css ?? []),
       ...(entry.isEntry && entry.file.endsWith('.css') ? [entry.file] : []),
     ])
     .filter((file, index, all) => all.indexOf(file) === index)
-  return htmlTemplate(base, islands.file, styles)
+  return htmlTemplate(base, islands.file, behaviors.file, styles)
 }
 
 function publicationPreviewPlugin(
@@ -271,6 +281,7 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
       rollupOptions: {
         input: {
           islands: NIB_CLIENT_ENTRY,
+          behaviors: NIB_BEHAVIOR_ENTRY,
           ...(hasStyles ? { styles: stylePath } : {}),
         },
       },

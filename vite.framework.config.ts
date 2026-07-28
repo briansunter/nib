@@ -12,6 +12,8 @@ const entries = {
   verify: path.resolve('src/verify.ts'),
   hosting: path.resolve('src/hosting.ts'),
   client: path.resolve('src/client.ts'),
+  'client/islands': path.resolve('src/client-islands.ts'),
+  'client/behaviors': path.resolve('src/client-behaviors.ts'),
   server: path.resolve('src/server.ts'),
   'internal/client': path.resolve('src/runtime/client.ts'),
   'internal/server': path.resolve('src/runtime/server.ts'),
