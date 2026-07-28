@@ -22,15 +22,18 @@ import type {
   CollectionEntry,
 } from './types'
 
-export const defaultMarkdownSchema = z.looseObject({
+const pageMetaSchema = z.looseObject({
   title: z.string().optional(),
   description: z.string().optional(),
   draft: z.boolean().optional(),
-  layout: z.string().min(1).optional(),
   head: z.unknown().optional(),
   image: z.string().optional(),
   type: z.enum(['website', 'article']).optional(),
   twitterCard: z.enum(['summary', 'summary_large_image']).optional(),
+})
+
+export const defaultMarkdownSchema = pageMetaSchema.extend({
+  layout: z.string().min(1).optional(),
 })
 
 export function defineMarkdown<Data>(
@@ -346,6 +349,7 @@ export function pageSourceIndex(
 function normalizePagePath(value: string, label: string): string {
   if (
     !value.startsWith('/')
+    || value.startsWith('//')
     || value.includes('?')
     || value.includes('#')
     || value.includes('\\')
@@ -365,15 +369,7 @@ function getLayoutName(layout: unknown, label: string): string | undefined {
 
 function getPageMeta(meta: unknown, label: string): PageMeta | undefined {
   if (meta === undefined) return undefined
-  const parsed = z.looseObject({
-    title: z.string().optional(),
-    description: z.string().optional(),
-    draft: z.boolean().optional(),
-    head: z.unknown().optional(),
-    image: z.string().optional(),
-    type: z.enum(['website', 'article']).optional(),
-    twitterCard: z.enum(['summary', 'summary_large_image']).optional(),
-  }).safeParse(meta)
+  const parsed = pageMetaSchema.safeParse(meta)
   if (!parsed.success) throw new Error(`${label} metadata: ${parsed.error.message}`)
   const head = normalizeHeadContribution(parsed.data.head, `${label} head`)
   return {

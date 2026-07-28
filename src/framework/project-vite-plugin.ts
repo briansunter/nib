@@ -52,8 +52,12 @@ export function nibProject(
           `import { createIslandRuntime, registerClientRuntime } from '@briansunter/nib/client/islands'`,
           `const modules = import.meta.glob('/src/islands/**/*.tsx')`,
           `const runtime = createIslandRuntime(modules)`,
-          `registerClientRuntime(runtime)`,
+          `const unregisterRuntime = registerClientRuntime(runtime)`,
           `runtime.mount(document)`,
+          `if (import.meta.hot) import.meta.hot.dispose(() => {`,
+          `  unregisterRuntime()`,
+          `  runtime.destroy()`,
+          `})`,
         ].join('\n')
       }
       if (id === RESOLVED_BEHAVIOR_ENTRY) {
@@ -61,8 +65,12 @@ export function nibProject(
           `import { createBehaviorRuntime, registerClientRuntime } from '@briansunter/nib/client/behaviors'`,
           `const modules = import.meta.glob('/src/behaviors/**/*.client.{ts,tsx}')`,
           `const runtime = createBehaviorRuntime(modules)`,
-          `registerClientRuntime(runtime)`,
+          `const unregisterRuntime = registerClientRuntime(runtime)`,
           `runtime.mount(document)`,
+          `if (import.meta.hot) import.meta.hot.dispose(() => {`,
+          `  unregisterRuntime()`,
+          `  runtime.destroy()`,
+          `})`,
         ].join('\n')
       }
       if (id === RESOLVED_ENHANCEMENT_ENTRY) {
@@ -75,15 +83,27 @@ export function nibProject(
           `  if (typeof result === 'function') __nibClientCleanups.push(result)`,
           `  else if (result && typeof result.destroy === 'function') __nibClientCleanups.push(() => result.destroy())`,
           `}`,
-          ...clientEntries.map((_, index) => (
-            `__nibRegisterClientCleanup(__nibClientInitializer${index}())`
-          )),
-          `if (import.meta.hot) import.meta.hot.dispose(() => {`,
+          `const __nibCleanupClientEnhancements = () => {`,
           `  const failures = []`,
-          `  for (const cleanup of __nibClientCleanups.reverse()) {`,
-          `    try { cleanup() } catch (error) { failures.push(error) }`,
+          `  while (__nibClientCleanups.length > 0) {`,
+          `    try { __nibClientCleanups.pop()() } catch (error) { failures.push(error) }`,
           `  }`,
           `  if (failures.length > 0) throw new AggregateError(failures, 'Nib client enhancement cleanup failed')`,
+          `}`,
+          `try {`,
+          ...clientEntries.map((_, index) => (
+            `  __nibRegisterClientCleanup(__nibClientInitializer${index}())`
+          )),
+          `} catch (error) {`,
+          `  try {`,
+          `    __nibCleanupClientEnhancements()`,
+          `  } catch (cleanupError) {`,
+          `    throw new AggregateError([error, cleanupError], 'Nib client enhancement initialization failed')`,
+          `  }`,
+          `  throw error`,
+          `}`,
+          `if (import.meta.hot) import.meta.hot.dispose(() => {`,
+          `  __nibCleanupClientEnhancements()`,
           `})`,
         ].join('\n')
       }
@@ -100,6 +120,7 @@ export function nibProject(
         `const folderLayouts = import.meta.glob('/src/pages/**/layout.tsx', { eager: true })`,
         `const namedLayouts = import.meta.glob('/src/layouts/*.tsx', { eager: true })`,
         `const islandModules = import.meta.glob('/src/islands/**/*.tsx', { eager: true })`,
+        `const behaviorClientFiles = Object.keys(import.meta.glob('/src/behaviors/**/*.client.{ts,tsx}'))`,
         `const renderer = await createProjectRenderer({`,
         `  config,`,
         `  root: ${projectRoot},`,
@@ -109,6 +130,7 @@ export function nibProject(
         `  folderLayouts,`,
         `  namedLayouts,`,
         `  islandModules,`,
+        `  behaviorClientFiles,`,
         `})`,
         `export const paths = renderer.paths`,
         `export const render = renderer.render`,

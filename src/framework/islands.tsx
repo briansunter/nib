@@ -6,55 +6,27 @@ import {
   type ComponentType,
   type ReactNode,
 } from 'react'
+import {
+  isHydrationStrategy,
+  type HydrationStrategy,
+} from './hydration'
 import { islandFileToId, validateIslandId } from './island-paths'
+import type { JsonSerializableObject } from './island-serialization'
+
+export type { HydrationStrategy } from './hydration'
 
 const ISLAND_DEFINITION = Symbol.for('nib.island-definition')
-
-export type HydrationStrategy = 'load' | 'idle' | 'visible'
 
 export interface IslandControlProps {
   hydrate?: HydrationStrategy
 }
 
-type IsAny<Value> = 0 extends (1 & Value) ? true : false
-type IsBroadObject<Value> = [Value] extends [object]
-  ? [object] extends [Value] ? true : false
-  : false
-type IsOptionalKey<Value extends object, Key extends keyof Value> = {} extends Pick<Value, Key>
-  ? true
-  : false
-type AllPropertiesAreJson<Value extends object> = Value extends unknown
-  ? IsBroadObject<Value> extends true
-    ? false
-    : keyof Value extends never
-      ? true
-      : false extends {
-          [Key in keyof Value]-?: IsOptionalKey<Value, Key> extends true
-            ? IsJsonValue<Exclude<Value[Key], undefined>>
-            : IsJsonValue<Value[Key]>
-        }[keyof Value]
-        ? false
-        : true
-  : never
-type IsJsonValue<Value> = IsAny<Value> extends true
-  ? false
-  : [Value] extends [never | undefined]
-    ? false
-    : [Value] extends [null | string | number | boolean]
-    ? true
-    : Value extends (...args: never[]) => unknown
-      ? false
-      : Value extends readonly (infer Item)[]
-        ? IsJsonValue<Item>
-        : Value extends object
-          ? AllPropertiesAreJson<Value>
-          : false
 type HasHydrateKey<Props extends object> = Props extends unknown
   ? 'hydrate' extends keyof Props ? true : false
   : never
 type DefinitionGuard<Props extends object> = true extends HasHydrateKey<Props>
   ? [error: 'hydrate is reserved for the island hydration strategy']
-  : AllPropertiesAreJson<Props> extends true
+  : JsonSerializableObject<Props> extends true
     ? []
     : [error: 'Island props must be JSON-serializable']
 
@@ -79,10 +51,6 @@ export interface IslandRenderer {
 }
 
 export const IslandRenderContext = createContext<IslandRenderer | null>(null)
-
-function isHydrationStrategy(value: unknown): value is HydrationStrategy {
-  return value === 'load' || value === 'idle' || value === 'visible'
-}
 
 export function defineIsland<Props extends object>(
   id: string,

@@ -1,11 +1,16 @@
 import { createElement, type ReactNode } from 'react'
 import { loadCollections } from './content-server'
 import { DefaultSiteShell } from './default-shell'
-import { normalizeHeadContribution, renderHead } from './meta'
+import { renderHead } from './meta'
 import { deepFreeze } from './freeze'
 import { createContentRenderer } from './markdown-content'
 import { renderReactPage } from './render-page'
 import { validateIslandModules, type IslandModule } from './islands'
+import { behaviorFileToId } from './behavior-paths'
+import {
+  resolvedRouteSnapshot,
+  resolvedSiteSnapshot,
+} from './snapshots'
 import {
   addConfiguredRedirects,
   addPluginRoutes,
@@ -15,14 +20,14 @@ import {
 } from './router'
 import {
   canonicalRequestRedirect,
+  normalizePath,
   publicRouteHref,
   stripBasePath,
 } from './publication'
 import {
   createRendererPluginPipeline,
-  inspectResolvedPluginRoutes,
   resolvedRouteSnapshots,
-  resolvePluginRouteContributions,
+  resolvePluginRouteContribution,
   type NibFinalizeContext,
   type NibRenderPageContext,
   type NibCommand,
@@ -38,6 +43,8 @@ import type {
   SiteShellProps,
   PageDescriptor,
   CollectionCapability,
+  PageRoute,
+  ResolvedSite,
 } from './types'
 
 export interface ProjectRendererOptions {
@@ -49,6 +56,36 @@ export interface ProjectRendererOptions {
   folderLayouts?: RouteLayouts['folders']
   namedLayouts?: RouteLayouts['named']
   islandModules: Record<string, IslandModule>
+  behaviorClientFiles?: readonly string[]
+}
+
+function behaviorClientIds(files: readonly string[]): ReadonlySet<string> {
+  const ids = new Set<string>()
+  for (const file of files) {
+    const id = behaviorFileToId(file)
+    if (ids.has(id)) throw new Error(`Duplicate behavior ID: ${id}`)
+    ids.add(id)
+  }
+  return ids
+}
+
+function assertClientModules(
+  route: ResolvedPageRoute,
+  kind: 'island' | 'behavior',
+  emittedIds: readonly string[],
+  discoveredIds: { has(id: string): boolean },
+): void {
+  const missing = emittedIds.filter((id) => !discoveredIds.has(id))
+  if (missing.length === 0) return
+  const marker = missing.length === 1
+    ? `${kind} "${missing[0]}"`
+    : `${kind}s ${missing.map((id) => `"${id}"`).join(', ')}`
+  const pattern = kind === 'island'
+    ? 'src/islands/**/*.tsx'
+    : 'src/behaviors/**/*.client.{ts,tsx}'
+  throw new Error(
+    `Route ${route.path} emitted ${marker} without a matching client module in ${pattern}`,
+  )
 }
 
 function pageSourceCollectionEntries(
@@ -87,30 +124,17 @@ export interface ProjectRenderer {
   finalize(context: Pick<NibFinalizeContext, 'clientDirectory' | 'publication'>): Promise<void>
 }
 
-function readonlySite(config: NibConfig): NibFinalizeContext['site'] {
-  const head = normalizeHeadContribution(config.site.head, 'Nib site.head')
-  return Object.freeze({
-    ...config.site,
-    ...(config.site.navigation === undefined
-      ? {}
-      : {
-          navigation: Object.freeze(
-            config.site.navigation.map((item) => Object.freeze({ ...item })),
-          ),
-        }),
-    ...(head === undefined ? {} : { head }),
-  })
-}
-
 function composePage(
   route: ResolvedPageRoute,
-  config: NibConfig,
+  publicRoute: PageRoute,
+  site: ResolvedSite,
+  shell: NibConfig['shell'],
   collections: unknown,
 ): ReactNode {
   const Content = route.content === undefined
     ? undefined
     : createContentRenderer(route.content)
-  const pageProps = { route, site: config.site, collections, Content }
+  const pageProps = { route: publicRoute, site, collections, Content }
   let content = createElement(route.component, {
     ...pageProps,
     ...(route.data === undefined ? {} : { data: route.data }),
@@ -128,7 +152,7 @@ function composePage(
     )
   }
 
-  const Shell = config.shell ?? DefaultSiteShell
+  const Shell = shell ?? DefaultSiteShell
   // The config is loaded dynamically at runtime, so its concrete collection
   // map is unavailable to this erased React module. Authoring helpers retain
   // the concrete type for consumers; this is the single runtime handoff.
@@ -144,7 +168,8 @@ function publicRedirectDestination(base: string, destination: string): string {
 export async function createProjectRenderer(
   options: ProjectRendererOptions,
 ): Promise<ProjectRenderer> {
-  validateIslandModules(options.islandModules)
+  const islandDefinitions = validateIslandModules(options.islandModules)
+  const behaviorIds = behaviorClientIds(options.behaviorClientFiles ?? [])
   const layoutModules: RouteLayouts = {
     ...(options.folderLayouts === undefined ? {} : { folders: options.folderLayouts }),
     ...(options.namedLayouts === undefined ? {} : { named: options.namedLayouts }),
@@ -154,7 +179,7 @@ export async function createProjectRenderer(
     mode: options.command === 'serve' ? 'development' as const : 'production' as const,
     root: options.root,
     base: options.base,
-    site: readonlySite(options.config),
+    site: resolvedSiteSnapshot(options.config.site),
   })
   const configuredPlugins = options.config.plugins ?? []
   const routes: Map<string, ResolvedRoute> = new Map(createRoutes(
@@ -199,32 +224,33 @@ export async function createProjectRenderer(
     options.config.redirects,
     options.config.trailingSlash,
   )
-  const initialRoutes = resolvedRouteSnapshots(routes.values())
-  const contributedRoutes = await resolvePluginRouteContributions(
-    configuredPlugins,
-    Object.freeze({ ...rendererContext, readCollection }),
-    initialRoutes,
-  )
-  addPluginRoutes(
-    routes,
-    contributedRoutes,
-    options.config.site,
-    options.config.trailingSlash,
-  )
+  const routeContext = Object.freeze({ ...rendererContext, readCollection })
+  for (const plugin of configuredPlugins) {
+    const contributedRoutes = await resolvePluginRouteContribution(
+      plugin,
+      routeContext,
+      resolvedRouteSnapshots(routes.values()),
+    )
+    addPluginRoutes(
+      routes,
+      contributedRoutes,
+      options.config.site,
+      options.config.trailingSlash,
+    )
+  }
   const resolvedRoutes = resolvedRouteSnapshots(routes.values())
-  await inspectResolvedPluginRoutes(configuredPlugins, rendererContext, resolvedRoutes)
+  const routeSnapshots = new Map(resolvedRoutes.map((route) => [route.path, route]))
   const plugins = await createRendererPluginPipeline(configuredPlugins, rendererContext)
-  const renderedPaths = new Set<string>()
   let finalized = false
 
   return {
     paths: [...routes.values()]
-      .filter((route) => route.status !== 404)
+      .filter((route) => normalizePath(route.path) !== '/404')
       .map((route) => route.path),
     render(url) {
       if (finalized) throw new Error('Nib project renderer cannot render after finalization')
       const route = getRoute(routes, stripBasePath(url, options.base))
-      const slashRedirect = route.source === 'generated' || route.status === 404
+      const slashRedirect = route.source === 'generated' || normalizePath(route.path) === '/404'
         ? undefined
         : canonicalRequestRedirect(
             url,
@@ -233,7 +259,6 @@ export async function createProjectRenderer(
             options.config.trailingSlash,
           )
       if (slashRedirect !== undefined) {
-        renderedPaths.add(route.path)
         return {
           kind: 'redirect',
           status: 301,
@@ -241,7 +266,6 @@ export async function createProjectRenderer(
         }
       }
       if (route.kind === 'resource') {
-        renderedPaths.add(route.path)
         return {
           kind: 'resource',
           status: route.status,
@@ -250,43 +274,45 @@ export async function createProjectRenderer(
         }
       }
       if (route.kind === 'redirect') {
-        renderedPaths.add(route.path)
         return {
           kind: 'redirect',
           status: route.status,
           destination: publicRedirectDestination(options.base, route.destination),
         }
       }
+      const knownRoute = routeSnapshots.get(route.path)
+      const publicRoute = knownRoute?.kind === 'page'
+        ? knownRoute
+        : resolvedRouteSnapshot(route)
+      if (knownRoute === undefined) routeSnapshots.set(publicRoute.path, publicRoute)
       const pageContext: NibRenderPageContext = Object.freeze({
         command: options.command ?? 'build',
         site: rendererContext.site,
-        route: Object.freeze({
-          kind: 'page',
-          path: route.path,
-          source: route.source,
-          status: route.status,
-          meta: Object.freeze({ ...route.meta }),
-        }),
+        route: publicRoute,
         root: options.root,
         base: options.base,
         mode: options.command === 'serve' ? 'development' : 'production',
       })
       const head = plugins.head(pageContext)
-      const content = plugins.wrapPage(composePage(route, options.config, collections), pageContext)
+      const content = plugins.wrapPage(composePage(
+        route,
+        publicRoute,
+        rendererContext.site,
+        options.config.shell,
+        collections,
+      ), pageContext)
       const reactPage = renderReactPage(
         content,
         route.content === undefined ? [] : [route.content],
       )
-      const renderedPage = plugins.transformPage({
-        status: route.status,
-        head: renderHead(route.meta, options.config.site, head),
-        html: reactPage.html,
-      }, pageContext)
-      renderedPaths.add(route.path)
+      assertClientModules(route, 'island', reactPage.islands, islandDefinitions)
+      assertClientModules(route, 'behavior', reactPage.behaviors, behaviorIds)
       return {
         kind: 'page',
         page: {
-          ...renderedPage,
+          status: route.status,
+          head: renderHead(publicRoute.meta, rendererContext.site, head),
+          html: reactPage.html,
           islands: reactPage.islands,
           behaviors: reactPage.behaviors,
         },
@@ -299,7 +325,6 @@ export async function createProjectRenderer(
         ...rendererContext,
         clientDirectory: context.clientDirectory,
         publication: deepFreeze(context.publication),
-        renderedPaths: Object.freeze([...renderedPaths]),
       })
       await plugins.finalize(finalContext)
     },

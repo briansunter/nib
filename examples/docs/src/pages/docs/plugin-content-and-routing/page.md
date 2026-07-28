@@ -16,14 +16,12 @@ with `base`, and leaves each project in charge of its own content data model.
 The generic resource-route API remains available for Atom, JSON Feed, or a
 custom feed format.
 
-The `setup` hook returns typed page sources. The `routes` hook receives the
-immutable file, data-page, and configured-redirect routes and can return page,
-resource, or redirect routes. Every provider sees the same initial manifest, so
-route generation does not depend on plugin order.
-
-After Nib merges registrations and rejects duplicate paths, `routesResolved`
-receives the complete immutable manifest. Use it for validation, reporting, and
-indexes—not mutation.
+Plugins declare typed `pageSources` directly. Nib also discovers source
+definitions referenced by `fromPageSource()` collections, so a collection does
+not require a duplicate top-level registration. The `routes` hook receives an
+immutable snapshot and can return page, resource, or redirect routes. Providers
+run in configuration order, and each later provider sees routes already added
+by earlier plugins.
 
 ## Sitemap
 
@@ -71,7 +69,7 @@ export default defineConfig({
 receive the configured `base`, so the same config works under a project-site
 deployment. Item fields support descriptions, content, publication dates,
 authors, categories, GUIDs, and enclosures. `items` may instead be an async
-function that receives the immutable initial route manifest.
+function that receives the current immutable route manifest.
 
 ## Redirects and trailing slashes
 

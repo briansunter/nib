@@ -12,6 +12,10 @@ as React islands. The browser implementation receives only its root,
 validated props, and an `AbortSignal`. Cleanup is driven by aborting the signal
 before a root is detached.
 
+Nib emits the behavior boundary with framework-owned `display: contents`
+styling. Layout and semantics therefore belong to its server-rendered children,
+not the implementation marker.
+
 Pages without an island or behavior remain runtime-free. Behavior-only pages do
 not import or ship `react-dom/client`. Essential content must remain in the
 server-rendered HTML.

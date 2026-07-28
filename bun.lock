@@ -45,6 +45,7 @@
       "name": "@briansunter/nib-images",
       "version": "0.4.0",
       "dependencies": {
+        "parse5": "^8.0.1",
         "sharp": "^0.35.0",
       },
       "devDependencies": {

@@ -1,0 +1,78 @@
+import { createElement } from 'react'
+import { describe, expect, it } from 'vitest'
+import { defineClientBehavior } from '../src/framework/behaviors'
+import { defineIsland } from '../src/framework/islands'
+import { createProjectRenderer } from '../src/framework/project-renderer'
+
+const OutsideIsland = defineIsland('outside', () => <p>Interactive</p>)
+const MissingBehavior = defineClientBehavior('missing')
+
+const config = { site: { title: 'Site' } }
+
+describe('project client marker validation', () => {
+  it('rejects an island definition rendered outside the discovered islands directory', async () => {
+    const renderer = await createProjectRenderer({
+      config,
+      root: process.cwd(),
+      base: '/',
+      pages: {
+        '/src/pages/page.tsx': {
+          default: () => <OutsideIsland />,
+        },
+      },
+      islandModules: {},
+    })
+
+    expect(() => renderer.render('/')).toThrow(
+      'Route / emitted island "outside" without a matching client module in src/islands/**/*.tsx',
+    )
+  })
+
+  it('rejects a declared behavior without its matching client module', async () => {
+    const renderer = await createProjectRenderer({
+      config,
+      root: process.cwd(),
+      base: '/',
+      pages: {
+        '/src/pages/page.tsx': {
+          default: () => <MissingBehavior />,
+        },
+      },
+      islandModules: {},
+      behaviorClientFiles: [],
+    })
+
+    expect(() => renderer.render('/')).toThrow(
+      'Route / emitted behavior "missing" without a matching client module in '
+      + 'src/behaviors/**/*.client.{ts,tsx}',
+    )
+  })
+
+  it('accepts discovered module IDs and ignores unsupported hand-authored markers', async () => {
+    function Page() {
+      return (
+        <>
+          <OutsideIsland />
+          <MissingBehavior />
+          {createElement('nib-behavior', { 'data-behavior': 'raw' }, 'Raw marker')}
+        </>
+      )
+    }
+    const renderer = await createProjectRenderer({
+      config,
+      root: process.cwd(),
+      base: '/',
+      pages: { '/src/pages/page.tsx': { default: Page } },
+      islandModules: {
+        '/src/islands/outside.tsx': { default: OutsideIsland },
+      },
+      behaviorClientFiles: ['/src/behaviors/missing.client.ts'],
+    })
+
+    const output = renderer.render('/')
+    if (output.kind !== 'page') throw new Error('Expected page output')
+    expect(output.page.islands).toEqual(['outside'])
+    expect(output.page.behaviors).toEqual(['missing'])
+    expect(output.page.html).toContain('data-behavior="raw"')
+  })
+})

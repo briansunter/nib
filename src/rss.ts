@@ -57,7 +57,7 @@ export interface RssOptions {
   readonly lastBuildDate?: string | Date
   /** Path to an XSL stylesheet, emitted as an xml-stylesheet processing instruction. */
   readonly stylesheet?: string
-  /** Static items or an async provider using the immutable initial route manifest. */
+  /** Static items or an async provider using the current immutable route manifest. */
   readonly items:
     | readonly RssItem[]
     | CollectionCapability<readonly RssItem[]>

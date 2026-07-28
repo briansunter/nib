@@ -1,7 +1,5 @@
 import {
   parse,
-  parseFragment,
-  serializeOuter,
   Tokenizer,
   TokenizerMode,
   type DefaultTreeAdapterTypes,
@@ -30,11 +28,6 @@ export interface InspectedHtmlElement {
 export interface ParsedInspectionDocument {
   readonly elements: readonly InspectedHtmlElement[]
   readonly parseErrors: readonly ParserError[]
-}
-
-export interface OwnedClientMarkup {
-  readonly islands: readonly string[]
-  readonly behaviors: readonly string[]
 }
 
 function isElement(node: DefaultTreeAdapterTypes.Node): node is HtmlElementNode {
@@ -127,52 +120,4 @@ export function htmlAttribute(
   name: string,
 ): string | undefined {
   return element.attrs.find((attribute) => attribute.name === name)?.value
-}
-
-/**
- * Captures Nib-owned custom-element subtrees in document order. Source
- * locations make malformed or implicitly closed markers unrepresentable,
- * which lets renderer ownership checks fail closed.
- */
-export function ownedClientMarkup(html: string): OwnedClientMarkup {
-  const fragment = parseFragment(html, { sourceCodeLocationInfo: true })
-  const islands: string[] = []
-  const behaviors: string[] = []
-  const visit = (node: DefaultTreeAdapterTypes.Node): void => {
-    if (isElement(node) && (node.tagName === 'nib-island' || node.tagName === 'nib-behavior')) {
-      const location = node.sourceCodeLocation
-      if (
-        location == null
-        || location.startTag === undefined
-        || location.endTag === undefined
-        || location.startOffset < 0
-        || location.endOffset > html.length
-      ) {
-        throw new Error(`Malformed or implicitly closed <${node.tagName}> marker`)
-      }
-      const source = html.slice(location.startOffset, location.endOffset)
-      // Reparse/serialize the isolated subtree so a location that does not
-      // represent one complete marker cannot be accepted accidentally.
-      const reparsed = parseFragment(source, { sourceCodeLocationInfo: true })
-      const root = reparsed.childNodes.find((child) => (
-        isElement(child) && child.tagName === node.tagName
-      ))
-      if (
-        !root
-        || !isElement(root)
-        || root.sourceCodeLocation?.endTag === undefined
-        || serializeOuter(root) === ''
-      ) {
-        throw new Error(`Cannot compare <${node.tagName}> marker`)
-      }
-      if (node.tagName === 'nib-island') islands.push(source)
-      else behaviors.push(source)
-    }
-    for (const child of childNodes(node)) visit(child)
-  }
-  visit(fragment)
-  return Object.freeze({
-    islands: Object.freeze(islands),
-    behaviors: Object.freeze(behaviors),
-  })
 }

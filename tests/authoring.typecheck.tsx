@@ -23,8 +23,20 @@ const config = defineConfig({
 definePage<typeof config>(({ collections, route }: PageProps<typeof config>) => {
   collections.posts[0]?.data.title
   route.meta.title
+  // @ts-expect-error public route metadata is immutable
+  route.meta.title = 'Changed'
   // @ts-expect-error collection data remains schema-derived
   collections.posts[0]?.data.missing
+  return null
+})
+
+definePage<typeof config>(({ site }: PageProps<typeof config>) => {
+  // @ts-expect-error resolved site fields are immutable
+  site.title = 'Changed'
+  // @ts-expect-error resolved navigation is immutable
+  site.navigation?.push({ label: 'Changed', href: '/' })
+  // @ts-expect-error resolved navigation items are immutable
+  if (site.navigation?.[0]) site.navigation[0].label = 'Changed'
   return null
 })
 

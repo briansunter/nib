@@ -8,8 +8,8 @@ remote images, relative-path Markdown resolution, SVG rasterization, and
 animated-image conversion are follow-up work. Opt-in rewriting of rendered
 content images with stable public URLs is implemented by the image package.
 
-The plugin interface was subsequently extended with typed page-source setup,
-virtual route providers, immutable resolved-route inspection, and structured
+The plugin interface was subsequently extended with declarative page sources,
+virtual route providers, immutable route snapshots, and structured
 document-head contributions. The additive contract and current ordering rules
 are documented in
 [Plugin content and routing](./plugin-content-and-routing.md); the original
@@ -160,13 +160,14 @@ Add an advanced plugin-author entry point:
 ```text
 @briansunter/nib
 @briansunter/nib/plugin
-@briansunter/nib/internal/client
 @briansunter/nib/internal/server
 ```
 
 The root entry exposes site-authoring APIs only. The `/plugin` entry is the
-plugin-author seam: it exposes plugin contracts and `definePlugin`. Runtime implementation
-details remain under the existing internal entries.
+plugin-author seam: it exposes plugin contracts and `definePlugin`. Generated
+server modules use the internal server entry; browser runtime APIs are public
+under `/client`, `/client/islands`, `/client/behaviors`, and
+`/client/navigation`.
 
 ### `@briansunter/nib-images`
 
@@ -242,12 +243,6 @@ export interface NibVitePluginContext {
   readonly configPath: string
 }
 
-export type NibPluginSetupPhase = 'vite-config' | 'page-source-module'
-
-export interface NibPluginSetupContext extends NibVitePluginContext {
-  readonly phase: NibPluginSetupPhase
-}
-
 export interface NibRendererPluginContext {
   readonly command: NibCommand
   readonly mode: NibMode
@@ -267,7 +262,6 @@ export interface NibRenderPageContext {
 export interface NibFinalizeContext extends NibRendererPluginContext {
   readonly clientDirectory: string
   readonly publication: PublicationManifest
-  readonly renderedPaths: readonly string[]
 }
 
 export interface NibRendererExtension {
@@ -280,20 +274,14 @@ export interface NibRendererExtension {
     context: NibRenderPageContext,
   ): ReactNode
 
-  transformPage?(
-    page: NibRenderedPage,
-    context: NibRenderPageContext,
-  ): NibRenderedPage
-
   finalize?(context: NibFinalizeContext): Promise<void>
 }
 
 export interface NibPlugin {
   readonly name: string
 
-  setup?(
-    context: NibPluginSetupContext,
-  ): Awaitable<{ readonly pageSources?: readonly PageSourceDefinition[] } | void>
+  readonly pageSources?: readonly PageSourceDefinition[]
+  readonly clientEntries?: readonly NibClientEntry[]
 
   vite?(
     context: NibVitePluginContext,
@@ -388,24 +376,21 @@ that also need Nib renderer or build lifecycle hooks, such as image processing.
   changing their declared order.
 - Renderer extensions are created once, in config order, for each server
   renderer.
-- `head` runs in config order before page composition. It can add structured
-  `meta`, `link`, `script`, or `style` elements but cannot replace the document
-  template or island entry.
+- `head` runs in config order before page composition. It can override the
+  document title or description and add structured `meta`, `link`, `script`, or
+  `style` elements, but cannot replace the document template or client entries.
+- Later title or description overrides win; structured elements retain
+  site-page-plugin order.
 - `wrapPage` is synchronous. The first configured plugin is the outermost
   wrapper, making composition deterministic.
-- `transformPage` runs synchronously in config order after React rendering.
-- Transform inputs contain only status, head, and HTML. Nib retains hydration
-  ownership, and verifies that each plugin leaves every rendered island element
-  byte-for-byte intact. A transform may change ordinary static HTML but cannot
-  invent, remove, reorder, or alter hydration boundaries after React rendering.
 - `finalize` runs asynchronously in config order after every production route
   and the 404 page have rendered.
 - Arbitrary plugin finalizers are not run in parallel because ordering may be
   meaningful. Each plugin can parallelize its own independent work.
 - `finalize` is called once in production and never during development request
   rendering.
-- Calling `finalize` twice, rendering after finalization, or returning a
-  malformed page produces an attributed framework error.
+- Calling `finalize` twice or rendering after finalization produces an
+  attributed framework error.
 - Errors include the plugin name, hook name, route when applicable, original
   message, and original error cause.
 
@@ -466,10 +451,9 @@ internal plugin array or import Nib internals.
 5. collect structured renderer head contributions for each route;
 6. compose the page, layouts, and shell, then apply plugin wrappers before
    `renderReactPage`;
-7. apply synchronous `transformPage` hooks to the static page fields while Nib
-   retains the separately collected island metadata;
-8. track every successfully rendered canonical path;
-9. expose `finalize(context)` alongside `paths` and `render`.
+7. render the framework-owned page status, head, HTML, and client marker
+   metadata without a raw post-render mutation seam;
+8. expose `finalize(context)` alongside `paths` and `render`.
 
 Wrapping happens around the complete site shell so a provider can observe image
 components in the page, layouts, or shell:
@@ -1130,9 +1114,12 @@ Benchmark cold and warm builds before fixing defaults.
 - duplicate or blank plugin names fail config validation.
 - app and package Vite contributions appear in dev and both production builds
   with fresh instances per graph.
+- declarative plugin page sources and client entries are validated once and
+  preserve configuration order.
+- `fromPageSource()` collections make their source discoverable without a
+  duplicate top-level registration.
 - config order and wrap order are deterministic.
-- `transformPage` receives the correct route and base.
-- `finalize` sees all successful routes including 404.
+- structured title and description overrides resolve deterministically.
 - `finalize` runs once and rendering afterward fails.
 - hook errors identify plugin, hook, and route.
 - sites without plugins preserve existing behavior.

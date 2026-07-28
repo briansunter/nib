@@ -60,7 +60,7 @@ export const Reveal = defineClientBehavior<{ open: boolean }>('reveal')
 // src/behaviors/reveal.client.ts
 import { defineBehaviorClient } from '@briansunter/nib/client/behaviors'
 
-export default defineBehaviorClient('reveal', ({ root, signal }) => {
+export default defineBehaviorClient(({ root, signal }) => {
   const button = root.querySelector('button')
   const panel = root.querySelector<HTMLElement>('[data-panel]')
   button?.addEventListener('click', () => {

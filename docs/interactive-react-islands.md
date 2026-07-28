@@ -211,7 +211,7 @@ The container includes only the data needed by the runtime, including a stable p
 </nib-island>
 ```
 
-`nib-island` uses `display: contents` in the global stylesheet so it does not normally create a layout box. Direct placement in parser-sensitive structures such as `table`, `select`, or `svg` is unsupported; the island should own a valid containing element instead.
+Nib emits `nib-island` with framework-owned `display: contents` styling so it does not normally create a layout box or require site CSS. Direct placement in parser-sensitive structures such as `table`, `select`, or `svg` is unsupported; the island should own a valid containing element instead.
 
 Both shell passes must be deterministic. This follows React's existing purity requirement and should be documented because side effects during render would otherwise run twice.
 

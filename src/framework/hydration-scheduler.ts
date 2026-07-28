@@ -1,4 +1,4 @@
-import type { HydrationStrategy } from './islands'
+import type { HydrationStrategy } from './hydration'
 
 export interface HydrationEnvironment {
   requestIdleCallback?: (callback: () => void) => number

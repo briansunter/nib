@@ -24,18 +24,14 @@ function VirtualPage() {
 export function tomlPages() {
   return definePlugin({
     name: 'test-toml-pages',
-    setup() {
-      return {
-        pageSources: [
-          definePageSource({
-            extensions: ['toml'],
-            schema: settingsSchema,
-            load: ({ source }) => ({ data: parseToml(source) }),
-            component: SettingsPage,
-          }),
-        ],
-      }
-    },
+    pageSources: [
+      definePageSource({
+        extensions: ['toml'],
+        schema: settingsSchema,
+        load: ({ source }) => ({ data: parseToml(source) }),
+        component: SettingsPage,
+      }),
+    ],
   })
 }
 
@@ -60,16 +56,6 @@ export function virtualRoutes() {
           body: '<?xml version="1.0"?><feed><title>Generic resource route</title></feed>',
         },
       ] as const
-    },
-    routesResolved(context) {
-      if (!Object.isFrozen(context.routes)) {
-        throw new Error('Resolved routes must be immutable')
-      }
-      for (const path of ['/legacy/', '/virtual/', '/sitemap.xml', '/rss.xml', '/feed.xml']) {
-        if (!context.routes.some((route) => route.path === path)) {
-          throw new Error(`Missing resolved route ${path}`)
-        }
-      }
     },
   })
 }

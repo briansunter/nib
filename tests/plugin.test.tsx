@@ -1,102 +1,55 @@
 import { describe, expect, it } from 'vitest'
 import { definePlugin } from '../src/plugin'
-import {
-  flattenVitePlugins,
-  resolvePluginSetupContributions,
-} from '../src/framework/plugin'
-import { defineIsland } from '../src/framework/islands'
-import { defineClientBehavior } from '../src/framework/behaviors'
+import { flattenVitePlugins } from '../src/framework/plugin'
 import { clientNavigation } from '../src/navigation'
+import { configuredClientEntries } from '../src/framework/plugin-contributions'
 import { validateNibConfig } from '../src/framework/project-config'
 import { createProjectRenderer } from '../src/framework/project-renderer'
 import { createPublicationManifest } from '../src/framework/publication'
 
 const Page = () => <h1>Home</h1>
-const Counter = defineIsland('counter', () => <button>Count</button>)
-const IslandPage = () => <Counter />
-const Reveal = defineClientBehavior<{ label: string }>('reveal')
-const BehaviorPage = () => (
-  <>
-    <Reveal props={{ label: 'outer' }}>
-      <div>
-        <Reveal props={{ label: 'inner' }}><button>Inner</button></Reveal>
-      </div>
-    </Reveal>
-    <Reveal props={{ label: 'second' }}><p>Second</p></Reveal>
-  </>
-)
 
 describe('Nib plugins', () => {
-  it('labels the two deterministic page-source setup phases', async () => {
-    const phases: string[] = []
-    const plugin = definePlugin({
-      name: 'setup-phases',
-      setup(context) {
-        phases.push(context.phase)
-      },
+  it('keeps client entries declarative, immutable, and validated once with their owners', () => {
+    const client = validateNibConfig({
+      site: { title: 'Site' },
+      plugins: [clientNavigation()],
     })
-    const base = {
-      command: 'build' as const,
-      mode: 'production' as const,
-      target: 'server' as const,
-      root: '/site',
-      base: '/',
-      configPath: '/site/nib.config.ts',
-    }
-    await resolvePluginSetupContributions(
-      [plugin],
-      Object.freeze({ ...base, phase: 'vite-config' as const }),
-    )
-    await resolvePluginSetupContributions(
-      [plugin],
-      Object.freeze({ ...base, phase: 'page-source-module' as const }),
-    )
-    expect(phases).toEqual(['vite-config', 'page-source-module'])
-  })
-
-  it('keeps optional client entries declarative, validated, and target-specific', async () => {
-    const base = {
-      command: 'build' as const,
-      mode: 'production' as const,
-      root: '/site',
-      base: '/',
-      configPath: '/site/nib.config.ts',
-      phase: 'vite-config' as const,
-    }
-    const client = await resolvePluginSetupContributions(
-      [clientNavigation()],
-      Object.freeze({ ...base, target: 'client' as const }),
-    )
-    expect(client.clientEntries).toEqual([{
+    expect(configuredClientEntries(client)).toEqual([{
       module: '@briansunter/nib/client/navigation',
       initializer: 'startClientNavigation',
     }])
-    expect(Object.isFrozen(client.clientEntries)).toBe(true)
-    const explicitClient = await resolvePluginSetupContributions(
-      [clientNavigation({ prefetch: 'explicit' })],
-      Object.freeze({ ...base, target: 'client' as const }),
-    )
-    expect(explicitClient.clientEntries).toEqual([{
+    expect(Object.isFrozen(configuredClientEntries(client))).toBe(true)
+
+    const explicitClient = validateNibConfig({
+      site: { title: 'Site' },
+      plugins: [clientNavigation({ prefetch: 'explicit' })],
+    })
+    expect(configuredClientEntries(explicitClient)).toEqual([{
       module: '@briansunter/nib/client/navigation',
       initializer: 'startExplicitClientNavigation',
     }])
 
-    const server = await resolvePluginSetupContributions(
-      [clientNavigation()],
-      Object.freeze({ ...base, target: 'server' as const }),
-    )
-    expect(server.clientEntries).toEqual([])
-
-    const invalid = definePlugin({
-      name: 'invalid-client-entry',
-      setup: () => ({
+    expect(() => validateNibConfig({
+      site: { title: 'Site' },
+      plugins: [{
+        name: 'invalid-client-entry',
         clientEntries: [{ module: 'browser', initializer: 'not-valid()' }],
-      }),
-    })
-    await expect(resolvePluginSetupContributions(
-      [invalid],
-      Object.freeze({ ...base, target: 'client' as const }),
-    )).rejects.toThrow('JavaScript initializer name')
+      }],
+    })).toThrow('JavaScript initializer name')
+    expect(() => validateNibConfig({
+      site: { title: 'Site' },
+      plugins: [
+        {
+          name: 'first-owner',
+          clientEntries: [{ module: 'browser', initializer: 'start' }],
+        },
+        {
+          name: 'second-owner',
+          clientEntries: [{ module: 'browser', initializer: 'start' }],
+        },
+      ],
+    })).toThrow('duplicated by first-owner and second-owner')
   })
 
   it('resolves recursive Vite plugin promises without changing order', async () => {
@@ -121,15 +74,23 @@ describe('Nib plugins', () => {
     })).toThrow('renderer hook must be a function')
     expect(() => validateNibConfig({
       site: { title: 'Site' },
-      plugins: [{ name: 'invalid', routesResolved: true }],
-    })).toThrow('routesResolved hook must be a function')
+      plugins: [{ name: 'invalid', setup: () => undefined }],
+    })).toThrow('unsupported field setup')
+    expect(() => validateNibConfig({
+      site: { title: 'Site' },
+      plugins: [{ name: 'invalid', pageSources: {} }],
+    })).toThrow('pageSources must be an array')
+    expect(() => validateNibConfig({
+      site: { title: 'Site' },
+      plugins: [{ name: 'invalid', clientEntries: {} }],
+    })).toThrow('clientEntries must be an array')
     expect(() => validateNibConfig({
       site: { title: 'Site' },
       plugins: [{ name: ' padded ' }],
     })).toThrow('non-empty name')
   })
 
-  it('wraps, transforms, and finalizes pages in deterministic plugin order', async () => {
+  it('contributes head data, wraps, and finalizes in deterministic plugin order', async () => {
     const events: string[] = []
     const first = definePlugin({
       name: 'first',
@@ -138,24 +99,24 @@ describe('Nib plugins', () => {
         expect(Object.isFrozen(context.site)).toBe(true)
         expect(Object.isFrozen(context.site.navigation)).toBe(true)
         return {
+          head() {
+            events.push('first-head')
+            return {
+              title: 'First title',
+              elements: [{ tag: 'meta', attributes: { name: 'first', content: 'yes' } }],
+            }
+          },
           wrapPage(page) {
             events.push('first-wrap')
             return <div data-plugin="first">{page}</div>
-          },
-          transformPage(page, context) {
-            events.push(`first-transform:${context.route.path}`)
-            expect(context.command).toBe('build')
-            expect(Object.isFrozen(page)).toBe(true)
-            return { ...page, head: `${page.head}\n<meta name="first" content="yes" />` }
           },
           async finalize(context) {
             expect(context.command).toBe('build')
             expect(context.mode).toBe('production')
             expect(context.site.title).toBe('Site')
-            expect(Object.isFrozen(context.renderedPaths)).toBe(true)
             expect(Object.isFrozen(context.publication)).toBe(true)
             expect(Object.isFrozen(context.publication.routes)).toBe(true)
-            events.push(`first-finalize:${context.renderedPaths.join(',')}`)
+            events.push('first-finalize')
           },
         }
       },
@@ -164,13 +125,16 @@ describe('Nib plugins', () => {
       name: 'second',
       renderer() {
         return {
+          head() {
+            events.push('second-head')
+            return {
+              title: 'Second title',
+              description: 'Second description',
+            }
+          },
           wrapPage(page) {
             events.push('second-wrap')
             return <section data-plugin="second">{page}</section>
-          },
-          transformPage(page) {
-            events.push('second-transform')
-            return { ...page, html: `${page.html}<aside>transformed</aside>` }
           },
         }
       },
@@ -189,19 +153,21 @@ describe('Nib plugins', () => {
     const output = renderer.render('/')
     if (output.kind !== 'page') throw new Error('Expected a page output')
     expect(output.page.html).toBe(
-      '<div data-plugin="first"><section data-plugin="second"><header><a href="/">Site</a></header><main><h1>Home</h1></main></section></div><aside>transformed</aside>',
+      '<div data-plugin="first"><section data-plugin="second"><header><a href="/">Site</a></header><main><h1>Home</h1></main></section></div>',
     )
     expect(output.page.head).toContain('name="first"')
+    expect(output.page.head).toContain('<title>Second title</title>')
+    expect(output.page.head).toContain('content="Second description"')
     await renderer.finalize({
       clientDirectory: '/tmp/client',
       publication: createPublicationManifest('/', 'ignore', []),
     })
     expect(events).toEqual([
+      'first-head',
+      'second-head',
       'second-wrap',
       'first-wrap',
-      'first-transform:/',
-      'second-transform',
-      'first-finalize:/',
+      'first-finalize',
     ])
     await expect(renderer.finalize({
       clientDirectory: '/tmp/client',
@@ -247,8 +213,7 @@ describe('Nib plugins', () => {
     expect(output.page.head).toContain('rel="canonical"')
   })
 
-  it('registers routes against one initial manifest and inspects the immutable result', async () => {
-    const inspected: string[][] = []
+  it('registers routes in plugin order against the latest immutable manifest', async () => {
     const first = definePlugin({
       name: 'first-routes',
       routes(context) {
@@ -260,15 +225,11 @@ describe('Nib plugins', () => {
           contentType: 'application/xml',
         }
       },
-      routesResolved(context) {
-        expect(Object.isFrozen(context.routes)).toBe(true)
-        inspected.push(context.routes.map((route) => route.path))
-      },
     })
     const second = definePlugin({
       name: 'second-routes',
       routes(context) {
-        expect(context.routes.map((route) => route.path)).toEqual(['/'])
+        expect(context.routes.map((route) => route.path)).toEqual(['/', '/first.xml'])
         return {
           kind: 'page',
           path: '/virtual',
@@ -295,7 +256,6 @@ describe('Nib plugins', () => {
       contentType: 'application/xml',
     })
     expect(renderer.render('/virtual')).toMatchObject({ kind: 'page' })
-    expect(inspected).toEqual([['/', '/first.xml', '/virtual']])
   })
 
   it('rejects duplicate plugin routes with both owners', async () => {
@@ -317,7 +277,7 @@ describe('Nib plugins', () => {
       base: '/',
       pages: { '/src/pages/page.tsx': { default: Page } },
       islandModules: {},
-    })).rejects.toThrow('Duplicate route /same.xml: one routes()[0] and two routes()[1]')
+    })).rejects.toThrow('Duplicate route /same.xml: one routes()[0] and two routes()[0]')
   })
 
   it('attributes render hook failures to the originating plugin and route', async () => {
@@ -337,122 +297,4 @@ describe('Nib plugins', () => {
     expect(() => renderer.render('/')).toThrow('Nib plugin broken failed in wrapPage() for route /')
   })
 
-  it('rejects invalid status codes and post-render island markup mutations', async () => {
-    const invalidStatus = await createProjectRenderer({
-      config: {
-        site: { title: 'Site' },
-        plugins: [definePlugin({
-          name: 'invalid-status',
-          renderer: () => ({ transformPage: (page) => ({ ...page, status: 999 }) }),
-        })],
-      },
-      root: process.cwd(),
-      base: '/',
-      pages: { '/src/pages/page.tsx': { default: Page } },
-      islandModules: {},
-    })
-    expect(() => invalidStatus.render('/')).toThrow('returned an invalid rendered page')
-
-    const informationalStatus = await createProjectRenderer({
-      config: {
-        site: { title: 'Site' },
-        plugins: [definePlugin({
-          name: 'informational-status',
-          renderer: () => ({ transformPage: (page) => ({ ...page, status: 199 }) }),
-        })],
-      },
-      root: process.cwd(),
-      base: '/',
-      pages: { '/src/pages/page.tsx': { default: Page } },
-      islandModules: {},
-    })
-    expect(() => informationalStatus.render('/')).toThrow('returned an invalid rendered page')
-
-    const invalidIslands = await createProjectRenderer({
-      config: {
-        site: { title: 'Site' },
-        plugins: [definePlugin({
-          name: 'invalid-islands',
-          renderer: () => ({
-            transformPage: (page) => ({ ...page, html: page.html.replace('<nib-island', '<removed-island') }),
-          }),
-        })],
-      },
-      root: process.cwd(),
-      base: '/',
-      pages: { '/src/pages/page.tsx': { default: IslandPage } },
-      islandModules: { '/src/islands/counter.tsx': { default: Counter } },
-    })
-    expect(() => invalidIslands.render('/')).toThrow('cannot change React island markup')
-  })
-
-  it('protects nested and repeated behavior subtrees with parser-backed ownership', async () => {
-    const renderer = await createProjectRenderer({
-      config: {
-        site: { title: 'Site' },
-        plugins: [definePlugin({
-          name: 'invalid-nested-behavior',
-          renderer: () => ({
-            transformPage: (page) => ({
-              ...page,
-              html: page.html.replace('>Inner</button>', '>Changed</button>'),
-            }),
-          }),
-        })],
-      },
-      root: process.cwd(),
-      base: '/',
-      pages: { '/src/pages/page.tsx': { default: BehaviorPage } },
-      islandModules: {},
-    })
-    expect(() => renderer.render('/')).toThrow(
-      'Nib plugin invalid-nested-behavior failed in transformPage() for route /',
-    )
-    expect(() => renderer.render('/')).toThrow('cannot change client behavior markup')
-  })
-
-  it('allows changes outside owned subtrees even when scripts contain marker-like text', async () => {
-    const renderer = await createProjectRenderer({
-      config: {
-        site: { title: 'Site' },
-        plugins: [definePlugin({
-          name: 'outside-only',
-          renderer: () => ({
-            transformPage: (page) => ({
-              ...page,
-              html: `${page.html}<script>const marker = "<nib-behavior></nib-behavior>"</script>`,
-            }),
-          }),
-        })],
-      },
-      root: process.cwd(),
-      base: '/',
-      pages: { '/src/pages/page.tsx': { default: BehaviorPage } },
-      islandModules: {},
-    })
-    const output = renderer.render('/')
-    expect(output.kind).toBe('page')
-  })
-
-  it('fails closed when a renderer removes an owned closing marker', async () => {
-    const renderer = await createProjectRenderer({
-      config: {
-        site: { title: 'Site' },
-        plugins: [definePlugin({
-          name: 'malformed-marker',
-          renderer: () => ({
-            transformPage: (page) => ({
-              ...page,
-              html: page.html.replace('</nib-behavior>', ''),
-            }),
-          }),
-        })],
-      },
-      root: process.cwd(),
-      base: '/',
-      pages: { '/src/pages/page.tsx': { default: BehaviorPage } },
-      islandModules: {},
-    })
-    expect(() => renderer.render('/')).toThrow('Malformed or implicitly closed')
-  })
 })

@@ -1,14 +1,15 @@
-import { hydrateRoot } from 'react-dom/client'
-import { islandFileToId } from '../framework/island-paths'
+import { isHydrationStrategy } from '../framework/hydration'
 import {
-  hydrateIsland,
   scheduleHydration,
-  type IslandHydrateRoot,
-  type IslandHydrationEnvironment,
-  type IslandReactRoot,
   type ScheduledHydration,
+} from '../framework/hydration-scheduler'
+import { islandFileToId } from '../framework/island-paths'
+import type {
+  IslandHydrateRoot,
+  IslandHydrationEnvironment,
+  IslandReactRoot,
 } from '../framework/island-runtime'
-import type { HydrationStrategy, IslandModule } from '../framework/islands'
+import type { IslandModule } from '../framework/islands'
 
 export type IslandClientModules = Record<string, () => Promise<IslandModule>>
 
@@ -26,13 +27,10 @@ export interface CreateIslandRuntimeOptions {
 
 interface MountedIsland {
   active: boolean
+  controller: AbortController
   owner: ParentNode
   scheduled?: ScheduledHydration
   reactRoot?: IslandReactRoot
-}
-
-function isHydrationStrategy(value: string | undefined): value is HydrationStrategy {
-  return value === 'load' || value === 'idle' || value === 'visible'
 }
 
 function defaultReportError(id: string, instance: string, error: unknown) {
@@ -55,6 +53,57 @@ function rootContains(root: ParentNode, element: HTMLElement): boolean {
   return typeof root.contains !== 'function' || root.contains(element)
 }
 
+function memoizeLoader(
+  load: () => Promise<IslandModule>,
+): () => Promise<IslandModule> {
+  let loaded: Promise<IslandModule> | undefined
+  return () => {
+    loaded ??= Promise.resolve()
+      .then(load)
+      .catch((error: unknown) => {
+        loaded = undefined
+        throw error
+      })
+    return loaded
+  }
+}
+
+type IslandHydrator = typeof import('../framework/island-runtime')['hydrateIsland']
+
+function lazyHydrator(
+  injectedHydrateRoot?: IslandHydrateRoot,
+): () => Promise<{
+  hydrateIsland: IslandHydrator
+  hydrateRoot: IslandHydrateRoot
+}> {
+  let loaded: Promise<{
+    hydrateIsland: IslandHydrator
+    hydrateRoot: IslandHydrateRoot
+  }> | undefined
+  return () => {
+    loaded ??= Promise.all([
+      import('../framework/island-runtime'),
+      injectedHydrateRoot
+        ? Promise.resolve(injectedHydrateRoot)
+        : import('react-dom/client').then((module) => module.hydrateRoot),
+    ]).then(([runtime, hydrateRoot]) => ({
+      hydrateIsland: runtime.hydrateIsland,
+      hydrateRoot,
+    })).catch((error: unknown) => {
+      loaded = undefined
+      throw error
+    })
+    return loaded
+  }
+}
+
+function isAbortError(error: unknown): boolean {
+  return error !== null
+    && typeof error === 'object'
+    && 'name' in error
+    && error.name === 'AbortError'
+}
+
 export function createIslandRuntime(
   islandModules: IslandClientModules,
   options: CreateIslandRuntimeOptions = {},
@@ -63,10 +112,10 @@ export function createIslandRuntime(
   for (const [file, load] of Object.entries(islandModules)) {
     const id = islandFileToId(file)
     if (loaders.has(id)) throw new Error(`Duplicate island ID: ${id}`)
-    loaders.set(id, load)
+    loaders.set(id, memoizeLoader(load))
   }
   const mounted = new Map<HTMLElement, MountedIsland>()
-  const hydrate = options.hydrateRoot ?? hydrateRoot
+  const loadHydrator = lazyHydrator(options.hydrateRoot)
   const reportError = options.reportError ?? defaultReportError
   let destroyed = false
 
@@ -74,6 +123,7 @@ export function createIslandRuntime(
     if (!state.active) return
     state.active = false
     state.scheduled?.cancel()
+    state.controller.abort()
     delete element.dataset.scheduled
     mounted.delete(element)
     const reactRoot = state.reactRoot
@@ -109,23 +159,80 @@ export function createIslandRuntime(
           )
           continue
         }
-        const state: MountedIsland = { active: true, owner: root }
+        const id = element.dataset.island
+        const instance = element.dataset.instance
+        if (
+          !id
+          || !instance
+          || !element.dataset.prefix
+          || element.dataset.props === undefined
+        ) {
+          reportError(
+            id ?? 'unknown',
+            instance ?? 'unknown',
+            new Error('Island element is missing hydration metadata'),
+          )
+          continue
+        }
+        const loadIsland = loaders.get(id)
+        if (!loadIsland) {
+          reportError(
+            id,
+            instance,
+            new Error(`No client module found for island ${id}`),
+          )
+          continue
+        }
+        const state: MountedIsland = {
+          active: true,
+          controller: new AbortController(),
+          owner: root,
+        }
         mounted.set(element, state)
         element.dataset.scheduled = 'true'
         state.scheduled = scheduleHydration(element, strategy, () => {
-          if (!state.active || !rootContains(root, element)) return
-          void hydrateIsland(element, {
-            loaders,
-            hydrateRoot: hydrate,
-            reportError,
+          if (!state.active) return
+          if (!rootContains(root, element)) {
+            cleanup(element, state)
+            return
+          }
+          void Promise.all([
+            loadHydrator(),
+            loadIsland(),
+          ]).then(([{ hydrateIsland, hydrateRoot }]) => {
+            if (!state.active) return
+            if (!rootContains(root, element)) {
+              cleanup(element, state)
+              return
+            }
+            return hydrateIsland(element, {
+              loaders,
+              hydrateRoot,
+              reportError,
+              signal: state.controller.signal,
+              shouldHydrate: () => (
+                state.active && rootContains(root, element)
+              ),
+            })
           }).then((reactRoot) => {
+            if (!reactRoot) return
             if (!state.active || !rootContains(root, element)) {
-              reactRoot.unmount()
+              try {
+                reactRoot.unmount()
+              } catch (error) {
+                reportError(
+                  element.dataset.island ?? 'unknown',
+                  element.dataset.instance ?? 'unknown',
+                  error,
+                )
+              }
               return
             }
             state.reactRoot = reactRoot
           }).catch((error) => {
             if (!state.active) return
+            cleanup(element, state)
+            if (isAbortError(error)) return
             reportError(
               element.dataset.island ?? 'unknown',
               element.dataset.instance ?? 'unknown',
@@ -146,15 +253,5 @@ export function createIslandRuntime(
       cleanupAll([...mounted])
     },
   }
-  return runtime
-}
-
-/** Mounts the legacy document-wide runtime and returns its public controller. */
-export function startIslandRuntime(
-  islandModules: IslandClientModules,
-  documentRoot: Document = document,
-): IslandRuntime {
-  const runtime = createIslandRuntime(islandModules)
-  runtime.mount(documentRoot)
   return runtime
 }

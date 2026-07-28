@@ -5,14 +5,14 @@ Status: accepted — approved for implementation on 2026-07-27
 ## Context
 
 Nib deliberately omits client-side routing. Its static pages, ordinary links,
-and hard-navigation behavior are complete without JavaScript. The personal-site
-replica nevertheless contains a proven document-navigation layer that currently
-lives in application code. It coordinates fetched HTML, history, scroll and
+and hard-navigation behavior are complete without JavaScript. A standalone
+reference site nevertheless contained a proven document-navigation layer that
+lived in application code. It coordinates fetched HTML, history, scroll and
 focus, view transitions, persistent DOM, head and script synchronization,
 prefetching, and the public island/behavior runtime coordinator.
 
 Keeping that implementation application-owned duplicates framework lifecycle
-logic and leaves the replica coupled to Astro event and attribute names. Making
+logic and left the reference site coupled to Astro event and attribute names. Making
 navigation a default would violate Nib's static-first contract and add browser
 runtime to sites that did not request it.
 
@@ -152,7 +152,7 @@ a snapshot.
 - A site that opts in ships one site-wide navigation controller.
 - Server and client imports remain explicit; no dynamic import is required for
   the controller.
-- The replica can delete its application navigation controller and Astro
+- The reference site can delete its application navigation controller and Astro
   lifecycle compatibility after migration.
 - Runtime consumers must use the typed Nib lifecycle rather than private
   globals or framework-emulation event names.
@@ -173,7 +173,7 @@ a snapshot.
 - prefetch TTL, eviction, connection policy, and observer cleanup;
 - view-transition success, rejection, abort, and unsupported fallback;
 - no listener, observer, React root, behavior, cache, or timer accumulation;
-- full replica interaction and 493-page parity verification after adoption.
+- full reference-site interaction and 493-page parity verification after adoption.
 
 Approval changes only this ADR's status from `proposed` to `accepted`.
-Implementation and replica adoption remain separate commits.
+Implementation and reference-site adoption remain separate commits.

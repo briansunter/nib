@@ -32,6 +32,19 @@ export interface IslandHydratorDependencies {
   loaders: ReadonlyMap<string, () => Promise<IslandModule>>
   hydrateRoot: IslandHydrateRoot
   reportError?: (id: string, instance: string, error: unknown) => void
+  signal?: AbortSignal
+  shouldHydrate?: () => boolean
+}
+
+function assertHydrationIsActive(
+  dependencies: Pick<IslandHydratorDependencies, 'signal' | 'shouldHydrate'>,
+) {
+  if (
+    dependencies.signal?.aborted
+    || dependencies.shouldHydrate?.() === false
+  ) {
+    throw new DOMException('Island hydration aborted', 'AbortError')
+  }
 }
 
 export async function hydrateIsland(
@@ -48,9 +61,12 @@ export async function hydrateIsland(
 
   const load = dependencies.loaders.get(id)
   if (!load) throw new Error(`No client module found for island ${id}`)
+  assertHydrationIsActive(dependencies)
   const module = await load()
+  assertHydrationIsActive(dependencies)
   const definition = validateIslandModule(`/src/islands/${id}.tsx`, module)
   const props = parseIslandProps(serializedProps)
+  assertHydrationIsActive(dependencies)
   return dependencies.hydrateRoot(
     element,
     createElement(

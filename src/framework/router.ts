@@ -143,6 +143,7 @@ function validateRegisteredPath(
   if (
     typeof value !== 'string'
     || !value.startsWith('/')
+    || value.startsWith('//')
     || value.includes('?')
     || value.includes('#')
     || value.includes('\\')
@@ -168,6 +169,9 @@ function redirectDestination(
     return url.href
   }
   if (!value.startsWith('/')) {
+    throw new Error(`${label} destination must be an absolute path or HTTP(S) URL`)
+  }
+  if (value.startsWith('//')) {
     throw new Error(`${label} destination must be an absolute path or HTTP(S) URL`)
   }
   const parsed = new URL(value, 'http://nib.local')

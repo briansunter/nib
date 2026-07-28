@@ -63,10 +63,6 @@
       "types": "./dist/framework/server.d.ts",
       "import": "./dist/framework/server.js"
     },
-    "./internal/client": {
-      "types": "./dist/framework/runtime/client.d.ts",
-      "import": "./dist/framework/internal/client.js"
-    },
     "./internal/server": {
       "types": "./dist/framework/runtime/server.d.ts",
       "import": "./dist/framework/internal/server.js"
@@ -105,18 +101,23 @@
   ],
   "scripts": {
     "dev": "bun run build:framework && node bin/nib.js dev --root examples/docs",
+    "dev:blog": "bun run build:framework && bun run build:images && node bin/nib.js dev --root examples/blog",
     "build": "bun run build:framework && bun run build:images && bun run build:docs",
     "build:docs": "node bin/nib.js build --root examples/docs",
+    "build:blog": "node bin/nib.js build --root examples/blog",
     "build:images": "bun run --cwd packages/nib-images build",
     "benchmark:images": "bun run build:images && bun run --cwd packages/nib-images benchmark",
     "benchmark:inspection": "bun run build:framework && node --expose-gc scripts/benchmark-inspection.mjs",
     "build:framework": "vite build --config vite.framework.config.ts && tsc --project tsconfig.build.json",
     "test": "bun run build:framework && bun run build:images && bun run --cwd packages/nib-images test && vitest run --coverage --exclude tests/package-consumer.test.ts && vitest run tests/package-consumer.test.ts --no-coverage",
     "preview": "node bin/nib.js preview --root examples/docs",
+    "preview:blog": "node bin/nib.js preview --root examples/blog",
     "test:watch": "vitest",
     "typecheck": "bun run build:framework && bun run build:images && tsc --noEmit && bun run --cwd packages/nib-images typecheck",
-    "check:unused": "tsc --noEmit --noUnusedLocals --noUnusedParameters && tsc --project packages/nib-images/tsconfig.json --noEmit --noUnusedLocals --noUnusedParameters && tsc --project examples/personal-site-replica/tsconfig.json --noEmit --noUnusedLocals --noUnusedParameters",
-    "verify": "bun run typecheck && bun run check:unused && bun run test && bun run build:docs && bun run --cwd examples/personal-site-replica verify",
+    "check:unused": "tsc --noEmit --noUnusedLocals --noUnusedParameters && tsc --project packages/nib-images/tsconfig.json --noEmit --noUnusedLocals --noUnusedParameters && tsc --project examples/blog/tsconfig.json --noEmit --noUnusedLocals --noUnusedParameters",
+    "check:blog": "node bin/nib.js check --root examples/blog",
+    "verify:blog": "tsc --project examples/blog/tsconfig.json --noEmit && bun run build:blog && bun run check:blog && node examples/blog/scripts/check-output.mjs",
+    "verify": "bun run typecheck && bun run check:unused && bun run test && bun run build:docs && bun run verify:blog",
     "check:version-policy": "tsx scripts/check-version-policy.ts"
   },
   "dependencies": {

@@ -281,11 +281,23 @@ describe('generic content', () => {
       component: pageRenderer('./src/data-pages', 'ItemPage'),
     })
     const plugin = nibDataPages('/site/nib.config.ts', [source])
+    if (typeof plugin.configResolved !== 'function') {
+      throw new Error('Data page plugin has no configResolved hook')
+    }
+    if (typeof plugin.resolveId !== 'function') throw new Error('Data page plugin has no resolve hook')
     if (typeof plugin.load !== 'function') throw new Error('Data page plugin has no load hook')
+    const configResolved = plugin.configResolved as (config: { root: string }) => void
+    const resolveId = plugin.resolveId as (id: string) => string | null
     const load = plugin.load as (id: string) => Promise<unknown>
-    const result = await load(path.resolve(
-      'tests/fixtures/basic-site/src/pages/team/page.yaml',
-    ))
+    configResolved({ root: process.cwd() })
+    const yamlFile = path.resolve('tests/fixtures/basic-site/src/pages/team/page.yaml')
+    expect(resolveId(yamlFile)).toBeNull()
+    expect(await load(yamlFile)).toBeNull()
+    expect(resolveId(`${yamlFile}?raw`)).toBeNull()
+    expect(await load(`${yamlFile}?raw`)).toBeNull()
+    const yamlId = resolveId(`${yamlFile}?import&nib-page-source&lang.yaml`)
+    expect(yamlId).toMatch(/^\0nib:page-source:/)
+    const result = await load(yamlId!)
 
     // Generated data-page modules must advertise a JS module type so Vite 8
     // does not guess JSON from a `.json`/`.yaml` source extension and skip
@@ -302,11 +314,12 @@ describe('generic content', () => {
     temporaryDirectories.push(jsonRoot)
     const jsonFile = path.join(jsonRoot, 'projects.json')
     await fs.writeFile(jsonFile, '{"slug":"json-project","count":2}')
-    const jsonResult = await load(jsonFile)
+    const jsonResult = await load(`${jsonFile}?nib-page-source`)
     expect(jsonResult).toEqual(expect.objectContaining({ moduleType: 'js' }))
     expect((jsonResult as { code: string }).code).toContain('virtual:nib/page-sources')
 
     const sourceModule = await load('\0virtual:nib/page-sources')
-    expect(sourceModule).toContain('"phase":"page-source-module"')
+    expect(sourceModule).toContain('configuredPageSources(config)')
+    expect(sourceModule).not.toContain('setup')
   })
 })

@@ -3,7 +3,6 @@ import path from 'node:path'
 import type { Plugin } from 'vite'
 import { pageSourceIndex } from './content'
 import { fileToRoute } from './paths'
-import type { NibVitePluginContext } from './plugin'
 import type { PageSourceDefinition, PageSourceRenderer } from './types'
 
 const NIB_PAGE_SOURCES = 'virtual:nib/page-sources'
@@ -37,9 +36,16 @@ function parseDataPageVirtualId(id: string): string | null {
   }
 }
 
+function isDataPageSourceRequest(id: string): boolean {
+  const queryIndex = id.indexOf('?')
+  if (queryIndex === -1) return false
+  return new URLSearchParams(id.slice(queryIndex + 1)).has('nib-page-source')
+}
+
 function toAbsolutePath(cleanId: string, root: string): string {
   // Vite treats a leading `/` as project-root relative; otherwise an id that
   // is already absolute on disk passes through.
+  if (cleanId === root || cleanId.startsWith(`${root}${path.sep}`)) return cleanId
   if (cleanId.startsWith('/')) return path.join(root, cleanId)
   if (!path.isAbsolute(cleanId)) return path.resolve(root, cleanId)
   return cleanId
@@ -99,7 +105,6 @@ export function nibMarkdown(configPath = 'nib.config.ts'): Plugin {
 export function nibDataPages(
   configPath: string,
   definitions: ReadonlyArray<PageSourceDefinition<any>> | undefined,
-  context?: NibVitePluginContext,
 ): Plugin {
   const configImport = JSON.stringify(path.resolve(configPath))
   // Captured in configResolved so resolveId can turn root-relative source ids
@@ -115,6 +120,7 @@ export function nibDataPages(
     },
     resolveId(id) {
       if (id === NIB_PAGE_SOURCES) return RESOLVED_PAGE_SOURCES
+      if (!isDataPageSourceRequest(id)) return null
       const cleanId = id.split('?')[0]
       const extension = path.extname(cleanId)
       if (extension && extension !== '.md' && extension !== '.tsx') {
@@ -126,36 +132,14 @@ export function nibDataPages(
     },
     async load(id) {
       if (id === RESOLVED_PAGE_SOURCES) {
-        const setupContext = context === undefined
-          ? {
-              command: 'serve' as const,
-              mode: 'development' as const,
-              target: 'development' as const,
-              root: path.dirname(path.resolve(configPath)),
-              base: '/',
-              configPath: path.resolve(configPath),
-              phase: 'page-source-module' as const,
-            }
-          : {
-              ...context,
-              phase: 'page-source-module' as const,
-            }
         return [
           `import config from ${configImport}`,
-          `import { resolvePluginSetupContributions } from '@briansunter/nib/internal/server'`,
-          `const setup = await resolvePluginSetupContributions(`,
-          `  config.plugins ?? [],`,
-          `  Object.freeze(${JSON.stringify(setupContext)}),`,
-          `)`,
-          `export const pageSources = [`,
-          `  ...(config.pageSources ?? []),`,
-          `  ...(setup.pageSources ?? []),`,
-          `]`,
+          `import { configuredPageSources } from '@briansunter/nib/internal/server'`,
+          `export const pageSources = configuredPageSources(config)`,
         ].join('\n')
       }
-      // Accept both the re-resolved virtual id (the path Vite uses after
-      // resolveId) and a plain source path (kept for direct callers/tests).
       const virtualCleanId = parseDataPageVirtualId(id)
+      if (virtualCleanId === null && !isDataPageSourceRequest(id)) return null
       const cleanId = virtualCleanId ?? id.split('?')[0]
       const extension = path.extname(cleanId)
       if (!extension || extension === '.md' || extension === '.tsx') return null

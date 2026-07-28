@@ -1,12 +1,11 @@
 import { behaviorFileToId } from '../framework/behavior-paths'
+import { isHydrationStrategy } from '../framework/hydration'
 import {
   scheduleHydration,
   type HydrationEnvironment,
   type ScheduledHydration,
 } from '../framework/hydration-scheduler'
 import { parseIslandProps } from '../framework/island-serialization'
-import { validateIslandId } from '../framework/island-paths'
-import type { HydrationStrategy } from '../framework/islands'
 
 const BEHAVIOR_CLIENT_DEFINITION = Symbol.for('nib.behavior-client-definition')
 
@@ -23,7 +22,6 @@ export type BehaviorMount<Props extends object = Record<string, unknown>> = (
 
 export interface BehaviorClientDefinition<Props extends object = Record<string, unknown>> {
   readonly [BEHAVIOR_CLIENT_DEFINITION]: true
-  readonly behaviorId: string
   readonly mount: BehaviorMount<Props>
 }
 
@@ -52,14 +50,12 @@ interface MountedBehavior {
   cleanup?: () => void
 }
 
-export function defineBehaviorClient<Props extends object>(
-  id: string,
+export function defineBehaviorClient<Props extends object = Record<string, unknown>>(
   mount: BehaviorMount<Props>,
 ): BehaviorClientDefinition<Props> {
   if (typeof mount !== 'function') throw new Error('Client behavior mount must be a function')
   return Object.freeze({
     [BEHAVIOR_CLIENT_DEFINITION]: true as const,
-    behaviorId: validateIslandId(id),
     mount,
   })
 }
@@ -68,25 +64,14 @@ function validateBehaviorModule(
   file: string,
   module: BehaviorClientModule,
 ): BehaviorClientDefinition {
-  const expectedId = behaviorFileToId(file)
   const definition = module.default as Partial<BehaviorClientDefinition> | undefined
   if (
     definition?.[BEHAVIOR_CLIENT_DEFINITION] !== true
-    || typeof definition.behaviorId !== 'string'
     || typeof definition.mount !== 'function'
   ) {
     throw new Error(`Behavior module ${file} must default-export defineBehaviorClient(...)`)
   }
-  if (definition.behaviorId !== expectedId) {
-    throw new Error(
-      `Behavior ID mismatch for ${file}: expected ${expectedId}, received ${definition.behaviorId}`,
-    )
-  }
   return definition as BehaviorClientDefinition
-}
-
-function isHydrationStrategy(value: string | undefined): value is HydrationStrategy {
-  return value === 'load' || value === 'idle' || value === 'visible'
 }
 
 function elementsWithin(root: ParentNode): HTMLElement[] {
@@ -118,9 +103,16 @@ export function createBehaviorRuntime(
     const id = behaviorFileToId(file)
     if (loaders.has(id)) throw new Error(`Duplicate behavior ID: ${id}`)
     let loaded: Promise<BehaviorClientDefinition> | undefined
-    loaders.set(id, () => (
-      loaded ??= loadModule().then((module) => validateBehaviorModule(file, module))
-    ))
+    loaders.set(id, () => {
+      if (loaded !== undefined) return loaded
+      loaded = loadModule()
+        .then((module) => validateBehaviorModule(file, module))
+        .catch((error: unknown) => {
+          loaded = undefined
+          throw error
+        })
+      return loaded
+    })
   }
   const mounted = new Map<HTMLElement, MountedBehavior>()
   const reportError = options.reportError ?? defaultReportError
@@ -176,21 +168,38 @@ export function createBehaviorRuntime(
         mounted.set(element, state)
         element.dataset.scheduled = 'true'
         state.scheduled = scheduleHydration(element, strategy, () => {
-          if (!state.active || !rootContains(root, element)) return
+          if (!state.active) return
+          if (!rootContains(root, element)) {
+            cleanup(element, state)
+            return
+          }
           void load().then(async (definition) => {
-            if (!state.active || !rootContains(root, element)) return
+            if (!state.active) return
+            if (!rootContains(root, element)) {
+              cleanup(element, state)
+              return
+            }
             const result = await definition.mount({
               root: element,
               props: parseIslandProps(element.dataset.props ?? ''),
               signal: state.controller.signal,
             })
-            if (!state.active) {
-              if (typeof result === 'function') result()
+            if (!state.active || !rootContains(root, element)) {
+              if (state.active) cleanup(element, state)
+              if (typeof result === 'function') {
+                try {
+                  result()
+                } catch (error) {
+                  reportError(id, error)
+                }
+              }
               return
             }
             if (typeof result === 'function') state.cleanup = result
           }).catch((error) => {
-            if (state.active) reportError(id, error)
+            if (!state.active) return
+            cleanup(element, state)
+            reportError(id, error)
           })
         }, options.environment)
       }

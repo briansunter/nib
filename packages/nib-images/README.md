@@ -35,6 +35,25 @@ bytes through HMR; unchanged content keeps its cache key and revalidates with
 creates a renderer. The build-only package entry is the only supported plugin
 authoring path; its internal benchmark utilities are not published as an import.
 
+The content-addressed transform cache targets 10,000 images and 1 GiB by
+default. Every transform used by the current build or development session is
+protected, so a larger active working set may exceed those soft limits instead
+of being evicted and recreated on the next build. Warm builds validate the
+encoded byte count and filesystem identity recorded alongside each SHA-256
+digest, avoiding a full read of every unchanged image. Use checksum verification
+when the cache resides on untrusted or externally mutable storage, or tune the
+deterministic least-recently-used cap:
+
+```ts
+images({
+  cache: {
+    maxBytes: 2 * 1024 * 1024 * 1024,
+    maxEntries: 20_000,
+    verification: 'checksum',
+  },
+})
+```
+
 Rendered `<img>` elements expose only objective source metadata for consumer
 styling: `data-nib-orientation` (`landscape`, `portrait`, or `square`) plus
 `--nib-image-source-width`, `--nib-image-source-height`, and

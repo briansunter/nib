@@ -16,7 +16,7 @@ export {
   type ProjectRendererOptions,
 } from '../framework/project-renderer'
 export { renderReactPage } from '../framework/render-page'
-export { resolvePluginSetupContributions } from '../framework/plugin'
+export { configuredPageSources } from '../framework/plugin-contributions'
 export { createRoutes, getRoute } from '../framework/router'
 export { stripBasePath } from '../framework/urls'
 export { validateIslandModules } from '../framework/islands'

@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { parse, type DefaultTreeAdapterTypes } from 'parse5'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Image } from './image-component'
@@ -14,10 +15,128 @@ interface HtmlAttributes {
   readonly [name: string]: string
 }
 
+interface ParsedHtmlAttribute {
+  readonly name: string
+  readonly localName: string
+  readonly value: string
+  readonly startOffset: number
+  readonly endOffset: number
+}
+
+interface ParsedHtmlElement {
+  readonly tagName: string
+  readonly attributes: readonly ParsedHtmlAttribute[]
+  readonly startOffset: number
+  readonly startTagEndOffset: number
+  readonly endOffset: number
+}
+
+interface TextReplacement {
+  readonly startOffset: number
+  readonly endOffset: number
+  readonly value: string
+}
+
 interface PublicationRoute {
   readonly kind: string
   readonly artifact: string
   readonly contentType: string
+}
+
+function elementChildren(
+  node: DefaultTreeAdapterTypes.Node,
+): readonly DefaultTreeAdapterTypes.ChildNode[] {
+  if (!('childNodes' in node)) return []
+  if ('tagName' in node && node.tagName === 'template' && 'content' in node) {
+    return [...node.childNodes, ...node.content.childNodes]
+  }
+  return node.childNodes
+}
+
+/** Inspects only real HTML elements while retaining exact source ranges. */
+function parseHtmlElements(html: string): readonly ParsedHtmlElement[] {
+  const document = parse(html, { sourceCodeLocationInfo: true })
+  const elements: ParsedHtmlElement[] = []
+  const visit = (node: DefaultTreeAdapterTypes.Node): void => {
+    if ('tagName' in node) {
+      const location = node.sourceCodeLocation
+      const startTag = location?.startTag ?? location
+      if (location && startTag) {
+        const attributes = node.attrs.flatMap((attribute): ParsedHtmlAttribute[] => {
+          const name = attribute.prefix === undefined
+            ? attribute.name
+            : `${attribute.prefix}:${attribute.name}`
+          const attributeLocation = location.attrs?.[name]
+          if (!attributeLocation) return []
+          return [{
+            name,
+            localName: attribute.name,
+            value: attribute.value,
+            startOffset: attributeLocation.startOffset,
+            endOffset: attributeLocation.endOffset,
+          }]
+        })
+        elements.push({
+          tagName: node.tagName,
+          attributes,
+          startOffset: startTag.startOffset,
+          startTagEndOffset: startTag.endOffset,
+          endOffset: location.endOffset,
+        })
+      }
+    }
+    for (const child of elementChildren(node)) visit(child)
+  }
+  visit(document)
+  return elements
+}
+
+function attributesFor(element: ParsedHtmlElement): HtmlAttributes {
+  const attributes: Record<string, string> = {}
+  for (const attribute of element.attributes) {
+    if (!(attribute.localName in attributes)) attributes[attribute.localName] = attribute.value
+  }
+  return attributes
+}
+
+function applyTextReplacements(
+  value: string,
+  replacements: readonly TextReplacement[],
+): string {
+  if (replacements.length === 0) return value
+  let output = value
+  let nextOffset = value.length
+  for (const replacement of [...replacements].sort(
+    (left, right) => right.startOffset - left.startOffset,
+  )) {
+    if (
+      replacement.startOffset < 0
+      || replacement.endOffset < replacement.startOffset
+      || replacement.endOffset > nextOffset
+    ) {
+      throw new Error('@briansunter/nib-images: overlapping or invalid HTML rewrite')
+    }
+    output = `${output.slice(0, replacement.startOffset)}${replacement.value}${output.slice(replacement.endOffset)}`
+    nextOffset = replacement.startOffset
+  }
+  return output
+}
+
+function localContentUrl(value: string): URL | undefined {
+  const authored = value.trim()
+  if (
+    authored === ''
+    || /^[A-Za-z][A-Za-z\d+.-]*:/.test(authored)
+    || authored.startsWith('//')
+  ) {
+    return undefined
+  }
+  try {
+    const parsed = new URL(authored, 'http://nib.local')
+    return parsed.origin === 'http://nib.local' ? parsed : undefined
+  } catch {
+    return undefined
+  }
 }
 
 function outputPrefix(clientDirectory: string, publicPath: string): string {
@@ -30,7 +149,10 @@ function outputPrefix(clientDirectory: string, publicPath: string): string {
 }
 
 function publicContentUrl(src: string, base: string): string {
-  const parsed = new URL(src, 'http://nib.local')
+  const parsed = localContentUrl(src)
+  if (parsed === undefined) {
+    throw new Error(`@briansunter/nib-images: content URL must be local: ${src}`)
+  }
   const normalizedBase = base === '/' ? '/' : `/${base.replace(/^\/+|\/+$/g, '')}/`
   const basePrefix = normalizedBase.replace(/\/$/, '')
   const pathname = basePrefix !== ''
@@ -79,8 +201,15 @@ async function copyReferencedContentSources(
   const references = new Set<string>()
   for (const file of files) {
     const html = await fs.readFile(file, 'utf8')
-    for (const match of html.matchAll(/\b(?:src|href)\s*=\s*(["'])(.*?)\1/gi)) {
-      if (match[2]) references.add(match[2])
+    for (const element of parseHtmlElements(html)) {
+      for (const attribute of element.attributes) {
+        if (
+          (attribute.localName === 'src' || attribute.localName === 'href')
+          && attribute.value !== ''
+        ) {
+          references.add(attribute.value)
+        }
+      }
     }
   }
   const copies = new Map<string, Promise<void>>()
@@ -111,26 +240,14 @@ function htmlFiles(
   })
 }
 
-function parseAttributes(value: string): HtmlAttributes {
-  const result: Record<string, string> = {}
-  for (const match of value.matchAll(/([A-Za-z_:][A-Za-z0-9:._-]*)(?:\s*=\s*(?:(["'])(.*?)\2|([^\s>]+)))?/g)) {
-    const name = match[1]!.toLowerCase()
-    result[name] = match[3] ?? match[4] ?? ''
-  }
-  return result
-}
-
 function relativeSourceFile(
   src: string,
   source: NormalizedContentImageSource,
   base: string,
 ): string | undefined {
-  let pathname: string
-  try {
-    pathname = new URL(src, 'http://nib.local').pathname
-  } catch {
-    return undefined
-  }
+  const parsed = localContentUrl(src)
+  if (parsed === undefined) return undefined
+  const pathname = parsed.pathname
   const prefixes = [...new Set([
     source.publicPath,
     `${base}${source.publicPath.replace(/^\/+/, '')}`,
@@ -187,21 +304,56 @@ function parseAuthoredWidth(value: string | undefined): number | undefined {
   return parsed
 }
 
-async function replaceAsync(
+function replaceAttributeValue(
+  html: string,
+  attribute: ParsedHtmlAttribute,
   value: string,
-  expression: RegExp,
-  replacer: (full: string, ...groups: string[]) => Promise<string>,
-): Promise<string> {
-  const matches = [...value.matchAll(expression)]
-  if (matches.length === 0) return value
-  let output = ''
-  let cursor = 0
-  for (const match of matches) {
-    output += value.slice(cursor, match.index)
-    output += await replacer(match[0]!, ...(match.slice(1) as string[]))
-    cursor = (match.index ?? 0) + match[0]!.length
+): TextReplacement {
+  const authored = html.slice(attribute.startOffset, attribute.endOffset)
+  const equals = authored.indexOf('=')
+  if (equals < 0) {
+    throw new Error(`@briansunter/nib-images: ${attribute.name} unexpectedly has no value`)
   }
-  return output + value.slice(cursor)
+  let valueStart = equals + 1
+  while (/\s/.test(authored[valueStart] ?? '')) valueStart += 1
+  const quote = authored[valueStart]
+  if (quote === '"' || quote === "'") {
+    return {
+      startOffset: attribute.startOffset,
+      endOffset: attribute.endOffset,
+      value: `${authored.slice(0, valueStart + 1)}${escapeAttribute(value, quote)}${quote}`,
+    }
+  }
+  return {
+    startOffset: attribute.startOffset,
+    endOffset: attribute.endOffset,
+    value: `${authored.slice(0, valueStart)}"${escapeAttribute(value)}"`,
+  }
+}
+
+function normalizeContentReferences(
+  html: string,
+  base: string,
+  options: NormalizedImagesOptions,
+): string {
+  const replacements: TextReplacement[] = []
+  for (const element of parseHtmlElements(html)) {
+    for (const attribute of element.attributes) {
+      if (
+        attribute.localName !== 'src'
+        && attribute.localName !== 'href'
+      ) {
+        continue
+      }
+      if (sourceForUrl(attribute.value, base, options) === undefined) continue
+      replacements.push(replaceAttributeValue(
+        html,
+        attribute,
+        publicContentUrl(attribute.value, base),
+      ))
+    }
+  }
+  return applyTextReplacements(html, replacements)
 }
 
 async function rewriteFile(
@@ -214,24 +366,16 @@ async function rewriteFile(
   sourceCache: Map<string, Awaited<ReturnType<ImageSourceCatalog['load']>>>,
 ): Promise<number> {
   const html = await fs.readFile(file, 'utf8')
-  const normalizedHtml = html.replace(
-    /\b(src|href)\s*=\s*(["'])(.*?)\2/gi,
-    (attribute, _name: string, quote: string, reference: string) => (
-      sourceForUrl(reference, base, options) === undefined
-        ? attribute
-        : attribute.replace(
-            `${quote}${reference}${quote}`,
-            `${quote}${escapeAttribute(publicContentUrl(reference, base))}${quote}`,
-          )
-    ),
-  )
+  const normalizedHtml = normalizeContentReferences(html, base, options)
   let replacements = 0
-  const rewritten = await replaceAsync(normalizedHtml, /<img\b([^>]*?)>/gi, async (full, rawAttributes: string) => {
-    const input = parseAttributes(rawAttributes)
+  const imageReplacements: TextReplacement[] = []
+  for (const element of parseHtmlElements(normalizedHtml)) {
+    if (element.tagName !== 'img') continue
+    const input = attributesFor(element)
     const src = input.src
-    if (!src) return full
+    if (!src) continue
     const match = sourceForUrl(src, base, options)
-    if (!match) return full
+    if (!match) continue
     const { source: sourceDefinition, file: sourceFile } = match
     let source = sourceCache.get(sourceFile)
     try {
@@ -248,7 +392,7 @@ async function rewriteFile(
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)
       console.warn(`nib-images: preserving ${src} after source inspection failure: ${detail}`)
-      return full
+      continue
     }
     const highPriority = input.fetchpriority?.toLowerCase() === 'high'
     const loading = input.loading === 'lazy' || input.loading === 'eager' ? input.loading : undefined
@@ -260,7 +404,7 @@ async function rewriteFile(
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)
       console.warn(`nib-images: ${detail}; preserving ${src}`)
-      return full
+      continue
     }
     const authoredMaximum = authoredWidths?.at(-1)
     // Before data-nib-width existed, the largest authored candidate also
@@ -299,11 +443,16 @@ async function rewriteFile(
       ...(highPriority ? { priority: true as const } : loading === undefined ? {} : { loading }),
     } as ImageProps
     replacements += 1
-    return renderToStaticMarkup(createElement(
-      ImageRegistryProvider,
-      { registry, children: createElement(Image, props) },
-    ))
-  })
+    imageReplacements.push({
+      startOffset: element.startOffset,
+      endOffset: element.startTagEndOffset,
+      value: renderToStaticMarkup(createElement(
+        ImageRegistryProvider,
+        { registry, children: createElement(Image, props) },
+      )),
+    })
+  }
+  const rewritten = applyTextReplacements(normalizedHtml, imageReplacements)
   if (rewritten !== html) await fs.writeFile(file, rewritten)
   return replacements
 }
@@ -329,24 +478,67 @@ export async function optimizeContentImages(
   return replacements
 }
 
-function escapeAttribute(value: string): string {
+function escapeAttribute(value: string, quote: '"' | "'" = '"'): string {
   return value
     .replaceAll('&', '&amp;')
-    .replaceAll('"', '&quot;')
+    .replaceAll(quote, quote === '"' ? '&quot;' : '&#39;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
 }
 
 function restoreImageTag(tag: string, publicUrl: string): string {
-  const restored = tag
-    .replace(/\s(?:srcset|sizes)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(
-      /(\bsrc\s*=\s*)(["'])(.*?)(\2)/i,
-      (_match, prefix: string, quote: string) => `${prefix}${quote}${escapeAttribute(publicUrl)}${quote}`,
-    )
-  return restored.includes('src=')
+  const image = parseHtmlElements(tag).find((element) => element.tagName === 'img')
+  if (!image) return tag
+  const replacements: TextReplacement[] = []
+  let hasSource = false
+  for (const attribute of image.attributes) {
+    if (attribute.localName === 'src') {
+      replacements.push(replaceAttributeValue(tag, attribute, publicUrl))
+      hasSource = true
+    } else if (attribute.localName === 'srcset' || attribute.localName === 'sizes') {
+      replacements.push({
+        startOffset: attribute.startOffset,
+        endOffset: attribute.endOffset,
+        value: '',
+      })
+    }
+  }
+  const restored = applyTextReplacements(tag, replacements)
+  return hasSource
     ? restored
     : restored.replace(/<img\b/i, `<img src="${escapeAttribute(publicUrl)}"`)
+}
+
+const imageUrlAttributes = new Set(['href', 'imagesrcset', 'src', 'srcset'])
+
+function referencesFailure(
+  element: ParsedHtmlElement,
+  outputUrl: string,
+): boolean {
+  return element.attributes.some((attribute) => (
+    imageUrlAttributes.has(attribute.localName)
+    && attribute.value.includes(outputUrl)
+  ))
+}
+
+function restoreFailedUrls(
+  html: string,
+  failures: readonly { readonly outputUrl: string; readonly publicUrl: string }[],
+): string {
+  const replacements: TextReplacement[] = []
+  for (const element of parseHtmlElements(html)) {
+    for (const attribute of element.attributes) {
+      if (!imageUrlAttributes.has(attribute.localName)) continue
+      let value = attribute.value
+      for (const failure of failures) {
+        value = value.replaceAll(failure.outputUrl, failure.publicUrl)
+      }
+      if (value !== attribute.value) {
+        replacements.push(replaceAttributeValue(html, attribute, value))
+      }
+    }
+  }
+  return applyTextReplacements(html, replacements)
 }
 
 /** Restores original content markup for derivatives that Sharp could not encode. */
@@ -361,19 +553,58 @@ export async function restoreFailedContentImages(
   let restored = 0
   for (const file of files) {
     const html = await fs.readFile(file, 'utf8')
-    let rewritten = html.replace(/<picture\b[\s\S]*?<\/picture>/gi, (picture) => {
-      const failure = failures.find(({ outputUrl }) => picture.includes(outputUrl))
-      if (!failure) return picture
-      const image = picture.match(/<img\b[^>]*>/i)?.[0]
+    const elements = parseHtmlElements(html)
+    const replacements: TextReplacement[] = []
+    const replacedPictures: ParsedHtmlElement[] = []
+    for (const picture of elements.filter((element) => element.tagName === 'picture')) {
+      if (replacedPictures.some((parent) => (
+        picture.startOffset >= parent.startOffset && picture.endOffset <= parent.endOffset
+      ))) {
+        continue
+      }
+      const descendants = elements.filter((element) => (
+        element.startOffset >= picture.startOffset
+        && element.startTagEndOffset <= picture.endOffset
+      ))
+      const failure = failures.find(({ outputUrl }) => (
+        descendants.some((element) => referencesFailure(element, outputUrl))
+      ))
+      if (!failure) continue
+      const image = descendants.find((element) => element.tagName === 'img')
+      if (!image) continue
+      replacements.push({
+        startOffset: picture.startOffset,
+        endOffset: picture.endOffset,
+        value: restoreImageTag(
+          html.slice(image.startOffset, image.startTagEndOffset),
+          failure.publicUrl,
+        ),
+      })
+      replacedPictures.push(picture)
       restored += 1
-      return image === undefined ? picture : restoreImageTag(image, failure.publicUrl)
-    }).replace(/<img\b[^>]*>/gi, (image) => {
-      const failure = failures.find(({ outputUrl }) => image.includes(outputUrl))
-      if (!failure) return image
+    }
+    for (const image of elements.filter((element) => element.tagName === 'img')) {
+      if (replacedPictures.some((picture) => (
+        image.startOffset >= picture.startOffset && image.startTagEndOffset <= picture.endOffset
+      ))) {
+        continue
+      }
+      const failure = failures.find(({ outputUrl }) => referencesFailure(image, outputUrl))
+      if (!failure) continue
+      replacements.push({
+        startOffset: image.startOffset,
+        endOffset: image.startTagEndOffset,
+        value: restoreImageTag(
+          html.slice(image.startOffset, image.startTagEndOffset),
+          failure.publicUrl,
+        ),
+      })
       restored += 1
-      return restoreImageTag(image, failure.publicUrl)
-    })
-    for (const failure of failures) rewritten = rewritten.replaceAll(failure.outputUrl, failure.publicUrl)
+    }
+    const rewritten = restoreFailedUrls(
+      applyTextReplacements(html, replacements),
+      failures,
+    )
     if (rewritten !== html) await fs.writeFile(file, rewritten)
   }
   if (restored > 0) console.warn(`nib-images: restored ${restored} content image reference(s)`)

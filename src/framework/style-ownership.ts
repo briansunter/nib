@@ -19,8 +19,7 @@ function sourceRoot(root: string): string {
   return `${canonical.replaceAll('\\', '/')}/`
 }
 
-function applicationModule(root: string, id: string): boolean {
-  const applicationRoot = sourceRoot(root)
+function applicationModule(applicationRoot: string, id: string): boolean {
   const file = cleanId(id)
   return file.startsWith(applicationRoot)
     && !file.includes('/src/islands/')
@@ -30,8 +29,7 @@ function applicationModule(root: string, id: string): boolean {
     && !file.endsWith('.client.tsx')
 }
 
-function clientOwnedModule(root: string, id: string): boolean {
-  const applicationRoot = sourceRoot(root)
+function clientOwnedModule(applicationRoot: string, id: string): boolean {
   const file = cleanId(id)
   return id.includes('virtual:nib/enhancement-entry')
     || (
@@ -53,6 +51,7 @@ export function pageStyleOwnershipGuard(
   root: string,
   target: NibViteTarget,
 ): Plugin {
+  const applicationRoot = sourceRoot(root)
   const clientOwned = new Set<string>()
   return {
     name: 'nib-page-style-ownership',
@@ -62,12 +61,12 @@ export function pageStyleOwnershipGuard(
       const resolved = await this.resolve(source, importer, { skipSelf: true })
       const resolvedId = resolved?.id ?? source
       const importerIsClientOwned = clientOwned.has(cleanId(importer))
-        || clientOwnedModule(root, importer)
+        || clientOwnedModule(applicationRoot, importer)
       if (importerIsClientOwned) {
         if (!cleanId(resolvedId).endsWith('.css')) clientOwned.add(cleanId(resolvedId))
         return null
       }
-      if (!applicationModule(root, importer)) return null
+      if (!applicationModule(applicationRoot, importer)) return null
       if (!cleanId(resolvedId).endsWith('.css')) return null
       throw new Error([
         `Nib cannot deploy stylesheet ${source} imported by ${cleanId(importer)}.`,

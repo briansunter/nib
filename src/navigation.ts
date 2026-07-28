@@ -18,21 +18,11 @@ export function clientNavigation(
   }
   return definePlugin({
     name: 'nib-client-navigation',
-    setup(context) {
-      if (
-        context.phase !== 'vite-config'
-        || (context.target !== 'client' && context.target !== 'development')
-      ) {
-        return
-      }
-      return {
-        clientEntries: [{
-          module: '@briansunter/nib/client/navigation',
-          initializer: prefetch === 'explicit'
-            ? 'startExplicitClientNavigation'
-            : 'startClientNavigation',
-        }],
-      }
-    },
+    clientEntries: [{
+      module: '@briansunter/nib/client/navigation',
+      initializer: prefetch === 'explicit'
+        ? 'startExplicitClientNavigation'
+        : 'startClientNavigation',
+    }],
   })
 }
