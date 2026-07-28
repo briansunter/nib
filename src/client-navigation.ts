@@ -2,219 +2,42 @@ import {
   mountClientRuntimes,
   unmountClientRuntimes,
 } from './runtime/coordinator'
+import {
+  HISTORY_INDEX,
+  HISTORY_SCROLL_X,
+  HISTORY_SCROLL_Y,
+  navigationState,
+  replaceHistoryScroll,
+  stateNumber,
+} from './navigation/history'
+import {
+  connectionIsSlow,
+  NavigationPageCache,
+  requestPage,
+} from './navigation/page-cache'
+import type {
+  ClientNavigationController,
+  NavigateOptions,
+  NavigationBeforeSwapDetail,
+  NavigationContext,
+  NavigationDirection,
+  NavigationHistoryState,
+  NavigationLifecycleDetail,
+  NavigationType,
+} from './navigation/types'
+export type {
+  ClientNavigationController,
+  NavigateOptions,
+  NavigationBeforeSwapDetail,
+  NavigationDirection,
+  NavigationLifecycleDetail,
+  NavigationType,
+} from './navigation/types'
 
-export type NavigationDirection = 'back' | 'forward'
-export type NavigationType = 'push' | 'replace' | 'traverse'
-
-export interface NavigateOptions {
-  readonly history?: Extract<NavigationType, 'push' | 'replace'>
-  readonly sourceElement?: Element
-}
-
-export interface ClientNavigationController {
-  mount(): void
-  navigate(to: string | URL, options?: NavigateOptions): Promise<void>
-  destroy(): void
-}
-
-interface FetchedPage {
-  finalUrl: string
-  html: string
-  mediaType: DOMParserSupportedType
-}
-
-interface CachedPage {
-  createdAt: number
-  promise: Promise<FetchedPage | null>
-}
-
-interface NavigationContext {
-  direction: NavigationDirection
-  from?: URL
-  history: NavigationType
-  restoreScroll?: { x: number; y: number }
-  sourceElement?: Element
-}
-
-interface NavigationHistoryState {
-  __nibNavigationIndex?: number
-  __nibScrollX?: number
-  __nibScrollY?: number
-  [key: string]: unknown
-}
-
-export interface NavigationLifecycleDetail {
-  readonly direction: NavigationDirection
-  readonly from: URL
-  readonly navigationType: NavigationType
-  readonly sourceElement?: Element
-  readonly to: URL
-}
-
-export interface NavigationBeforeSwapDetail extends NavigationLifecycleDetail {
-  readonly newDocument: Document
-  readonly signal: AbortSignal
-  swap: () => void | Promise<void>
-  readonly viewTransition?: ViewTransition
-}
-
-declare global {
-  interface DocumentEventMap {
-    'nib:navigation-before-swap': CustomEvent<NavigationBeforeSwapDetail>
-    'nib:navigation-after-swap': CustomEvent<NavigationLifecycleDetail>
-    'nib:navigation-load': CustomEvent<NavigationLifecycleDetail>
-  }
-}
-
-interface NetworkInformationLike {
-  effectiveType?: string
-  saveData?: boolean
-}
-
-const CACHE_TTL_MS = 30_000
 const HOVER_PREFETCH_DELAY_MS = 80
-const MAX_PREFETCHED_PAGES = 40
-const HISTORY_INDEX = '__nibNavigationIndex'
-const HISTORY_SCROLL_X = '__nibScrollX'
-const HISTORY_SCROLL_Y = '__nibScrollY'
 const PERSIST_ATTRIBUTE = 'data-nib-navigation-persist'
 const EXECUTED_SCRIPT_ATTRIBUTE = 'data-nib-script-executed'
 const RERUN_SCRIPT_ATTRIBUTE = 'data-nib-script-rerun'
-
-function navigationState(): NavigationHistoryState {
-  const state = history.state
-  return state && typeof state === 'object'
-    ? state as NavigationHistoryState
-    : {}
-}
-
-function stateNumber(
-  state: NavigationHistoryState | null,
-  key: keyof NavigationHistoryState,
-  fallback: number,
-): number {
-  const value = state?.[key]
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
-}
-
-function replaceHistoryScroll(
-  index: number,
-  x = window.scrollX,
-  y = window.scrollY,
-) {
-  const state = navigationState()
-  history.replaceState({
-    ...state,
-    [HISTORY_INDEX]: index,
-    [HISTORY_SCROLL_X]: x,
-    [HISTORY_SCROLL_Y]: y,
-  }, '')
-}
-
-function normalizedFetchUrl(url: URL): string {
-  const normalized = new URL(url)
-  normalized.hash = ''
-  return normalized.href
-}
-
-function isHtmlMediaType(value: string): value is DOMParserSupportedType {
-  return value === 'text/html' || value === 'application/xhtml+xml'
-}
-
-function isSlowConnection(): boolean {
-  const connection = (
-    navigator as Navigator & { connection?: NetworkInformationLike }
-  ).connection
-  return connection?.saveData === true
-    || /(^|-)2g$/.test(connection?.effectiveType ?? '')
-}
-
-function canPrefetch(): boolean {
-  return navigator.onLine !== false
-}
-
-function trimPageCache(pageCache: Map<string, CachedPage>) {
-  while (pageCache.size > MAX_PREFETCHED_PAGES) {
-    const oldest = pageCache.keys().next().value
-    if (typeof oldest !== 'string') return
-    pageCache.delete(oldest)
-  }
-}
-
-async function requestPage(
-  url: URL,
-  signal?: AbortSignal,
-): Promise<FetchedPage | null> {
-  try {
-    const response = await fetch(normalizedFetchUrl(url), {
-      credentials: 'same-origin',
-      headers: {
-        Accept: 'text/html, application/xhtml+xml',
-      },
-      method: 'GET',
-      redirect: 'follow',
-      ...(signal === undefined ? {} : { signal }),
-    })
-    const mediaType = (response.headers.get('content-type') ?? '')
-      .split(';', 1)[0]
-      ?.trim()
-    if (!mediaType || !isHtmlMediaType(mediaType)) return null
-    return {
-      finalUrl: response.url || normalizedFetchUrl(url),
-      html: await response.text(),
-      mediaType,
-    }
-  } catch (error) {
-    if (
-      error !== null
-      && typeof error === 'object'
-      && 'name' in error
-      && error.name === 'AbortError'
-    ) {
-      throw error
-    }
-    return null
-  }
-}
-
-function cachedPage(
-  pageCache: Map<string, CachedPage>,
-  url: URL,
-): Promise<FetchedPage | null> | undefined {
-  const key = normalizedFetchUrl(url)
-  const cached = pageCache.get(key)
-  if (!cached) return undefined
-  if (Date.now() - cached.createdAt > CACHE_TTL_MS) {
-    pageCache.delete(key)
-    return undefined
-  }
-  // Refresh insertion order so the cache is bounded by least-recent use.
-  pageCache.delete(key)
-  pageCache.set(key, cached)
-  return cached.promise
-}
-
-function prefetchPage(
-  pageCache: Map<string, CachedPage>,
-  url: URL,
-  signal: AbortSignal,
-) {
-  if (!canPrefetch() || isSlowConnection() || signal.aborted) return
-  if (url.origin !== location.origin) return
-
-  const key = normalizedFetchUrl(url)
-  if (key === normalizedFetchUrl(new URL(location.href))) return
-  if (cachedPage(pageCache, url)) return
-
-  const promise = requestPage(url, signal)
-  pageCache.set(key, { createdAt: Date.now(), promise })
-  trimPageCache(pageCache)
-  void promise.then((page) => {
-    if (!page) pageCache.delete(key)
-  }).catch(() => {
-    pageCache.delete(key)
-  })
-}
 
 function elementHref(element: Element): string | null {
   if (
@@ -668,7 +491,7 @@ class NibClientNavigation implements ClientNavigationController {
   private hoverTimer = 0
   private mounted = false
   private navigationAbort: AbortController | undefined
-  private readonly pageCache = new Map<string, CachedPage>()
+  private readonly pageCache = new NavigationPageCache()
   private scrollFrame = 0
   private viewportObserver: IntersectionObserver | undefined
   private readonly viewportTimers = new Map<Element, number>()
@@ -811,7 +634,7 @@ class NibClientNavigation implements ClientNavigationController {
 
   private onHover = (event: Event) => {
     const link = linkFromEvent(event)
-    if (!link || prefetchMode(link) !== 'hover' || isSlowConnection()) return
+    if (!link || prefetchMode(link) !== 'hover' || connectionIsSlow()) return
     const url = eligibleLink(link)
     if (!url) return
     const signal = this.controller?.signal
@@ -820,7 +643,7 @@ class NibClientNavigation implements ClientNavigationController {
     this.hoverTimer = window.setTimeout(
       () => {
         this.hoverTimer = 0
-        prefetchPage(this.pageCache, url, signal)
+        this.pageCache.prefetch(url, signal)
       },
       HOVER_PREFETCH_DELAY_MS,
     )
@@ -836,7 +659,7 @@ class NibClientNavigation implements ClientNavigationController {
     if (!link || prefetchMode(link) !== 'tap') return
     const url = eligibleLink(link)
     const signal = this.controller?.signal
-    if (url && signal) prefetchPage(this.pageCache, url, signal)
+    if (url && signal) this.pageCache.prefetch(url, signal)
   }
 
   private scanPrefetchLinks = () => {
@@ -852,7 +675,7 @@ class NibClientNavigation implements ClientNavigationController {
       'a[href][data-nib-prefetch="load"], area[href][data-nib-prefetch="load"]',
     )) {
       const url = eligibleLink(link)
-      if (url) prefetchPage(this.pageCache, url, signal)
+      if (url) this.pageCache.prefetch(url, signal)
     }
     if (!('IntersectionObserver' in window) || viewportLinks.length === 0) {
       return
@@ -872,7 +695,7 @@ class NibClientNavigation implements ClientNavigationController {
           this.viewportTimers.delete(entry.target)
           observer.unobserve(entry.target)
           const url = eligibleLink(entry.target)
-          if (url) prefetchPage(this.pageCache, url, signal)
+          if (url) this.pageCache.prefetch(url, signal)
         }, 300)
         this.viewportTimers.set(entry.target, timer)
       }
@@ -1061,7 +884,7 @@ class NibClientNavigation implements ClientNavigationController {
 
     try {
       const prepared = await (
-        cachedPage(this.pageCache, to) ?? requestPage(to, signal)
+        this.pageCache.get(to) ?? requestPage(to, signal)
       )
       if (signal.aborted) return
       if (!prepared) {

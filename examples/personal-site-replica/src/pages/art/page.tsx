@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { siteHref, type PageProps } from '@briansunter/nib'
 import { Image } from '@briansunter/nib-images'
 import type config from '../../../nib.config'
-import Gallery from '../../islands/gallery'
+import Gallery from '../../components/Gallery'
 import { galleryImages } from '../../data/gallery-images'
 
 export const meta = {
@@ -103,7 +103,6 @@ export default function ArtPage({ collections }: PageProps<typeof config>) {
           filterAriaLabel="Filter artwork"
           gridLabel="Gallery"
           listLabel="Detail"
-          hydrate="load"
         />
       )}
 

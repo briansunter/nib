@@ -2,7 +2,7 @@ import { siteHref, type PageProps } from '@briansunter/nib'
 import { Fragment } from 'react'
 import type config from '../../../nib.config'
 import { PageHero } from '../../components/PageHero'
-import Search from '../../islands/search'
+import Search from '../../components/Search'
 import { tagCounts, titledPages } from '../../lib/content-queries'
 
 export const meta = {
@@ -23,7 +23,7 @@ export default function SearchPage({ collections }: PageProps<typeof config>) {
         </PageHero>
 
         <div className="search-container">
-          <Search hydrate="load" />
+          <Search />
         </div>
 
         <div data-search-empty-state className="search-empty-state">

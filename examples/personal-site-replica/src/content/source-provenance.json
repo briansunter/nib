@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sourceRepository": "https://github.com/briansunter/personal-site",
+  "sourceCommit": "b10a973a677cee207d1258edf0d95170078829dd",
+  "sharedFiles": [
+    { "path": "src/utils/artMasonryInitializer.ts", "sha256": "b1c54e1779a4cbae5ef54753bd2a4f9e3b60d45c6c83c0c4337db312796913b2", "testOwner": "src/utils/artMasonryInitializer.test.ts" },
+    { "path": "src/utils/autoplayVideoInitializer.ts", "sha256": "5938ae07f2ac965e7383d25cc0766b55053141dd925321b759e300debb276dba", "testOwner": "src/utils/autoplayVideoInitializer.test.ts" },
+    { "path": "src/utils/dropdown.ts", "sha256": "80c0e40a8a2a9951a612bf701b684ac7cd5d485e596668d16e7faa6f64e5420a", "testOwner": "src/utils/dropdown.test.ts" },
+    { "path": "src/utils/fullscreen-toggle.ts", "sha256": "e78c9d470363e40e9f0cd8dd8f6f360aab3f5a3286c77bc914105211c20a8dbc", "testOwner": "src/utils/fullscreen-toggle.test.ts" },
+    { "path": "src/utils/ingredientConversionPolicy.ts", "sha256": "38b5cdd38a8fb0025c08d8157f9e577e2f49ea99e3371304e7ae07f19e796214", "testOwner": "src/utils/ingredientConversionPolicy.test.ts" },
+    { "path": "src/utils/lightbox-history.ts", "sha256": "c9dd8f96a49590fce11ff6488030e944d943208d978333db2baec6b17baf18ba", "testOwner": "src/utils/lightbox-history.test.ts" },
+    { "path": "src/utils/masonryPacker.ts", "sha256": "d2f9abc1dd74e8c80a131fd1a0ff89e41b44dfe647a830f5830bc507b9705754", "testOwner": "src/utils/masonryPacker.test.ts" },
+    { "path": "src/utils/pin-collection/sticky-nav.ts", "sha256": "0e00771d752924d8e8bb1a1985f2b4ba42b3f4de444f97bacaebdc1f70a9322c", "testOwner": "src/utils/pin-collection/sticky-nav.test.ts" },
+    { "path": "src/utils/pin-collection/zoom-fullscreen.ts", "sha256": "125f9d18a3923312f64929fe62c4075c6f91b4ea17db9356589227756fcb1cbd", "testOwner": "src/utils/pin-collection/zoom-fullscreen.test.ts" },
+    { "path": "src/utils/pin-map-clustering.ts", "sha256": "2c23eb8442167cedda4861aae4ffc19d13f6e4b33b5dd47020e9678ab83e8ea9", "testOwner": "src/utils/pin-map-clustering.test.ts" },
+    { "path": "src/utils/proseEnhancementsInitializer.ts", "sha256": "b12717bba215acc4d55b4607e48aab058ef14af0d6127c6ce504f3dfab72cc9e", "testOwner": "src/utils/proseEnhancementsInitializer.test.ts" },
+    { "path": "src/utils/recipeQuantityDisplay.ts", "sha256": "c0edc2aea8740f72957c890645d18c7e96e18ea5367aa56d59e9b1622db56cee", "testOwner": "src/utils/recipeQuantityDisplay.test.ts" }
+  ]
+}

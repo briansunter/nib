@@ -1,18 +1,8 @@
-import { defineIsland } from '@briansunter/nib'
-import { useEffect } from 'react'
-import {
-  destroyRecipeInteraction,
-  initRecipeInteraction,
-} from '../utils/recipeInteractionInitializer'
+import { RecipeControlsBehavior } from '../client-behaviors'
 
-function RecipeControls({ defaultUnit }: { defaultUnit: 'metric' | 'imperial' }) {
-  useEffect(() => {
-    initRecipeInteraction()
-    return destroyRecipeInteraction
-  }, [])
-
+export default function RecipeControls({ defaultUnit }: { defaultUnit: 'metric' | 'imperial' }) {
   return (
-    <>
+    <RecipeControlsBehavior props={{}} hydrate="load">
       <div className="flex items-center gap-3 font-sans">
         <span id="scale-label" className="text-sm text-ink-muted">Scale</span>
         <div className="segmented-control" role="group" aria-labelledby="scale-label">
@@ -71,8 +61,6 @@ function RecipeControls({ defaultUnit }: { defaultUnit: 'metric' | 'imperial' })
           defaultChecked={defaultUnit === 'metric'}
         />
       </div>
-    </>
+    </RecipeControlsBehavior>
   )
 }
-
-export default defineIsland('recipe-controls', RecipeControls)

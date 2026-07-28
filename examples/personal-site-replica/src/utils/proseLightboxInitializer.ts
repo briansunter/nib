@@ -1,7 +1,5 @@
 import PhotoSwipe from 'photoswipe';
 import PhotoSwipeLightbox from 'photoswipe/lightbox';
-import 'photoswipe/dist/photoswipe.css';
-import '@/styles/integrations/prose-lightbox.css';
 import { createLightboxHistory, currentHistoryState } from './lightbox-history';
 
 const ZOOM_CLASS = 'pswp-zoomable';

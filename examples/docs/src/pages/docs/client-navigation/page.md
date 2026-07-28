@@ -26,6 +26,10 @@ site, uses static imports, and does not depend on React DOM. Every destination
 is still a complete prerendered document, so links work when JavaScript is
 disabled or an enhanced navigation falls back.
 
+Nib owns the returned navigation controller through the client-entry cleanup
+contract, so a development HMR replacement destroys listeners, observers,
+pending fetches, and transitions before starting the replacement.
+
 ## Eligible navigation
 
 Nib intercepts unmodified, same-origin HTTP(S) links in the current browsing

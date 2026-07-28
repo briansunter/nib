@@ -3,7 +3,7 @@ import { Image } from '@briansunter/nib-images'
 import { Fragment } from 'react'
 import CopyButton from './islands/copy-button'
 import { ContentEnhancements } from './client-behaviors'
-import RecipeControls from './islands/recipe-controls'
+import RecipeControls from './components/RecipeControls'
 import { imageMap } from './data/images'
 import type { Project, Recipe, TagPage } from './content'
 import { PostListItem } from './components/BlogList'
@@ -283,7 +283,7 @@ export function RecipeDetailPage({ data }: DataPageProps<Recipe>) {
           </div>
         </header>
         <div className="mb-12 mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-border pt-6">
-          <RecipeControls defaultUnit={page.defaultUnit} hydrate="load" />
+          <RecipeControls defaultUnit={page.defaultUnit} />
         </div>
         {page.hasNutrition && (
           <section className="mb-12 mt-8">

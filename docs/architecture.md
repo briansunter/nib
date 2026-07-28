@@ -229,7 +229,9 @@ conditional module:
 - `virtual:nib/behavior-entry` discovers `.client.ts(x)` behavior modules
   lazily and starts the non-React behavior runtime.
 - `virtual:nib/enhancement-entry` statically imports configured site-wide
-  browser initializers. It exists only when a plugin contributes one.
+  browser initializers. It exists only when a plugin contributes one. An
+  initializer may return a cleanup callback or a controller with `destroy()`;
+  the generated entry runs cleanups in reverse order before HMR replacement.
 
 All use project-root `/src/...` globs. This keeps route and client-module discovery in
 the framework while ensuring Vite still sees literal glob patterns and can

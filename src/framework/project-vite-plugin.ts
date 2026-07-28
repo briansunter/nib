@@ -70,7 +70,17 @@ export function nibProject(
           ...clientEntries.map((entry, index) => (
             `import { ${entry.initializer} as __nibClientInitializer${index} } from ${JSON.stringify(entry.module)}`
           )),
-          ...clientEntries.map((_, index) => `__nibClientInitializer${index}()`),
+          `const __nibClientCleanups = []`,
+          `const __nibRegisterClientCleanup = (result) => {`,
+          `  if (typeof result === 'function') __nibClientCleanups.push(result)`,
+          `  else if (result && typeof result.destroy === 'function') __nibClientCleanups.push(() => result.destroy())`,
+          `}`,
+          ...clientEntries.map((_, index) => (
+            `__nibRegisterClientCleanup(__nibClientInitializer${index}())`
+          )),
+          `if (import.meta.hot) import.meta.hot.dispose(() => {`,
+          `  for (const cleanup of __nibClientCleanups.reverse()) cleanup()`,
+          `})`,
         ].join('\n')
       }
       if (id !== RESOLVED_SERVER_ENTRY) return null

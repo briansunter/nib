@@ -9,6 +9,8 @@
 // Run: bun run import:content
 import { readFile, writeFile, mkdir, readdir, copyFile, rm, cp } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parse as parseYaml } from 'yaml'
@@ -644,13 +646,11 @@ async function importGalleryRuntime() {
   const styleFiles = ['gallery.css', 'photos.css', 'art.css']
   const utilityFiles = [
     'artMasonryInitializer.ts',
-    'navigationLifecycle.ts',
     'dropdown.ts',
     'lightbox-history.ts',
     'mapInitializer.ts',
     'masonryPacker.ts',
     'photoMasonryInitializer.ts',
-    'photoNavInitializer.ts',
     'photoSwipeInitializer.ts',
     'pin-map-clustering.ts',
   ]
@@ -679,10 +679,12 @@ async function importGalleryRuntime() {
           .replace('iconRetinaUrl: icon2x.src,', 'iconRetinaUrl: icon2x,')
           .replace('shadowUrl: markerShadow.src,', 'shadowUrl: markerShadow,')
       : importsNormalized
+          .replace(/^import 'photoswipe\/dist\/photoswipe\.css';?\r?\n/gm, '')
+          .replace(/^import '@\/styles\/integrations\/prose-lightbox\.css';?\r?\n/gm, '')
     await writeFile(path.join(OUT_UTILS, file), normalized)
   }
 
-  for (const file of ['analytics.ts', 'analytics-config.ts', 'html-utils.ts']) {
+  for (const file of ['analytics-config.ts', 'html-utils.ts']) {
     const source = await readFile(path.join(SOURCE, 'src/lib', file), 'utf8')
     const normalized = source
       .replaceAll("from '@/utils/", "from '../utils/")
@@ -690,6 +692,57 @@ async function importGalleryRuntime() {
     await writeFile(path.join(REPLICA, 'src/lib', file), normalized)
   }
   console.log(`gallery runtime: ${styleFiles.length} styles and ${utilityFiles.length + 3} modules copied`)
+}
+
+function sha256(content) {
+  return createHash('sha256').update(content).digest('hex')
+}
+
+function sourceCommit() {
+  const status = execFileSync('git', ['status', '--porcelain'], {
+    cwd: SOURCE,
+    encoding: 'utf8',
+  }).trim()
+  if (status) {
+    throw new Error('Canonical personal-site must be clean before importing a frozen snapshot')
+  }
+  return execFileSync('git', ['rev-parse', 'HEAD'], {
+    cwd: SOURCE,
+    encoding: 'utf8',
+  }).trim()
+}
+
+async function writeSourceProvenance(commit) {
+  const sourceUtilities = await filesUnder(path.join(SOURCE, 'src/utils'))
+  const sharedFiles = []
+  for (const sourceFile of sourceUtilities) {
+    if (!sourceFile.endsWith('.ts') || sourceFile.endsWith('.test.ts')) continue
+    const relative = path.relative(SOURCE, sourceFile).replaceAll(path.sep, '/')
+    const replicaFile = path.join(REPLICA, relative)
+    const testOwner = relative.replace(/\.ts$/, '.test.ts')
+    if (!(await exists(replicaFile)) || !(await exists(path.join(SOURCE, testOwner)))) {
+      continue
+    }
+    const sourceContent = await readFile(sourceFile)
+    const replicaContent = await readFile(replicaFile)
+    if (!sourceContent.equals(replicaContent)) continue
+    sharedFiles.push({
+      path: relative,
+      sha256: sha256(sourceContent),
+      testOwner,
+    })
+  }
+  sharedFiles.sort((left, right) => left.path.localeCompare(right.path))
+  await writeFile(
+    path.join(OUT_CONTENT, 'source-provenance.json'),
+    `${JSON.stringify({
+      version: 1,
+      sourceRepository: 'https://github.com/briansunter/personal-site',
+      sourceCommit: commit,
+      sharedFiles,
+    }, null, 2)}\n`,
+  )
+  console.log(`source provenance: ${commit.slice(0, 12)}, ${sharedFiles.length} shared modules`)
 }
 
 // Static module of `?nib-image` imports for every gallery source file so the
@@ -985,6 +1038,7 @@ async function main() {
   if (!(await exists(SOURCE))) {
     throw new Error(`PERSONAL_SITE_SRC not found: ${SOURCE}`)
   }
+  const commit = sourceCommit()
   // Clean only generated content roots. Hand-written route pages (about,
   // 404, projects index, etc.) are owned by this repo and left in place.
   await rm(path.join(OUT_CONTENT), { recursive: true, force: true })
@@ -1030,6 +1084,7 @@ async function main() {
   await writeFile(path.join(REPLICA, 'src/data/writing-images.ts'), await buildWritingImagesModule(writing))
   await writeFile(path.join(REPLICA, 'src/data/writing-slugs.ts'), buildWritingSlugsModule(writing))
   await writeFile(path.join(REPLICA, 'src/data/gallery-images.ts'), await buildGalleryImagesModule(galleryImagePaths))
+  await writeSourceProvenance(commit)
   console.log(`gallery images: ${galleryImagePaths.size} sources indexed`)
   console.log('import complete')
 }

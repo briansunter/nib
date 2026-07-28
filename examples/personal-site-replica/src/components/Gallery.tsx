@@ -1,18 +1,9 @@
-import { Fragment, useEffect } from 'react'
-import { defineIsland, siteHref } from '@briansunter/nib'
+import { Fragment } from 'react'
+import { siteHref } from '@briansunter/nib'
 import {
-  destroyArtMasonry,
-  initArtMasonry,
-} from '../utils/artMasonryInitializer'
-import {
-  destroyPhotoMasonry,
-  initPhotoMasonry,
-} from '../utils/photoMasonryInitializer'
-import {
-  destroyPhotoNav,
-  initPhotoNav,
-} from '../utils/photoNavInitializer'
-import { initPhotoSwipe } from '../utils/photoSwipeInitializer'
+  ArtGalleryBehavior,
+  PhotoGalleryBehavior,
+} from '../client-behaviors'
 
 type GalleryVariant = 'photos' | 'art'
 type FilterKind = 'location' | 'medium' | 'tag'
@@ -48,35 +39,6 @@ function GalleryToolbar({
   listLabel,
 }: GalleryProps) {
   const firstCollectionName = collections[0]?.name || 'All'
-
-  useEffect(() => {
-    let cancelled = false
-    let destroyMaps = () => {}
-
-    initPhotoSwipe()
-    initPhotoNav()
-
-    if (variant === 'photos') {
-      initPhotoMasonry()
-      // Leaflet reads browser globals at module evaluation time, so this is
-      // the single intentional client-only boundary for the photo gallery.
-      void import('../utils/mapInitializer').then((maps) => {
-        if (cancelled) return
-        maps.initMaps({ lazy: true })
-        destroyMaps = maps.destroyMaps
-      })
-    } else {
-      initArtMasonry()
-    }
-
-    return () => {
-      cancelled = true
-      destroyPhotoNav()
-      destroyMaps()
-      if (variant === 'photos') destroyPhotoMasonry()
-      else destroyArtMasonry()
-    }
-  }, [variant])
 
   return (
     <div
@@ -254,4 +216,13 @@ function GalleryToolbar({
   )
 }
 
-export default defineIsland<GalleryProps>('gallery', GalleryToolbar)
+export default function Gallery(props: GalleryProps) {
+  const Behavior = props.variant === 'photos'
+    ? PhotoGalleryBehavior
+    : ArtGalleryBehavior
+  return (
+    <Behavior props={{}} hydrate="load">
+      <GalleryToolbar {...props} />
+    </Behavior>
+  )
+}

@@ -1,10 +1,5 @@
-import { useEffect } from 'react'
-import { defineIsland } from '@briansunter/nib'
 import type { TravelMapPayload } from '../lib/travel/page-data'
-import {
-  destroyTravelMap,
-  initTravelMap,
-} from '../utils/travelMapInitializer'
+import { TravelMapBehavior } from '../client-behaviors'
 
 interface TravelStats {
   cityCount: number
@@ -13,49 +8,32 @@ interface TravelStats {
   usStateCount: number
 }
 
-function TravelMap({
+export default function TravelMap({
   map,
   stats,
 }: {
   map: TravelMapPayload
   stats: TravelStats
 }) {
-  useEffect(() => {
-    const bodyClasses = [
-      'travel-page',
-      'min-h-screen',
-      'font-sans',
-      'bg-surface',
-      'text-ink',
-      'transition-colors',
-      'overscroll-none',
-    ]
-    document.body.classList.add(...bodyClasses)
-    initTravelMap()
-    return () => {
-      destroyTravelMap()
-      document.body.classList.remove(...bodyClasses)
-    }
-  }, [])
-
   return (
-    <section className="travel-map-panel" aria-labelledby="travel-map-title">
-      <h2 id="travel-map-title" className="sr-only">Visited places map</h2>
-      <div
-        id="travel-map"
-        className="travel-map-canvas"
-        data-travel-map={JSON.stringify(map)}
-      >
-        <div className="travel-map-loading" aria-hidden="true">Loading map</div>
-      </div>
-      <button
-        type="button"
-        className="travel-map-fullscreen-button"
-        data-travel-map-fullscreen
-        aria-controls="travel-map"
-        aria-label="Enter fullscreen map"
-        aria-pressed="false"
-      >
+    <TravelMapBehavior props={{}} hydrate="load">
+      <section className="travel-map-panel" aria-labelledby="travel-map-title">
+        <h2 id="travel-map-title" className="sr-only">Visited places map</h2>
+        <div
+          id="travel-map"
+          className="travel-map-canvas"
+          data-travel-map={JSON.stringify(map)}
+        >
+          <div className="travel-map-loading" aria-hidden="true">Loading map</div>
+        </div>
+        <button
+          type="button"
+          className="travel-map-fullscreen-button"
+          data-travel-map-fullscreen
+          aria-controls="travel-map"
+          aria-label="Enter fullscreen map"
+          aria-pressed="false"
+        >
         <svg
           width="1em"
           height="1em"
@@ -76,8 +54,8 @@ function TravelMap({
         >
           <path fill="currentColor" d="M14 14h5v2h-3v3h-2zm-9 0h5v5H8v-3H5zm3-9h2v5H5V8h3zm11 3v2h-5V5h2v3z" />
         </svg>
-      </button>
-      <div className="travel-map-meta" aria-hidden="true">
+        </button>
+        <div className="travel-map-meta" aria-hidden="true">
         <span>
           <strong>{stats.countryCount}</strong>
           {stats.countryCount === 1 ? 'country' : 'countries'}
@@ -94,9 +72,8 @@ function TravelMap({
           <strong>{stats.cityCount}</strong>
           {stats.cityCount === 1 ? 'city' : 'cities'}
         </span>
-      </div>
-    </section>
+        </div>
+      </section>
+    </TravelMapBehavior>
   )
 }
-
-export default defineIsland('travel-map', TravelMap)

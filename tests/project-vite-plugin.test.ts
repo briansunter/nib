@@ -74,7 +74,15 @@ describe('consumer project Vite adapter', () => {
     if (!entryId) throw new Error('Nib enhancement entry did not resolve')
     expect(load(entryId)).toBe([
       'import { startClientNavigation as __nibClientInitializer0 } from "@briansunter/nib/client/navigation"',
-      '__nibClientInitializer0()',
+      'const __nibClientCleanups = []',
+      "const __nibRegisterClientCleanup = (result) => {",
+      "  if (typeof result === 'function') __nibClientCleanups.push(result)",
+      "  else if (result && typeof result.destroy === 'function') __nibClientCleanups.push(() => result.destroy())",
+      '}',
+      '__nibRegisterClientCleanup(__nibClientInitializer0())',
+      'if (import.meta.hot) import.meta.hot.dispose(() => {',
+      '  for (const cleanup of __nibClientCleanups.reverse()) cleanup()',
+      '})',
     ].join('\n'))
   })
 })

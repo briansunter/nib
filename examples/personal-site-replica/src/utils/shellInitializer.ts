@@ -1,11 +1,9 @@
 import { initSiteAnalytics } from '../lib/analytics'
-import { registerNavigationLifecycle } from './navigationLifecycle'
 import { initNewsletterForms } from './newsletterInitializer'
 
 let cleanupHeaderNavigation: (() => void) | undefined
 let backToTopController: AbortController | null = null
 let socialProfilesController: AbortController | null = null
-let cleanupShellLifecycle: (() => void) | undefined
 
 function initHeaderNavigation() {
   cleanupHeaderNavigation?.()
@@ -196,43 +194,15 @@ function initBackToTop() {
 }
 
 export function initSiteShell(): () => void {
-  cleanupShellLifecycle?.()
-
   initSiteAnalytics()
+  initHeaderNavigation()
+  initSocialProfiles()
+  initNewsletterForms()
+  initBackToTop()
 
-  const cleanupHeader = registerNavigationLifecycle({
-    destroy: () => cleanupHeaderNavigation?.(),
-    mount: initHeaderNavigation,
-    runImmediately: true,
-  })
-  const cleanupSocial = registerNavigationLifecycle({
-    destroy: () => socialProfilesController?.abort(),
-    mount: initSocialProfiles,
-    mountEvent: 'nib:navigation-after-swap',
-    runImmediately: true,
-  })
-  const cleanupNewsletter = registerNavigationLifecycle({
-    mount: initNewsletterForms,
-    mountEvent: 'nib:navigation-after-swap',
-    runImmediately: true,
-  })
-  const cleanupBackToTop = registerNavigationLifecycle({
-    destroy: () => backToTopController?.abort(),
-    mount: initBackToTop,
-    mountEvent: 'nib:navigation-after-swap',
-    runImmediately: true,
-  })
-
-  cleanupShellLifecycle = () => {
-    cleanupHeader()
-    cleanupSocial()
-    cleanupNewsletter()
-    cleanupBackToTop()
+  return () => {
     cleanupHeaderNavigation?.()
     socialProfilesController?.abort()
     backToTopController?.abort()
-    cleanupShellLifecycle = undefined
   }
-
-  return cleanupShellLifecycle
 }

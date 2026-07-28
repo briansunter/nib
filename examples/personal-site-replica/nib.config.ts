@@ -6,7 +6,6 @@ import {
   markdownMedia,
   markdownBody,
   pageRenderer,
-  search,
 } from '@briansunter/nib'
 import tailwindcss from '@tailwindcss/vite'
 import { images } from '@briansunter/nib-images/plugin'
@@ -31,10 +30,10 @@ import {
 } from './src/content'
 import { SiteShell } from './src/site-shell'
 import { generateThemeScript } from './src/lib/theme'
-import { cooklangToPlainText, htmlToPlainText } from './src/lib/search-text'
 import { sourceRedirects } from './src/redirects'
 import { sourceMetadata } from './src/lib/source-metadata'
 import { projectMarkdown } from './src/lib/project-markdown'
+import { pagefindSearch } from './src/lib/pagefind-plugin'
 
 function parseJson<T>(raw: string, file: string): T {
   try {
@@ -112,34 +111,6 @@ const tagPages = definePageSource({
 const projects = fromPageSource(projectPages)
 const recipes = fromPageSource(recipePages)
 
-const writingSearchItems = fromCollection(writing, (entries) => entries.map(({ data }) => ({
-  title: data.title,
-  description: data.description,
-  href: `/${data.slug}`,
-  kind: 'Writing',
-  tags: data.tags,
-  text: data.description,
-})))
-const projectSearchItems = fromCollection(projects, (entries) => (
-  entries.map(({ data }) => ({
-    title: data.title,
-    description: data.description,
-    href: `/projects/${data.slug}`,
-    kind: 'Project',
-    tags: data.tags,
-    text: htmlToPlainText(data.body.html) || data.description,
-  }))
-))
-const recipeSearchItems = fromCollection(recipes, (entries) => (
-  entries.map(({ data }) => ({
-    title: data.metadata.title,
-    description: data.metadata.description,
-    href: `/recipes/${data.slug}`,
-    kind: 'Recipe',
-    tags: data.metadata.tags,
-    text: cooklangToPlainText(data.cooklang) || data.metadata.description,
-  }))
-))
 const writingFeedItems = fromCollection(writing, (entries) => entries.map(({ data }) => ({
   title: data.title,
   description: data.description,
@@ -248,15 +219,7 @@ export default defineConfig({
         sizes: '(min-width: 900px) 860px, 100vw',
       }],
     }),
-    search({
-      items: ({ readCollection }) => {
-        return [
-          ...readCollection(writingSearchItems),
-          ...readCollection(projectSearchItems),
-          ...readCollection(recipeSearchItems),
-        ]
-      },
-    }),
+    pagefindSearch(),
     sourceMetadata(),
     sitemap({
       filter: (route) => (

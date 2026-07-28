@@ -30,23 +30,16 @@ const pageFiles = [...new Set([...htmlFiles, ...extensionlessPageFiles])]
 const fileSet = new Set(allFiles)
 const index = await readFile(path.join(client, 'index.html'), 'utf8')
 const rss = await readFile(path.join(client, 'index.xml'), 'utf8')
-const searchIndexRaw = await readFile(path.join(client, 'search.json'), 'utf8')
+const searchIndexRaw = await readFile(path.join(client, 'pagefind/pagefind-entry.json'), 'utf8')
 let searchIndex
 try {
   searchIndex = JSON.parse(searchIndexRaw)
 } catch (error) {
   throw new Error(`Search index is not valid JSON: ${error instanceof Error ? error.message : String(error)}`)
 }
-if (!searchIndex || !Array.isArray(searchIndex.items) || searchIndex.items.length === 0) {
-  throw new Error('Search index is missing a non-empty items array')
-}
-const searchItemsMissingText = searchIndex.items.filter((item) => (
-  !item || typeof item.text !== 'string' || item.text.trim() === ''
-))
-if (searchItemsMissingText.length > 0) {
-  throw new Error(`Search index has ${searchItemsMissingText.length} item(s) without body text`)
-}
-const searchTextBytes = searchIndex.items.reduce((total, item) => total + Buffer.byteLength(item.text, 'utf8'), 0)
+const searchItems = Object.values(searchIndex?.languages ?? {})
+  .reduce((total, language) => total + Number(language?.page_count ?? 0), 0)
+if (searchItems === 0) throw new Error('Pagefind index has no indexed pages')
 const imageDirectory = path.join(client, 'assets/nib')
 const imageFiles = await filesUnder(imageDirectory)
 const imageBytes = (await Promise.all(imageFiles.map(async (file) => (await stat(file)).size)))
@@ -221,7 +214,11 @@ const markdownFeatureAssertions = {
   youtubeShortcodes: mediaArticle.includes('youtube.com/embed/') && !mediaArticle.includes('{{video'),
   photoSwipeAnchors: galleryPages.photos.includes('data-pswp-width') && galleryPages.photos.includes('data-pswp-height'),
   artPhotoSwipeAnchors: galleryPages.art.includes('data-pswp-width') && galleryPages.art.includes('data-pswp-height'),
-  galleryIsland: galleryPages.photos.includes('data-island="gallery"') && galleryPages.art.includes('data-island="gallery"'),
+  galleryBehaviors:
+    galleryPages.photos.includes('data-behavior="photo-gallery"')
+    && galleryPages.art.includes('data-behavior="art-gallery"')
+    && !galleryPages.photos.includes('data-island="gallery"')
+    && !galleryPages.art.includes('data-island="gallery"'),
 }
 const failedMarkdownFeatureAssertions = Object.entries(markdownFeatureAssertions)
   .filter(([, ok]) => !ok)
@@ -294,9 +291,7 @@ console.log(JSON.stringify({
   optimizedAssetBytes: imageBytes,
   homepageChosenFallbackImageBytes: homePrimaryImageBytes,
   rssItems: (rss.match(/<item>/g) ?? []).length,
-  searchItems: searchIndex.items.length,
-  searchItemsWithText: searchIndex.items.length - searchItemsMissingText.length,
-  searchTextBytes,
+  searchItems,
   internalLinkCount: internalRoutes.size,
   brokenInternalRoutes,
   pageIssues,

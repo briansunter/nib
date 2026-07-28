@@ -1,7 +1,7 @@
 import type { PageProps } from '@briansunter/nib'
 import type config from '../../../nib.config'
 import { PageHero } from '../../components/PageHero'
-import TravelMap from '../../islands/travel-map'
+import TravelMap from '../../components/TravelMap'
 import { getTravelPageData } from '../../lib/travel/page-data'
 
 export const meta = {
@@ -54,7 +54,7 @@ export default function TravelMapPage({ collections }: PageProps<typeof config>)
       </div>
 
       <div className="mt-8 sm:mt-10">
-        <TravelMap map={travelData.map} stats={travelData.stats} hydrate="load" />
+        <TravelMap map={travelData.map} stats={travelData.stats} />
       </div>
 
       <div className="travel-visited-grid">

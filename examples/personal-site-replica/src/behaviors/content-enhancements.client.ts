@@ -1,4 +1,5 @@
 import { defineBehaviorClient } from '@briansunter/nib/client/behaviors'
+import '../styles/integrations/prose-lightbox.css'
 import {
   destroyProseEnhancements,
   initProseEnhancements,

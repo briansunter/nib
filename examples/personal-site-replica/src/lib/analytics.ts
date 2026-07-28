@@ -1,5 +1,4 @@
 import type { NavigationBeforeSwapDetail } from '@briansunter/nib/client/navigation';
-import { registerNavigationLifecycle } from '../utils/navigationLifecycle';
 import { ANALYTICS_CONFIG, getUmamiScriptAttributes } from './analytics-config';
 
 const UMAMI_SCRIPT_URL = ANALYTICS_CONFIG.umami.scriptUrl;
@@ -222,13 +221,12 @@ function installScrollDepthTracking() {
   });
   window.addEventListener('resize', scheduleScrollDepthCheck);
 
-  registerNavigationLifecycle({
-    mount: () => {
-      resetScrollDepthForCurrentPage();
-      scheduleScrollDepthCheck();
-    },
-    runImmediately: true,
+  document.addEventListener('nib:navigation-load', () => {
+    resetScrollDepthForCurrentPage();
+    scheduleScrollDepthCheck();
   });
+  resetScrollDepthForCurrentPage();
+  scheduleScrollDepthCheck();
 }
 
 function installOutboundClickTracking() {

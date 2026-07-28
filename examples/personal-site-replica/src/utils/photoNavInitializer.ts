@@ -2,13 +2,12 @@ import { initDropdownDismissal, setupDropdown } from './dropdown';
 
 let navController: AbortController | null = null;
 
-async function invalidateVisibleMapsIfPresent() {
+function invalidateVisibleMapsIfPresent(invalidateMaps?: () => void) {
   if (!document.querySelector('.map-element')) return;
-  const { invalidateVisibleMaps } = await import('./mapInitializer');
-  invalidateVisibleMaps();
+  invalidateMaps?.();
 }
 
-export function initPhotoNav() {
+export function initPhotoNav(options: { invalidateMaps?: () => void } = {}) {
   destroyPhotoNav();
   navController = new AbortController();
   const { signal } = navController;
@@ -212,7 +211,7 @@ export function initPhotoNav() {
 
           // Invalidate map sizes after view change (maps need recalculation when shown)
           requestAnimationFrame(() => {
-            void invalidateVisibleMapsIfPresent();
+            invalidateVisibleMapsIfPresent(options.invalidateMaps);
           });
         },
         { signal },
