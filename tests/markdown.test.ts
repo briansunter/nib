@@ -134,5 +134,8 @@ describe('markdown', () => {
     expect(result).toContain('file:')
     expect(result).toContain('export const frontmatter = compiled.frontmatter')
     expect(result).toContain('export const layout = compiled.layout')
+    expect(result).toContain('className = defaultClassName')
+    expect(result).toContain('...articleProps')
+    expect(result).toContain('dangerouslySetInnerHTML: { __html: compiled.html }')
   })
 })

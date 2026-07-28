@@ -50,6 +50,11 @@ remains the responsive candidate ladder and is capped at roughly 2x the
 display width. If `data-nib-width` is omitted, the existing behavior uses the
 largest `data-nib-widths` value for both.
 
+For component images, an explicit `widths` array is the complete authored
+candidate ladder: Nib filters it to usable source/layout bounds but does not
+silently append the intrinsic or display width. When every authored width is
+outside those bounds, Nib emits one bounded fallback candidate.
+
 ```ts
 images({
   content: [{

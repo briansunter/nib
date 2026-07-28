@@ -57,10 +57,9 @@ describe('publication integrations', () => {
     await writeHostingArtifacts(output, manifest, {
       adapters: ['netlify', 'vercel', 'cloudflare', 's3'],
     })
-    await expect(fs.access(path.join(output, '_redirects'))).resolves.toBeUndefined()
-    await expect(fs.access(path.join(output, '_headers'))).resolves.toBeUndefined()
-    await expect(fs.access(path.join(output, 'vercel.json'))).resolves.toBeUndefined()
-    await expect(fs.access(path.join(output, 's3-website.json'))).resolves.toBeUndefined()
+    for (const artifact of ['_redirects', '_headers', 'vercel.json', 's3-website.json']) {
+      await fs.access(path.join(output, artifact))
+    }
   })
 
   it('contributes canonical social metadata with and without a deployed origin', async () => {
@@ -225,6 +224,39 @@ describe('publication integrations', () => {
     transform(tree)
     expect(tree.children[0].children[0].tagName).toBe('iframe')
     expect(tree.children[0].children[1].tagName).toBe('img')
+  })
+
+  it('preserves safe iframe presentation and permission attributes exactly', () => {
+    const compiled = markdownToCompiledPage(
+      '<iframe width="515" height="915" src="https://www.youtube.com/embed/demo" '
+      + 'title="Hydrofoil Surfing" loading="lazy" frameborder="0" '
+      + 'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" '
+      + 'allowfullscreen style="max-width: 600px; border-radius: 8px;"></iframe>',
+      {
+        allowDangerousHtml: true,
+        rehypePlugins: [markdownMedia({ iframeHosts: ['www.youtube.com'] })],
+      },
+    )
+
+    expect(compiled.html).toContain('width="515"')
+    expect(compiled.html).toContain('height="915"')
+    expect(compiled.html).toContain('title="Hydrofoil Surfing"')
+    expect(compiled.html).toContain('loading="lazy"')
+    expect(compiled.html).toContain('frameborder="0"')
+    expect(compiled.html).toContain(
+      'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"',
+    )
+    expect(compiled.html).toContain('allowfullscreen')
+    expect(compiled.html).toContain('style="max-width: 600px; border-radius: 8px;"')
+
+    const withoutFullscreen = markdownToCompiledPage(
+      '<iframe src="https://www.youtube.com/embed/demo" title="No fullscreen"></iframe>',
+      {
+        allowDangerousHtml: true,
+        rehypePlugins: [markdownMedia({ iframeHosts: ['www.youtube.com'] })],
+      },
+    )
+    expect(withoutFullscreen.html).not.toContain('allowfullscreen')
   })
 
   it('checks publication artifacts, links, titles, and island ownership', async () => {

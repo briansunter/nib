@@ -227,6 +227,33 @@ describe('static Image component', () => {
     expect(html).not.toContain(' 32w')
   })
 
+  it('keeps an explicitly authored width ladder independent from intrinsic dimensions', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-'))
+    temporaryDirectories.push(root)
+    const registry = new ImageBuildRegistry(
+      normalizeImagesOptions(root, { widths: [20, 40, 80] }), '/', 'production',
+    )
+    const source = await fixtureSource()
+    const html = renderToStaticMarkup(createElement(
+      ImageRegistryProvider,
+      {
+        registry,
+        children: createElement(Image, {
+          src: source,
+          alt: 'Authored ladder fixture',
+          layout: 'constrained',
+          width: 60,
+          widths: [20, 40],
+        }),
+      },
+    ))
+    expect(html).toContain('width="60"')
+    expect(html).toContain(' 20w')
+    expect(html).toContain(' 40w')
+    expect(html).not.toContain(' 60w')
+    expect(registry.requests().every((request) => request.width <= 40)).toBe(true)
+  })
+
   it('uses maxWidth as a hard responsive-transform cap', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-'))
     temporaryDirectories.push(root)

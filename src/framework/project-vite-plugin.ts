@@ -42,7 +42,9 @@ export function nibProject(
         return [
           `import { startIslandRuntime } from '@briansunter/nib/internal/client'`,
           `const modules = import.meta.glob('/src/islands/**/*.tsx')`,
-          `startIslandRuntime(modules)`,
+          `const start = () => startIslandRuntime(modules)`,
+          `window.__nibStartIslandRuntime = start`,
+          `start()`,
         ].join('\n')
       }
       if (id !== RESOLVED_SERVER_ENTRY) return null

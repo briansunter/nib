@@ -80,12 +80,13 @@ export function nibMarkdown(configPath = 'nib.config.ts'): Plugin {
         `export const meta = compiled.meta`,
         `export const frontmatter = compiled.frontmatter`,
         `export const layout = compiled.layout`,
-        `const content = createElement('article', {`,
-        `  className: 'prose-editorial prose prose-invert max-w-none prose-a:text-sky-300',`,
-        `  dangerouslySetInnerHTML: { __html: compiled.html }`,
-        `})`,
-        `export default function MarkdownPage() {`,
-        `  return content`,
+        `const defaultClassName = 'prose-editorial prose prose-invert max-w-none prose-a:text-sky-300'`,
+        `export default function MarkdownPage({ route: _route, site: _site, collections: _collections, data: _data, className = defaultClassName, ...articleProps } = {}) {`,
+        `  return createElement('article', {`,
+        `    ...articleProps,`,
+        `    className,`,
+        `    dangerouslySetInnerHTML: { __html: compiled.html }`,
+        `  })`,
         `}`
       ].join('\n')
     }
