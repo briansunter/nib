@@ -10,6 +10,7 @@ import { Image } from '../src/image-component'
 import { ImageRegistryProvider } from '../src/image-context'
 import { ImageBuildRegistry } from '../src/image-registry'
 import { createImageSource } from '../src/image-source'
+import { intrinsicDimensions } from '../src/image-source-catalog'
 import { imageVitePlugin } from '../src/image-vite-plugin'
 import { normalizeImagesOptions } from '../src/options'
 import { cachedBuffer } from '../src/cache'
@@ -50,6 +51,21 @@ async function fixtureSource() {
 }
 
 describe('static Image component', () => {
+  it('uses one animated frame for intrinsic dimensions', () => {
+    expect(intrinsicDimensions({
+      width: 1028,
+      height: 149376,
+      pageHeight: 778,
+      orientation: undefined,
+    })).toEqual({ width: 1028, height: 778 })
+    expect(intrinsicDimensions({
+      width: 20,
+      height: 10,
+      pageHeight: undefined,
+      orientation: 6,
+    })).toEqual({ width: 10, height: 20 })
+  })
+
   it('normalizes concurrency against an explicit memory budget', () => {
     const root = path.resolve('.')
     expect(normalizeImagesOptions(root, { concurrency: 4, memoryLimitMb: 383 }).concurrency)
@@ -169,6 +185,10 @@ describe('static Image component', () => {
     expect(html).toContain('.png')
     expect(html).toContain('loading="lazy"')
     expect(html).toContain('decoding="async"')
+    expect(html).toContain('data-nib-orientation="landscape"')
+    expect(html).toContain('--nib-image-width:80px')
+    expect(html).toContain('--nib-image-height:40px')
+    expect(html).toContain('--nib-image-comfort-width:100px')
     expect(html).toContain('sizes="100vw"')
     expect(html).not.toContain('data-nib-islands')
   })

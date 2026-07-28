@@ -3,6 +3,7 @@ import { createReadStream } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import sharp from 'sharp'
+import type { Metadata } from 'sharp'
 import type { InternalImageSource, SourceImageFormat } from './image-source'
 import { isAllowedSource, type NormalizedImagesOptions } from './options'
 
@@ -33,6 +34,20 @@ function sourceId(file: string): string {
   return digest(path.resolve(file)).slice(0, 24)
 }
 
+export function intrinsicDimensions(metadata: Pick<Metadata, 'width' | 'height' | 'pageHeight' | 'orientation'>): {
+  width: number
+  height: number
+} {
+  if (!metadata.width || !metadata.height) {
+    throw new Error('@briansunter/nib-images: image metadata has no intrinsic dimensions')
+  }
+  const frameHeight = metadata.pageHeight ?? metadata.height
+  const rotated = metadata.orientation !== undefined && [5, 6, 7, 8].includes(metadata.orientation)
+  return rotated
+    ? { width: frameHeight, height: metadata.width }
+    : { width: metadata.width, height: frameHeight }
+}
+
 async function inspectImage(file: string): Promise<InternalImageSource> {
   const fingerprint = new Promise<string>((resolve, reject) => {
     const hash = crypto.createHash('sha256')
@@ -51,14 +66,14 @@ async function inspectImage(file: string): Promise<InternalImageSource> {
   if (!metadata.width || !metadata.height) {
     throw new Error(`@briansunter/nib-images: could not read dimensions for ${file}`)
   }
-  const rotated = metadata.orientation !== undefined && [5, 6, 7, 8].includes(metadata.orientation)
+  const dimensions = intrinsicDimensions(metadata)
   return {
     __nibImage: true,
     __nibFile: file,
     __nibSourceId: sourceId(file),
     __nibStem: path.basename(file, path.extname(file)),
-    width: rotated ? metadata.height : metadata.width,
-    height: rotated ? metadata.width : metadata.height,
+    width: dimensions.width,
+    height: dimensions.height,
     format: imageFormat(metadata.format, file),
     hasAlpha: metadata.hasAlpha ?? false,
     animated: (metadata.pages ?? 1) > 1,
