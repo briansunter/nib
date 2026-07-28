@@ -71,6 +71,7 @@ describe('framework-owned site builds', () => {
     expect(about).toContain('<section data-eyebrow="Company">')
     expect(about).not.toContain('data-nib-islands')
     expect(about).not.toContain('data-nib-behaviors')
+    expect(about).not.toContain('data-nib-enhancements')
     expect(enhanced).toContain('data-behavior="reveal"')
     expect(enhanced).toContain('data-nib-behaviors')
     expect(enhanced).not.toContain('data-nib-islands')

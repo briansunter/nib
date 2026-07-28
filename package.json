@@ -51,6 +51,14 @@
       "types": "./dist/framework/client-behaviors.d.ts",
       "import": "./dist/framework/client/behaviors.js"
     },
+    "./client/navigation": {
+      "types": "./dist/framework/client-navigation.d.ts",
+      "import": "./dist/framework/client/navigation.js"
+    },
+    "./navigation": {
+      "types": "./dist/framework/navigation.d.ts",
+      "import": "./dist/framework/navigation.js"
+    },
     "./server": {
       "types": "./dist/framework/server.d.ts",
       "import": "./dist/framework/server.js"
@@ -135,6 +143,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitest/coverage-v8": "^4.0.18",
     "csv-parse": "^7.0.1",
+    "happy-dom": "^20.11.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "smol-toml": "^1.7.0",

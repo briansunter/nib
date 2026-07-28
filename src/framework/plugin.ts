@@ -79,6 +79,16 @@ export interface NibFinalizeContext extends NibRendererPluginContext {
 
 export interface NibPluginSetupResult {
   readonly pageSources?: readonly PageSourceDefinition<DataValidator<any>>[]
+  /**
+   * Browser-only initializers imported into one generated, site-wide entry.
+   * Modules are named as strings so plugin configuration stays server-safe.
+   */
+  readonly clientEntries?: readonly NibClientEntry[]
+}
+
+export interface NibClientEntry {
+  readonly module: string
+  readonly initializer: string
 }
 
 /** Route snapshots exposed to route providers and inspection hooks. */
@@ -373,6 +383,8 @@ export async function resolvePluginSetupContributions(
   context: NibPluginSetupContext,
 ): Promise<NibPluginSetupResult> {
   const pageSources: PageSourceDefinition<DataValidator<any>>[] = []
+  const clientEntries: NibClientEntry[] = []
+  const clientEntryOwners = new Map<string, string>()
   for (const plugin of plugins) {
     if (!plugin.setup) continue
     try {
@@ -382,19 +394,50 @@ export async function resolvePluginSetupContributions(
         contribution === null
         || typeof contribution !== 'object'
         || Array.isArray(contribution)
-        || (
-          contribution.pageSources !== undefined
-          && !Array.isArray(contribution.pageSources)
-        )
+        || (contribution.pageSources !== undefined && !Array.isArray(contribution.pageSources))
+        || (contribution.clientEntries !== undefined && !Array.isArray(contribution.clientEntries))
       ) {
-        throw new Error('setup() must return an object with an optional pageSources array')
+        throw new Error(
+          'setup() must return an object with optional pageSources and clientEntries arrays',
+        )
       }
       pageSources.push(...contribution.pageSources ?? [])
+      for (const entry of contribution.clientEntries ?? []) {
+        if (
+          entry === null
+          || typeof entry !== 'object'
+          || Array.isArray(entry)
+          || typeof entry.module !== 'string'
+          || entry.module.trim() === ''
+          || entry.module !== entry.module.trim()
+          || typeof entry.initializer !== 'string'
+          || !/^[$A-Z_a-z][$\w]*$/.test(entry.initializer)
+        ) {
+          throw new Error(
+            'setup().clientEntries must contain a non-empty module and JavaScript initializer name',
+          )
+        }
+        const identity = `${entry.module}#${entry.initializer}`
+        const existingOwner = clientEntryOwners.get(identity)
+        if (existingOwner !== undefined) {
+          throw new Error(
+            `client entry ${identity} is duplicated by ${existingOwner} and ${plugin.name}`,
+          )
+        }
+        clientEntryOwners.set(identity, plugin.name)
+        clientEntries.push(Object.freeze({
+          module: entry.module,
+          initializer: entry.initializer,
+        }))
+      }
     } catch (error) {
       throw pluginError(plugin, 'setup()', error)
     }
   }
-  return { pageSources }
+  return {
+    pageSources: Object.freeze(pageSources),
+    clientEntries: Object.freeze(clientEntries),
+  }
 }
 
 function readonlyResolvedRoute(route: ResolvedRoute): NibResolvedRoute {

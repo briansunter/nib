@@ -14,6 +14,7 @@ export const documentation = [
       { label: 'Data and collections', href: '/docs/data-pages-and-collections/', description: 'Generate typed pages and lists' },
       { label: 'Plugin content and routing', href: '/docs/plugin-content-and-routing/', description: 'Extend formats and static routes' },
       { label: 'React islands', href: '/docs/react-islands/', description: 'Add interaction selectively' },
+      { label: 'Client navigation', href: '/docs/client-navigation/', description: 'Enhance static links optionally' },
     ],
   },
   {

@@ -2,6 +2,7 @@ export { definePlugin } from './framework/plugin'
 export type { HeadAttributeValue, HeadContribution, HeadElement, HeadTagName } from './framework/types'
 export type {
   Awaitable,
+  NibClientEntry,
   NibCommand,
   NibFinalizeContext,
   NibMode,

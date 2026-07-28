@@ -6,6 +6,7 @@ import {
   resolvePluginSetupContributions,
 } from '../src/framework/plugin'
 import { defineIsland } from '../src/framework/islands'
+import { clientNavigation } from '../src/navigation'
 import { validateNibConfig } from '../src/framework/project-config'
 import { createProjectRenderer } from '../src/framework/project-renderer'
 
@@ -39,6 +40,43 @@ describe('Nib plugins', () => {
       Object.freeze({ ...base, phase: 'page-source-module' as const }),
     )
     expect(phases).toEqual(['vite-config', 'page-source-module'])
+  })
+
+  it('keeps optional client entries declarative, validated, and target-specific', async () => {
+    const base = {
+      command: 'build' as const,
+      mode: 'production' as const,
+      root: '/site',
+      base: '/',
+      configPath: '/site/nib.config.ts',
+      phase: 'vite-config' as const,
+    }
+    const client = await resolvePluginSetupContributions(
+      [clientNavigation()],
+      Object.freeze({ ...base, target: 'client' as const }),
+    )
+    expect(client.clientEntries).toEqual([{
+      module: '@briansunter/nib/client/navigation',
+      initializer: 'startClientNavigation',
+    }])
+    expect(Object.isFrozen(client.clientEntries)).toBe(true)
+
+    const server = await resolvePluginSetupContributions(
+      [clientNavigation()],
+      Object.freeze({ ...base, target: 'server' as const }),
+    )
+    expect(server.clientEntries).toEqual([])
+
+    const invalid = definePlugin({
+      name: 'invalid-client-entry',
+      setup: () => ({
+        clientEntries: [{ module: 'browser', initializer: 'not-valid()' }],
+      }),
+    })
+    await expect(resolvePluginSetupContributions(
+      [invalid],
+      Object.freeze({ ...base, target: 'client' as const }),
+    )).rejects.toThrow('JavaScript initializer name')
   })
 
   it('resolves recursive Vite plugin promises without changing order', async () => {

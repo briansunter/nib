@@ -1,13 +1,15 @@
 import path from 'node:path'
 import type { Plugin } from 'vite'
-import type { NibCommand } from './plugin'
+import type { NibClientEntry, NibCommand } from './plugin'
 
 export const NIB_CLIENT_ENTRY = 'virtual:nib/client-entry'
 export const NIB_BEHAVIOR_ENTRY = 'virtual:nib/behavior-entry'
+export const NIB_ENHANCEMENT_ENTRY = 'virtual:nib/enhancement-entry'
 export const NIB_SERVER_ENTRY = 'virtual:nib/server-entry'
 
 const RESOLVED_CLIENT_ENTRY = `\0${NIB_CLIENT_ENTRY}`
 const RESOLVED_BEHAVIOR_ENTRY = `\0${NIB_BEHAVIOR_ENTRY}`
+const RESOLVED_ENHANCEMENT_ENTRY = `\0${NIB_ENHANCEMENT_ENTRY}`
 const RESOLVED_SERVER_ENTRY = `\0${NIB_SERVER_ENTRY}`
 
 export function nibProject(
@@ -16,6 +18,7 @@ export function nibProject(
   pageExtensions: readonly string[] = [],
   command: NibCommand = 'build',
   pageSourcePatterns: readonly string[] = [],
+  clientEntries: readonly NibClientEntry[] = [],
 ): Plugin {
   const configImport = JSON.stringify(path.resolve(configPath))
   const projectRoot = JSON.stringify(path.resolve(root))
@@ -31,6 +34,9 @@ export function nibProject(
     resolveId(id) {
       if (id === NIB_CLIENT_ENTRY) return RESOLVED_CLIENT_ENTRY
       if (id === NIB_BEHAVIOR_ENTRY) return RESOLVED_BEHAVIOR_ENTRY
+      if (id === NIB_ENHANCEMENT_ENTRY && clientEntries.length > 0) {
+        return RESOLVED_ENHANCEMENT_ENTRY
+      }
       if (id === NIB_SERVER_ENTRY) return RESOLVED_SERVER_ENTRY
       return null
     },
@@ -57,6 +63,14 @@ export function nibProject(
           `const runtime = createBehaviorRuntime(modules)`,
           `registerClientRuntime(runtime)`,
           `runtime.mount(document)`,
+        ].join('\n')
+      }
+      if (id === RESOLVED_ENHANCEMENT_ENTRY) {
+        return [
+          ...clientEntries.map((entry, index) => (
+            `import { ${entry.initializer} as __nibClientInitializer${index} } from ${JSON.stringify(entry.module)}`
+          )),
+          ...clientEntries.map((_, index) => `__nibClientInitializer${index}()`),
         ].join('\n')
       }
       if (id !== RESOLVED_SERVER_ENTRY) return null
