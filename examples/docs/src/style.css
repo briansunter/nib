@@ -85,10 +85,6 @@ summary {
   border: 0;
 }
 
-nib-island {
-  display: contents;
-}
-
 .skip-link {
   position: fixed;
   z-index: 100;

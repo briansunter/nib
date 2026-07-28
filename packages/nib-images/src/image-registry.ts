@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { linkOrCopy } from './cache'
+import { linkOrCopy, pruneImageCache } from './cache'
 import { ImageTransformExecutor } from './image-executor'
 import {
   createImageTransformRequest,
@@ -134,6 +134,7 @@ export class ImageBuildRegistry {
       onActive: (active) => {
         this.#stats.peakTransforms = Math.max(this.#stats.peakTransforms, active)
       },
+      cacheVerification: this.options.cache.verification,
     })
     await mapWithConcurrency(this.requests(), 32, async (request) => {
       try {
@@ -158,6 +159,14 @@ export class ImageBuildRegistry {
       console.info(
         `nib-images: ${this.#stats.coldTransforms} transformed, ${this.#stats.cacheHits} cached, ${this.#stats.bytesWritten} bytes (${elapsed}ms)`,
       )
+    }
+    const pruned = await pruneImageCache(
+      this.options.cacheDirectory,
+      this.options.cache,
+      new Set(this.requests().map((request) => request.key)),
+    )
+    if (pruned.entries > 0) {
+      console.info(`nib-images: pruned ${pruned.entries} cached images (${pruned.bytes} bytes)`)
     }
     const successfulRequests = this.requests()
       .filter((request) => !this.#failedContentFallbacks.has(request.key))

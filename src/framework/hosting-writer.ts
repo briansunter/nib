@@ -11,13 +11,26 @@ export async function writeHostingArtifacts(
   config: NibHostingConfig | undefined,
 ): Promise<void> {
   const adapters = [...new Set(config?.adapters ?? [])]
-  const artifacts = new Map<string, string>()
+  const artifacts = new Map<string, { adapter: string; body: string }>()
   for (const adapter of adapters) {
-    for (const artifact of hostingArtifacts(manifest, adapter)) artifacts.set(artifact.path, artifact.body)
+    for (const artifact of hostingArtifacts(manifest, adapter)) {
+      const existing = artifacts.get(artifact.path)
+      if (existing !== undefined && existing.body !== artifact.body) {
+        throw new Error(
+          `Hosting adapters ${existing.adapter} and ${adapter} both own `
+          + `${artifact.path} with incompatible contents; configure only one of them`,
+        )
+      }
+      artifacts.set(artifact.path, { adapter, body: artifact.body })
+    }
   }
-  await Promise.all([...artifacts].map(async ([file, body]) => {
+  const writes = await Promise.allSettled([...artifacts].map(async ([file, { body }]) => {
     const target = path.join(clientDirectory, file)
     await fs.mkdir(path.dirname(target), { recursive: true })
     await fs.writeFile(target, body)
   }))
+  const failure = writes.find((result): result is PromiseRejectedResult => (
+    result.status === 'rejected'
+  ))
+  if (failure !== undefined) throw failure.reason
 }

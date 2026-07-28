@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { defineConfig, fromMarkdownPages } from '../src/index'
+import {
+  defineConfig,
+  definePageSource,
+  fromMarkdownPages,
+  fromPageSource,
+} from '../src/index'
+import { configuredPageSources } from '../src/framework/plugin-contributions'
 import { resolveBasePath, validateNibConfig } from '../src/framework/project-config'
 
 describe('Nib configuration', () => {
@@ -54,6 +60,15 @@ describe('Nib configuration', () => {
       site: { title: 'Site' },
     })).toThrow('React component')
     expect(() => validateNibConfig({
+      site: { title: 'Site', description: 42 },
+    })).toThrow('site.description')
+    expect(() => validateNibConfig({
+      site: { title: 'Site', titleTemplate: false },
+    })).toThrow('site.titleTemplate')
+    expect(() => validateNibConfig({
+      site: { title: 'Site', navigation: [{ label: '', href: '/' }] },
+    })).toThrow('site.navigation')
+    expect(() => validateNibConfig({
       vite: true,
       site: { title: 'Site' },
     })).toThrow('must be a function that returns Vite plugins')
@@ -65,6 +80,18 @@ describe('Nib configuration', () => {
       redirects: { old: '/new' },
       site: { title: 'Site' },
     })).toThrow('redirect source')
+    expect(() => validateNibConfig({
+      base: '//cdn.example/',
+      site: { title: 'Site' },
+    })).toThrow('start and end with "/"')
+    expect(() => validateNibConfig({
+      redirects: { '//evil.example/old': '/new' },
+      site: { title: 'Site' },
+    })).toThrow('redirect source')
+    expect(() => validateNibConfig({
+      redirects: { '/old': '//evil.example/new' },
+      site: { title: 'Site' },
+    })).toThrow('redirect destination')
     expect(() => validateNibConfig({
       redirects: { '/old': 'javascript:alert(1)' },
       site: { title: 'Site' },
@@ -81,6 +108,10 @@ describe('Nib configuration', () => {
       markdown: { remarkPlugins: true },
       site: { title: 'Site' },
     })).toThrow('remarkPlugins must be an array')
+    expect(() => validateNibConfig({
+      markdown: { gfm: 'yes' },
+      site: { title: 'Site' },
+    })).toThrow('gfm must be a boolean')
     expect(() => validateNibConfig({
       pageSources: {},
       site: { title: 'Site' },
@@ -140,5 +171,38 @@ describe('Nib configuration', () => {
       collections: { posts: { schema: parse, loader: async () => [] } },
       site: { title: 'Site' },
     })).toThrow('schema must provide parse(value)')
+  })
+
+  it('discovers collection-referenced and plugin page sources once by identity', () => {
+    const collectionSource = definePageSource({
+      extensions: ['json'],
+      load: ({ source }) => ({ data: JSON.parse(source) }),
+      component: () => null,
+    })
+    const pluginSource = definePageSource({
+      extensions: ['toml'],
+      load: ({ source }) => ({ data: source }),
+      component: () => null,
+    })
+    const config = validateNibConfig({
+      site: { title: 'Site' },
+      pageSources: [collectionSource],
+      collections: {
+        records: fromPageSource(collectionSource),
+      },
+      plugins: [{
+        name: 'formats',
+        pageSources: [collectionSource, pluginSource],
+      }],
+    })
+
+    expect(configuredPageSources(config)).toEqual([collectionSource, pluginSource])
+    expect(Object.isFrozen(configuredPageSources(config))).toBe(true)
+
+    const collectionOnly = validateNibConfig({
+      site: { title: 'Site' },
+      collections: { records: fromPageSource(collectionSource) },
+    })
+    expect(configuredPageSources(collectionOnly)).toEqual([collectionSource])
   })
 })

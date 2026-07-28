@@ -4,6 +4,8 @@ const HEAD_OUTLET = '<!--head-outlet-->'
 const SSR_OUTLET = '<!--ssr-outlet-->'
 const ISLANDS_SCRIPT = /(?:<!--nib-islands-entry-->\s*)?<script\b(?=[^>]*\bdata-nib-islands(?:\s|=|>))[^>]*>[\s\S]*?<\/script>/gi
 const BEHAVIORS_SCRIPT = /(?:<!--nib-behaviors-entry-->\s*)?<script\b(?=[^>]*\bdata-nib-behaviors(?:\s|=|>))[^>]*>[\s\S]*?<\/script>/gi
+const ISLANDS_PRELOAD = /<link\b(?=[^>]*\bdata-nib-runtime-preload=["']islands["'])[^>]*>/gi
+const BEHAVIORS_PRELOAD = /<link\b(?=[^>]*\bdata-nib-runtime-preload=["']behaviors["'])[^>]*>/gi
 
 function replaceSingleOutlet(template: string, outlet: string, value: string): string {
   const occurrences = template.split(outlet).length - 1
@@ -49,15 +51,16 @@ export function renderDocument(template: string, page: RenderedPage): string {
   if (behaviorScripts.length > 1) {
     throw new Error('HTML template contains multiple behavior entry blocks')
   }
-  if (islandScripts.length === 0) {
-    if (page.islands.length > 0) throw new Error('HTML template is missing the island entry block')
-    document = page.islands.length > 0 ? document : document.replace(ISLANDS_SCRIPT, '')
-  } else if (page.islands.length === 0) {
-    document = document.replace(ISLANDS_SCRIPT, '')
+  if (islandScripts.length === 0 && page.islands.length > 0) {
+    throw new Error('HTML template is missing the island entry block')
   }
-  if (behaviorScripts.length === 0) {
-    if (page.behaviors.length > 0) throw new Error('HTML template is missing the behavior entry block')
-    return document
+  if (page.islands.length === 0) {
+    document = document.replace(ISLANDS_SCRIPT, '').replace(ISLANDS_PRELOAD, '')
   }
-  return page.behaviors.length > 0 ? document : document.replace(BEHAVIORS_SCRIPT, '')
+  if (behaviorScripts.length === 0 && page.behaviors.length > 0) {
+    throw new Error('HTML template is missing the behavior entry block')
+  }
+  return page.behaviors.length > 0
+    ? document
+    : document.replace(BEHAVIORS_SCRIPT, '').replace(BEHAVIORS_PRELOAD, '')
 }

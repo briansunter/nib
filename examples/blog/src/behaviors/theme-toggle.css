@@ -1,0 +1,7 @@
+[data-behavior="theme-toggle"] {
+  display: inline-flex !important;
+}
+
+[data-behavior="theme-toggle"] .theme-toggle {
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}

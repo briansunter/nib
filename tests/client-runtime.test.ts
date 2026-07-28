@@ -4,7 +4,7 @@ const hydrateRoot = vi.hoisted(() => vi.fn())
 
 vi.mock('react-dom/client', () => ({ hydrateRoot }))
 
-import { createIslandRuntime, startIslandRuntime } from '../src/runtime/client'
+import { createIslandRuntime } from '../src/runtime/client'
 import { defineIsland } from '../src/framework/islands'
 
 function rootWith(elements: HTMLElement[]): Document {
@@ -36,19 +36,46 @@ describe('island client entry', () => {
       props: '{"count":1}',
     })
 
-    startIslandRuntime({
+    const runtime = createIslandRuntime({
       '/src/islands/counter.tsx': async () => ({ default: Counter }),
-    }, rootWith([element, element]))
+    })
+    runtime.mount(rootWith([element, element]))
 
     await vi.waitFor(() => expect(hydrateRoot).toHaveBeenCalledOnce())
     expect(element.dataset.scheduled).toBe('true')
   })
 
+  it('shares one in-flight module load across island instances', async () => {
+    const Counter = defineIsland('counter', () => null)
+    const load = vi.fn(async () => ({ default: Counter }))
+    const first = islandElement({
+      hydrate: 'load',
+      island: 'counter',
+      instance: 'nib-0',
+      prefix: 'nib-0-',
+      props: '{}',
+    })
+    const second = islandElement({
+      hydrate: 'load',
+      island: 'counter',
+      instance: 'nib-1',
+      prefix: 'nib-1-',
+      props: '{}',
+    })
+
+    createIslandRuntime({
+      '/src/islands/counter.tsx': load,
+    }).mount(rootWith([first, second]))
+
+    await vi.waitFor(() => expect(hydrateRoot).toHaveBeenCalledTimes(2))
+    expect(load).toHaveBeenCalledOnce()
+  })
+
   it('rejects duplicate IDs and reports invalid hydration metadata', () => {
-    expect(() => startIslandRuntime({
+    expect(() => createIslandRuntime({
       './src/islands/counter.tsx': async () => ({ default: null }),
       '/src/islands/counter.tsx': async () => ({ default: null }),
-    }, rootWith([]))).toThrow('Duplicate island ID: counter')
+    })).toThrow('Duplicate island ID: counter')
 
     const report = vi.spyOn(console, 'error').mockImplementation(() => {})
     const element = islandElement({
@@ -57,11 +84,25 @@ describe('island client entry', () => {
       instance: 'nib-0',
       props: '{}',
     })
-    startIslandRuntime({}, rootWith([element]))
+    createIslandRuntime({}).mount(rootWith([element]))
     expect(report).toHaveBeenCalledWith(
       'Failed to hydrate island counter (nib-0)',
       expect.any(Error),
     )
+    const missing = islandElement({
+      hydrate: 'load',
+      island: 'missing',
+      instance: 'nib-1',
+      prefix: 'nib-1-',
+      props: '{}',
+    })
+    createIslandRuntime({}).mount(rootWith([missing]))
+    expect(report).toHaveBeenCalledWith(
+      'Failed to hydrate island missing (nib-1)',
+      expect.objectContaining({ message: 'No client module found for island missing' }),
+    )
+    expect(missing.dataset.scheduled).toBeUndefined()
+    expect(hydrateRoot).not.toHaveBeenCalled()
     report.mockRestore()
   })
 
@@ -113,6 +154,93 @@ describe('island client entry', () => {
     idle?.()
     expect(cancelIdleCallback).toHaveBeenCalledWith(11)
     expect(hydrateRoot).toHaveBeenCalledOnce()
+  })
+
+  it('does not hydrate after an in-flight module load is unmounted', async () => {
+    let resolveModule: ((module: { default: ReturnType<typeof defineIsland> }) => void) | undefined
+    const loading = new Promise<{ default: ReturnType<typeof defineIsland> }>((resolve) => {
+      resolveModule = resolve
+    })
+    const element = islandElement({
+      hydrate: 'load',
+      island: 'counter',
+      instance: 'nib-0',
+      prefix: 'nib-0-',
+      props: '{}',
+    })
+    const root = rootWith([element])
+    const runtime = createIslandRuntime({
+      '/src/islands/counter.tsx': () => loading,
+    })
+
+    runtime.mount(root)
+    runtime.unmount(root)
+    resolveModule?.({ default: defineIsland('counter', () => null) })
+    await loading
+    await Promise.resolve()
+
+    expect(hydrateRoot).not.toHaveBeenCalled()
+  })
+
+  it('does not hydrate a root detached during its module load', async () => {
+    let attached = true
+    let resolveModule: ((module: { default: ReturnType<typeof defineIsland> }) => void) | undefined
+    const loading = new Promise<{ default: ReturnType<typeof defineIsland> }>((resolve) => {
+      resolveModule = resolve
+    })
+    const load = vi.fn(() => loading)
+    const reportError = vi.fn()
+    const element = islandElement({
+      hydrate: 'load',
+      island: 'counter',
+      instance: 'nib-0',
+      prefix: 'nib-0-',
+      props: '{}',
+    })
+    const root = {
+      contains: () => attached,
+      querySelectorAll: () => [element],
+    } as unknown as ParentNode
+    const runtime = createIslandRuntime({
+      '/src/islands/counter.tsx': load,
+    }, { reportError })
+
+    runtime.mount(root)
+    await vi.waitFor(() => expect(load).toHaveBeenCalledOnce())
+    attached = false
+    resolveModule?.({ default: defineIsland('counter', () => null) })
+    await loading
+    await vi.waitFor(() => expect(element.dataset.scheduled).toBeUndefined())
+
+    expect(hydrateRoot).not.toHaveBeenCalled()
+    expect(reportError).not.toHaveBeenCalled()
+  })
+
+  it('clears a rejected loader so a later mount can retry', async () => {
+    const Counter = defineIsland('counter', () => null)
+    const load = vi.fn()
+      .mockRejectedValueOnce(new Error('temporary chunk failure'))
+      .mockResolvedValueOnce({ default: Counter })
+    const reportError = vi.fn()
+    const element = islandElement({
+      hydrate: 'load',
+      island: 'counter',
+      instance: 'nib-0',
+      prefix: 'nib-0-',
+      props: '{}',
+    })
+    const root = rootWith([element])
+    const runtime = createIslandRuntime({
+      '/src/islands/counter.tsx': load,
+    }, { reportError })
+
+    runtime.mount(root)
+    await vi.waitFor(() => expect(reportError).toHaveBeenCalledOnce())
+    expect(element.dataset.scheduled).toBeUndefined()
+
+    runtime.mount(root)
+    await vi.waitFor(() => expect(hydrateRoot).toHaveBeenCalledOnce())
+    expect(load).toHaveBeenCalledTimes(2)
   })
 
   it('clears island bookkeeping even when React cleanup throws', async () => {

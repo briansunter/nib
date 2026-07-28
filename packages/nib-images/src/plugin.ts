@@ -6,7 +6,7 @@ import { imageVitePlugin } from './image-vite-plugin'
 import { normalizeImagesOptions, validateImagesOptions, type ImagesOptions } from './options'
 import { optimizeContentImages, restoreFailedContentImages } from './content-images'
 
-export type { ContentImageSource, ImagesOptions } from './options'
+export type { ContentImageSource, ImageCacheOptions, ImagesOptions } from './options'
 
 export function images<const Options extends ImagesOptions>(options?: Options) {
   validateImagesOptions(options)

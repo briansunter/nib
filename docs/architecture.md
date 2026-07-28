@@ -114,35 +114,38 @@ multi-environment graph separately. This prevents plugin-local Vite state from
 leaking between builds.
 
 Renderer extensions are instantiated once per server renderer. Their structured
-head contributions, wrappers, and page transformations run in configuration
-order, while finalizers run once after every production route (including the
-generated 404) has rendered. Production writes route HTML with bounded
-concurrency, then gives finalizers the completed `dist/client` directory so
-output-aware extensions can inspect or enrich rendered documents. Finalizers
-also receive the exact frozen route-to-artifact publication manifest, avoiding
-recursive output crawls and route reconstruction. Nib then emits that same data
-as `.nib/publication.json` plus any configured hosting companions;
-development does not run finalizers.
+head contributions and wrappers run in configuration order, while finalizers
+run once after every production route (including the generated 404) has
+rendered. Production preplans artifact ownership, then renders and writes routes
+in small deterministic batches so page bodies do not accumulate in memory.
+Finalizers receive the completed client directory in a sibling staging tree,
+plus the exact frozen route-to-artifact publication manifest, so output-aware
+extensions can inspect or enrich rendered documents without recursive output
+crawls or route reconstruction. Nib emits that same data as
+`.nib/publication.json`, writes configured hosting companions, and only then
+swaps the completed tree into `dist`; a failed build leaves the prior `dist`
+unchanged. Development does not run finalizers.
 
 The plugin host owns contribution resolution, renderer-extension construction,
 ordering, hook error attribution, and finalization. Renderer plugins receive a
 stable route snapshot rather than page modules, layouts, or page data. They may
-change static status, head, and HTML, but Nib keeps the hydration metadata and
-rejects changes to rendered island markup.
+contribute structured head metadata or wrap the React tree, while Nib keeps
+status, serialized HTML, and client marker metadata under framework ownership.
 
 Plugins may also contribute typed page-source adapters and virtual page,
 resource, or redirect routes before rendering. The host validates and merges
-these registrations, then exposes one immutable resolved-route list to
-inspection hooks. See
+these registrations in configuration order, giving each later provider the
+latest immutable route snapshot. See
 [Plugin content and routing](./plugin-content-and-routing.md) for ordering,
 collision, output, head, and trailing-slash rules. Site and page metadata use
 the same structured head contract as renderer plugins.
 
-Plugin setup may also declare browser initializers by module and export name.
-Nib validates and combines them into one generated static-import entry for the
-client/development graph. The declaration contains strings rather than imported
-browser functions, so `nib.config.ts` and the server graph remain server-safe.
-Sites without a contribution do not build or emit this entry.
+Plugins may also declare browser initializers through `clientEntries` module and
+export names. Nib validates ownership and combines them into one generated
+static-import entry for the client/development graph. The declaration contains
+strings rather than imported browser functions, so `nib.config.ts` and the
+server graph remain server-safe. Sites without a contribution do not build or
+emit this entry.
 
 Tailwind is optional rather than a framework dependency. The initializer adds
 `@tailwindcss/vite` and opts in through the narrow app-owned `vite` field in

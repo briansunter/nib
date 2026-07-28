@@ -1,6 +1,7 @@
 import { defineBehaviorClient } from '@briansunter/nib/client/behaviors'
+import './reveal.css'
 
-export default defineBehaviorClient<{ label: string }>('reveal', ({ root, props, signal }) => {
+export default defineBehaviorClient<{ label: string }>(({ root, props, signal }) => {
   const button = root.querySelector('button')
   const panel = root.querySelector<HTMLElement>('[data-panel]')
   if (!button || !panel) return

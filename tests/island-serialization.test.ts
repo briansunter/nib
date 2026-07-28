@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { parseIslandProps, serializeIslandProps } from '../src/framework/island-serialization'
+import {
+  MAX_SERIALIZED_PROPS_LENGTH,
+  parseIslandProps,
+  serializeIslandProps,
+} from '../src/framework/island-serialization'
 
 describe('island prop serialization', () => {
   it('round trips nested JSON props', () => {
@@ -29,5 +33,7 @@ describe('island prop serialization', () => {
   it('rejects invalid serialized input and non-object roots', () => {
     expect(() => parseIslandProps('{')).toThrow('invalid JSON')
     expect(() => parseIslandProps('[]')).toThrow('plain object')
+    expect(() => parseIslandProps(`{"value":"${'x'.repeat(MAX_SERIALIZED_PROPS_LENGTH)}"}`))
+      .toThrow('exceed')
   })
 })

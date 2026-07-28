@@ -11,7 +11,6 @@ import {
   stateNumber,
 } from './navigation/history'
 import {
-  connectionIsSlow,
   NavigationPageCache,
   requestPage,
 } from './navigation/page-cache'
@@ -41,6 +40,15 @@ const HOVER_PREFETCH_DELAY_MS = 80
 const PERSIST_ATTRIBUTE = 'data-nib-navigation-persist'
 const EXECUTED_SCRIPT_ATTRIBUTE = 'data-nib-script-executed'
 const RERUN_SCRIPT_ATTRIBUTE = 'data-nib-script-rerun'
+const TRANSIENT_BASE_ATTRIBUTE = 'data-nib-navigation-base'
+const RUNTIME_SCRIPT_ATTRIBUTES = [
+  'data-nib-islands',
+  'data-nib-behaviors',
+  'data-nib-enhancements',
+] as const
+const RUNTIME_SCRIPT_SELECTOR = RUNTIME_SCRIPT_ATTRIBUTES
+  .map((attribute) => `script[${attribute}][src]`)
+  .join(',')
 
 function elementHref(element: Element): string | null {
   if (
@@ -135,29 +143,32 @@ function scriptIdentity(script: HTMLScriptElement, baseUrl: URL): string {
     : `inline:${type}:${script.textContent ?? ''}`
 }
 
-function seedExecutedScripts(executedScripts: Set<string>) {
-  const baseUrl = new URL(location.href)
+function seedExecutedScripts() {
   for (const script of document.scripts) {
     if (!scriptTypeIsExecutable(script)) continue
-    executedScripts.add(scriptIdentity(script, baseUrl))
     script.setAttribute(EXECUTED_SCRIPT_ATTRIBUTE, '')
   }
 }
 
+function currentScriptIdentities(baseUrl: URL): Set<string> {
+  return new Set(
+    [...document.scripts]
+      .filter(scriptTypeIsExecutable)
+      .map((script) => scriptIdentity(script, baseUrl)),
+  )
+}
+
 function markPreviouslyExecutedScripts(
-  executedScripts: Set<string>,
+  currentScripts: ReadonlySet<string>,
   nextDocument: Document,
   nextUrl: URL,
 ) {
   for (const script of nextDocument.scripts) {
-    if (!scriptTypeIsExecutable(script)) {
-      script.setAttribute(EXECUTED_SCRIPT_ATTRIBUTE, '')
-      continue
-    }
+    if (!scriptTypeIsExecutable(script)) continue
     const identity = scriptIdentity(script, nextUrl)
     if (
       !script.hasAttribute(RERUN_SCRIPT_ATTRIBUTE)
-      && executedScripts.has(identity)
+      && currentScripts.has(identity)
     ) {
       script.setAttribute(EXECUTED_SCRIPT_ATTRIBUTE, '')
     }
@@ -165,8 +176,6 @@ function markPreviouslyExecutedScripts(
 }
 
 async function executeNewScripts(
-  executedScripts: Set<string>,
-  nextUrl: URL,
   signal: AbortSignal,
 ) {
   for (const script of [...document.scripts]) {
@@ -178,14 +187,12 @@ async function executeNewScripts(
       continue
     }
 
-    const identity = scriptIdentity(script, nextUrl)
     const replacement = document.createElement('script')
     for (const attribute of script.attributes) {
       replacement.setAttribute(attribute.name, attribute.value)
     }
     replacement.textContent = script.textContent
     replacement.setAttribute(EXECUTED_SCRIPT_ATTRIBUTE, '')
-    executedScripts.add(identity)
 
     const source = replacement.getAttribute('src')
     const waitsForLoad = source !== null || replacement.type === 'module'
@@ -209,6 +216,106 @@ async function executeNewScripts(
   }
 }
 
+function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) {
+    return Promise.reject(new DOMException('Navigation aborted', 'AbortError'))
+  }
+  return new Promise<T>((resolve, reject) => {
+    const aborted = () => {
+      reject(new DOMException('Navigation aborted', 'AbortError'))
+    }
+    signal.addEventListener('abort', aborted, { once: true })
+    void promise.then(
+      (value) => {
+        signal.removeEventListener('abort', aborted)
+        resolve(value)
+      },
+      (error: unknown) => {
+        signal.removeEventListener('abort', aborted)
+        reject(error)
+      },
+    )
+  })
+}
+
+function runtimeSources(
+  root: ParentNode,
+  attribute: typeof RUNTIME_SCRIPT_ATTRIBUTES[number],
+  baseUrl: URL,
+): string[] {
+  return [...root.querySelectorAll<HTMLScriptElement>(`script[${attribute}][src]`)]
+    .map((script) => resolvedAttribute(script, 'src', baseUrl))
+    .sort()
+}
+
+function runtimeEntryChanged(
+  nextDocument: Document,
+  currentUrl: URL,
+  nextUrl: URL,
+): boolean {
+  return RUNTIME_SCRIPT_ATTRIBUTES.some((attribute) => {
+    const current = runtimeSources(document, attribute, currentUrl)
+    const next = runtimeSources(nextDocument, attribute, nextUrl)
+    return current.length > 0
+      && next.length > 0
+      && (
+        current.length !== next.length
+        || current.some((source, index) => source !== next[index])
+      )
+  })
+}
+
+function prepareNavigationBase(nextDocument: Document, nextUrl: URL): URL {
+  const authoredBase = nextDocument.head.querySelector<HTMLBaseElement>('base[href]')
+  let effectiveBase = nextUrl
+  if (authoredBase) {
+    try {
+      const resolved = new URL(authoredBase.getAttribute('href') ?? '', nextUrl)
+      authoredBase.href = resolved.href
+      effectiveBase = resolved
+    } catch {
+      // Browsers ignore unusable authored bases and fall back to the document URL.
+    }
+  }
+
+  const transientBase = nextDocument.createElement('base')
+  transientBase.href = effectiveBase.href
+  transientBase.setAttribute(TRANSIENT_BASE_ATTRIBUTE, '')
+  nextDocument.head.prepend(transientBase)
+  return effectiveBase
+}
+
+function activateNavigationBase(nextDocument: Document) {
+  const base = nextDocument.head.querySelector<HTMLBaseElement>(
+    `base[${TRANSIENT_BASE_ATTRIBUTE}]`,
+  )
+  if (base) document.head.prepend(document.importNode(base, true))
+}
+
+function absolutizeHeadResources(nextDocument: Document, baseUrl: URL) {
+  for (const element of nextDocument.head.querySelectorAll('link[href], script[src]')) {
+    const attribute = element.localName === 'link' ? 'href' : 'src'
+    const value = element.getAttribute(attribute)
+    if (!value) continue
+    try {
+      element.setAttribute(attribute, new URL(value, baseUrl).href)
+    } catch {
+      // Preserve invalid URLs so the browser handles them normally.
+    }
+  }
+}
+
+function normalizedHeadNode(element: Element, baseUrl: URL): Element {
+  const clone = element.cloneNode(true) as Element
+  clone.removeAttribute(EXECUTED_SCRIPT_ATTRIBUTE)
+  for (const attribute of ['href', 'src']) {
+    if (element.hasAttribute(attribute)) {
+      clone.setAttribute(attribute, resolvedAttribute(element, attribute, baseUrl))
+    }
+  }
+  return clone
+}
+
 function headNodesMatch(
   current: Element,
   next: Element,
@@ -224,34 +331,50 @@ function headNodesMatch(
     return true
   }
 
-  if (
-    current.matches('link[rel="stylesheet"]')
-    && next.matches('link[rel="stylesheet"]')
-  ) {
-    return resolvedAttribute(current, 'href', currentUrl)
-      === resolvedAttribute(next, 'href', nextUrl)
-  }
-  if (
-    current.matches('link[rel="preload"][as="font"]')
-    && next.matches('link[rel="preload"][as="font"]')
-  ) {
-    return resolvedAttribute(current, 'href', currentUrl)
-      === resolvedAttribute(next, 'href', nextUrl)
-  }
-  if (current instanceof HTMLStyleElement && next instanceof HTMLStyleElement) {
-    return current.textContent === next.textContent
-  }
-  if (
-    current instanceof HTMLScriptElement
-    && next instanceof HTMLScriptElement
-  ) {
-    if (next.hasAttribute(RERUN_SCRIPT_ATTRIBUTE)) return false
-    return scriptIdentity(current, currentUrl) === scriptIdentity(next, nextUrl)
-  }
-  return current.isEqualNode(next)
+  if (next.hasAttribute(RERUN_SCRIPT_ATTRIBUTE)) return false
+  return normalizedHeadNode(current, currentUrl)
+    .isEqualNode(normalizedHeadNode(next, nextUrl))
 }
 
-function syncHead(nextDocument: Document, currentUrl: URL, nextUrl: URL) {
+function runtimeEntryAttribute(
+  element: Element,
+): typeof RUNTIME_SCRIPT_ATTRIBUTES[number] | undefined {
+  return RUNTIME_SCRIPT_ATTRIBUTES.find((attribute) => (
+    element.matches(`script[${attribute}][src]`)
+  ))
+}
+
+function stylesheetHrefs(root: ParentNode, baseUrl: URL): Set<string> {
+  return new Set(
+    [...root.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"][href]')]
+      .map((link) => resolvedAttribute(link, 'href', baseUrl)),
+  )
+}
+
+function initialDocumentStyles(baseUrl: URL): Set<string> {
+  const runtimeScripts = [
+    ...document.querySelectorAll<HTMLScriptElement>(RUNTIME_SCRIPT_SELECTOR),
+  ]
+  const lastRuntime = runtimeScripts.at(-1)
+  return new Set(
+    [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"][href]')]
+      .filter((link) => (
+        !lastRuntime
+        || (
+          lastRuntime.compareDocumentPosition(link)
+          & Node.DOCUMENT_POSITION_FOLLOWING
+        ) === 0
+      ))
+      .map((link) => resolvedAttribute(link, 'href', baseUrl)),
+  )
+}
+
+function syncHead(
+  nextDocument: Document,
+  currentUrl: URL,
+  nextUrl: URL,
+  clientStyles: ReadonlySet<string>,
+) {
   const nextNodes = [...nextDocument.head.children]
   const currentNodes = [...document.head.children]
   const reused = new Set<Element>()
@@ -266,6 +389,28 @@ function syncHead(nextDocument: Document, currentUrl: URL, nextUrl: URL) {
       desired.push(current)
     } else {
       desired.push(document.importNode(next, true))
+    }
+  }
+  // Vite inserts lazy island/behavior stylesheets at runtime. They are absent
+  // from fetched HTML and must survive swaps because its module preload cache
+  // will not insert the same stylesheet twice.
+  for (const current of currentNodes) {
+    const runtimeAttribute = runtimeEntryAttribute(current)
+    if (
+      !reused.has(current)
+      && (
+        (
+          runtimeAttribute !== undefined
+          && !nextDocument.querySelector(`script[${runtimeAttribute}][src]`)
+        )
+        || (
+          current.matches('link[rel="stylesheet"][href]')
+          && clientStyles.has(resolvedAttribute(current, 'href', currentUrl))
+        )
+      )
+    ) {
+      reused.add(current)
+      desired.push(current)
     }
   }
   // Appending an existing child moves it without recreating an executed script.
@@ -423,10 +568,7 @@ function scrollToHash(url: URL): boolean {
   }
   const target = document.getElementById(id)
     ?? document.querySelector<HTMLElement>(`[name="${CSS.escape(id)}"]`)
-  if (!target) {
-    window.scrollTo({ left: 0, top: 0, behavior: 'auto' })
-    return false
-  }
+  if (!target) return false
   target.scrollIntoView()
   if (
     target.matches(
@@ -441,7 +583,18 @@ function scrollToHash(url: URL): boolean {
 function announceRoute(timers: Set<number>) {
   document.querySelector('.nib-route-announcer')?.remove()
   const announcer = document.createElement('div')
-  announcer.className = 'nib-route-announcer sr-only'
+  announcer.className = 'nib-route-announcer'
+  announcer.style.cssText = [
+    'position:absolute',
+    'width:1px',
+    'height:1px',
+    'padding:0',
+    'margin:-1px',
+    'overflow:hidden',
+    'clip:rect(0, 0, 0, 0)',
+    'white-space:nowrap',
+    'border:0',
+  ].join(';')
   announcer.setAttribute('aria-live', 'assertive')
   announcer.setAttribute('aria-atomic', 'true')
   document.body.append(announcer)
@@ -494,10 +647,11 @@ function navigationEvent(
 }
 
 class NibClientNavigation implements ClientNavigationController {
+  private committedNavigation: AbortController | undefined
   private controller: AbortController | undefined
   private currentIndex = 0
   private currentUrl = new URL(location.href)
-  private readonly executedScripts = new Set<string>()
+  private documentStyles = new Set<string>()
   private hoverTimer = 0
   private mounted = false
   private navigationAbort: AbortController | undefined
@@ -516,6 +670,7 @@ class NibClientNavigation implements ClientNavigationController {
     this.mounted = true
     this.controller = new AbortController()
     this.currentUrl = new URL(location.href)
+    this.documentStyles = initialDocumentStyles(new URL(document.baseURI))
     const state = navigationState()
     const existingIndex = stateNumber(state, HISTORY_INDEX, Number.NaN)
     this.currentIndex = Number.isFinite(existingIndex) ? existingIndex : 0
@@ -535,7 +690,7 @@ class NibClientNavigation implements ClientNavigationController {
     }
     this.previousScrollRestoration = history.scrollRestoration
     history.scrollRestoration = 'manual'
-    seedExecutedScripts(this.executedScripts)
+    seedExecutedScripts()
     this.bind(this.controller.signal)
     this.scanPrefetchLinks()
   }
@@ -553,6 +708,7 @@ class NibClientNavigation implements ClientNavigationController {
       this.hardNavigate(to)
       return
     }
+    this.cancelHoverPrefetch()
     const from = new URL(location.href)
     if (to.pathname === from.pathname && to.search === from.search) {
       this.navigateWithinPage(to, options.history === 'replace')
@@ -583,7 +739,7 @@ class NibClientNavigation implements ClientNavigationController {
     this.viewportTimers.clear()
     this.announcementTimers.clear()
     this.pageCache.clear()
-    this.executedScripts.clear()
+    this.documentStyles.clear()
     document.querySelectorAll('[data-nib-navigation-preload]').forEach((node) => node.remove())
     document.documentElement.removeAttribute('data-nib-navigation-direction')
     document.documentElement.removeAttribute('data-nib-navigation-fallback')
@@ -591,6 +747,7 @@ class NibClientNavigation implements ClientNavigationController {
       history.scrollRestoration = this.previousScrollRestoration
     }
     this.controller = undefined
+    this.committedNavigation = undefined
     this.navigationAbort = undefined
     this.viewportObserver = undefined
     this.activeTransition = undefined
@@ -658,7 +815,6 @@ class NibClientNavigation implements ClientNavigationController {
     if (
       !link
       || prefetchMode(link, this.prefetchPolicy) !== 'hover'
-      || connectionIsSlow()
     ) return
     const url = eligibleLink(link)
     if (!url) return
@@ -675,6 +831,10 @@ class NibClientNavigation implements ClientNavigationController {
   }
 
   private onHoverEnd = () => {
+    this.cancelHoverPrefetch()
+  }
+
+  private cancelHoverPrefetch() {
     window.clearTimeout(this.hoverTimer)
     this.hoverTimer = 0
   }
@@ -895,6 +1055,12 @@ class NibClientNavigation implements ClientNavigationController {
   }
 
   private async performNavigation(to: URL, context: NavigationContext) {
+    this.cancelHoverPrefetch()
+    if (this.committedNavigation) {
+      this.committedNavigation.abort()
+      this.hardNavigate(to)
+      return
+    }
     if (context.history !== 'traverse') this.snapshotScroll()
     this.navigationAbort?.abort()
     try {
@@ -906,10 +1072,12 @@ class NibClientNavigation implements ClientNavigationController {
     this.navigationAbort = navigationAbort
     const { signal } = navigationAbort
     const from = context.from ?? new URL(location.href)
+    let fallbackUrl = to
 
     try {
+      const cached = this.pageCache.get(to, signal)
       const prepared = await (
-        this.pageCache.get(to) ?? requestPage(to, signal)
+        cached ? abortable(cached, signal) : requestPage(to, signal)
       )
       if (signal.aborted) return
       if (!prepared) {
@@ -923,6 +1091,7 @@ class NibClientNavigation implements ClientNavigationController {
         return
       }
       finalUrl.hash = to.hash
+      fallbackUrl = finalUrl
 
       const nextDocument = new DOMParser().parseFromString(
         prepared.html,
@@ -935,11 +1104,26 @@ class NibClientNavigation implements ClientNavigationController {
       }
       persistenceIndex(document, 'Current document')
       persistenceIndex(nextDocument, 'Next document')
-      markPreviouslyExecutedScripts(this.executedScripts, nextDocument, finalUrl)
+      const currentBaseUrl = new URL(document.baseURI)
+      const nextBaseUrl = prepareNavigationBase(nextDocument, finalUrl)
+      absolutizeHeadResources(nextDocument, nextBaseUrl)
+      if (runtimeEntryChanged(
+        nextDocument,
+        currentBaseUrl,
+        nextBaseUrl,
+      )) {
+        this.hardNavigate(finalUrl)
+        return
+      }
+      markPreviouslyExecutedScripts(
+        currentScriptIdentities(currentBaseUrl),
+        nextDocument,
+        nextBaseUrl,
+      )
       const pendingStyles = preloadNewStyles(
         nextDocument,
-        from,
-        finalUrl,
+        currentBaseUrl,
+        nextBaseUrl,
         signal,
       )
       if (pendingStyles.length > 0) await Promise.all(pendingStyles)
@@ -954,12 +1138,17 @@ class NibClientNavigation implements ClientNavigationController {
           nextDocument,
           from,
           finalUrl,
+          currentBaseUrl,
+          nextBaseUrl,
           context,
           signal,
+          () => {
+            this.committedNavigation = navigationAbort
+          },
         )
       }
       const completeNavigation = async () => {
-        await executeNewScripts(this.executedScripts, finalUrl, signal)
+        await executeNewScripts(signal)
         if (signal.aborted) return
         mountClientRuntimes(document)
         await Promise.resolve()
@@ -985,11 +1174,11 @@ class NibClientNavigation implements ClientNavigationController {
         }).finally(() => {
           if (this.activeTransition === transition) {
             this.activeTransition = undefined
+            document.documentElement.removeAttribute('data-nib-navigation-direction')
+            document.documentElement.removeAttribute(
+              'data-nib-navigation-fallback',
+            )
           }
-          document.documentElement.removeAttribute('data-nib-navigation-direction')
-          document.documentElement.removeAttribute(
-            'data-nib-navigation-fallback',
-          )
         })
       } else {
         document.documentElement.setAttribute(
@@ -1006,10 +1195,13 @@ class NibClientNavigation implements ClientNavigationController {
     } catch (error) {
       if (signal.aborted) return
       console.error('[nib-navigation] Navigation failed', error)
-      this.hardNavigate(to)
+      this.hardNavigate(fallbackUrl)
     } finally {
       if (this.navigationAbort === navigationAbort) {
         this.navigationAbort = undefined
+      }
+      if (this.committedNavigation === navigationAbort) {
+        this.committedNavigation = undefined
       }
     }
   }
@@ -1018,8 +1210,11 @@ class NibClientNavigation implements ClientNavigationController {
     nextDocument: Document,
     from: URL,
     to: URL,
+    currentBaseUrl: URL,
+    nextBaseUrl: URL,
     context: NavigationContext,
     signal: AbortSignal,
+    onCommit: () => void,
   ) {
     const currentRoot = document.getElementById('root')
     const nextRoot = nextDocument.getElementById('root')
@@ -1028,11 +1223,25 @@ class NibClientNavigation implements ClientNavigationController {
     }
 
     let restoreFocus: (() => void) | undefined
+    let committed = false
     let defaultSwapCalled = false
+    const commit = () => {
+      if (committed) return
+      committed = true
+      this.commitHistory(to, context)
+      document.head.querySelector(`base[${TRANSIENT_BASE_ATTRIBUTE}]`)?.remove()
+      onCommit()
+    }
     const defaultSwap = () => {
       if (defaultSwapCalled) return
       defaultSwapCalled = true
-      syncHead(nextDocument, from, to)
+      activateNavigationBase(nextDocument)
+      const clientStyles = new Set(
+        [...stylesheetHrefs(document, currentBaseUrl)]
+          .filter((href) => !this.documentStyles.has(href)),
+      )
+      syncHead(nextDocument, currentBaseUrl, nextBaseUrl, clientStyles)
+      this.documentStyles = stylesheetHrefs(nextDocument, nextBaseUrl)
       copyAttributes(
         nextDocument.documentElement,
         document.documentElement,
@@ -1042,6 +1251,7 @@ class NibClientNavigation implements ClientNavigationController {
       restoreFocus = restorePersistedElements(currentRoot, nextRoot)
       unmountClientRuntimes(currentRoot)
       currentRoot.replaceWith(nextRoot)
+      commit()
     }
     const beforeSwap = navigationEvent(
       nextDocument,
@@ -1057,7 +1267,7 @@ class NibClientNavigation implements ClientNavigationController {
     await beforeSwap.detail.swap()
     if (signal.aborted) return
 
-    this.commitHistory(to, context)
+    commit()
     restoreFocus?.()
     if (context.restoreScroll) {
       window.scrollTo({

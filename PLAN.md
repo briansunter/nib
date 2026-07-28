@@ -4,9 +4,10 @@ Status: implemented and verified
 
 Baseline: `08ef502d84d1f85669f82489aed0c45989719bd9`
 
-Reference implementation:
-`examples/personal-site-replica`, compared with `../personal-site` at
-`b10a973a677cee207d1258edf0d95170078829dd`
+Reference implementation at the time of the audit:
+the now-standalone `../personal-site-nib`, compared with its source site at
+`b10a973a677cee207d1258edf0d95170078829dd`. The repository now uses
+`examples/blog` as its dependency-light, fictional CI consumer.
 
 Scope: correctness, simplification, and modularity improvements in the Nib
 framework and optional plugins. The personal-site implementation is evidence
@@ -108,8 +109,9 @@ Batches 1 through 4 are correctness work and should land before the modularity
 cleanup in Batches 5 and 6. Batch 7 is small and can land with Batch 3 if doing
 so keeps the navigation change cohesive.
 
-Root and replica verification must run sequentially until their framework
-output directories are isolated.
+Root and reference-site verification had to run sequentially while they shared
+framework output. The in-repository blog is now a root workspace and uses the
+same clean install as CI.
 
 ## Batch 1: Base-safe content images
 
@@ -423,13 +425,13 @@ After Batches 5 through 7, run the complete ordered gate:
 2. full root test suite;
 3. package-consumer verification;
 4. documentation build and link checks;
-5. personal-site replica `bun run verify`;
+5. in-repository blog template `bun run verify`;
 6. targeted browser checks for navigation, images, behaviors, and code blocks;
 7. `git diff --check`;
 8. clean-worktree review.
 
-Do not run the root build and replica verification concurrently while they
-share `dist/framework`.
+Keep framework and consumer validation ordered when they share generated
+framework output.
 
 ## Completion criteria
 
@@ -440,7 +442,7 @@ The plan is complete only when:
 - no personal-site styling policy remains in framework-generated markup;
 - output plugins use authoritative publication artifacts;
 - the complete sequential validation gate passes;
-- the replica retains exact route, metadata, semantic-content, reference,
+- the standalone reference site retains exact route, metadata, semantic-content, reference,
   search, performance, and targeted visual behavior;
 - documentation explains the final public contracts;
 - commits remain independently reviewable and reversible.
@@ -448,7 +450,7 @@ The plan is complete only when:
 ## Completion evidence
 
 Implemented across the framework, `@nib/images`, documentation, and the
-personal-site replica:
+standalone reference site:
 
 - content-image public URLs and physical artifacts are base-safe, including
   linked originals and failed-transform fallbacks;
@@ -462,8 +464,8 @@ personal-site replica:
   output;
 - client navigation supports explicit prefetch while retaining hover as the
   compatibility default;
-- `bun run verify` runs the complete root, documentation, and replica gate in
-  the required order.
+- `bun run verify` runs the complete root, documentation, and blog-template
+  gate in the required order.
 
 Final verification:
 

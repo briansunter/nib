@@ -1,62 +1,43 @@
-import { createElement, type ComponentType, type ReactNode } from 'react'
-import { serializeIslandProps } from './island-serialization'
+import {
+  createContext,
+  createElement,
+  useContext,
+  type ComponentType,
+  type ReactNode,
+} from 'react'
+import {
+  serializeIslandProps,
+  type JsonSerializableObject,
+} from './island-serialization'
 import { validateIslandId } from './island-paths'
-import type { HydrationStrategy } from './islands'
+import {
+  isHydrationStrategy,
+  type HydrationStrategy,
+} from './hydration'
 
 const BEHAVIOR_DEFINITION = Symbol.for('nib.behavior-definition')
 
-type IsAny<Value> = 0 extends (1 & Value) ? true : false
-type IsBroadObject<Value> = [Value] extends [object]
-  ? [object] extends [Value] ? true : false
-  : false
-type IsOptionalKey<Value extends object, Key extends keyof Value> = {} extends Pick<Value, Key>
-  ? true
-  : false
-type AllPropertiesAreJson<Value extends object> = Value extends unknown
-  ? IsBroadObject<Value> extends true
-    ? false
-    : keyof Value extends never
-      ? true
-      : false extends {
-          [Key in keyof Value]-?: IsOptionalKey<Value, Key> extends true
-            ? IsJsonValue<Exclude<Value[Key], undefined>>
-            : IsJsonValue<Value[Key]>
-        }[keyof Value]
-        ? false
-        : true
-  : never
-type IsJsonValue<Value> = IsAny<Value> extends true
-  ? false
-  : [Value] extends [never | undefined]
-    ? false
-    : [Value] extends [null | string | number | boolean]
-      ? true
-      : Value extends (...args: never[]) => unknown
-        ? false
-        : Value extends readonly (infer Item)[]
-          ? IsJsonValue<Item>
-          : Value extends object
-            ? AllPropertiesAreJson<Value>
-            : false
-type DefinitionGuard<Props extends object> = AllPropertiesAreJson<Props> extends true
+/** @internal Collects framework-authored behavior markers during SSR. */
+export const BehaviorRenderContext = createContext<Set<string> | null>(null)
+
+type DefinitionGuard<Props extends object> = JsonSerializableObject<Props> extends true
   ? []
   : [error: 'Behavior props must be JSON-serializable']
 
-export interface ClientBehaviorProps<Props extends object> {
-  props: Props
+interface BehaviorControlProps {
   hydrate?: HydrationStrategy
   children?: ReactNode
 }
+
+export type ClientBehaviorProps<Props extends object> = keyof Props extends never
+  ? BehaviorControlProps & { props?: Props }
+  : BehaviorControlProps & { props: Props }
 
 export type ClientBehaviorDefinition<Props extends object = object> = ComponentType<
   ClientBehaviorProps<Props>
 > & {
   readonly [BEHAVIOR_DEFINITION]: true
   readonly behaviorId: string
-}
-
-function isHydrationStrategy(value: unknown): value is HydrationStrategy {
-  return value === 'load' || value === 'idle' || value === 'visible'
 }
 
 /**
@@ -70,16 +51,14 @@ export function defineClientBehavior<Props extends object>(
   id: string,
   ..._guard: DefinitionGuard<Props>
 ): ClientBehaviorDefinition<Props>
-export function defineClientBehavior<Props extends object>(
+export function defineClientBehavior(
   id: string,
-  ..._guard: unknown[]
-): ClientBehaviorDefinition<Props> {
+  ..._guard: readonly unknown[]
+): unknown {
   const behaviorId = validateIslandId(id)
-  function BehaviorBoundary({
-    props,
-    hydrate = 'load',
-    children,
-  }: ClientBehaviorProps<Props>) {
+  function BehaviorBoundary(received: BehaviorControlProps & { props?: object }) {
+    useContext(BehaviorRenderContext)?.add(behaviorId)
+    const { props = {}, hydrate = 'load', children } = received
     if (!isHydrationStrategy(hydrate)) {
       throw new Error(`Invalid hydration strategy for behavior ${behaviorId}: ${String(hydrate)}`)
     }
@@ -87,6 +66,7 @@ export function defineClientBehavior<Props extends object>(
       'data-behavior': behaviorId,
       'data-hydrate': hydrate,
       'data-props': serializeIslandProps(props),
+      style: { display: 'contents' },
     }, children)
   }
   return Object.assign(BehaviorBoundary, {

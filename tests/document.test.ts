@@ -3,7 +3,15 @@ import { renderDocument, renderRedirectDocument } from '../src/framework/documen
 import { renderHead } from '../src/framework/meta'
 import type { RenderedPage } from '../src/framework/types'
 
-const template = `<!doctype html><head><!--head-outlet--><script type="module">refresh()</script><script data-nib-islands type="module" src="/assets/islands.js"></script><script data-nib-behaviors type="module" src="/assets/behaviors.js"></script></head><body><!--ssr-outlet--></body>`
+const template = `<!doctype html><head><!--head-outlet-->
+<link rel="modulepreload" href="/assets/refresh.js" />
+<link data-nib-runtime-preload="islands" rel="modulepreload" href="/assets/react.js" />
+<script type="module">refresh()</script>
+<script data-nib-islands type="module" src="/assets/islands.js"></script>
+<link data-nib-runtime-preload="behaviors" rel="modulepreload" href="/assets/behaviors-runtime.js" />
+<script data-nib-behaviors type="module" src="/assets/behaviors.js"></script>
+<link data-nib-runtime-preload="enhancements" rel="modulepreload" href="/assets/navigation.js" />
+</head><body><!--ssr-outlet--></body>`
 
 function page(islands: string[], behaviors: string[] = []): RenderedPage {
   return {
@@ -22,6 +30,8 @@ describe('HTML documents', () => {
         title: 'Page',
         description: 'Description',
         head: {
+          title: 'Page head title',
+          description: 'Page head description',
           elements: [{
             tag: 'script',
             attributes: { type: 'application/ld+json' },
@@ -31,6 +41,8 @@ describe('HTML documents', () => {
       },
       {
         head: {
+          title: 'Site head title',
+          description: 'Site head description',
           elements: [{
             tag: 'link',
             attributes: { rel: 'alternate', href: '/rss.xml?x="unsafe"' },
@@ -38,13 +50,16 @@ describe('HTML documents', () => {
         },
       },
       {
+        title: 'Renderer title',
+        description: 'Renderer description',
         elements: [{
           tag: 'meta',
           attributes: { property: 'og:title', content: 'A & B' },
         }],
       },
     )
-    expect(html).toContain('<title>Page</title>')
+    expect(html).toContain('<title>Renderer title</title>')
+    expect(html).toContain('name="description" content="Renderer description"')
     expect(html).toContain('href="/rss.xml?x=&quot;unsafe&quot;"')
     expect(html).toContain('content="A &amp; B"')
     expect(html).toContain('<\\/script>')
@@ -61,24 +76,38 @@ describe('HTML documents', () => {
         }],
       },
     })).toThrow('unsafe attribute name')
+    expect(() => renderHead({
+      title: 'Page',
+      description: '',
+      head: { title: 42 } as never,
+    })).toThrow('head.title must be a string')
   })
 
-  it('removes only the island entry from static pages', () => {
+  it('removes inactive runtimes without touching unrelated head assets', () => {
     const html = renderDocument(template, page([]))
     expect(html).toContain('<script type="module">refresh()</script>')
     expect(html).not.toContain('data-nib-islands')
+    expect(html).not.toContain('data-nib-runtime-preload="islands"')
+    expect(html).not.toContain('data-nib-runtime-preload="behaviors"')
+    expect(html).toContain('href="/assets/refresh.js"')
+    expect(html).toContain('data-nib-runtime-preload="enhancements"')
     expect(html).toContain('<title>Page</title>')
     expect(html).toContain('<main>Page</main>')
   })
 
   it('keeps the island entry on interactive pages', () => {
-    expect(renderDocument(template, page(['counter']))).toContain('data-nib-islands')
+    const html = renderDocument(template, page(['counter']))
+    expect(html).toContain('data-nib-islands')
+    expect(html).toContain('data-nib-runtime-preload="islands"')
+    expect(html).not.toContain('data-nib-runtime-preload="behaviors"')
   })
 
   it('keeps only the behavior entry on non-React enhanced pages', () => {
     const html = renderDocument(template, page([], ['pin']))
     expect(html).toContain('data-nib-behaviors')
+    expect(html).toContain('data-nib-runtime-preload="behaviors"')
     expect(html).not.toContain('data-nib-islands')
+    expect(html).not.toContain('data-nib-runtime-preload="islands"')
   })
 
   it('requires a marked client entry when a page uses islands', () => {

@@ -1,4 +1,4 @@
-const MAX_SERIALIZED_PROPS_LENGTH = 64 * 1024
+export const MAX_SERIALIZED_PROPS_LENGTH = 64 * 1024
 
 export type JsonValue =
   | null
@@ -7,6 +7,42 @@ export type JsonValue =
   | string
   | JsonValue[]
   | { [key: string]: JsonValue }
+
+type IsAny<Value> = 0 extends (1 & Value) ? true : false
+type IsBroadObject<Value> = [Value] extends [object]
+  ? [object] extends [Value] ? true : false
+  : false
+type IsOptionalKey<Value extends object, Key extends keyof Value> = {} extends Pick<Value, Key>
+  ? true
+  : false
+type IsJsonValue<Value> = IsAny<Value> extends true
+  ? false
+  : [Value] extends [never | undefined]
+    ? false
+    : [Value] extends [null | string | number | boolean]
+      ? true
+      : Value extends (...args: never[]) => unknown
+        ? false
+        : Value extends readonly (infer Item)[]
+          ? IsJsonValue<Item>
+          : Value extends object
+            ? JsonSerializableObject<Value>
+            : false
+
+/** Compile-time counterpart to the runtime serializer's plain JSON contract. */
+export type JsonSerializableObject<Value extends object> = Value extends unknown
+  ? IsBroadObject<Value> extends true
+    ? false
+    : keyof Value extends never
+      ? true
+      : false extends {
+          [Key in keyof Value]-?: IsOptionalKey<Value, Key> extends true
+            ? IsJsonValue<Exclude<Value[Key], undefined>>
+            : IsJsonValue<Value[Key]>
+        }[keyof Value]
+        ? false
+        : true
+  : never
 
 function isPlainObject(value: object): value is Record<string, unknown> {
   const prototype = Object.getPrototypeOf(value)
@@ -64,6 +100,9 @@ export function serializeIslandProps(props: object): string {
 }
 
 export function parseIslandProps(serialized: string): Record<string, unknown> {
+  if (serialized.length > MAX_SERIALIZED_PROPS_LENGTH) {
+    throw new Error(`Island props exceed ${MAX_SERIALIZED_PROPS_LENGTH} serialized characters`)
+  }
   let parsed: unknown
   try {
     parsed = JSON.parse(serialized)

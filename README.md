@@ -24,6 +24,13 @@ npx @briansunter/nib init my-site
 cd my-site
 npm run dev
 ```
+
+For a compact feature-complete example, see the
+[Commonplace blog template](examples/blog/README.md). It uses fictional sample
+content while demonstrating Markdown, collections, typed data pages,
+responsive images, islands, client behaviors, optional navigation, feeds,
+search data, redirects, and hosting output.
+
 ## Features
 
 - File-based routes from `src/pages`, including a static `404.html`.
@@ -187,10 +194,11 @@ export const meta = {
 
 Renderer plugins can contribute the same `HeadContribution` shape from their
 typed `renderer().head(context)` hook. Nib emits site, page, then plugin
-contributions in that order. When the `metadata()` plugin is enabled, a page's
-`image`, `type`, and `twitterCard` metadata override the plugin defaults
-independently, so article pages can use their own social preview without
-duplicating or replacing unrelated site-wide defaults.
+contributions in that order; later `title` and `description` overrides win.
+When the `metadata()` plugin is enabled, a page's `image`, `type`, and
+`twitterCard` metadata override the plugin defaults independently, so article
+pages can use their own social preview without duplicating or replacing
+unrelated site-wide defaults.
 
 ## Optional Vite adapters
 
@@ -257,14 +265,15 @@ Plugins can also contribute typed page-source adapters, virtual React pages,
 static resources, and redirects. `@briansunter/nib/rss` is a first-party RSS
 2.0 resource-route helper: item `link` values may be absolute URLs or Nib route
 paths, which are resolved with the configured `base`. Its `items` option can
-also be an async function receiving the immutable initial route manifest, or an
+also be an async function receiving the current immutable route manifest, or an
 explicit `fromCollection(collection, mapper)` capability. A capability grants
 that resource access to only the named collection and returns deeply frozen
 build data. The generic resource route API remains available for Atom, JSON
 Feed, or another custom format.
-After registrations are merged, inspection hooks receive an immutable resolved-
-route manifest. Nib retains path normalization, collision detection, base paths,
-and output-file ownership.
+Route providers run in plugin order, so later providers receive an immutable
+snapshot that includes routes already contributed by earlier plugins. Nib
+retains path normalization, collision detection, base paths, and output-file
+ownership.
 
 Builds also emit `dist/client/.nib/publication.json`. It records the manifest
 version, base path, trailing-slash policy, and each published route's kind,
@@ -413,9 +422,9 @@ The [documentation site](https://briansunter.github.io/nib/docs/) covers setup,
 pages, Markdown, layouts, data sources, collections, islands, and GitHub Pages.
 
 Repository maintainers can run `bun run verify` for the ordered framework,
-package-consumer, documentation, and personal-site replica gate. The command is
-sequential so the root and replica builds cannot overwrite shared framework
-output.
+package-consumer, documentation, and blog-template gate. The example is a root
+workspace, so `bun install --frozen-lockfile` installs the exact dependency
+graph used by CI.
 
 ## Optional optimized images
 
@@ -479,6 +488,7 @@ bun run check:version-policy
 ```
 
 Framework source lives in `src`, the published initializer in
-`templates/default`, and the documentation site in `examples/docs`. Optional
-publishable packages live under `packages/*`; the image package can be built
-or tested directly with `bun run --cwd packages/nib-images <script>`.
+`templates/default`, the documentation site in `examples/docs`, and the
+feature-complete sample in `examples/blog`. Optional publishable packages live
+under `packages/*`; the image package can be built or tested directly with
+`bun run --cwd packages/nib-images <script>`.

@@ -2,7 +2,7 @@ import { performance } from 'node:perf_hooks'
 import path from 'node:path'
 import { inspectSite } from '../dist/framework/verify.js'
 
-const root = path.resolve(process.argv[2] ?? 'examples/personal-site-replica')
+const root = path.resolve(process.argv[2] ?? 'examples/blog')
 const baselineMilliseconds = Number(process.env.INSPECTION_BASELINE_MS ?? 2520)
 const minimumSpeedup = Number(process.env.INSPECTION_MIN_SPEEDUP ?? 3)
 const samples = []

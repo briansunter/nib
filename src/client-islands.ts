@@ -1,6 +1,5 @@
 export {
   createIslandRuntime,
-  startIslandRuntime,
   type CreateIslandRuntimeOptions,
   type IslandClientModules,
   type IslandRuntime,

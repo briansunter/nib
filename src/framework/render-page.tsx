@@ -1,5 +1,6 @@
 import { StrictMode, createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup, renderToString } from 'react-dom/server'
+import { BehaviorRenderContext } from './behaviors'
 import { serializeIslandProps } from './island-serialization'
 import {
   MarkdownContentRenderContext,
@@ -30,16 +31,10 @@ export interface RenderedReactPage {
   behaviors: string[]
 }
 
-function behaviorIds(html: string): string[] {
-  return [...new Set(
-    [...html.matchAll(/<nib-behavior\b[^>]*\bdata-behavior="([^"]+)"/gi)]
-      .map((match) => match[1]!),
-  )]
-}
-
 function contentRenderTree(
   page: ReactNode,
   islandRenderer: IslandRenderer,
+  behaviors: Set<string>,
 ): { tree: ReactNode; rendered: Set<MarkdownContent> } {
   const rendered = new Set<MarkdownContent>()
   return {
@@ -47,7 +42,11 @@ function contentRenderTree(
     tree: createElement(
       MarkdownContentRenderContext.Provider,
       { value: { rendered } },
-      createElement(IslandRenderContext.Provider, { value: islandRenderer }, page),
+      createElement(
+        IslandRenderContext.Provider,
+        { value: islandRenderer },
+        createElement(BehaviorRenderContext.Provider, { value: behaviors }, page),
+      ),
     ),
   }
 }
@@ -63,7 +62,7 @@ function assertRequiredContent(
   }
 }
 
-function islandTree(island: CollectedIsland): ReactNode {
+function islandTree(island: CollectedIsland, behaviors: Set<string>): ReactNode {
   return contentRenderTree(
     createElement(
       StrictMode,
@@ -71,6 +70,7 @@ function islandTree(island: CollectedIsland): ReactNode {
       createElement(island.definition.Component, island.props),
     ),
     composedIslandRenderer(),
+    behaviors,
   ).tree
 }
 
@@ -79,6 +79,7 @@ export function renderReactPage(
   requiredContent: readonly MarkdownContent[] = [],
 ): RenderedReactPage {
   const collected: CollectedIsland[] = []
+  const behaviors = new Set<string>()
   const collector: IslandRenderer = {
     render(request: IslandRenderRequest) {
       const index = collected.length
@@ -96,15 +97,15 @@ export function renderReactPage(
     },
   }
 
-  const collectedTree = contentRenderTree(page, collector)
+  const collectedTree = contentRenderTree(page, collector, behaviors)
   const collectedShell = renderToStaticMarkup(collectedTree.tree)
   assertRequiredContent(collectedTree.rendered, requiredContent)
   if (collected.length === 0) {
-    return { html: collectedShell, islands: [], behaviors: behaviorIds(collectedShell) }
+    return { html: collectedShell, islands: [], behaviors: [...behaviors] }
   }
 
   for (const island of collected) {
-    island.html = renderToString(islandTree(island), {
+    island.html = renderToString(islandTree(island, behaviors), {
       identifierPrefix: island.identifierPrefix,
     })
   }
@@ -131,12 +132,13 @@ export function renderReactPage(
         'data-prefix': island.identifierPrefix,
         'data-hydrate': island.hydrate,
         'data-props': island.serializedProps,
+        style: { display: 'contents' },
         dangerouslySetInnerHTML: { __html: island.html },
       })
     },
   }
 
-  const emittedTree = contentRenderTree(page, emitter)
+  const emittedTree = contentRenderTree(page, emitter, behaviors)
   const html = renderToStaticMarkup(emittedTree.tree)
   assertRequiredContent(emittedTree.rendered, requiredContent)
   if (cursor !== collected.length) {
@@ -146,6 +148,6 @@ export function renderReactPage(
   return {
     html,
     islands: [...new Set(collected.map((island) => island.definition.islandId))],
-    behaviors: behaviorIds(html),
+    behaviors: [...behaviors],
   }
 }

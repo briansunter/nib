@@ -27,8 +27,10 @@ export interface HeadElement {
   readonly content?: string
 }
 
-/** Site- or page-owned additions to the generated document head. */
+/** Structured document-head additions and optional final metadata overrides. */
 export interface HeadContribution {
+  readonly title?: string
+  readonly description?: string
   readonly elements?: readonly HeadElement[]
 }
 
@@ -199,6 +201,16 @@ export interface SiteConfig {
   head?: HeadContribution
 }
 
+/** Site facts after validation, copied into a deeply immutable public snapshot. */
+export type ResolvedSite = Readonly<
+  Omit<SiteConfig, 'navigation'>
+  & {
+    readonly navigation?: readonly Readonly<
+      NonNullable<SiteConfig['navigation']>[number]
+    >[]
+  }
+>
+
 export type TrailingSlash = 'always' | 'never' | 'ignore'
 export type RedirectStatus = 301 | 302 | 307 | 308
 
@@ -266,9 +278,9 @@ export interface CollectionCapability<Result = unknown> {
 
 export interface PageProps<Config extends NibConfig = NibConfig> {
   /** Stable public facts about the route being rendered. */
-  route: PageRoute
-  site: SiteConfig
-  collections: LoadedCollections<Config>
+  readonly route: PageRoute
+  readonly site: ResolvedSite
+  readonly collections: LoadedCollections<Config>
 }
 
 export interface DataPageProps<

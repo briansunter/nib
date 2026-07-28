@@ -79,6 +79,7 @@ export type {
   RedirectStatus,
   RedirectRoute,
   ResolvedPageMeta,
+  ResolvedSite,
   ResourceRoute,
   RouteSnapshot,
   SiteConfig,

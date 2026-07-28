@@ -88,4 +88,12 @@ describe('router', () => {
     expect(routes.get('/projects/one')?.data).toEqual({ name: 'One' })
     expect(routes.get('/projects/one')?.layouts).toEqual([])
   })
+
+  it('rejects protocol-relative generated routes instead of normalizing their host away', () => {
+    expect(() => createRoutes({
+      '/src/content/projects.json': {
+        pages: [{ path: '//evil.example/project', component: Page, data: {} }],
+      },
+    }, site)).toThrow('protocol-relative')
+  })
 })

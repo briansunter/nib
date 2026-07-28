@@ -123,6 +123,11 @@ describe('optional client navigation', () => {
     expect(runtime.unmount).toHaveBeenCalledOnce()
     expect(runtime.mount).toHaveBeenCalledOnce()
     expect(document.documentElement.hasAttribute('data-nib-navigation-direction')).toBe(false)
+    const announcer = document.querySelector<HTMLElement>('.nib-route-announcer')
+    expect(announcer?.classList.contains('sr-only')).toBe(false)
+    expect(announcer?.style.position).toBe('absolute')
+    expect(announcer?.style.width).toBe('1px')
+    expect(announcer?.getAttribute('aria-live')).toBe('assertive')
   })
 
   it('aborts a superseded request without letting stale HTML win', async () => {
@@ -147,6 +152,33 @@ describe('optional client navigation', () => {
     expect(document.querySelector('#root')?.textContent).toBe('Second')
     expect(runtime.unmount).toHaveBeenCalledOnce()
     expect(runtime.mount).toHaveBeenCalledOnce()
+  })
+
+  it('settles a superseded navigation waiting on an active prefetch', async () => {
+    document.querySelector('#root')!.innerHTML = Array.from(
+      { length: 6 },
+      (_, index) => `<a href="/active-${index}" data-nib-prefetch="load">${index}</a>`,
+    ).join('')
+    const requests = new Map<string, ReturnType<typeof deferredResponse>>()
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const pathname = new URL(String(input), location.href).pathname
+      const request = deferredResponse(init?.signal ?? undefined)
+      requests.set(pathname, request)
+      return request.promise
+    })
+    controller = createClientNavigation()
+    controller.mount()
+    expect(fetch).toHaveBeenCalledTimes(6)
+
+    const prefetched = controller.navigate('/active-0')
+    const winner = controller.navigate('/winner')
+    await vi.waitFor(() => expect(requests.has('/winner')).toBe(true))
+    requests.get('/winner')?.resolve(page('/winner', 'Winner', '<h1>Winner</h1>'))
+
+    await winner
+    await prefetched
+    expect(document.title).toBe('Winner')
+    expect(location.pathname).toBe('/winner')
   })
 
   it('retains a persisted control, focus, and selection across documents', async () => {
@@ -249,6 +281,61 @@ describe('optional client navigation', () => {
     expect(scrollIntoView).toHaveBeenCalledOnce()
   })
 
+  it('activates the destination base before inserting relative resources', async () => {
+    history.replaceState(null, '', '/recipes/current')
+    vi.mocked(fetch).mockResolvedValue(page(
+      '/next/subpage',
+      'Next',
+      '<h1>Next</h1><img src="./pixel.png" alt="">',
+    ))
+    const nativeReplaceWith = HTMLElement.prototype.replaceWith
+    let baseDuringRootSwap: string | undefined
+    vi.spyOn(HTMLElement.prototype, 'replaceWith').mockImplementation(function (
+      this: HTMLElement,
+      ...nodes: (Node | string)[]
+    ) {
+      if (this.id === 'root') baseDuringRootSwap = document.baseURI
+      nativeReplaceWith.call(this, ...nodes)
+    })
+    controller = createClientNavigation()
+    controller.mount()
+
+    await controller.navigate('/next/subpage')
+
+    expect(new URL(baseDuringRootSwap!).pathname).toBe('/next/subpage')
+    expect(document.querySelector<HTMLImageElement>('img')?.src)
+      .toBe(new URL('/next/pixel.png', location.href).href)
+    expect(document.querySelector(`base[data-nib-navigation-base]`)).toBeNull()
+  })
+
+  it('activates an authored base before earlier head resources are inserted', async () => {
+    vi.mocked(fetch).mockResolvedValue(page(
+      '/nested/page',
+      'Nested',
+      '<h1>Nested</h1>',
+      '<script type="application/json" src="./metadata.json"></script><base href="../assets/">',
+    ))
+    const nativeReplaceWith = HTMLElement.prototype.replaceWith
+    let baseDuringRootSwap: string | undefined
+    vi.spyOn(HTMLElement.prototype, 'replaceWith').mockImplementation(function (
+      this: HTMLElement,
+      ...nodes: (Node | string)[]
+    ) {
+      if (this.id === 'root') baseDuringRootSwap = document.baseURI
+      nativeReplaceWith.call(this, ...nodes)
+    })
+    controller = createClientNavigation()
+    controller.mount()
+
+    await controller.navigate('/nested/page')
+
+    expect(new URL(baseDuringRootSwap!).pathname).toBe('/assets/')
+    expect(document.querySelector<HTMLScriptElement>('script[src]')?.src)
+      .toBe(new URL('/assets/metadata.json', location.href).href)
+    expect(document.querySelector(`base[data-nib-navigation-base]`)).toBeNull()
+    expect(new URL(document.baseURI).pathname).toBe('/assets/')
+  })
+
   it('falls back to native navigation for non-HTML and malformed documents', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce({
@@ -329,6 +416,158 @@ describe('optional client navigation', () => {
     expect(scripts[1]?.getAttribute('nonce')).toBe('json')
   })
 
+  it('replaces matching head resources when their other attributes change', async () => {
+    document.head.innerHTML = `
+      <title>Home</title>
+      <link rel="stylesheet" href="data:text/css,body{}" media="screen" integrity="old">
+      <style media="screen">body { color: black; }</style>
+      <script type="application/json" src="data:application/json,{}" nonce="old" data-version="1"></script>
+    `
+    const previous = {
+      link: document.querySelector('link'),
+      script: document.querySelector('script'),
+      style: document.querySelector('style'),
+    }
+    vi.mocked(fetch).mockResolvedValue(page(
+      '/head-attributes',
+      'Head attributes',
+      '<h1>Head attributes</h1>',
+      `<link rel="stylesheet" href="data:text/css,body{}" media="print" integrity="new" crossorigin="anonymous">
+       <style media="print">body { color: black; }</style>
+       <script type="application/json" src="data:application/json,{}" nonce="new" data-version="2"></script>`,
+    ))
+    controller = createClientNavigation()
+    controller.mount()
+
+    await controller.navigate('/head-attributes')
+
+    const link = document.querySelector('link')
+    const style = document.querySelector('style')
+    const script = document.querySelector('script')
+    expect(link).not.toBe(previous.link)
+    expect(style).not.toBe(previous.style)
+    expect(script).not.toBe(previous.script)
+    expect(link).toMatchObject({ media: 'print' })
+    expect(link?.getAttribute('integrity')).toBe('new')
+    expect(link?.getAttribute('crossorigin')).toBe('anonymous')
+    expect(style?.getAttribute('media')).toBe('print')
+    expect(script?.getAttribute('nonce')).toBe('new')
+    expect(script?.getAttribute('data-version')).toBe('2')
+  })
+
+  it('deduplicates scripts against the current document rather than session history', async () => {
+    document.head.innerHTML = `
+      <title>Home</title>
+      <script>window.__pageScript = true</script>
+    `
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(page('/without-script', 'Without script', '<h1>Without</h1>'))
+      .mockResolvedValueOnce(page(
+        '/script-returns',
+        'Script returns',
+        '<h1>Returns</h1>',
+        '<script>window.__pageScript = true</script>',
+      ))
+    controller = createClientNavigation()
+    controller.mount()
+    await controller.navigate('/without-script')
+
+    let wasMarkedAsExecuted: boolean | undefined
+    document.addEventListener('nib:navigation-before-swap', (event) => {
+      wasMarkedAsExecuted = event.detail.newDocument
+        .querySelector('script')
+        ?.hasAttribute('data-nib-script-executed')
+    }, { once: true })
+    await controller.navigate('/script-returns')
+
+    expect(wasMarkedAsExecuted).toBe(false)
+  })
+
+  it('hard-navigates when a retained Nib runtime entry changes deployment hash', async () => {
+    document.head.innerHTML = `
+      <title>Home</title>
+      <script data-nib-islands type="application/json" src="/assets/islands-old.js"></script>
+    `
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(page('/static', 'Static', '<h1>Static</h1>'))
+      .mockResolvedValueOnce(page(
+        '/new-deployment',
+        'New deployment',
+        '<h1>New</h1>',
+        '<script data-nib-islands type="application/json" src="/assets/islands-new.js"></script>',
+      ))
+    controller = createClientNavigation()
+    controller.mount()
+
+    await controller.navigate('/static')
+    expect(document.querySelector('script[data-nib-islands]')?.getAttribute('src'))
+      .toBe('/assets/islands-old.js')
+    const unmountCalls = runtime.unmount.mock.calls.length
+
+    await controller.navigate('/new-deployment')
+
+    expect(location.pathname).toBe('/new-deployment')
+    expect(document.title).toBe('Static')
+    expect(runtime.unmount).toHaveBeenCalledTimes(unmountCalls)
+  })
+
+  it('preserves client CSS that loaded before navigation mounted', async () => {
+    document.head.innerHTML = `
+      <title>Home</title>
+      <link rel="stylesheet" href="data:text/css,server">
+      <script data-nib-enhancements type="application/json" src="/assets/enhancements.js"></script>
+      <link rel="stylesheet" href="data:text/css,lazy-client">
+    `
+    vi.mocked(fetch).mockResolvedValue(page(
+      '/next',
+      'Next',
+      '<h1>Next</h1>',
+      `<link rel="stylesheet" href="data:text/css,server">
+       <script data-nib-enhancements type="application/json" src="/assets/enhancements.js"></script>`,
+    ))
+    controller = createClientNavigation()
+    controller.mount()
+
+    await controller.navigate('/next')
+
+    expect([
+      ...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'),
+    ].map((link) => link.href)).toEqual([
+      'data:text/css,server',
+      'data:text/css,lazy-client',
+    ])
+  })
+
+  it('commits the default swap atomically before an async swap extension yields', async () => {
+    vi.mocked(fetch).mockResolvedValue(page('/first', 'First', '<h1>First</h1>'))
+    let release!: () => void
+    const extensionWork = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    document.addEventListener('nib:navigation-before-swap', (event) => {
+      const defaultSwap = event.detail.swap
+      event.detail.swap = async () => {
+        await defaultSwap()
+        await extensionWork
+      }
+    }, { once: true })
+    controller = createClientNavigation()
+    controller.mount()
+
+    const first = controller.navigate('/first')
+    await vi.waitFor(() => expect(document.title).toBe('First'))
+    expect(location.pathname).toBe('/first')
+    expect(document.querySelector(`base[data-nib-navigation-base]`)).toBeNull()
+
+    await controller.navigate('/second')
+    expect(fetch).toHaveBeenCalledOnce()
+    expect(location.pathname).toBe('/second')
+
+    release()
+    await first
+    expect(runtime.mount).not.toHaveBeenCalled()
+  })
+
   it('prefetches load links within a bounded cache and skips constrained connections', async () => {
     document.querySelector('#root')!.innerHTML = Array.from(
       { length: 41 },
@@ -358,6 +597,113 @@ describe('optional client navigation', () => {
     })
     controller.mount()
     expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('caps background prefetches and immediately promotes a clicked queued page', async () => {
+    document.querySelector('#root')!.innerHTML = Array.from(
+      { length: 41 },
+      (_, index) => `<a href="/queued-${index}" data-nib-prefetch="load">${index}</a>`,
+    ).join('')
+    const requests = new Map<string, ReturnType<typeof deferredResponse>>()
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const pathname = new URL(String(input), location.href).pathname
+      const request = deferredResponse(init?.signal ?? undefined)
+      requests.set(pathname, request)
+      return request.promise
+    })
+    controller = createClientNavigation()
+    controller.mount()
+
+    expect(fetch).toHaveBeenCalledTimes(6)
+    expect(requests.has('/queued-40')).toBe(false)
+
+    const promoted = controller.navigate('/queued-40')
+    await vi.waitFor(() => expect(requests.has('/queued-40')).toBe(true))
+    expect(fetch).toHaveBeenCalledTimes(7)
+
+    const superseding = controller.navigate('/foreground')
+    await vi.waitFor(() => expect(requests.has('/foreground')).toBe(true))
+    requests.get('/foreground')?.resolve(page(
+      '/foreground',
+      'Foreground',
+      '<h1>Foreground</h1>',
+    ))
+    await superseding
+    await promoted
+
+    expect(document.title).toBe('Foreground')
+    expect(vi.mocked(fetch).mock.calls.length).toBeLessThan(41)
+  })
+
+  it('restarts a promoted queued request when same-page navigation supersedes it', async () => {
+    document.querySelector('#root')!.innerHTML = Array.from(
+      { length: 7 },
+      (_, index) => `<a href="/same-${index}" data-nib-prefetch="load">${index}</a>`,
+    ).join('')
+    const requests = new Map<string, ReturnType<typeof deferredResponse>[]>()
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const pathname = new URL(String(input), location.href).pathname
+      const request = deferredResponse(init?.signal ?? undefined)
+      const pending = requests.get(pathname) ?? []
+      pending.push(request)
+      requests.set(pathname, pending)
+      return request.promise
+    })
+    controller = createClientNavigation()
+    controller.mount()
+    expect(fetch).toHaveBeenCalledTimes(6)
+
+    const first = controller.navigate('/same-6')
+    await vi.waitFor(() => expect(requests.get('/same-6')).toHaveLength(1))
+    const second = controller.navigate('/same-6')
+    await vi.waitFor(() => expect(requests.get('/same-6')).toHaveLength(2))
+    requests.get('/same-6')?.[1]?.resolve(page(
+      '/same-6',
+      'Same page',
+      '<h1>Same page</h1>',
+    ))
+
+    await second
+    await first
+    expect(document.title).toBe('Same page')
+    expect(location.pathname).toBe('/same-6')
+  })
+
+  it('keeps background queue drain at six and never starts queued work on destroy', async () => {
+    document.querySelector('#root')!.innerHTML = Array.from(
+      { length: 12 },
+      (_, index) => `<a href="/drain-${index}" data-nib-prefetch="load">${index}</a>`,
+    ).join('')
+    const requests = new Map<string, ReturnType<typeof deferredResponse>>()
+    let active = 0
+    let peak = 0
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const pathname = new URL(String(input), location.href).pathname
+      const request = deferredResponse(init?.signal ?? undefined)
+      requests.set(pathname, request)
+      active += 1
+      peak = Math.max(peak, active)
+      return request.promise.finally(() => {
+        active -= 1
+      })
+    })
+    controller = createClientNavigation()
+    controller.mount()
+
+    expect(fetch).toHaveBeenCalledTimes(6)
+    expect(active).toBe(6)
+    expect(peak).toBe(6)
+
+    requests.get('/drain-0')?.resolve(page('/drain-0', 'Zero', '<h1>Zero</h1>'))
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(7))
+    expect(active).toBe(6)
+    expect(peak).toBe(6)
+
+    const callsBeforeDestroy = vi.mocked(fetch).mock.calls.length
+    controller.destroy()
+    controller = undefined
+    await vi.waitFor(() => expect(active).toBe(0))
+    expect(fetch).toHaveBeenCalledTimes(callsBeforeDestroy)
   })
 
   it('requires an explicit tap strategy for pointer-down prefetch', async () => {
@@ -650,6 +996,33 @@ describe('optional client navigation', () => {
     document.querySelector('#hover')!.dispatchEvent(new Event('mouseover', { bubbles: true }))
     vi.advanceTimersByTime(100)
     await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce())
+  })
+
+  it('cancels pending hover prefetch when the link is clicked', async () => {
+    vi.useFakeTimers()
+    document.querySelector('#root')!.innerHTML =
+      '<a href="/hover-click" data-nib-prefetch="hover">Hover then click</a>'
+    vi.mocked(fetch).mockResolvedValue(page(
+      '/hover-click',
+      'Hover click',
+      '<h1>Hover click</h1>',
+    ))
+    controller = createClientNavigation()
+    controller.mount()
+
+    const link = document.querySelector('a')!
+    link.dispatchEvent(new Event('mouseover', { bubbles: true }))
+    link.dispatchEvent(new MouseEvent('click', {
+      bubbles: true,
+      button: 0,
+      cancelable: true,
+    }))
+    expect(fetch).toHaveBeenCalledOnce()
+
+    await vi.advanceTimersByTimeAsync(100)
+
+    expect(fetch).toHaveBeenCalledOnce()
+    expect(document.title).toBe('Hover click')
   })
 
   it('hard-navigates after runtime teardown fails', async () => {

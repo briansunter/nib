@@ -7,12 +7,8 @@ nibAuthoring.definePlugin
 
 const plugin = definePlugin({
   name: 'typed-plugin',
-  setup(context) {
-    context.configPath
-    const phase: 'vite-config' | 'page-source-module' = context.phase
-    void phase
-    return { pageSources: [] }
-  },
+  pageSources: [],
+  clientEntries: [{ module: 'browser-module', initializer: 'startBrowser' }],
   vite(context) {
     context.base
     const target: 'client' | 'server' | 'development' = context.target
@@ -31,12 +27,6 @@ const plugin = definePlugin({
       contentType: 'application/xml',
     }
   },
-  routesResolved(context) {
-    const paths: readonly string[] = context.routes.map((route) => route.path)
-    void paths
-    // @ts-expect-error the resolved route list is readonly.
-    context.routes.push()
-  },
   renderer(context) {
     context.site.title
     return {
@@ -53,11 +43,6 @@ const plugin = definePlugin({
         render.route.path
         // @ts-expect-error plugin route facts do not expose the page implementation.
         render.route.component
-        return page
-      },
-      transformPage(page) {
-        // @ts-expect-error transform inputs are readonly.
-        page.html = 'mutated'
         return page
       },
       async finalize(context) {
@@ -95,6 +80,10 @@ defineConfig({
 
 // @ts-expect-error renderer hooks must be functions.
 definePlugin({ name: 'bad-renderer', renderer: true })
+// @ts-expect-error declarative page sources must be an array.
+definePlugin({ name: 'bad-page-sources', pageSources: true })
+// @ts-expect-error declarative client entries must have valid fields.
+definePlugin({ name: 'bad-client-entry', clientEntries: [{ module: 1, initializer: 'start' }] })
 // @ts-expect-error a Vite contribution must be a Vite PluginOption.
 definePlugin({ name: 'bad-vite', vite: () => 42 })
 // @ts-expect-error route registrations use a closed discriminated union.

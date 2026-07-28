@@ -25,14 +25,19 @@ import {
 } from './project-vite-plugin'
 import { loadNibConfig, resolveBasePath } from './project-config'
 import {
-  createPublicationManifest,
-  normalizePath,
+  configuredClientEntries,
+  configuredPageSources,
+} from './plugin-contributions'
+import {
+  createPublicationArtifactPlan,
+  createPublicationManifestFromRoutes,
+  createPublicationManifestRoute,
   previewCanonicalRedirect,
   previewExtensionlessPageArtifacts,
-  routeArtifacts,
+  type PublicationArtifactPlanEntry,
+  type PublicationManifestRoute,
 } from './publication'
 import {
-  resolvePluginSetupContributions,
   resolveVitePluginContributions,
 } from './plugin'
 import { writeHostingArtifacts } from './hosting-writer'
@@ -48,13 +53,14 @@ export interface SiteOperationOptions {
 interface ManifestEntry {
   css?: string[]
   file: string
+  imports?: string[]
   isEntry?: boolean
   name?: string
 }
 
 type ViteManifest = Record<string, ManifestEntry>
 
-function htmlWriteConcurrency(): number {
+function publicationBatchSize(): number {
   return Math.max(1, Math.min(8, os.availableParallelism()))
 }
 
@@ -68,36 +74,72 @@ function normalizedAllowedHosts(
   return [...new Set(hosts.map((host) => host.trim()))]
 }
 
-async function mapWithConcurrency<Value>(
-  values: readonly Value[],
-  concurrency: number,
-  callback: (value: Value) => Promise<void>,
+async function waitForAll(
+  promises: readonly Promise<unknown>[],
 ): Promise<void> {
-  let next = 0
-  await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, async () => {
-    while (next < values.length) {
-      const index = next
-      next += 1
-      await callback(values[index]!)
-    }
-  }))
+  const results = await Promise.allSettled(promises)
+  const failure = results.find((result): result is PromiseRejectedResult => (
+    result.status === 'rejected'
+  ))
+  if (failure !== undefined) throw failure.reason
 }
 
 function baseHref(base: string, file: string): string {
   return `${base}${file.replace(/^\/+/, '')}`
 }
 
+/** @internal Exported for framework contract tests, not from the package API. */
+export function manifestModulePreloads(
+  manifest: ViteManifest,
+  entry: ManifestEntry,
+): string[] {
+  const visited = new Set<string>()
+  const files = new Set<string>()
+  const visit = (current: ManifestEntry) => {
+    for (const imported of current.imports ?? []) {
+      if (visited.has(imported)) continue
+      visited.add(imported)
+      const dependency = manifest[imported]
+      if (dependency === undefined) {
+        throw new Error(`Nib client manifest references missing module ${imported}`)
+      }
+      if (dependency.file !== entry.file) files.add(dependency.file)
+      visit(dependency)
+    }
+  }
+  visit(entry)
+  return [...files]
+}
+
+interface HtmlTemplateEntry {
+  readonly source: string
+  readonly preloads: readonly string[]
+}
+
 interface HtmlTemplateEntries {
-  readonly island: string
-  readonly behavior: string
-  readonly enhancement?: string
+  readonly island: HtmlTemplateEntry
+  readonly behavior: HtmlTemplateEntry
+  readonly enhancement?: HtmlTemplateEntry
   readonly stylesheets: readonly string[]
+}
+
+function modulePreloadLinks(
+  owner: 'islands' | 'behaviors' | 'enhancements',
+  preloads: readonly string[],
+): string {
+  return preloads
+    .map((href) => (
+      `<link data-nib-runtime-preload="${owner}" rel="modulepreload" href="${href}" />`
+    ))
+    .join('\n    ')
 }
 
 function htmlTemplate(entries: HtmlTemplateEntries): string {
   const styles = entries.stylesheets
     .map((href) => `<link rel="stylesheet" href="${href}" />`)
     .join('\n    ')
+  const islandPreloads = modulePreloadLinks('islands', entries.island.preloads)
+  const behaviorPreloads = modulePreloadLinks('behaviors', entries.behavior.preloads)
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -105,11 +147,14 @@ function htmlTemplate(entries: HtmlTemplateEntries): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--head-outlet-->
     ${styles}
-    <!--nib-islands-entry--><script data-nib-islands type="module" src="${entries.island}"></script>
-    <!--nib-behaviors-entry--><script data-nib-behaviors type="module" src="${entries.behavior}"></script>
+    ${islandPreloads}
+    <!--nib-islands-entry--><script data-nib-islands type="module" src="${entries.island.source}"></script>
+    ${behaviorPreloads}
+    <!--nib-behaviors-entry--><script data-nib-behaviors type="module" src="${entries.behavior.source}"></script>
     ${entries.enhancement === undefined
       ? ''
-      : `<script data-nib-enhancements type="module" src="${entries.enhancement}"></script>`}
+      : `${modulePreloadLinks('enhancements', entries.enhancement.preloads)}
+    <script data-nib-enhancements type="module" src="${entries.enhancement.source}"></script>`}
   </head>
   <body>
     <div id="root"><!--ssr-outlet--></div>
@@ -139,14 +184,8 @@ export async function siteViteConfig(
     base,
     configPath: loaded.configPath,
   })
-  const setup = await resolvePluginSetupContributions(
-    loaded.config.plugins ?? [],
-    Object.freeze({ ...pluginContext, phase: 'vite-config' as const }),
-  )
-  const pageSources = [
-    ...(loaded.config.pageSources ?? []),
-    ...(setup.pageSources ?? []),
-  ]
+  const pageSources = configuredPageSources(loaded.config)
+  const clientEntries = configuredClientEntries(loaded.config)
   const extensions = pageSourceExtensions(pageSources)
   const appVitePlugins = loaded.config.vite === undefined
     ? []
@@ -161,7 +200,7 @@ export async function siteViteConfig(
     base,
     trailingSlash: loaded.config.trailingSlash,
     hosting: loaded.config.hosting,
-    clientEntries: setup.clientEntries ?? [],
+    clientEntries,
     config: {
       appType: 'custom',
       base,
@@ -174,7 +213,7 @@ export async function siteViteConfig(
         targetBoundaryGuard(target),
         pageStyleOwnershipGuard(root, target),
         nibMarkdown(loaded.configPath),
-        nibDataPages(loaded.configPath, pageSources, pluginContext),
+        nibDataPages(loaded.configPath, pageSources),
         ...appVitePlugins,
         ...contributedPlugins,
         react(),
@@ -184,7 +223,7 @@ export async function siteViteConfig(
           extensions,
           command,
           pageSourcePatterns(pageSources),
-          setup.clientEntries,
+          clientEntries,
         ),
         nibIslandsEntry(),
       ],
@@ -216,18 +255,35 @@ async function readBuildTemplate(
   if (hasEnhancements && !enhancements) {
     throw new Error('Nib client build did not produce its configured enhancement entry')
   }
+  const preloads = (entry: ManifestEntry): string[] => (
+    manifestModulePreloads(manifest, entry).map((file) => baseHref(base, file))
+  )
+  // Dynamic island and behavior CSS is loaded with its owning chunk. Linking
+  // every manifest stylesheet here would make unrelated routes download it.
   const styles = entries
+    .filter((entry) => entry.isEntry)
     .flatMap((entry) => [
       ...(entry.css ?? []),
       ...(entry.isEntry && entry.file.endsWith('.css') ? [entry.file] : []),
     ])
     .filter((file, index, all) => all.indexOf(file) === index)
   return htmlTemplate({
-    island: baseHref(base, islands.file),
-    behavior: baseHref(base, behaviors.file),
+    island: {
+      source: baseHref(base, islands.file),
+      preloads: preloads(islands),
+    },
+    behavior: {
+      source: baseHref(base, behaviors.file),
+      preloads: preloads(behaviors),
+    },
     ...(enhancements === undefined
       ? {}
-      : { enhancement: baseHref(base, enhancements.file) }),
+      : {
+          enhancement: {
+            source: baseHref(base, enhancements.file),
+            preloads: preloads(enhancements),
+          },
+        }),
     stylesheets: styles.map((file) => baseHref(base, file)),
   })
 }
@@ -271,15 +327,124 @@ function publicationPreviewPlugin(
   }
 }
 
-async function buildSiteInProduction(options: SiteOperationOptions): Promise<void> {
-  const root = path.resolve(options.root)
-  const output = path.join(root, 'dist')
+function fileSystemErrorCode(error: unknown): string | undefined {
+  return error !== null && typeof error === 'object' && 'code' in error
+    && typeof error.code === 'string'
+    ? error.code
+    : undefined
+}
+
+async function assertPublicationArtifactsAvailable(
+  clientDirectory: string,
+  plan: readonly PublicationArtifactPlanEntry[],
+): Promise<void> {
+  const checkedDirectories = new Set<string>()
+  for (const { routePath, artifact } of plan) {
+    const segments = artifact.split('/')
+    let candidate = clientDirectory
+    for (const [index, segment] of segments.entries()) {
+      candidate = path.join(candidate, segment)
+      const isArtifact = index === segments.length - 1
+      if (!isArtifact && checkedDirectories.has(candidate)) continue
+
+      let stats
+      try {
+        stats = await fs.lstat(candidate)
+      } catch (error) {
+        if (fileSystemErrorCode(error) === 'ENOENT') break
+        throw error
+      }
+      if (!isArtifact && stats.isDirectory() && !stats.isSymbolicLink()) {
+        checkedDirectories.add(candidate)
+        continue
+      }
+      throw new Error(
+        `Nib cannot publish route ${JSON.stringify(routePath)} to `
+        + `${JSON.stringify(artifact)} because the client build already owns that artifact`,
+      )
+    }
+  }
+}
+
+function renderedBody(template: string, output: RenderedOutput): string {
+  return output.kind === 'page'
+    ? renderDocument(template, output.page)
+    : output.kind === 'resource'
+      ? output.body
+      : renderRedirectDocument(output.destination)
+}
+
+async function renderAndWritePublication(
+  server: { render(url: string): RenderedOutput },
+  plan: readonly PublicationArtifactPlanEntry[],
+  clientDirectory: string,
+  template: string,
+): Promise<readonly PublicationManifestRoute[]> {
+  const manifestRoutes: PublicationManifestRoute[] = []
+  const batchSize = publicationBatchSize()
+  for (let start = 0; start < plan.length; start += batchSize) {
+    // Render in canonical route order before starting this batch's writes.
+    // This keeps stateful render hooks deterministic while bounding retained
+    // page bodies to one small batch.
+    const batch = plan.slice(start, start + batchSize).map(({ routePath, artifact }) => {
+      const output = server.render(routePath)
+      manifestRoutes.push(createPublicationManifestRoute({ routePath, artifact, output }))
+      return { artifact, body: renderedBody(template, output) }
+    })
+    await waitForAll(batch.map(async ({ artifact, body }) => {
+      const primaryFile = path.join(clientDirectory, artifact)
+      await fs.mkdir(path.dirname(primaryFile), { recursive: true })
+      await fs.writeFile(primaryFile, body)
+    }))
+  }
+  return manifestRoutes
+}
+
+async function promoteStagedOutput(
+  stagingDirectory: string,
+  outputDirectory: string,
+): Promise<void> {
+  const suffix = path.basename(path.dirname(stagingDirectory))
+    .replace(/^\.nib-build-/, '')
+  const backupDirectory = path.join(
+    path.dirname(outputDirectory),
+    `.nib-previous-${suffix}`,
+  )
+  let previousMoved = false
+  try {
+    await fs.rename(outputDirectory, backupDirectory)
+    previousMoved = true
+  } catch (error) {
+    if (fileSystemErrorCode(error) !== 'ENOENT') throw error
+  }
+
+  try {
+    await fs.rename(stagingDirectory, outputDirectory)
+  } catch (promotionError) {
+    if (!previousMoved) throw promotionError
+    try {
+      await fs.rename(backupDirectory, outputDirectory)
+    } catch (rollbackError) {
+      throw new AggregateError(
+        [promotionError, rollbackError],
+        `Nib could not publish the staged build or restore ${outputDirectory}; `
+        + `the previous build remains at ${backupDirectory}`,
+      )
+    }
+    throw promotionError
+  }
+
+  if (previousMoved) {
+    await fs.rm(backupDirectory, { recursive: true, force: true })
+  }
+}
+
+async function buildStagedSite(root: string, output: string): Promise<void> {
   const clientDirectory = path.join(output, 'client')
   const serverDirectory = path.join(output, 'server')
   const stylePath = path.join(root, 'src/style.css')
   const hasStyles = await fs.access(stylePath).then(() => true, () => false)
 
-  await fs.rm(output, { recursive: true, force: true })
   const {
     base,
     trailingSlash,
@@ -310,6 +475,7 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
   await viteBuild({
     ...serverConfig,
     build: {
+      copyPublicDir: false,
       emptyOutDir: true,
       outDir: serverDirectory,
       rollupOptions: {
@@ -332,31 +498,20 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
       publication: import('./publication').PublicationManifest
     }): Promise<void>
   }
-  const rendered = server.paths.map((routePath) => ({ routePath, output: server.render(routePath) }))
-  const notFound = { routePath: '/404', output: server.render('/404') }
-  const renderedRoutePaths = rendered.map(({ routePath }) => normalizePath(routePath))
-  const outputs = [...rendered, notFound].map(({ routePath, output }) => ({
-    routePath,
-    output,
-    artifact: routePath === '/404'
-      ? '404.html'
-      : routeArtifacts(
-        routePath,
-        trailingSlash,
-        renderedRoutePaths.some((candidate) => candidate.startsWith(`${normalizePath(routePath)}/`)),
-      ).primary,
-  }))
-  const publicationManifest = createPublicationManifest(base, trailingSlash, outputs)
-  await mapWithConcurrency(outputs, htmlWriteConcurrency(), async ({ output, artifact }) => {
-    const primaryFile = path.join(clientDirectory, artifact)
-    await fs.mkdir(path.dirname(primaryFile), { recursive: true })
-    const body = output.kind === 'page'
-      ? renderDocument(template, output.page)
-      : output.kind === 'resource'
-        ? output.body
-        : renderRedirectDocument(output.destination)
-    await fs.writeFile(primaryFile, body)
-  })
+  const routePaths = [...server.paths, '/404']
+  const plan = createPublicationArtifactPlan(routePaths, trailingSlash)
+  await assertPublicationArtifactsAvailable(clientDirectory, plan)
+  const manifestRoutes = await renderAndWritePublication(
+    server,
+    plan,
+    clientDirectory,
+    template,
+  )
+  const publicationManifest = createPublicationManifestFromRoutes(
+    base,
+    trailingSlash,
+    manifestRoutes,
+  )
   // Finalizers can inspect and enrich the already-published HTML while still
   // sharing the same output directory as framework-owned artifacts.
   await server.finalize({
@@ -370,6 +525,28 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
     `${JSON.stringify(publicationManifest, null, 2)}\n`,
   )
   await writeHostingArtifacts(clientDirectory, publicationManifest, hosting)
+}
+
+async function buildSiteInProduction(options: SiteOperationOptions): Promise<void> {
+  const root = path.resolve(options.root)
+  const output = path.join(root, 'dist')
+  const transactionDirectory = await fs.mkdtemp(path.join(root, '.nib-build-'))
+  const stagingDirectory = path.join(transactionDirectory, 'dist')
+  try {
+    await buildStagedSite(root, stagingDirectory)
+    await promoteStagedOutput(stagingDirectory, output)
+  } catch (error) {
+    try {
+      await fs.rm(transactionDirectory, { recursive: true, force: true })
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        `Nib build failed and could not clean staging directory ${transactionDirectory}`,
+      )
+    }
+    throw error
+  }
+  await fs.rm(transactionDirectory, { recursive: true, force: true })
 }
 
 export async function buildSite(options: SiteOperationOptions): Promise<void> {
@@ -405,11 +582,22 @@ export async function startDevSite(options: DevSiteOptions): Promise<ViteDevServ
   })
   const hasStyles = await fs.access(path.join(root, 'src/style.css')).then(() => true, () => false)
   const template = htmlTemplate({
-    island: `/@id/${NIB_CLIENT_ENTRY}`,
-    behavior: `/@id/${NIB_BEHAVIOR_ENTRY}`,
+    island: {
+      source: `/@id/${NIB_CLIENT_ENTRY}`,
+      preloads: [],
+    },
+    behavior: {
+      source: `/@id/${NIB_BEHAVIOR_ENTRY}`,
+      preloads: [],
+    },
     ...(clientEntries.length === 0
       ? {}
-      : { enhancement: `/@id/${NIB_ENHANCEMENT_ENTRY}` }),
+      : {
+          enhancement: {
+            source: `/@id/${NIB_ENHANCEMENT_ENTRY}`,
+            preloads: [],
+          },
+        }),
     stylesheets: hasStyles ? ['/src/style.css'] : [],
   })
   vite.middlewares.use(async (request, response, next) => {

@@ -7,11 +7,24 @@ export interface ImagesOptions {
   readonly widths?: readonly number[]
   readonly quality?: number | Partial<Record<ImageQualityFormat, number>>
   readonly cacheDirectory?: string
+  readonly cache?: ImageCacheOptions
   readonly concurrency?: 'auto' | number
   readonly memoryLimitMb?: number
   readonly allowedSourceRoots?: readonly string[]
   /** Rewrite referenced static HTML images after prerendering. */
   readonly content?: readonly ContentImageSource[]
+}
+
+export interface ImageCacheOptions {
+  /** Soft byte limit; transforms used by the current run are never evicted. */
+  readonly maxBytes?: number
+  /** Soft entry limit; transforms used by the current run are never evicted. */
+  readonly maxEntries?: number
+  /**
+   * `metadata` trusts matching local filesystem identity for fast warm builds.
+   * `checksum` streams every cached image to verify its SHA-256 digest.
+   */
+  readonly verification?: 'metadata' | 'checksum'
 }
 
 export interface ContentImageSource {
@@ -32,6 +45,7 @@ export interface NormalizedImagesOptions {
   readonly widths: readonly number[]
   readonly quality: Readonly<Record<ImageFormat, number>>
   readonly cacheDirectory: string
+  readonly cache: Required<ImageCacheOptions>
   readonly concurrency: number
   readonly allowedSourceRoots: readonly string[]
   readonly content: readonly NormalizedContentImageSource[]
@@ -46,6 +60,11 @@ export interface NormalizedContentImageSource {
 }
 
 const defaultWidths = [320, 480, 640, 768, 1024, 1280, 1536, 1920, 2560]
+const defaultCache: Required<ImageCacheOptions> = {
+  maxBytes: 1024 * 1024 * 1024,
+  maxEntries: 10_000,
+  verification: 'metadata',
+}
 const defaultQuality: Record<ImageFormat, number> = {
   avif: 50,
   webp: 75,
@@ -154,6 +173,35 @@ export function validateImagesOptions(options: ImagesOptions = {}): void {
   ) {
     throw new Error('@briansunter/nib-images: cacheDirectory must be a non-empty string')
   }
+  if (
+    options.cache !== undefined
+    && (
+      options.cache === null
+      || typeof options.cache !== 'object'
+      || Array.isArray(options.cache)
+    )
+  ) {
+    throw new Error('@briansunter/nib-images: cache must be an object')
+  }
+  if (
+    options.cache?.maxBytes !== undefined
+    && (!Number.isSafeInteger(options.cache.maxBytes) || options.cache.maxBytes <= 0)
+  ) {
+    throw new Error('@briansunter/nib-images: cache.maxBytes must be a positive integer')
+  }
+  if (
+    options.cache?.maxEntries !== undefined
+    && (!Number.isSafeInteger(options.cache.maxEntries) || options.cache.maxEntries <= 0)
+  ) {
+    throw new Error('@briansunter/nib-images: cache.maxEntries must be a positive integer')
+  }
+  if (
+    options.cache?.verification !== undefined
+    && options.cache.verification !== 'metadata'
+    && options.cache.verification !== 'checksum'
+  ) {
+    throw new Error('@briansunter/nib-images: cache.verification must be "metadata" or "checksum"')
+  }
   const formats = [...new Set<'avif' | 'webp'>(options.formats ?? ['avif', 'webp'])]
   if (formats.length === 0 || formats.some((format) => format !== 'avif' && format !== 'webp')) {
     throw new Error('@briansunter/nib-images: formats may contain only avif and webp')
@@ -184,6 +232,7 @@ export function normalizeImagesOptions(root: string, options: ImagesOptions = {}
     widths: normalizedPositiveIntegers(options.widths ?? defaultWidths, 'widths'),
     quality: normalizedQuality(options.quality),
     cacheDirectory: path.resolve(resolvedRoot, options.cacheDirectory ?? '.nib/cache/images'),
+    cache: { ...defaultCache, ...options.cache },
     concurrency: options.memoryLimitMb === undefined
       ? concurrency
       : Math.max(1, Math.min(concurrency, Math.floor(options.memoryLimitMb / 192))),

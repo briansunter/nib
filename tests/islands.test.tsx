@@ -59,6 +59,7 @@ describe('React islands', () => {
     expect(rendered.html).toContain('data-prefix="nib-0-"')
     expect(rendered.html).toContain('data-hydrate="visible"')
     expect(rendered.html).toContain('data-props="{&quot;label&quot;:&quot;Name&quot;}"')
+    expect(rendered.html).toContain('style="display:contents"')
     expect(rendered.html).toContain(expectedIslandHtml)
   })
 

@@ -62,10 +62,18 @@ export function normalizeHeadContribution(
 ): HeadContribution | undefined {
   if (value === undefined) return undefined
   if (!isRecord(value)) throw new Error(`${label} must be an object`)
-  if (value.elements === undefined) return Object.freeze({ elements: Object.freeze([]) })
-  if (!Array.isArray(value.elements)) throw new Error(`${label}.elements must be an array`)
+  for (const field of ['title', 'description'] as const) {
+    if (value[field] !== undefined && typeof value[field] !== 'string') {
+      throw new Error(`${label}.${field} must be a string`)
+    }
+  }
+  if (value.elements !== undefined && !Array.isArray(value.elements)) {
+    throw new Error(`${label}.elements must be an array`)
+  }
+  const title = typeof value.title === 'string' ? value.title : undefined
+  const description = typeof value.description === 'string' ? value.description : undefined
 
-  const elements = value.elements.map((element, index) => {
+  const elements = (value.elements ?? []).map((element, index) => {
     const elementLabel = `${label}.elements[${index}]`
     if (!isRecord(element)) throw new Error(`${elementLabel} must be an object`)
     const tag = element.tag
@@ -89,7 +97,11 @@ export function normalizeHeadContribution(
     })
   })
 
-  return Object.freeze({ elements: Object.freeze(elements) })
+  return Object.freeze({
+    ...(title === undefined ? {} : { title }),
+    ...(description === undefined ? {} : { description }),
+    elements: Object.freeze(elements),
+  })
 }
 
 function renderAttributes(
@@ -131,14 +143,22 @@ export function renderHead(
   site?: Pick<SiteConfig, 'head'>,
   additional?: HeadContribution,
 ): string {
+  const siteHead = normalizeHeadContribution(site?.head, 'Nib site.head')
+  const pageHead = normalizeHeadContribution(meta.head, 'Page metadata head')
+  const rendererHead = normalizeHeadContribution(additional, 'Renderer head contribution')
+  const title = rendererHead?.title ?? pageHead?.title ?? siteHead?.title ?? meta.title
+  const description = rendererHead?.description
+    ?? pageHead?.description
+    ?? siteHead?.description
+    ?? meta.description
   const elements = [
-    ...(normalizeHeadContribution(site?.head, 'Nib site.head')?.elements ?? []),
-    ...(normalizeHeadContribution(meta.head, 'Page metadata head')?.elements ?? []),
-    ...(normalizeHeadContribution(additional, 'Renderer head contribution')?.elements ?? []),
+    ...(siteHead?.elements ?? []),
+    ...(pageHead?.elements ?? []),
+    ...(rendererHead?.elements ?? []),
   ]
   return [
-    `<title>${escapeHtml(meta.title)}</title>`,
-    `<meta name="description" content="${escapeHtml(meta.description)}" />`,
+    `<title>${escapeHtml(title)}</title>`,
+    `<meta name="description" content="${escapeHtml(description)}" />`,
     ...elements.map(renderElement),
   ].join('\n    ')
 }

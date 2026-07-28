@@ -16,6 +16,9 @@ export function canonicalRoutePath(
   value: string,
   trailingSlash: TrailingSlash = 'ignore',
 ): string {
+  if (value.startsWith('//')) {
+    throw new Error('Route paths cannot be protocol-relative URLs')
+  }
   const path = normalizePath(value)
   if (path === '/' || isFileRoute(path)) return path
   return trailingSlash === 'always' ? `${path}/` : path
@@ -67,47 +70,165 @@ export interface PublicationManifestInput {
   readonly output: RenderedOutput
 }
 
+export interface PublicationPlanInput {
+  readonly routePath: string
+  readonly output: RenderedOutput
+}
+
+export interface PublicationArtifactPlanEntry {
+  readonly routePath: string
+  readonly artifact: string
+}
+
+function routeAncestors(normalizedPath: string): string[] {
+  const ancestors: string[] = []
+  let parentEnd = normalizedPath.lastIndexOf('/')
+  while (parentEnd > 0) {
+    const parent = normalizedPath.slice(0, parentEnd)
+    ancestors.push(parent)
+    parentEnd = parent.lastIndexOf('/')
+  }
+  return ancestors
+}
+
+function assertUniqueArtifactDestinations(
+  entries: readonly PublicationArtifactPlanEntry[],
+): void {
+  const owners = new Map<string, string>()
+  for (const entry of entries) {
+    const existing = owners.get(entry.artifact)
+    if (existing !== undefined) {
+      throw new Error(
+        `Nib cannot publish routes ${JSON.stringify(existing)} and `
+        + `${JSON.stringify(entry.routePath)} to the same artifact `
+        + `${JSON.stringify(entry.artifact)}`,
+      )
+    }
+    owners.set(entry.artifact, entry.routePath)
+  }
+
+  for (const entry of entries) {
+    const segments = entry.artifact.split('/')
+    let parentArtifact = ''
+    for (let index = 1; index < segments.length; index += 1) {
+      parentArtifact += `${index === 1 ? '' : '/'}${segments[index - 1]!}`
+      const parentOwner = owners.get(parentArtifact)
+      if (parentOwner !== undefined) {
+        throw new Error(
+          `Nib cannot publish route ${JSON.stringify(entry.routePath)} to `
+          + `${JSON.stringify(entry.artifact)} because route `
+          + `${JSON.stringify(parentOwner)} publishes the required directory `
+          + `${JSON.stringify(parentArtifact)} as a file`,
+        )
+      }
+    }
+  }
+}
+
+/**
+ * Plans every static artifact before publication. Ancestors are indexed once
+ * so extensionless parent routes can coexist with descendants without a
+ * route-by-route scan.
+ */
+export function createPublicationArtifactPlan(
+  routePaths: readonly string[],
+  policy: TrailingSlash = 'ignore',
+): readonly PublicationArtifactPlanEntry[] {
+  const normalizedPaths = routePaths.map(normalizePath)
+  const routesWithDescendants = new Set(
+    normalizedPaths.flatMap((routePath) => routeAncestors(routePath)),
+  )
+  const plan = routePaths.map((routePath, index): PublicationArtifactPlanEntry => {
+    const normalizedPath = normalizedPaths[index]!
+    return {
+      routePath,
+      artifact: normalizedPath === '/404'
+        ? '404.html'
+        : routeArtifacts(
+          normalizedPath,
+          policy,
+          routesWithDescendants.has(normalizedPath),
+        ).primary,
+    }
+  })
+  assertUniqueArtifactDestinations(plan)
+  return plan
+}
+
+export function createPublicationPlan(
+  entries: readonly PublicationPlanInput[],
+  policy: TrailingSlash = 'ignore',
+): readonly PublicationManifestInput[] {
+  const artifacts = createPublicationArtifactPlan(
+    entries.map(({ routePath }) => routePath),
+    policy,
+  )
+  return entries.map(({ output }, index) => ({
+    ...artifacts[index]!,
+    output,
+  }))
+}
+
+/** Reduces a rendered output to the metadata retained after its body is written. */
+export function createPublicationManifestRoute(
+  entry: PublicationManifestInput,
+): PublicationManifestRoute {
+  const { routePath, artifact, output } = entry
+  if (output.kind === 'page') {
+    return Object.freeze({
+      kind: 'page',
+      path: routePath,
+      artifact,
+      status: output.page.status,
+      contentType: 'text/html; charset=utf-8',
+    })
+  }
+  if (output.kind === 'resource') {
+    return Object.freeze({
+      kind: 'resource',
+      path: routePath,
+      artifact,
+      status: output.status,
+      contentType: output.contentType,
+    })
+  }
+  return Object.freeze({
+    kind: 'redirect',
+    path: routePath,
+    artifact,
+    status: output.status,
+    contentType: 'text/html; charset=utf-8',
+    destination: output.destination,
+  })
+}
+
 /** Creates the deployable route-to-artifact contract for static hosts. */
+export function createPublicationManifestFromRoutes(
+  base: string,
+  trailingSlash: TrailingSlash | undefined,
+  inputRoutes: readonly PublicationManifestRoute[],
+): PublicationManifest {
+  const routes = [...inputRoutes]
+    .sort((left, right) => left.path.localeCompare(right.path))
+    .map((route) => Object.freeze({ ...route }))
+  return Object.freeze({
+    version: 1,
+    base,
+    trailingSlash: trailingSlash ?? 'ignore',
+    routes: Object.freeze(routes),
+  })
+}
+
 export function createPublicationManifest(
   base: string,
   trailingSlash: TrailingSlash | undefined,
   entries: readonly PublicationManifestInput[],
 ): PublicationManifest {
-  const routes = entries.map(({ routePath, artifact, output }): PublicationManifestRoute => {
-    if (output.kind === 'page') {
-      return {
-        kind: 'page',
-        path: routePath,
-        artifact,
-        status: output.page.status,
-        contentType: 'text/html; charset=utf-8',
-      }
-    }
-    if (output.kind === 'resource') {
-      return {
-        kind: 'resource',
-        path: routePath,
-        artifact,
-        status: output.status,
-        contentType: output.contentType,
-      }
-    }
-    return {
-      kind: 'redirect',
-      path: routePath,
-      artifact,
-      status: output.status,
-      contentType: 'text/html; charset=utf-8',
-      destination: output.destination,
-    }
-  }).sort((left, right) => left.path.localeCompare(right.path))
-
-  return Object.freeze({
-    version: 1,
+  return createPublicationManifestFromRoutes(
     base,
-    trailingSlash: trailingSlash ?? 'ignore',
-    routes: Object.freeze(routes.map((route) => Object.freeze(route))),
-  })
+    trailingSlash,
+    entries.map(createPublicationManifestRoute),
+  )
 }
 
 /**

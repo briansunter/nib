@@ -3,6 +3,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import type { Plugin } from 'vite'
 import type { NibViteTarget } from '@briansunter/nib/plugin'
+import { pruneImageCache } from './cache'
 import { ImageTransformExecutor } from './image-executor'
 import {
   createImageTransformRequest,
@@ -121,7 +122,11 @@ export function imageVitePlugin(
   target: NibViteTarget = 'development',
 ): Plugin {
   const sources = new ImageSourceCatalog(options)
-  const executor = new ImageTransformExecutor({ concurrency: options.concurrency })
+  const executor = new ImageTransformExecutor({
+    concurrency: options.concurrency,
+    cacheVerification: options.cache.verification,
+  })
+  const activeCacheKeys = new Set<string>()
   return {
     name: '@briansunter/nib-images',
     enforce: 'pre',
@@ -209,6 +214,7 @@ export function imageVitePlugin(
             parsed.quality,
             passthrough,
           )
+          activeCacheKeys.add(image.key)
           const etag = `"${image.key}"`
           response.setHeader('ETag', etag)
           response.setHeader('Cache-Control', 'no-cache')
@@ -228,6 +234,11 @@ export function imageVitePlugin(
     },
     async hotUpdate(context) {
       await sources.refresh(context.file)
+    },
+    async closeBundle() {
+      if (target === 'development') {
+        await pruneImageCache(options.cacheDirectory, options.cache, activeCacheKeys)
+      }
     },
   }
 }

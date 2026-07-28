@@ -11,34 +11,30 @@ The target examples are:
 - a TOML plugin contributing a typed `page.toml` source;
 - a sitemap plugin inspecting project routes and returning `sitemap.xml`;
 - the first-party RSS plugin returning a typed `rss.xml` resource route;
-- a plugin observing the final route manifest for validation or reporting.
 - a renderer plugin contributing typed document-head elements.
 
 ## Resolution order
 
-For each Vite graph, Nib loads and validates the app configuration, asks plugins
-for page-source contributions, merges those contributions with app page
-sources, validates extension conflicts, and then constructs its Vite adapters.
-`setup(context)` is called in two explicit phases: `vite-config` discovers the
-extensions before Vite is constructed, and `page-source-module` recreates the
-definitions inside the generated server graph. Contributions must be
-deterministic because client, server, and development graphs receive fresh
-plugin state.
+For each Vite graph, Nib loads and validates the app configuration, combines
+app `pageSources`, declarative plugin `pageSources`, and source definitions
+referenced by `fromPageSource()` collections, deduplicates them by identity,
+and then constructs its Vite adapters. A plugin declares browser
+`clientEntries` alongside its page sources, so discovery has no phase-sensitive
+setup hook.
 
 Inside the server renderer, Nib:
 
 1. creates file and data-page routes;
 2. adds configured redirects;
-3. resolves explicitly granted collection capabilities and invokes route
-   providers against the same immutable initial-route snapshot;
-4. merges provider results in plugin order and rejects duplicate paths;
-5. freezes public resolved-route snapshots;
-6. invokes resolved-route inspectors in plugin order;
-7. constructs renderer extensions.
+3. resolves explicitly granted collection capabilities;
+4. invokes route providers in plugin order, with each provider receiving the
+   latest immutable route snapshot;
+5. merges each result immediately and rejects duplicate paths;
+6. constructs renderer extensions.
 
-Route providers do not observe routes returned by other providers. This avoids
-order-dependent route generation. A sitemap therefore describes project page
-routes, not other generated resources.
+Route ordering is explicit: a later sitemap or feed can include routes
+contributed by earlier plugins, while an earlier provider cannot depend on a
+later one.
 
 ## Route kinds
 
@@ -52,7 +48,7 @@ as `/rss.xml` is emitted as that exact file rather than
 `@briansunter/nib/rss` is a first-party RSS 2.0 helper built on this mechanism.
 It accepts typed channel fields and items; internal item paths are resolved with
 Nib's `base`, while absolute HTTP(S) links remain unchanged. Its item provider
-can asynchronously read the immutable initial route manifest, but applications
+can asynchronously read the current immutable route manifest, but applications
 keep ownership of their content data model. It can alternatively accept
 `fromCollection(collection, mapper)`. That capability resolves only when the
 exact collection is registered by the site; the mapper receives deeply frozen
@@ -67,16 +63,17 @@ file cannot select its HTTP status.
 
 ## Document head
 
-Site configuration and page metadata accept a structured `HeadContribution` with
-`meta`, `link`, `script`, and `style` elements. Renderer plugins can return the
-same shape from `renderer().head(context)`. Nib emits site elements, page
-elements, and plugin elements in that order, then keeps the document template
-and island markers under framework ownership.
+Site configuration and page metadata accept a structured `HeadContribution`
+with optional `title` and `description` overrides plus `meta`, `link`, `script`,
+and `style` elements. Renderer plugins can return the same shape from
+`renderer().head(context)`. Nib emits site elements, page elements, and plugin
+elements in that order. Later defined title and description overrides win, and
+the last plugin override wins within the plugin list.
 
 Attributes are escaped, event-handler names are rejected, and script/style raw
-text is guarded against prematurely closing its element. The hook is synchronous
-because the renderer's page and transform pipeline is synchronous; asynchronous
-work belongs in plugin setup or finalization.
+text is guarded against prematurely closing its element. The hook is
+synchronous because page rendering is synchronous; asynchronous work belongs
+in route creation, renderer creation, or finalization.
 
 ## Path policy
 
@@ -98,13 +95,10 @@ deployment hosts, which remain responsible for enforcing request URL policy.
 
 ## Ownership and errors
 
-Every contributed page source and route retains its plugin owner for errors.
-Nib validates hook shapes, returned contribution shapes, MIME types, redirect
-destinations, status codes, and duplicate routes before rendering.
-
-Resolved-route inspectors receive no React implementation, page data, route
-handler, or mutable internal object. They can build indexes and diagnostics
-without gaining authority over rendering.
+Every contributed route retains its plugin owner for errors. Nib validates
+declarative page sources and client entries, hook shapes, returned route shapes,
+MIME types, redirect destinations, status codes, and duplicate routes before
+rendering.
 
 Route providers likewise do not receive a general collection registry. An
 application must hand a provider a `fromCollection()` capability explicitly,

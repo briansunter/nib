@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -13,7 +14,7 @@ import { createImageSource } from '../src/image-source'
 import { intrinsicDimensions } from '../src/image-source-catalog'
 import { imageVitePlugin } from '../src/image-vite-plugin'
 import { normalizeImagesOptions } from '../src/options'
-import { cachedBuffer } from '../src/cache'
+import { cachedBuffer, pruneImageCache } from '../src/cache'
 import { images } from '../src/plugin'
 import {
   createImageTransformRequest,
@@ -88,6 +89,18 @@ describe('static Image component', () => {
     expect(normalizeImagesOptions(root, {
       content: [{ publicPath: '/site-assets/', directory: 'src/assets/site-assets', maxWidth: 1720 }],
     }).content[0]?.maxWidth).toBe(1720)
+    expect(normalizeImagesOptions(root).cache).toEqual({
+      maxBytes: 1024 * 1024 * 1024,
+      maxEntries: 10_000,
+      verification: 'metadata',
+    })
+    expect(normalizeImagesOptions(root, {
+      cache: { maxBytes: 1_000, maxEntries: 5, verification: 'checksum' },
+    }).cache).toEqual({
+      maxBytes: 1_000,
+      maxEntries: 5,
+      verification: 'checksum',
+    })
     expect(() => normalizeImagesOptions(root, {
       content: [{ publicPath: '/site-assets/', directory: 'src/assets/site-assets', maxWidth: 0 }],
     } as any)).toThrow('content[0].maxWidth must contain positive integers')
@@ -95,6 +108,10 @@ describe('static Image component', () => {
       content: [{ publicPath: '/../site-assets/', directory: 'src/assets/site-assets' }],
     })).toThrow('publicPath must start and end')
     expect(() => images({ widths: [] } as any)).toThrow('widths must contain positive integers')
+    expect(() => images({ cache: { maxBytes: 0 } } as any)).toThrow('cache.maxBytes')
+    expect(() => images({ cache: { maxEntries: 1.5 } } as any)).toThrow('cache.maxEntries')
+    expect(() => images({ cache: { verification: 'mtime' } } as any))
+      .toThrow('cache.verification')
   })
 
   it('rejects image metadata imports from client and island graphs', async () => {
@@ -598,6 +615,124 @@ describe('static Image component', () => {
     expect([first.hit, second.hit].sort()).toEqual([false, true])
   })
 
+  it('upgrades legacy checksum metadata once, then keeps the stat-bound identity', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-cache-upgrade-'))
+    temporaryDirectories.push(root)
+    const key = 'b'.repeat(64)
+    const data = Buffer.from('encoded-image')
+    const first = await cachedBuffer(root, key, 'webp', async () => data)
+    const metadataFile = `${first.file}.json`
+    await fs.writeFile(metadataFile, JSON.stringify({
+      version: 1,
+      bytes: data.length,
+      checksum: crypto.createHash('sha256').update(data).digest('hex'),
+    }))
+
+    const create = vi.fn(async () => data)
+    const warm = await cachedBuffer(root, key, 'webp', create)
+    expect(warm.hit).toBe(true)
+    expect(create).not.toHaveBeenCalled()
+    expect(JSON.parse(await fs.readFile(metadataFile, 'utf8'))).toMatchObject({
+      version: 2,
+      bytes: data.length,
+      checksum: crypto.createHash('sha256').update(data).digest('hex'),
+      device: expect.stringMatching(/^\d+$/),
+      inode: expect.stringMatching(/^\d+$/),
+      mtimeNs: expect.stringMatching(/^\d+$/),
+    })
+  })
+
+  it('keeps metadata validation fast after build output hard-links come and go', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-cache-link-'))
+    temporaryDirectories.push(root)
+    const key = 'd'.repeat(64)
+    const data = Buffer.from('encoded-image')
+    const first = await cachedBuffer(root, key, 'webp', async () => data)
+    const output = path.join(root, 'output.webp')
+    await fs.link(first.file, output)
+    await fs.rm(output)
+    const metadataFile = `${first.file}.json`
+    const metadata = JSON.parse(await fs.readFile(metadataFile, 'utf8'))
+    await fs.writeFile(metadataFile, JSON.stringify({ ...metadata, checksum: '0'.repeat(64) }))
+
+    const create = vi.fn(async () => data)
+    const warm = await cachedBuffer(root, key, 'webp', create)
+    expect(warm.hit).toBe(true)
+    expect(warm.data).toEqual(data)
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  it('offers full checksum verification even when cache metadata is tampered to match', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-cache-checksum-'))
+    temporaryDirectories.push(root)
+    const key = 'c'.repeat(64)
+    const original = Buffer.from('encoded-image')
+    const first = await cachedBuffer(root, key, 'webp', async () => original)
+    await fs.writeFile(first.file, Buffer.alloc(original.length, 1))
+    const stat = await fs.stat(first.file, { bigint: true })
+    const metadataFile = `${first.file}.json`
+    const metadata = JSON.parse(await fs.readFile(metadataFile, 'utf8'))
+    await fs.writeFile(metadataFile, JSON.stringify({
+      ...metadata,
+      device: stat.dev.toString(),
+      inode: stat.ino.toString(),
+      mtimeNs: stat.mtimeNs.toString(),
+    }))
+
+    const create = vi.fn(async () => original)
+    const verified = await cachedBuffer(root, key, 'webp', create, 'checksum')
+    expect(verified.hit).toBe(false)
+    expect(verified.data).toEqual(original)
+    expect(create).toHaveBeenCalledOnce()
+  })
+
+  it('prunes the oldest complete cache entries to deterministic byte and entry bounds', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-cache-prune-'))
+    temporaryDirectories.push(root)
+    const files: string[] = []
+    for (const [index, character] of ['1', '2', '3', '4'].entries()) {
+      const cached = await cachedBuffer(
+        root,
+        character.repeat(64),
+        'webp',
+        async () => Buffer.alloc(32, index),
+      )
+      files.push(cached.file)
+      const accessedAt = new Date(Date.UTC(2020, 0, index + 1))
+      await fs.utimes(`${cached.file}.json`, accessedAt, accessedAt)
+    }
+
+    const pruned = await pruneImageCache(root, {
+      maxBytes: Number.MAX_SAFE_INTEGER,
+      maxEntries: 2,
+    })
+    expect(pruned.entries).toBe(2)
+    await expect(fs.stat(files[0]!)).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(fs.stat(files[1]!)).rejects.toMatchObject({ code: 'ENOENT' })
+    await expect(fs.stat(files[2]!)).resolves.toMatchObject({ size: 32 })
+    await expect(fs.stat(files[3]!)).resolves.toMatchObject({ size: 32 })
+
+    const sizePruned = await pruneImageCache(root, { maxBytes: 1, maxEntries: 2 })
+    expect(sizePruned.entries).toBe(2)
+    expect(sizePruned.bytes).toBeGreaterThan(64)
+  })
+
+  it('never prunes the active working set when it exceeds the cache limits', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-cache-active-'))
+    temporaryDirectories.push(root)
+    const keys = ['5', '6', '7'].map((character) => character.repeat(64))
+    const files = await Promise.all(keys.map(async (key) => (
+      await cachedBuffer(root, key, 'webp', async () => Buffer.alloc(32))
+    ).file))
+
+    expect(await pruneImageCache(
+      root,
+      { maxBytes: 1, maxEntries: 1 },
+      new Set(keys),
+    )).toEqual({ entries: 0, bytes: 0 })
+    await Promise.all(files.map((file) => expect(fs.stat(file)).resolves.toMatchObject({ size: 32 })))
+  })
+
   it('content image rewriter honors per-use data-nib-widths and authored sizes', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-content-'))
     temporaryDirectories.push(root)
@@ -696,6 +831,53 @@ describe('static Image component', () => {
     expect(rewritten).not.toContain('data-nib-width')
   })
 
+  it('rewrites only real local image elements, never raw-text markup or external URLs', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-content-html-'))
+    temporaryDirectories.push(root)
+    const publicDir = path.join(root, 'src/assets/site-assets')
+    await fs.mkdir(publicDir, { recursive: true })
+    await sharp({
+      create: { width: 80, height: 40, channels: 3, background: '#336699' },
+    }).jpeg().toFile(path.join(publicDir, 'photo.jpg'))
+    const options = normalizeImagesOptions(root, {
+      formats: ['webp'],
+      widths: [40],
+      content: [{
+        publicPath: '/site-assets/',
+        directory: 'src/assets/site-assets',
+      }],
+    })
+    const registry = new ImageBuildRegistry(options, '/journal/', 'production')
+    const clientDirectory = path.join(root, 'dist/client')
+    const pageFile = path.join(clientDirectory, 'article')
+    await fs.mkdir(clientDirectory, { recursive: true })
+    const protectedMarkup = [
+      '<!-- <img src="/site-assets/photo.jpg" alt="Comment"> -->',
+      '<script>const markup = \'<img src="/site-assets/photo.jpg" alt="Script">\';</script>',
+      '<style>.example::after { content: \'<img src="/site-assets/photo.jpg" alt="Style">\'; }</style>',
+      '<textarea><img src="/site-assets/photo.jpg" alt="Textarea"></textarea>',
+      '<img src="https://cdn.example/site-assets/photo.jpg" alt="External">',
+      '<img src="//cdn.example/site-assets/photo.jpg" alt="Protocol relative">',
+    ]
+    await fs.writeFile(pageFile, [
+      ...protectedMarkup,
+      '<img src="/site-assets/photo.jpg" alt="Local">',
+    ].join('\n'))
+
+    expect(await optimizeContentImages(
+      clientDirectory,
+      '/journal/',
+      options,
+      registry,
+      pageArtifact('article'),
+    )).toBe(1)
+
+    const rewritten = await fs.readFile(pageFile, 'utf8')
+    for (const markup of protectedMarkup) expect(rewritten).toContain(markup)
+    expect(rewritten.match(/<picture>/g)).toHaveLength(1)
+    expect(rewritten).toContain('/journal/assets/nib/')
+  })
+
   it('keeps non-root content URLs and physical artifacts aligned without duplicating the base', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-base-content-'))
     temporaryDirectories.push(root)
@@ -766,6 +948,16 @@ describe('static Image component', () => {
     await fs.writeFile(pageFile, '<img src="/site-assets/photo.jpg" alt="Photo">')
     const routes = pageArtifact('article')
     await optimizeContentImages(clientDirectory, base, options, registry, routes)
+    const optimized = await fs.readFile(pageFile, 'utf8')
+    const failedUrl = optimized.match(/\/(?:journal\/)?assets\/nib\/[^ "'>,]+/)?.[0]
+    if (!failedUrl) throw new Error('Expected optimized content image URL')
+    const protectedMarkup = [
+      `<!-- <img src="${failedUrl}" alt="Comment"> -->`,
+      `<script>const markup = '<img src="${failedUrl}" alt="Script">';</script>`,
+      `<style>.example::after { content: '<img src="${failedUrl}" alt="Style">'; }</style>`,
+      `<textarea><img src="${failedUrl}" alt="Textarea"></textarea>`,
+    ]
+    await fs.writeFile(pageFile, [optimized, ...protectedMarkup].join('\n'))
     await fs.writeFile(sourceFile, 'corrupt after inspection')
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
@@ -774,7 +966,8 @@ describe('static Image component', () => {
 
     const restored = await fs.readFile(pageFile, 'utf8')
     expect(restored).toContain(`src="${expected}"`)
-    expect(restored).not.toContain('/assets/nib/')
+    for (const markup of protectedMarkup) expect(restored).toContain(markup)
+    expect(restored.split(failedUrl)).toHaveLength(protectedMarkup.length + 1)
     await expect(fs.access(path.join(clientDirectory, 'site-assets/photo.jpg')))
       .resolves.toBeUndefined()
     warning.mockRestore()

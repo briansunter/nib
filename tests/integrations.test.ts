@@ -47,23 +47,31 @@ describe('publication integrations', () => {
       },
     ])
 
-    expect(hostingArtifacts(manifest, 'netlify')[0]?.body).toContain('/docs/about /docs/about/ 301!')
-    expect(hostingArtifacts(manifest, 'vercel')[0]?.body).toContain('"permanent": true')
-    expect(hostingArtifacts(manifest, 'cloudflare')).toEqual([
+    expect(hostingArtifacts(manifest, 'netlify')[0]?.body).toContain('/docs/old/ /about/ 301!')
+    expect(hostingArtifacts(manifest, 'vercel')[0]?.body).toContain('"statusCode": 301')
+    const cloudflare = hostingArtifacts(manifest, 'cloudflare')
+    expect(cloudflare[0]?.body).toContain('/docs/about /docs/about/ 301')
+    expect(cloudflare).toEqual([
       expect.objectContaining({ path: '_redirects' }),
       expect.objectContaining({ path: '_headers', body: expect.stringContaining('Cache-Control') }),
     ])
     expect(hostingArtifacts(manifest, 's3')[0]?.body).toContain('"trailingSlash": "always"')
-    expect(hostingArtifacts({ ...manifest, trailingSlash: 'ignore' }, 'netlify')[0]?.body).toBe('\n')
+    expect(hostingArtifacts({ ...manifest, trailingSlash: 'ignore' }, 'netlify')[0]?.body)
+      .toBe('/docs/old/ /about/ 301!\n')
 
     const output = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-hosting-'))
     temporaryDirectories.push(output)
     await writeHostingArtifacts(output, manifest, {
-      adapters: ['netlify', 'vercel', 'cloudflare', 's3'],
+      adapters: ['cloudflare', 'vercel', 's3'],
     })
     for (const artifact of ['_redirects', '_headers', 'vercel.json', 's3-website.json']) {
       await fs.access(path.join(output, artifact))
     }
+    await expect(writeHostingArtifacts(output, manifest, {
+      adapters: ['netlify', 'cloudflare'],
+    })).rejects.toThrow(
+      'Hosting adapters netlify and cloudflare both own _redirects with incompatible contents',
+    )
   })
 
   it('contributes canonical social metadata with and without a deployed origin', async () => {
