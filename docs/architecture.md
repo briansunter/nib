@@ -297,10 +297,24 @@ seam. Loaders return `{ id, data }` entries or an ID-keyed record. The built-in
 collections and aggregate data files; arbitrary loader functions can use
 project-root `read()`.
 
-Collections load before the route map and are passed to TSX pages, generated
-page components, layouts, and the site shell. `PageProps<typeof config>` maps
-the config's collection definitions to inferred `{ id, data }` lists without a
+`fromPages()` and `fromMarkdownPages()` derive collections after page modules,
+data pages, and frontmatter have been validated. Their pure `match`, `id`,
+`select`, and optional `sort` callbacks receive immutable descriptors containing
+only route path, source identity, resolved metadata, validated frontmatter, and
+validated data. They receive no collection resolver, so collection dependency
+cycles are structurally impossible. Duplicate IDs fail before rendering.
+
+All collections are deeply frozen and are passed to TSX pages, generated page
+components, layouts, and the site shell. `PageProps<typeof config>` maps the
+config's collection definitions to inferred `{ id, data }` lists without a
 generated type file or global registry.
+
+Resource providers do not receive the complete collection registry.
+`fromCollection(collection, mapper)` creates an explicit capability accepted by
+the RSS and search helpers. The renderer resolves it only when the exact
+collection definition is registered by the site, then deeply freezes the mapped
+result. This keeps feed and search access narrow without exposing internal page
+objects to every plugin.
 
 ## Layout composition
 

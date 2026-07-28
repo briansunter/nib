@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defineConfig } from '../src/index'
+import { defineConfig, fromMarkdownPages } from '../src/index'
 import { resolveBasePath, validateNibConfig } from '../src/framework/project-config'
 
 describe('Nib configuration', () => {
@@ -89,6 +89,20 @@ describe('Nib configuration', () => {
       collections: { posts: {} },
       site: { title: 'Site' },
     })).toThrow('loader function')
+    expect(validateNibConfig({
+      collections: {
+        posts: fromMarkdownPages({
+          match: () => true,
+          id: (page) => page.path,
+          select: (page) => page.meta,
+        }),
+      },
+      site: { title: 'Site' },
+    })).toMatchObject({ collections: { posts: { pages: true, markdownOnly: true } } })
+    expect(() => validateNibConfig({
+      collections: { posts: { pages: true, markdownOnly: true } },
+      site: { title: 'Site' },
+    })).toThrow('page selector')
     expect(() => validateNibConfig({
       site: {
         title: 'Site',

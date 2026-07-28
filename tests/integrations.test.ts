@@ -165,6 +165,9 @@ describe('publication integrations', () => {
       root: '/site',
       base: '/',
       site: { title: 'Site' },
+      readCollection: () => {
+        throw new Error('No collection capability configured')
+      },
       routes: [
         { kind: 'page' as const, path: '/', source: 'home', status: 200, meta: { title: 'Home', description: 'Start' } },
         { kind: 'page' as const, path: '/draft', source: 'draft', status: 404, meta: { title: 'Draft', description: '' } },

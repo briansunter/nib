@@ -7,6 +7,9 @@ const context = {
   root: '/site',
   base: '/docs/',
   site: { title: 'Docs' },
+  readCollection: () => {
+    throw new Error('No collection capability configured')
+  },
 }
 
 describe('sitemap plugin', () => {

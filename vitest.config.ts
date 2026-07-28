@@ -3,6 +3,11 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     environment: 'node',
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'examples/**/scripts/*.test.mjs',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
@@ -12,6 +17,7 @@ export default defineConfig({
         'src/framework/types.ts',
         'src/runtime/server.ts',
         'packages/**',
+        'examples/**',
       ],
       thresholds: {
         lines: 85,

@@ -14,6 +14,12 @@ import type {
   PageSourceDefinition,
   PageSourceRenderer,
   PageSourcePage,
+  PageCollectionDefinition,
+  PageDescriptor,
+  AnyCollectionDefinition,
+  CollectionCapability,
+  CollectionData,
+  CollectionEntry,
 } from './types'
 
 export const defaultMarkdownSchema = z.looseObject({
@@ -80,6 +86,57 @@ export function fromPageSource<const Validator extends DataValidator>(
   source: PageSourceDefinition<Validator>,
 ): PageSourceCollectionDefinition<Validator> {
   return { source }
+}
+
+export interface FromPagesOptions<Selected> {
+  match(page: PageDescriptor): boolean
+  id(page: PageDescriptor): string
+  select(page: PageDescriptor): Selected
+  sort?(left: PageDescriptor, right: PageDescriptor): number
+}
+
+/** Derives a typed collection from immutable validated page descriptors. */
+export function fromPages<Selected>(
+  options: FromPagesOptions<Selected>,
+): PageCollectionDefinition<Selected> {
+  if (
+    typeof options?.match !== 'function'
+    || typeof options.id !== 'function'
+    || typeof options.select !== 'function'
+  ) {
+    throw new Error('fromPages requires match, id, and select callbacks')
+  }
+  return Object.freeze({
+    pages: true as const,
+    markdownOnly: false,
+    ...options,
+  })
+}
+
+/** Like fromPages(), but considers only authored Markdown route modules. */
+export function fromMarkdownPages<Selected>(
+  options: FromPagesOptions<Selected>,
+): PageCollectionDefinition<Selected> {
+  const definition = fromPages(options)
+  return Object.freeze({ ...definition, markdownOnly: true })
+}
+
+/** Grants a resource provider mapped, immutable access to one collection. */
+export function fromCollection<
+  Definition extends AnyCollectionDefinition<any>,
+  Result,
+>(
+  collection: Definition,
+  mapper: (
+    entries: readonly CollectionEntry<CollectionData<Definition>>[],
+  ) => Result,
+): CollectionCapability<Result> {
+  if (typeof mapper !== 'function') throw new Error('fromCollection requires a mapper function')
+  return Object.freeze({
+    kind: 'collection-capability' as const,
+    collection,
+    map: mapper as (entries: readonly CollectionEntry[]) => Result,
+  })
 }
 
 export function defineCollection<Data>(

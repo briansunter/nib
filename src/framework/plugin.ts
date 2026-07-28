@@ -12,6 +12,7 @@ import type {
   RouteSnapshot,
   ResolvedRoute,
   SiteConfig,
+  CollectionCapability,
 } from './types'
 import { normalizeHeadContribution } from './meta'
 
@@ -117,6 +118,8 @@ export type NibRouteRegistration =
 export interface NibRoutesPluginContext extends NibRendererPluginContext {
   /** File, data-page, and configured redirect routes before plugin routes. */
   readonly routes: readonly NibResolvedRoute[]
+  /** Resolves only a collection explicitly granted with fromCollection(). */
+  readonly readCollection: <Result>(capability: CollectionCapability<Result>) => Result
 }
 
 export interface NibRoutesResolvedPluginContext extends NibRendererPluginContext {

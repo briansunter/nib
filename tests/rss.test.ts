@@ -7,6 +7,9 @@ const context = {
   root: '/site',
   base: '/journal/',
   site: { title: 'Journal' },
+  readCollection: () => {
+    throw new Error('No collection capability configured')
+  },
   routes: Object.freeze([
     Object.freeze({
       kind: 'page' as const,

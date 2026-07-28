@@ -3,6 +3,16 @@ import type {
   NibResolvedPageRoute,
   NibRoutesPluginContext,
 } from './framework/plugin'
+import type { CollectionCapability } from './framework/types'
+
+function isCollectionCapability<Result>(
+  value: unknown,
+): value is CollectionCapability<Result> {
+  return value !== null
+    && typeof value === 'object'
+    && !Array.isArray(value)
+    && (value as { kind?: unknown }).kind === 'collection-capability'
+}
 
 export interface SearchItem {
   readonly title: string
@@ -15,6 +25,7 @@ export interface SearchItem {
 
 export type SearchItems =
   | readonly SearchItem[]
+  | CollectionCapability<readonly SearchItem[]>
   | ((context: NibRoutesPluginContext) => readonly SearchItem[] | Promise<readonly SearchItem[]>)
 
 export interface SearchOptions {
@@ -85,7 +96,9 @@ export function search(options: SearchOptions = {}): NibPlugin {
             .map(pageRouteItem)
         : typeof options.items === 'function'
           ? await options.items(context)
-          : options.items
+          : isCollectionCapability<readonly SearchItem[]>(options.items)
+            ? context.readCollection(options.items)
+            : options.items
       const items = rawItems.map(normalizeItem)
       return {
         kind: 'resource',
