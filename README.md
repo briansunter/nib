@@ -272,10 +272,16 @@ applicable. Static-host adapters can use it instead of reimplementing Nib's
 extensionless and directory-index rules.
 
 Run `nib check` after a build to validate publication artifacts, titles, image
-alt text, island-runtime ownership, and internal links. Node consumers that
-need the same report can import `verifySite` from
-`@briansunter/nib/verify`; the browser-facing package entry intentionally does
-not load the filesystem-based verifier.
+alt text, island-runtime ownership, and local `href`, `src`, `srcset`, and
+`poster` references. Checks use one route/file index and one standards-parsed
+document per page, then report every issue with a stable code. `nib inspect`
+prints the read-only inspection summary without treating it as a verification
+success; `nib inspect --json` emits its compact, path-safe report.
+
+Node consumers can import `inspectSite`, `verifySite`, and
+`SiteVerificationError` from `@briansunter/nib/verify`. The returned inspection
+owns frozen route, file, and parsed-page indexes. The browser-facing package
+entry intentionally does not load the filesystem or HTML parser.
 
 Development and preview bind to loopback by default. To expose a server through
 a known hostname such as a Tailscale name, bind explicitly and allow only that

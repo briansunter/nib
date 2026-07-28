@@ -4,7 +4,13 @@ import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { scaffoldSite } from './scaffold'
 import { buildSite, previewSite, startDevSite } from './framework/site'
-import { verifySite } from './framework/verify'
+import {
+  formatSiteIssue,
+  inspectSite,
+  siteInspectionReport,
+  SiteVerificationError,
+  verifySite,
+} from './framework/verify'
 
 interface PackageManifest {
   version: string
@@ -39,7 +45,7 @@ function positional(args: string[]): string[] {
   const values: string[] = []
   for (let index = 0; index < args.length; index += 1) {
     if (args[index].startsWith('--')) {
-      if (args[index] !== '--no-install') index += 1
+      if (args[index] !== '--no-install' && args[index] !== '--json') index += 1
       continue
     }
     values.push(args[index])
@@ -106,7 +112,7 @@ Usage:
   nib dev [--root directory] [--host host] [--port port] [--allowed-host host]
   nib build [--root directory]
   nib check [--root directory]
-  nib inspect [--root directory]
+  nib inspect [--root directory] [--json]
   nib preview [--root directory] [--host host] [--port port] [--allowed-host host]`
 }
 
@@ -154,10 +160,28 @@ export async function runCli(
     write(`Built ${path.join(root, 'dist/client')}`)
     return 0
   }
-  if (command === 'check' || command === 'inspect') {
-    const result = await verifySite({ root })
-    write(JSON.stringify(result, null, 2))
-    return 0
+  if (command === 'inspect') {
+    const inspection = await inspectSite({ root })
+    const report = siteInspectionReport(inspection)
+    if (commandArgs.includes('--json')) {
+      write(JSON.stringify(report, null, 2))
+    } else {
+      write(`Inspected ${report.metrics.routeCount} routes and ${report.metrics.fileCount} files`)
+      for (const issue of report.issues) write(formatSiteIssue(issue))
+    }
+    return report.issues.some((issue) => issue.severity === 'error') ? 1 : 0
+  }
+  if (command === 'check') {
+    try {
+      const result = await verifySite({ root })
+      write(`Checked ${result.routeCount} routes and ${result.checkedLinks} local references`)
+      for (const issue of result.issues) write(formatSiteIssue(issue))
+      return 0
+    } catch (error) {
+      if (!(error instanceof SiteVerificationError)) throw error
+      for (const issue of error.result.issues) write(formatSiteIssue(issue))
+      return 1
+    }
   }
   if (command === 'dev') {
     const host = option(commandArgs, '--host')

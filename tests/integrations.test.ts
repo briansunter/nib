@@ -7,7 +7,11 @@ import { markdownToCompiledPage } from '../src/framework/markdown'
 import { hostingArtifacts } from '../src/framework/hosting'
 import { writeHostingArtifacts } from '../src/framework/hosting-writer'
 import { createPublicationManifest } from '../src/framework/publication'
-import { verifySite } from '../src/framework/verify'
+import {
+  inspectSite,
+  SiteVerificationError,
+  verifySite,
+} from '../src/framework/verify'
 import { metadata } from '../src/metadata'
 import { search } from '../src/search'
 
@@ -283,14 +287,32 @@ describe('publication integrations', () => {
     await fs.writeFile(path.join(output, 'about'), '<title>About</title>')
     await fs.writeFile(path.join(output, 'feed.xml'), '<feed />')
     await fs.writeFile(path.join(output, 'old'), '<title>Redirect</title>')
+    await fs.mkdir(path.join(output, 'assets'))
+    await fs.writeFile(path.join(output, 'assets/a'), 'image')
+    await fs.writeFile(path.join(output, 'assets/islands.js'), 'runtime')
     const result = await verifySite({ root: output, output })
     expect(result.routeCount).toBe(4)
-    expect(result.checkedLinks).toBe(3)
+    expect(result.checkedLinks).toBe(5)
     expect(result.warnings).toEqual(['/: 1 image(s) missing alt text'])
 
-    await fs.writeFile(path.join(output, 'index.html'), '<title>Home</title><a href="/missing">Missing</a>')
-    await expect(verifySite({ root: output, output })).rejects.toThrow('Broken internal link')
-    await fs.writeFile(path.join(output, 'index.html'), '<title>Home</title><script data-nib-islands src="/assets/islands.js"></script>')
-    await expect(verifySite({ root: output, output })).rejects.toThrow('island runtime without an island')
+    await fs.writeFile(
+      path.join(output, 'index.html'),
+      '<div id="first" id="second"><a href="/missing">Missing</a><img src="/also-missing"><script data-nib-islands src="/assets/islands.js"></script></div>',
+    )
+    const inspection = await inspectSite({ root: output, output })
+    expect(inspection.issues.map((issue) => issue.code)).toEqual([
+      'HTML_PARSE_ERROR',
+      'IMAGE_ALT_MISSING',
+      'ISLAND_RUNTIME_UNUSED',
+      'LOCAL_REFERENCE_MISSING',
+      'LOCAL_REFERENCE_MISSING',
+      'TITLE_COUNT',
+    ])
+    expect(Object.isFrozen(inspection)).toBe(true)
+    expect(Object.isFrozen(inspection.pages[0]?.document.document)).toBe(true)
+
+    const failure = await verifySite({ root: output, output }).catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(SiteVerificationError)
+    expect((failure as SiteVerificationError).result.issues).toHaveLength(6)
   })
 })

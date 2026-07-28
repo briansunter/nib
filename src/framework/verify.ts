@@ -1,10 +1,83 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import type { PublicationManifest } from './publication'
-import { isFileRoute, normalizePath, stripBasePath } from './publication'
+import {
+  htmlAttribute,
+  parseHtmlDocument,
+  type ParsedHtmlDocument,
+} from './html-document'
+import type {
+  PublicationManifest,
+  PublicationManifestRoute,
+} from './publication'
+import { normalizePath, stripBasePath } from './publication'
 
-export interface SiteCheckResult {
+export type SiteIssueSeverity = 'error' | 'warning'
+
+export interface SiteIssue {
+  readonly code: string
+  readonly severity: SiteIssueSeverity
+  readonly message: string
+  readonly route?: string
+  readonly artifact?: string
+  readonly reference?: string
+  readonly owner?: string
+}
+
+export interface InspectedSiteFile {
+  readonly path: string
+  readonly size: number
+}
+
+export interface InspectedReference {
+  readonly tagName: string
+  readonly attribute: 'href' | 'src' | 'srcset' | 'poster'
+  readonly value: string
+}
+
+export interface InspectedPage {
+  readonly route: PublicationManifestRoute
+  readonly document: ParsedHtmlDocument
+  readonly references: readonly InspectedReference[]
+  readonly titleCount: number
+  readonly imageCount: number
+  readonly missingAltCount: number
+  readonly hasIslandRuntime: boolean
+  readonly islandCount: number
+}
+
+export interface SiteInspectionMetrics {
+  readonly routeCount: number
+  readonly pageCount: number
+  readonly resourceCount: number
+  readonly redirectCount: number
+  readonly fileCount: number
+  readonly checkedReferences: number
+}
+
+export interface SiteInspection {
+  readonly version: 1
+  /** Root-relative output directory. Never an absolute authoring path. */
   readonly output: string
+  readonly manifest?: PublicationManifest
+  readonly routes: readonly PublicationManifestRoute[]
+  readonly routesByPath: Readonly<Record<string, PublicationManifestRoute>>
+  readonly files: readonly InspectedSiteFile[]
+  readonly filesByPath: Readonly<Record<string, InspectedSiteFile>>
+  readonly pages: readonly InspectedPage[]
+  readonly pagesByRoute: Readonly<Record<string, InspectedPage>>
+  readonly metrics: SiteInspectionMetrics
+  readonly issues: readonly SiteIssue[]
+}
+
+export interface SiteInspectionReport {
+  readonly version: 1
+  readonly output: string
+  readonly metrics: SiteInspectionMetrics
+  readonly issues: readonly SiteIssue[]
+}
+
+export interface SiteCheckResult extends SiteInspectionReport {
+  readonly ok: boolean
   readonly routeCount: number
   readonly pageCount: number
   readonly resourceCount: number
@@ -13,111 +86,452 @@ export interface SiteCheckResult {
   readonly warnings: readonly string[]
 }
 
-export interface VerifySiteOptions {
+export interface InspectSiteOptions {
   readonly root: string
   readonly output?: string
 }
 
-async function readManifest(output: string): Promise<PublicationManifest> {
-  return JSON.parse(await fs.readFile(path.join(output, '.nib/publication.json'), 'utf8')) as PublicationManifest
-}
+export interface VerifySiteOptions extends InspectSiteOptions {}
 
-async function exists(file: string): Promise<boolean> {
-  return fs.access(file).then(() => true, () => false)
-}
+export class SiteVerificationError extends Error {
+  readonly result: SiteCheckResult
 
-function safeArtifact(output: string, artifact: string): string {
-  const resolved = path.resolve(output, artifact)
-  const root = path.resolve(output)
-  if (resolved !== root && !resolved.startsWith(`${root}${path.sep}`)) {
-    throw new Error(`Publication artifact escapes output directory: ${artifact}`)
+  constructor(result: SiteCheckResult) {
+    const errors = result.issues.filter((issue) => issue.severity === 'error')
+    super(`Site verification failed with ${errors.length} error(s)\n${errors.map(formatSiteIssue).join('\n')}`)
+    this.name = 'SiteVerificationError'
+    this.result = result
   }
-  return resolved
 }
 
-function routeFileCandidates(output: string, pathname: string): string[] {
-  const normalized = normalizePath(pathname)
-  if (normalized === '/') return [path.join(output, 'index.html')]
-  const relative = normalized.replace(/^\/+/, '')
-  return [path.join(output, relative), path.join(output, `${relative}/index.html`)]
+interface MutableInspection {
+  manifest?: PublicationManifest
+  routes: PublicationManifestRoute[]
+  files: InspectedSiteFile[]
+  pages: InspectedPage[]
+  issues: SiteIssue[]
+  checkedReferences: number
 }
 
-async function linkExists(output: string, manifest: PublicationManifest, href: string): Promise<boolean> {
-  const pathname = stripBasePath(href, manifest.base).split(/[?#]/, 1)[0] || '/'
-  if (pathname === '/') return exists(path.join(output, 'index.html'))
-  const route = manifest.routes.find((candidate) => normalizePath(candidate.path) === normalizePath(pathname))
-  if (route) return exists(safeArtifact(output, route.artifact))
-  const candidates = routeFileCandidates(output, pathname)
-  for (const candidate of candidates) {
-    if (await exists(candidate)) return true
+const MANIFEST_PATH = '.nib/publication.json'
+
+function record<T extends { readonly path: string }>(
+  values: readonly T[],
+): Readonly<Record<string, T>> {
+  const result: Record<string, T> = Object.create(null) as Record<string, T>
+  for (const value of values) result[value.path] ??= value
+  return Object.freeze(result)
+}
+
+function pageRecord(
+  values: readonly InspectedPage[],
+): Readonly<Record<string, InspectedPage>> {
+  const result: Record<string, InspectedPage> = Object.create(null) as Record<string, InspectedPage>
+  for (const value of values) result[value.route.path] ??= value
+  return Object.freeze(result)
+}
+
+function issue(input: SiteIssue): SiteIssue {
+  return Object.freeze(input)
+}
+
+function errorCode(error: unknown): string {
+  if (error && typeof error === 'object' && 'code' in error && typeof error.code === 'string') {
+    return error.code
   }
-  return false
+  return 'UNKNOWN'
 }
 
-function internalHrefs(html: string): string[] {
-  return [...html.matchAll(/\shref=["']([^"']+)["']/gi)]
-    .map((match) => match[1]!)
-    .filter((href) => href.startsWith('/') && !href.startsWith('//'))
+function relativePath(value: string): string {
+  return value.split(path.sep).join('/')
 }
 
-function missingAltCount(html: string): number {
-  return [...html.matchAll(/<img\b([^>]*)>/gi)]
-    .filter(([, attributes]) => !/\salt\s*=\s*["']/i.test(attributes!)).length
-}
-
-function pageHasIslandRuntime(html: string): boolean {
-  return /\bdata-nib-islands\b/i.test(html) || /<script[^>]+assets\/islands-/i.test(html)
-}
-
-/** Verifies the static output through the publication manifest and HTML seams. */
-export async function verifySite(options: VerifySiteOptions): Promise<SiteCheckResult> {
-  const output = path.resolve(options.output ?? path.join(options.root, 'dist/client'))
-  const manifest = await readManifest(output)
-  if (manifest.version !== 1) throw new Error(`Unsupported Nib publication manifest version: ${manifest.version}`)
-  const seenPaths = new Set<string>()
-  const seenArtifacts = new Set<string>()
-  const warnings: string[] = []
-  let pageCount = 0
-  let resourceCount = 0
-  let redirectCount = 0
-  let checkedLinks = 0
-
-  for (const route of manifest.routes) {
-    if (seenPaths.has(route.path)) throw new Error(`Duplicate publication route: ${route.path}`)
-    seenPaths.add(route.path)
-    if (seenArtifacts.has(route.artifact)) throw new Error(`Duplicate publication artifact: ${route.artifact}`)
-    seenArtifacts.add(route.artifact)
-    const artifact = safeArtifact(output, route.artifact)
-    if (!await exists(artifact)) throw new Error(`Missing publication artifact: ${route.path} -> ${route.artifact}`)
-    if (route.kind === 'page') pageCount += 1
-    else if (route.kind === 'resource') resourceCount += 1
-    else redirectCount += 1
-    if (route.kind !== 'page') continue
-    const html = await fs.readFile(artifact, 'utf8')
-    if ((html.match(/<title>/gi) ?? []).length !== 1) {
-      throw new Error(`Page ${route.path} must contain exactly one title element`)
+async function indexFiles(
+  directory: string,
+  relative = '',
+): Promise<InspectedSiteFile[]> {
+  const entries = await fs.readdir(path.join(directory, relative), {
+    withFileTypes: true,
+  })
+  const files: InspectedSiteFile[] = []
+  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
+    const child = path.join(relative, entry.name)
+    if (entry.isDirectory()) {
+      files.push(...await indexFiles(directory, child))
+    } else if (entry.isFile()) {
+      const stats = await fs.stat(path.join(directory, child))
+      files.push(Object.freeze({ path: relativePath(child), size: stats.size }))
     }
-    const missingAlt = missingAltCount(html)
-    if (missingAlt > 0) warnings.push(`${route.path}: ${missingAlt} image(s) missing alt text`)
-    if (pageHasIslandRuntime(html) && !/<nib-island\b/i.test(html)) {
-      throw new Error(`Static page ${route.path} ships island runtime without an island`)
+  }
+  return files
+}
+
+function isManifest(value: unknown): value is PublicationManifest {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Partial<PublicationManifest>
+  return candidate.version === 1
+    && typeof candidate.base === 'string'
+    && Array.isArray(candidate.routes)
+    && candidate.routes.every((route) => {
+      if (!route || typeof route !== 'object') return false
+      const item = route as Partial<PublicationManifestRoute>
+      return (item.kind === 'page' || item.kind === 'resource' || item.kind === 'redirect')
+        && typeof item.path === 'string'
+        && typeof item.artifact === 'string'
+        && typeof item.status === 'number'
+        && typeof item.contentType === 'string'
+    })
+}
+
+async function readManifest(
+  output: string,
+  inspection: MutableInspection,
+): Promise<void> {
+  try {
+    const parsed: unknown = JSON.parse(
+      await fs.readFile(path.join(output, MANIFEST_PATH), 'utf8'),
+    )
+    if (!isManifest(parsed)) {
+      inspection.issues.push(issue({
+        code: 'MANIFEST_INVALID',
+        severity: 'error',
+        message: `Invalid or unsupported Nib publication manifest: ${MANIFEST_PATH}`,
+        artifact: MANIFEST_PATH,
+      }))
+      return
     }
-    for (const href of internalHrefs(html)) {
-      checkedLinks += 1
-      if (href.startsWith('/assets/') || href.startsWith('/site-assets/') || href.startsWith('/videos/')) continue
-      if (!await linkExists(output, manifest, href)) {
-        throw new Error(`Broken internal link on ${route.path}: ${href}`)
+    const routes = Object.freeze(parsed.routes.map((route) => Object.freeze(route)))
+    inspection.manifest = Object.freeze({ ...parsed, routes })
+    inspection.routes.push(...routes)
+  } catch (error) {
+    inspection.issues.push(issue({
+      code: 'MANIFEST_READ_FAILED',
+      severity: 'error',
+      message: `Could not read ${MANIFEST_PATH} (${errorCode(error)})`,
+      artifact: MANIFEST_PATH,
+    }))
+  }
+}
+
+function safeArtifact(artifact: string): string | undefined {
+  const normalized = path.posix.normalize(artifact.replaceAll('\\', '/'))
+  if (normalized === '..' || normalized.startsWith('../') || path.posix.isAbsolute(normalized)) {
+    return undefined
+  }
+  return normalized
+}
+
+function references(document: ParsedHtmlDocument): readonly InspectedReference[] {
+  const result: InspectedReference[] = []
+  for (const element of document.elements) {
+    for (const attribute of ['href', 'src', 'poster'] as const) {
+      const value = htmlAttribute(element, attribute)
+      if (value !== undefined) {
+        result.push(Object.freeze({ tagName: element.tagName, attribute, value }))
+      }
+    }
+    const srcset = htmlAttribute(element, 'srcset')
+    if (srcset !== undefined) {
+      for (const candidate of srcset.split(',')) {
+        const value = candidate.trim().split(/\s+/, 1)[0]
+        if (value) {
+          result.push(Object.freeze({
+            tagName: element.tagName,
+            attribute: 'srcset',
+            value,
+          }))
+        }
       }
     }
   }
+  return Object.freeze(result)
+}
 
-  return {
-    output,
-    routeCount: manifest.routes.length,
+function isLocalReference(value: string): boolean {
+  if (!value || value.startsWith('#') || value.startsWith('//')) return false
+  try {
+    const parsed = new URL(value, 'http://nib.local')
+    return parsed.origin === 'http://nib.local'
+      && !/^(?:data|mailto|tel|javascript):/i.test(value)
+  } catch {
+    return false
+  }
+}
+
+function referencePath(
+  value: string,
+  route: PublicationManifestRoute,
+  base: string,
+): string | undefined {
+  if (!isLocalReference(value)) return undefined
+  try {
+    const routeSuffix = route.path !== '/' && route.artifact.endsWith('/index.html')
+      ? '/'
+      : ''
+    const routeBase = `http://nib.local${route.path}${routeSuffix}`
+    const pathname = new URL(value, routeBase).pathname
+    return decodeURIComponent(stripBasePath(pathname, base).split(/[?#]/, 1)[0] || '/')
+  } catch {
+    return undefined
+  }
+}
+
+function routeFileCandidates(pathname: string): readonly string[] {
+  const normalized = normalizePath(pathname)
+  if (normalized === '/') return ['index.html']
+  const relative = normalized.replace(/^\/+/, '')
+  return [relative, `${relative}/index.html`]
+}
+
+function referenceExists(
+  pathname: string,
+  routesByPath: Readonly<Record<string, PublicationManifestRoute>>,
+  filesByPath: Readonly<Record<string, InspectedSiteFile>>,
+): boolean {
+  const route = routesByPath[normalizePath(pathname)]
+  if (route) {
+    const artifact = safeArtifact(route.artifact)
+    return artifact !== undefined && filesByPath[artifact] !== undefined
+  }
+  return routeFileCandidates(pathname).some((candidate) => filesByPath[candidate] !== undefined)
+}
+
+function inspectRouteIndexes(inspection: MutableInspection): void {
+  const seenPaths = new Set<string>()
+  const seenArtifacts = new Set<string>()
+  for (const route of inspection.routes) {
+    if (seenPaths.has(route.path)) {
+      inspection.issues.push(issue({
+        code: 'DUPLICATE_ROUTE',
+        severity: 'error',
+        message: `Duplicate publication route: ${route.path}`,
+        route: route.path,
+      }))
+    }
+    seenPaths.add(route.path)
+    if (seenArtifacts.has(route.artifact)) {
+      inspection.issues.push(issue({
+        code: 'DUPLICATE_ARTIFACT',
+        severity: 'error',
+        message: `Duplicate publication artifact: ${route.artifact}`,
+        route: route.path,
+        artifact: route.artifact,
+      }))
+    }
+    seenArtifacts.add(route.artifact)
+  }
+}
+
+async function inspectPages(
+  output: string,
+  inspection: MutableInspection,
+): Promise<void> {
+  const filesByPath = record(inspection.files)
+  const routesByPath = record(inspection.routes)
+  for (const route of inspection.routes) {
+    const artifact = safeArtifact(route.artifact)
+    if (artifact === undefined) {
+      inspection.issues.push(issue({
+        code: 'ARTIFACT_PATH_ESCAPE',
+        severity: 'error',
+        message: `Publication artifact escapes output directory: ${route.artifact}`,
+        route: route.path,
+        artifact: route.artifact,
+      }))
+      continue
+    }
+    if (filesByPath[artifact] === undefined) {
+      inspection.issues.push(issue({
+        code: 'ARTIFACT_MISSING',
+        severity: 'error',
+        message: `Missing publication artifact: ${route.path} -> ${artifact}`,
+        route: route.path,
+        artifact,
+      }))
+      continue
+    }
+    if (route.kind !== 'page') continue
+    let html: string
+    try {
+      html = await fs.readFile(path.join(output, artifact), 'utf8')
+    } catch (error) {
+      inspection.issues.push(issue({
+        code: 'PAGE_READ_FAILED',
+        severity: 'error',
+        message: `Could not read page artifact ${artifact} (${errorCode(error)})`,
+        route: route.path,
+        artifact,
+      }))
+      continue
+    }
+    const document = parseHtmlDocument(html)
+    const pageReferences = references(document)
+    const titles = document.elements.filter((element) => element.tagName === 'title')
+    const images = document.elements.filter((element) => element.tagName === 'img')
+    const islandCount = document.elements.filter((element) => element.tagName === 'nib-island').length
+    const hasIslandRuntime = document.elements.some((element) =>
+      htmlAttribute(element, 'data-nib-islands') !== undefined
+      || (element.tagName === 'script' && (htmlAttribute(element, 'src') ?? '').includes('assets/islands-')),
+    )
+    const missingAltCount = images.filter((element) => htmlAttribute(element, 'alt') === undefined).length
+    const page = Object.freeze({
+      route,
+      document,
+      references: pageReferences,
+      titleCount: titles.length,
+      imageCount: images.length,
+      missingAltCount,
+      hasIslandRuntime,
+      islandCount,
+    })
+    inspection.pages.push(page)
+    for (const parseError of document.parseErrors) {
+      if (parseError.code === 'missing-doctype') continue
+      inspection.issues.push(issue({
+        code: 'HTML_PARSE_ERROR',
+        severity: 'error',
+        message: `Malformed HTML on ${route.path}: ${parseError.code} at ${parseError.startLine}:${parseError.startCol}`,
+        route: route.path,
+        artifact,
+      }))
+    }
+    if (titles.length !== 1) {
+      inspection.issues.push(issue({
+        code: 'TITLE_COUNT',
+        severity: 'error',
+        message: `Page ${route.path} must contain exactly one title element (found ${titles.length})`,
+        route: route.path,
+        artifact,
+      }))
+    }
+    if (missingAltCount > 0) {
+      inspection.issues.push(issue({
+        code: 'IMAGE_ALT_MISSING',
+        severity: 'warning',
+        message: `${route.path}: ${missingAltCount} image(s) missing alt text`,
+        route: route.path,
+        artifact,
+      }))
+    }
+    if (hasIslandRuntime && islandCount === 0) {
+      inspection.issues.push(issue({
+        code: 'ISLAND_RUNTIME_UNUSED',
+        severity: 'error',
+        message: `Static page ${route.path} ships island runtime without an island`,
+        route: route.path,
+        artifact,
+      }))
+    }
+    for (const reference of pageReferences) {
+      const pathname = referencePath(reference.value, route, inspection.manifest?.base ?? '/')
+      if (pathname === undefined) continue
+      inspection.checkedReferences += 1
+      if (!referenceExists(pathname, routesByPath, filesByPath)) {
+        inspection.issues.push(issue({
+          code: 'LOCAL_REFERENCE_MISSING',
+          severity: 'error',
+          message: `Missing local ${reference.attribute} on ${route.path}: ${reference.value}`,
+          route: route.path,
+          artifact,
+          reference: reference.value,
+        }))
+      }
+    }
+  }
+}
+
+function issueOrder(left: SiteIssue, right: SiteIssue): number {
+  return (left.route ?? '').localeCompare(right.route ?? '')
+    || left.code.localeCompare(right.code)
+    || (left.reference ?? '').localeCompare(right.reference ?? '')
+    || left.message.localeCompare(right.message)
+}
+
+/** Indexes and parses a static publication once, returning all built-in issues. */
+export async function inspectSite(options: InspectSiteOptions): Promise<SiteInspection> {
+  const root = path.resolve(options.root)
+  const output = path.resolve(options.output ?? path.join(root, 'dist/client'))
+  const inspection: MutableInspection = {
+    routes: [],
+    files: [],
+    pages: [],
+    issues: [],
+    checkedReferences: 0,
+  }
+  try {
+    inspection.files.push(...await indexFiles(output))
+  } catch (error) {
+    inspection.issues.push(issue({
+      code: 'FILE_INDEX_FAILED',
+      severity: 'error',
+      message: `Could not index publication output (${errorCode(error)})`,
+    }))
+  }
+  await readManifest(output, inspection)
+  inspectRouteIndexes(inspection)
+  if (inspection.manifest) await inspectPages(output, inspection)
+  inspection.issues.sort(issueOrder)
+
+  const pageCount = inspection.routes.filter((route) => route.kind === 'page').length
+  const resourceCount = inspection.routes.filter((route) => route.kind === 'resource').length
+  const redirectCount = inspection.routes.filter((route) => route.kind === 'redirect').length
+  const metrics = Object.freeze({
+    routeCount: inspection.routes.length,
     pageCount,
     resourceCount,
     redirectCount,
-    checkedLinks,
+    fileCount: inspection.files.length,
+    checkedReferences: inspection.checkedReferences,
+  })
+  const routes = Object.freeze(inspection.routes.map((route) => Object.freeze(route)))
+  const files = Object.freeze(inspection.files)
+  const pages = Object.freeze(inspection.pages)
+  return Object.freeze({
+    version: 1,
+    output: relativePath(path.relative(root, output) || '.'),
+    ...(inspection.manifest === undefined ? {} : { manifest: Object.freeze(inspection.manifest) }),
+    routes,
+    routesByPath: record(routes),
+    files,
+    filesByPath: record(files),
+    pages,
+    pagesByRoute: pageRecord(pages),
+    metrics,
+    issues: Object.freeze(inspection.issues),
+  })
+}
+
+export function siteInspectionReport(inspection: SiteInspection): SiteInspectionReport {
+  return Object.freeze({
+    version: inspection.version,
+    output: inspection.output,
+    metrics: inspection.metrics,
+    issues: inspection.issues,
+  })
+}
+
+export function formatSiteIssue(value: SiteIssue): string {
+  const location = value.route ?? value.artifact
+  return `${value.severity.toUpperCase()} ${value.code}${location ? ` [${location}]` : ''}: ${value.message}`
+}
+
+/** Verifies a publication and throws one aggregate error after every check runs. */
+export async function verifySite(options: VerifySiteOptions): Promise<SiteCheckResult> {
+  const inspection = await inspectSite(options)
+  const report = siteInspectionReport(inspection)
+  const warnings = inspection.issues
+    .filter((value) => value.severity === 'warning')
+    .map((value) => value.message)
+  const result = Object.freeze({
+    ...report,
+    ok: !inspection.issues.some((value) => value.severity === 'error'),
+    routeCount: inspection.metrics.routeCount,
+    pageCount: inspection.metrics.pageCount,
+    resourceCount: inspection.metrics.resourceCount,
+    redirectCount: inspection.metrics.redirectCount,
+    checkedLinks: inspection.metrics.checkedReferences,
     warnings: Object.freeze(warnings),
-  }
+  })
+  if (!result.ok) throw new SiteVerificationError(result)
+  return result
 }
