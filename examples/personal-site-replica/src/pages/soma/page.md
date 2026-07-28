@@ -2,6 +2,8 @@
 title: "Soma Game Review"
 description: "A sci-fi horror game that asks uncomfortable questions about consciousness and identity."
 date: 2022-10-24T00:00:00.000Z
+cover: "/site-assets/ss_21b43d4cb49ef3332eefbb4957ec96e075543ef1.1920x1080_1666656957286_0.jpg"
+wordCount: 368
 tags:
   - "gaming"
   - "review"

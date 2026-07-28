@@ -2,6 +2,8 @@
 title: "Central Pacific Update"
 description: "Life updates from the Pacific islands, plus what I've been building and learning."
 date: 2025-09-23T00:00:00.000Z
+cover: "/site-assets/68d32d0a-a41f-4370-bf64-60dacba7e3ea.jpeg"
+wordCount: 1611
 tags:
   - "newsletter"
   - "fitness"

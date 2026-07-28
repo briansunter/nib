@@ -2,6 +2,8 @@
 title: "Daily Highlight Productivity Technique"
 description: "Pick one thing each day that matters most. A simple technique that cuts through endless to-do lists."
 date: 2022-06-17T00:00:00.000Z
+cover: "/site-assets/daily-highlight_1672273385215_0.jpg"
+wordCount: 459
 tags:
   - "productivity"
   - "writing"

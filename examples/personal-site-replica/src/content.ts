@@ -1,4 +1,10 @@
-import { defineCollection, defineMarkdown, file, z } from '@briansunter/nib'
+import {
+  defineCollection,
+  defineMarkdown,
+  fromMarkdownPages,
+  z,
+} from '@briansunter/nib'
+import { file } from '@briansunter/nib/server'
 import { parse as parseYaml } from 'yaml'
 import { rehypePlugins, remarkPlugins } from './lib/markdown-plugins'
 
@@ -11,9 +17,8 @@ function parseJson<T>(source: string, label: string): T {
   }
 }
 
-// Writing entries are emitted as root-level page.md routes by the import
-// script; this collection is the metadata mirror consumed by the archive,
-// home page, RSS, and search.
+// Writing entries are emitted as root-level page.md routes. Every consumer
+// derives from their validated frontmatter rather than a mirrored JSON file.
 export const writingSchema = z.object({
   slug: z.string(),
   title: z.string(),
@@ -27,15 +32,24 @@ export const writingSchema = z.object({
 })
 export type Writing = z.infer<typeof writingSchema>
 
-export const writing = defineCollection({
-  loader: file({
-    file: 'src/content/writing.json',
-    load(source) {
-      const entries = parseJson<Writing[]>(source, 'writing.json')
-      return entries.map((entry) => ({ id: entry.slug, data: entry }))
-    },
+function pageDateValue(page: { readonly frontmatter: unknown }): number {
+  const value = (page.frontmatter as { date?: unknown } | undefined)?.date
+  const date = value instanceof Date ? value : new Date(String(value ?? ''))
+  return Number.isNaN(date.valueOf()) ? 0 : date.valueOf()
+}
+
+export const writing = fromMarkdownPages<Writing>({
+  match: (page) => (
+    typeof page.frontmatter === 'object'
+    && page.frontmatter !== null
+    && (page.frontmatter as { layout?: unknown }).layout === 'article'
+  ),
+  id: (page) => page.path.replace(/^\/+|\/+$/g, ''),
+  select: (page) => writingSchema.parse({
+    ...(page.frontmatter as object),
+    slug: page.path.replace(/^\/+|\/+$/g, ''),
   }),
-  schema: writingSchema,
+  sort: (left, right) => pageDateValue(right) - pageDateValue(left),
 })
 
 export const projectSchema = z.object({
@@ -256,6 +270,10 @@ export const markdown = defineMarkdown({
     description: z.string().optional(),
     layout: z.string().optional(),
     date: z.coerce.date().optional(),
+    lastMod: z.coerce.date().nullable().optional(),
+    math: z.boolean().optional(),
+    cover: z.string().nullable().optional(),
+    wordCount: z.number().int().nonnegative().optional(),
     tags: z.array(z.string()).optional(),
   }),
 })

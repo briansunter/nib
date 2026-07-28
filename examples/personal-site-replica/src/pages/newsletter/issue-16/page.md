@@ -2,6 +2,8 @@
 title: "Cooking for Hackers"
 description: "How I'm optimizing my cooking process and organizing my recipes."
 date: 2024-04-08T00:00:00.000Z
+cover: "/site-assets/1713157492098_0.png"
+wordCount: 1131
 tags:
   - "newsletter"
   - "AI"

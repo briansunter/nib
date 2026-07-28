@@ -2,6 +2,8 @@
 title: "Why Clojure?"
 description: "What makes Clojure interesting and well suited for modern software development?"
 date: 2018-09-30T00:00:00.000Z
+cover: "/site-assets/clojure_logo.svg_1660983015847_0.png"
+wordCount: 1808
 tags:
   - "blog"
   - "programming"

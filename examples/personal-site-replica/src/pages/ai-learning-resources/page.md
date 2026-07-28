@@ -2,6 +2,8 @@
 title: "AI Learning Resources"
 description: "Best resources for studying machine learning"
 date: 2022-12-09T00:00:00.000Z
+cover: "/site-assets/1071614177.01._SCLZZZZZZZ_SX500_1670647404075_0.jpg"
+wordCount: 5292
 tags:
   - "AI"
   - "programming"

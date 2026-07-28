@@ -2,6 +2,8 @@
 title: "GPT-3 Chinese Language Tutor"
 description: "Building a chatbot to learn Chinese internet slang and casual expressions."
 date: 2022-07-03T00:00:00.000Z
+cover: "/site-assets/chinese-robot_1672272679577_0.jpg"
+wordCount: 738
 tags:
   - "AI"
   - "chinese"

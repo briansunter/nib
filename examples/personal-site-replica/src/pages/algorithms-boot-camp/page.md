@@ -2,6 +2,8 @@
 title: "Algorithms Boot Camp"
 description: "A structured learning path through data structures and algorithms fundamentals."
 date: 2022-07-10T00:00:00.000Z
+cover: "/site-assets/image_1657488579000_0_1672131758605_0.png"
+wordCount: 740
 tags:
   - "programming"
   - "algorithms"

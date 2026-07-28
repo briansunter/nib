@@ -3,6 +3,7 @@ title: "Time Complexity Analysis"
 description: "What Big O notation actually means, how to compare algorithm efficiency, and the difference between O, Theta, and Omega."
 date: 2022-08-22T00:00:00.000Z
 math: true
+wordCount: 2097
 tags:
   - "algorithms"
   - "data-structures"

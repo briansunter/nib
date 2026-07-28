@@ -2,6 +2,8 @@
 title: "How to Use GPT-3 to Learn Kubernetes"
 description: "Using AI to generate study materials and explain complex Kubernetes concepts."
 date: 2022-06-29T00:00:00.000Z
+cover: "/site-assets/kubernetes_1672272543261_0.png"
+wordCount: 1530
 tags:
   - "AI"
   - "gpt3"

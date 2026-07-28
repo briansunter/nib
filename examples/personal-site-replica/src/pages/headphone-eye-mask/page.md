@@ -2,6 +2,8 @@
 title: "Headphone Eye Mask"
 description: "How I use a Bluetooth headphone eye mask to sleep better"
 date: 2022-11-07T00:00:00.000Z
+cover: "/site-assets/image_1667858995655_0_1667859078784_0.jpeg"
+wordCount: 784
 tags:
   - "productivity"
   - "health"

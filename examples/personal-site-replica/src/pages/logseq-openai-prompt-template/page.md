@@ -2,6 +2,8 @@
 title: "Logseq GPT Prompt Templates"
 description: "Thoughts on prompt templates for the Logseq OpenAI Plugin"
 date: 2022-11-16T00:00:00.000Z
+cover: "/site-assets/logseq-openai-hero.png"
+wordCount: 820
 layout: article
 ---
 See the [Logseq GPT-3 OpenAI plugin here.](https://github.com/briansunter/logseq-plugin-gpt3-openai)

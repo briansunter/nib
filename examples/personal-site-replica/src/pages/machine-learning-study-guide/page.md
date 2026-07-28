@@ -2,6 +2,7 @@
 title: "Machine Learning Study Guide"
 description: "An outline of topics to study for understanding machine learning fundamentals."
 date: 2022-07-17T00:00:00.000Z
+wordCount: 313
 tags:
   - "programming"
   - "AI"

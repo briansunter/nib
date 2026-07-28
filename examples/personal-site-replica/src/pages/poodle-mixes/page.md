@@ -2,6 +2,7 @@
 title: "Generating Poodle Mix Names with AI"
 description: "Teaching GPT-3 to invent names for every possible poodle crossbreed."
 date: 2022-07-10T00:00:00.000Z
+wordCount: 578
 tags:
   - "AI"
   - "gpt3"

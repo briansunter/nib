@@ -2,10 +2,12 @@
 title: "100 newsletter subscribers"
 description: "Reaching 100 newsletter subscribers milestone"
 date: 2022-07-13T00:00:00.000Z
+wordCount: 319
 tags:
   - "project"
 layout: article
----### Summary
+---
+### Summary
 
 I am starting a newsletter about my learnings on coding, technology, health, and productivity.
 

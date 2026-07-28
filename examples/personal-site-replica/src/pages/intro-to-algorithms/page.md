@@ -2,6 +2,8 @@
 title: "Intro to Algorithms"
 description: "What algorithms are, why they matter, and how to start thinking about problem solving."
 date: 2022-10-04T00:00:00.000Z
+cover: "/site-assets/image_1662087569135_0.png"
+wordCount: 957
 tags:
   - "algorithms"
   - "programming"

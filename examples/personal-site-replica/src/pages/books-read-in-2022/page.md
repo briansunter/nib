@@ -2,6 +2,8 @@
 title: "Books Read in 2022"
 description: "List of books I read in 2022 with short summaries"
 date: 2023-01-01T00:00:00.000Z
+cover: "/site-assets/books-read-site_1672793412235_0.jpg"
+wordCount: 8121
 tags:
   - "reading"
 layout: article

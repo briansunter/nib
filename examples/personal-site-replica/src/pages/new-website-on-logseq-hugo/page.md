@@ -2,6 +2,7 @@
 title: "New Website on Logseq Hugo"
 description: "I've remade my website using Logseq and the Hugo static site generator."
 date: 2022-08-19T00:00:00.000Z
+wordCount: 1380
 tags:
   - "logseq"
   - "programming"

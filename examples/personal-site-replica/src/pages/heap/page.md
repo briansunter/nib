@@ -3,6 +3,8 @@ title: "Heap, Heap Sort, Heapify, and Priority Queues"
 description: "How heaps work, why they're useful for priority queues, and how to implement heap sort."
 date: 2023-01-05T00:00:00.000Z
 math: true
+cover: "/site-assets/heap_1673042424667_0.jpg"
+wordCount: 2199
 tags:
   - "algorithms"
   - "data-structures"

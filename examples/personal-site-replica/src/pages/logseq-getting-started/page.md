@@ -2,6 +2,8 @@
 title: "Logseq Getting Started"
 description: "How to get started with Logseq and publish your notes online in 30 minutes."
 date: 2022-10-04T00:00:00.000Z
+cover: "/site-assets/image_1662087082755_0.png"
+wordCount: 855
 tags:
   - "logseq"
   - "productivity"

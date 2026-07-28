@@ -3,6 +3,8 @@ title: "Recurrence Relation and Master's Theorem for Dividing Functions"
 description: "How to use the Master's Theorem to figure out the time complexity of divide-and-conquer algorithms like merge sort."
 date: 2023-01-05T00:00:00.000Z
 math: true
+cover: "/site-assets/recurrence-masters-theorem-cover.png"
+wordCount: 1540
 tags:
   - "algorithms"
   - "data-structures"

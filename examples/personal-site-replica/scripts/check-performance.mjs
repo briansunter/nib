@@ -166,7 +166,9 @@ const pinStylesheets = (await Promise.all(pinStylesheetPaths.map((href) => (
 )))).join('\n')
 const pinFilterAssertions = {
   oneGrid: (pinCollectionHtml.match(/id="pin-grid"/g) ?? []).length === 1,
-  island: pinCollectionHtml.includes('data-island="pin-filter"'),
+  behavior:
+    pinCollectionHtml.includes('data-behavior="pin-filter"')
+    && !pinCollectionHtml.includes('data-island="pin-filter"'),
   searchInput: pinCollectionHtml.includes('id="pin-search-input"'),
   favoritesToggle: pinCollectionHtml.includes('id="favorites-toggle"'),
   status: pinCollectionHtml.includes('id="pin-filter-status"'),
@@ -206,7 +208,9 @@ for (const route of ['photos', 'art', 'pin-collection']) {
 }
 
 const markdownFeatureAssertions = {
-  articleEnhancementsIsland: staticArticle.includes('data-island="content-enhancements"'),
+  articleEnhancementsBehavior:
+    staticArticle.includes('data-behavior="content-enhancements"')
+    && !staticArticle.includes('data-island="content-enhancements"'),
   shikiCodeBlocks: codeArticle.includes('class="astro-code github-dark"') && codeArticle.includes('data-language="tsx"'),
   copyButtons: codeArticle.includes('data-copy-button="true"') || codeArticle.includes('data-copy-button'),
   tweetCards: codeArticle.includes('class="not-prose tweet-embed"') && codeArticle.includes('class="tweet-card"'),

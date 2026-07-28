@@ -2,6 +2,8 @@
 title: "Newsletter 11 - Moving to Hawaii and Fitness Routine"
 description: "Some thoughts on moving to Hawaii and what I'm doing to improve my fitness"
 date: 2023-02-17T00:00:00.000Z
+cover: "/site-assets/honolulu_1676694313546_0.jpg"
+wordCount: 1108
 tags:
   - "newsletter"
   - "reading"

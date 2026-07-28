@@ -3,6 +3,8 @@ title: "Recurrence Relation and Master's Theorem for Subtracting Functions"
 description: "The math behind figuring out time complexity for recursive algorithms using recurrence relations."
 date: 2023-01-05T00:00:00.000Z
 math: true
+cover: "/site-assets/recurrence-subtracting-cover.png"
+wordCount: 1296
 tags:
   - "algorithms"
   - "data-structures"

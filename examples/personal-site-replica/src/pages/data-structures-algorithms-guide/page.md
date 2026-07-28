@@ -2,6 +2,7 @@
 title: "Data Structures and Algorithms Guide"
 description: "Common data structures and the problems they solve."
 date: 2022-11-26T00:00:00.000Z
+wordCount: 571
 tags:
   - "programming"
   - "algorithms"

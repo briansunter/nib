@@ -3,6 +3,8 @@ title: "How to Take Smart Notes"
 description: "By focusing on what is interesting and keeping written track of your own intellectual development, topics, questions, and arguments will naturally emerge without force."
 date: 2021-02-08T00:00:00.000Z
 lastMod: 2025-01-31T00:00:00.000Z
+cover: "/site-assets/image_1661224819843_0.png"
+wordCount: 1439
 tags:
   - "blog"
   - "productivity"

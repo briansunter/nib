@@ -3,6 +3,8 @@ title: "Binary Search Algorithm"
 description: "A walkthrough of binary search with both iterative and recursive implementations, plus why it's O(log n)."
 date: 2023-01-05T00:00:00.000Z
 math: true
+cover: "/site-assets/binary-search-cover.png"
+wordCount: 814
 tags:
   - "algorithms"
   - "data-structures"

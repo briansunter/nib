@@ -3,6 +3,7 @@ title: "Integer Sum Formula (Gauss Sum)"
 description: "The classic Gauss formula for summing consecutive integers, and why it matters for algorithm analysis."
 date: 2022-10-02T00:00:00.000Z
 math: true
+wordCount: 552
 tags:
   - "algorithms"
   - "math"

@@ -2,6 +2,8 @@
 title: "Newsletter Issue 2"
 description: "Intro to using AI to take notes and examples from of the community using the logseq openai plugin"
 date: 2022-06-19T00:00:00.000Z
+cover: "/site-assets/kubernetes-gpt_1672123546658_0.jpeg"
+wordCount: 1255
 tags:
   - "gpt3"
   - "AI"

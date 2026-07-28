@@ -2,6 +2,8 @@
 title: "Newsletter Issue 1"
 description: "Launching my newsletter, public graph, and logseq gpt3 AI plugin"
 date: 2022-06-12T00:00:00.000Z
+cover: "/site-assets/image_1660689722955_0.png"
+wordCount: 1467
 tags:
   - "logseq"
   - "logseq-openai/project"

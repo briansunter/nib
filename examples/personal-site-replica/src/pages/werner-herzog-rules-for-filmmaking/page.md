@@ -2,6 +2,8 @@
 title: "Werner Herzog's Rules for Filmmaking"
 description: "Unconventional creative advice from one of cinema's most distinctive directors."
 date: 2022-10-04T00:00:00.000Z
+cover: "/site-assets/herzog_1672134562808_0.jpeg"
+wordCount: 584
 tags:
   - "writing"
   - "creativity"

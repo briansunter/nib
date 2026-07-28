@@ -11,6 +11,7 @@ const clientDist = process.env.NIB_CLIENT_DIST
   : path.join(packageRoot, 'dist/client')
 const publicationFile = path.join(clientDist, '.nib/publication.json')
 const contentDirectory = path.join(packageRoot, 'src/content')
+const pagesDirectory = path.join(packageRoot, 'src/pages')
 const siteOrigin = 'https://briansunter.com'
 const maxReportedDifferences = Number.parseInt(
   process.env.CONTENT_PARITY_MAX_DIFFS ?? '80',
@@ -529,13 +530,22 @@ function sourceHtmlFile(route) {
 }
 
 async function indexedRouteMap() {
-  const [writing, projects, recipes] = await Promise.all([
-    readFile(path.join(contentDirectory, 'writing.json'), 'utf8').then(JSON.parse),
+  const [pageFiles, projects, recipes] = await Promise.all([
+    filesUnder(pagesDirectory),
     readFile(path.join(contentDirectory, 'projects.json'), 'utf8').then(JSON.parse),
     readFile(path.join(contentDirectory, 'recipes.json'), 'utf8').then(JSON.parse),
   ])
+  const writingRoutes = []
+  for (const file of pageFiles.sort()) {
+    if (path.basename(file) !== 'page.md') continue
+    const source = await readFile(file, 'utf8')
+    const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(source)?.[1] ?? ''
+    if (!/^layout:\s*["']?article["']?\s*$/m.test(frontmatter)) continue
+    const slug = path.relative(pagesDirectory, path.dirname(file)).split(path.sep).join('/')
+    writingRoutes.push(`/${slug}`)
+  }
   const entries = [
-    ...writing.map((item) => [`/${item.slug}`, 'writing']),
+    ...writingRoutes.map((route) => [route, 'writing']),
     ...projects.map((item) => [`/projects/${item.slug}`, 'project']),
     ...recipes.map((item) => [`/recipes/${item.slug}`, 'recipe']),
   ]

@@ -2,6 +2,8 @@
 title: "emacs-daemon-mode-on-macos"
 description: "How to have Emacs launch quickly and always be available on macOS."
 date: 2019-06-25T00:00:00.000Z
+cover: "/site-assets/image_1661148998101_0.png"
+wordCount: 262
 tags:
   - "programming"
   - "emacs"

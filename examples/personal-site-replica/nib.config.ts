@@ -1,8 +1,7 @@
-import fs from 'node:fs/promises'
-import path from 'node:path'
 import {
   defineConfig,
   definePageSource,
+  fromCollection,
   fromPageSource,
   markdownMedia,
   pageRenderer,
@@ -29,7 +28,7 @@ import {
 } from './src/content'
 import { SiteShell } from './src/site-shell'
 import { generateThemeScript } from './src/lib/theme'
-import { cooklangToPlainText, htmlToPlainText, markdownToPlainText } from './src/lib/search-text'
+import { cooklangToPlainText, htmlToPlainText } from './src/lib/search-text'
 import { sourceRedirects } from './src/redirects'
 import { sourceMetadata } from './src/lib/source-metadata'
 
@@ -98,6 +97,61 @@ const tagPages = definePageSource({
   },
   component: pageRenderer<TagPage>('./src/data-pages', 'TagDetailPage'),
 })
+const projects = fromPageSource(projectPages)
+const recipes = fromPageSource(recipePages)
+
+const writingSearchItems = fromCollection(writing, (entries) => entries.map(({ data }) => ({
+  title: data.title,
+  description: data.description,
+  href: `/${data.slug}`,
+  kind: 'Writing',
+  tags: data.tags,
+  text: data.description,
+})))
+const projectSearchItems = fromCollection(projects, (entries) => (
+  entries.map(({ data }) => ({
+    title: data.title,
+    description: data.description,
+    href: `/projects/${data.slug}`,
+    kind: 'Project',
+    tags: data.tags,
+    text: htmlToPlainText(data.bodyHtml) || data.description,
+  }))
+))
+const recipeSearchItems = fromCollection(recipes, (entries) => (
+  entries.map(({ data }) => ({
+    title: data.metadata.title,
+    description: data.metadata.description,
+    href: `/recipes/${data.slug}`,
+    kind: 'Recipe',
+    tags: data.metadata.tags,
+    text: cooklangToPlainText(data.cooklang) || data.metadata.description,
+  }))
+))
+const writingFeedItems = fromCollection(writing, (entries) => entries.map(({ data }) => ({
+  title: data.title,
+  description: data.description,
+  link: `/${data.slug}`,
+  pubDate: data.date,
+  categories: data.tags,
+  creator: 'Brian Sunter',
+})))
+const projectFeedItems = fromCollection(projects, (entries) => (
+  entries.map(({ data: project }) => {
+    const cover = project.cover
+      ? `<p><img src="https://briansunter.com${project.cover}" alt=""></p>`
+      : ''
+    return {
+      title: project.title,
+      description: project.description,
+      link: `/projects/${project.slug}`,
+      pubDate: project.date,
+      categories: project.tags,
+      creator: 'Brian Sunter',
+      content: `${cover}${project.bodyHtml}`,
+    }
+  })
+))
 
 export default defineConfig({
   vite: () => tailwindcss(),
@@ -161,8 +215,8 @@ export default defineConfig({
   },
   collections: {
     writing,
-    projects: fromPageSource(projectPages),
-    recipes: fromPageSource(recipePages),
+    projects,
+    recipes,
     art,
     photos,
     pins,
@@ -182,55 +236,11 @@ export default defineConfig({
       }],
     }),
     search({
-      items: async ({ root }) => {
-        const readSnapshot = async <T>(file: string): Promise<T> => parseJson<T>(
-          await fs.readFile(path.join(root, 'src/content', file), 'utf8'),
-          file,
-        )
-        // Read a writing entry's source Markdown and reduce it to searchable
-        // plain text, falling back to its description when a source is missing
-        // or empty. Slugs are trusted generated content; guard against escapes.
-        const readWritingSource = async (slug: string): Promise<string> => {
-          if (slug.includes('..') || slug.startsWith('/')) return ''
-          try {
-            const source = await fs.readFile(
-              path.join(root, 'src/pages', slug, 'page.md'),
-              'utf8',
-            )
-            return markdownToPlainText(source)
-          } catch {
-            return ''
-          }
-        }
-        const writingEntries = await readSnapshot<Writing[]>('writing.json')
-        const projectEntries = await readSnapshot<Project[]>('projects.json')
-        const recipeEntries = await readSnapshot<Recipe[]>('recipes.json')
-        const writingItems = await Promise.all(writingEntries.map(async (entry) => ({
-          title: entry.title,
-          description: entry.description,
-          href: `/${entry.slug}`,
-          kind: 'Writing',
-          tags: entry.tags,
-          text: (await readWritingSource(entry.slug)) || entry.description,
-        })))
+      items: ({ readCollection }) => {
         return [
-          ...writingItems,
-          ...projectEntries.map((entry) => ({
-            title: entry.title,
-            description: entry.description,
-            href: `/projects/${entry.slug}`,
-            kind: 'Project',
-            tags: entry.tags,
-            text: htmlToPlainText(entry.bodyHtml) || entry.description,
-          })),
-          ...recipeEntries.map((entry) => ({
-            title: entry.metadata.title,
-            description: entry.metadata.description,
-            href: `/recipes/${entry.slug}`,
-            kind: 'Recipe',
-            tags: entry.metadata.tags,
-            text: cooklangToPlainText(entry.cooklang) || entry.metadata.description,
-          })),
+          ...readCollection(writingSearchItems),
+          ...readCollection(projectSearchItems),
+          ...readCollection(recipeSearchItems),
         ]
       },
     }),
@@ -249,49 +259,10 @@ export default defineConfig({
       managingEditor: 'noreply@briansunter.com (Brian Sunter)',
       webMaster: 'noreply@briansunter.com (Brian Sunter)',
       stylesheet: '/rss/styles.xsl',
-      items: async ({ root: projectRoot, site }) => {
-        const contentDir = path.join(projectRoot, 'src/content')
-        const origin = (site.origin ?? 'https://briansunter.com').replace(/\/$/, '')
-        const readSnapshot = async <T>(file: string): Promise<T> => {
-          const raw = await fs.readFile(path.join(contentDir, file), 'utf8')
-          try {
-            return JSON.parse(raw) as T
-          } catch (error) {
-            const detail = error instanceof Error ? error.message : String(error)
-            throw new Error(`Failed to parse ${file}: ${detail}`)
-          }
-        }
-        // Plugin route inspectors do not receive page data, so the feed reads
-        // the same generated snapshots the page sources use.
-        const writingEntries = await readSnapshot<Writing[]>('writing.json')
-        const projectEntries = await readSnapshot<Project[]>('projects.json')
+      items: ({ readCollection }) => {
         return [
-          ...writingEntries.map((entry) => ({
-            title: entry.title,
-            description: entry.description,
-            link: `/${entry.slug}`,
-            pubDate: entry.date,
-            categories: entry.tags,
-            creator: 'Brian Sunter',
-          })),
-          ...projectEntries.map((project) => {
-            // Match the original feed: cover image first (when present), then
-            // the rendered project body. The static pipeline does not expose
-            // the webp@1200 transform to route inspectors, so the cover is
-            // referenced by its canonical absolute URL.
-            const cover = project.cover
-              ? `<p><img src="${origin}${project.cover}" alt=""></p>`
-              : ''
-            return {
-              title: project.title,
-              description: project.description,
-              link: `/projects/${project.slug}`,
-              pubDate: project.date,
-              categories: project.tags,
-              creator: 'Brian Sunter',
-              content: `${cover}${project.bodyHtml}`,
-            }
-          }),
+          ...readCollection(writingFeedItems),
+          ...readCollection(projectFeedItems),
         ]
       },
     }),

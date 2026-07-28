@@ -2,6 +2,7 @@
 title: "My Game Review Template"
 description: "A structured template I use to write thoughtful video game reviews."
 date: 2022-10-04T00:00:00.000Z
+wordCount: 401
 tags:
   - "template"
   - "gaming"

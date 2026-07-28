@@ -2,6 +2,8 @@
 title: "Analyzing Coffee with Data Science + ChatGPT Code Interpreter"
 description: "Uploading a dataset about coffee and using ChatGPT to automatically clean the data, understand insights, and generate cool charts."
 date: 2023-07-27T00:00:00.000Z
+cover: "/site-assets/coffee_quality_by_country_boxplot.png"
+wordCount: 1752
 tags:
   - "newsletter"
   - "logseq"

@@ -2,6 +2,8 @@
 title: "Omnivore Logseq Guide"
 description: "Save articles to read later and sync your highlights to Logseq automatically."
 date: 2022-10-26T00:00:00.000Z
+cover: "/site-assets/image_1662086881256_0.png"
+wordCount: 780
 tags:
   - "logseq"
   - "productivity"

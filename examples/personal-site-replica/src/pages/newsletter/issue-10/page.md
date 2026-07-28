@@ -2,6 +2,8 @@
 title: "Newsletter Issue 10"
 description: "Logseq GPT-3 OpenAI popup, YouTube captions plugin updates, and migrating to Substack"
 date: 2023-02-01T00:00:00.000Z
+cover: "/site-assets/Screenshot_2023-02-02_at_1.42.14_PM_1675381393942_0.png"
+wordCount: 1331
 tags:
   - "newsletter"
   - "reading"

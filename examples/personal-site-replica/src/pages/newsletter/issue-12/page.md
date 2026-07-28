@@ -2,6 +2,8 @@
 title: "GPT-4 and ChatGPT in the Logseq OpenAI Plugin"
 description: "Adding GPT-4 and ChatGPT to my Logseq OpenAI plugin, comparing usage costs, and looking at the best new features of GPT-4"
 date: 2023-03-15T00:00:00.000Z
+cover: "/site-assets/Screenshot_2023-03-14_at_3.01.45_PM_1678842139677_0.png"
+wordCount: 1423
 tags:
   - "newsletter"
   - "logseq"

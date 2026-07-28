@@ -2,6 +2,8 @@
 title: "Newsletter Issue 6"
 description: "I wrote a simple introduction to algorithms and why they're important and a short guide to my current logseq-projects template."
 date: 2022-07-17T00:00:00.000Z
+cover: "/site-assets/image_1657735112414_0_1672132400967_0.png"
+wordCount: 948
 tags:
   - "newsletter"
   - "AI"

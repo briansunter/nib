@@ -2,6 +2,8 @@
 title: "Notetaking with NLP and AI"
 description: "Using GPT-3, embeddings, and other AI tools to organize and search your notes."
 date: 2022-08-21T00:00:00.000Z
+cover: "/site-assets/image_1662087221258_0.png"
+wordCount: 2073
 tags:
   - "AI"
   - "logseq"

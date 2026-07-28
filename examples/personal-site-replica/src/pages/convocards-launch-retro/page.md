@@ -2,6 +2,8 @@
 title: "ConvoCards Launch Retro"
 description: "Thoughts and learnings from launching a new app."
 date: 2024-11-22T00:00:00.000Z
+cover: "/site-assets/convocards-launch-retro/image.jpg"
+wordCount: 2451
 tags:
   - "blog"
   - "newsletter"

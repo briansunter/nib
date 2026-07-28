@@ -2,6 +2,8 @@
 title: "Almanack of Naval Ravikant"
 description: "A collection of tweets on the philosophy of life, wealth, relationships, learning, and health from the investor and founder of AngelList Naval Ravikant."
 date: 2022-07-10T00:00:00.000Z
+cover: "/site-assets/41ZZY5kzLL_1670306664477_0.jpg"
+wordCount: 3227
 layout: article
 ---
 # The Book in 3 Sentences

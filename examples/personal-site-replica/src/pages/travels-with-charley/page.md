@@ -2,6 +2,8 @@
 title: "Travels with Charley"
 description: "Steinbeck's road trip across America with his poodle, searching for the country's character."
 date: 2022-05-08T00:00:00.000Z
+cover: "/site-assets/travels-with-charley_1672052430785_0.jpeg"
+wordCount: 3148
 tags:
   - "reading"
   - "travel"

@@ -3,6 +3,8 @@ title: "Algorithms and Data Structures"
 description: "My notes on algorithms and data structures, from Big O basics to heaps and sorting."
 date: 2022-10-04T00:00:00.000Z
 math: true
+cover: "/site-assets/Screenshot_2022-12-07_at_12.29.34_PM_1670452221345_0.png"
+wordCount: 254
 tags:
   - "algorithms"
   - "data-structures"

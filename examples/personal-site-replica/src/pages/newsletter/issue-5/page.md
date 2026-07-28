@@ -2,6 +2,8 @@
 title: "Newsletter Issue 5"
 description: "Algorithms Bootcamp and the Elon Musk Controversy"
 date: 2022-07-10T00:00:00.000Z
+cover: "/site-assets/image_1657488579000_0_1672131763262_0.png"
+wordCount: 278
 tags:
   - "algorithms-boot-camp"
   - "newsletter"

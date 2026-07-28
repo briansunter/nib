@@ -2,6 +2,7 @@
 title: "Cooklang for Recipe Management"
 description: "A plain-text recipe format that generates shopping lists and keeps your recipes in git."
 date: 2022-09-21T00:00:00.000Z
+wordCount: 508
 tags:
   - "cooking"
   - "programming"

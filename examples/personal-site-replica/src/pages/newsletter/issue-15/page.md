@@ -2,6 +2,8 @@
 title: "Year in Review - Hawaii, Health, and Projects"
 description: "Thoughts on living in Hawaii for the past year and recent projects"
 date: 2024-03-20T00:00:00.000Z
+cover: "/site-assets/hawaii-cover_1710985966457_0.jpg"
+wordCount: 969
 tags:
   - "newsletter"
   - "AI"

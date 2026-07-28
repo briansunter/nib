@@ -2,6 +2,8 @@
 title: "Newsletter Issue 8"
 description: "Integer Sum Formula, Donald Knuth on Email, and Werner Herzog"
 date: 2022-08-23T00:00:00.000Z
+cover: "/site-assets/image_1665465573710_0.png"
+wordCount: 997
 tags:
   - "newsletter"
   - "programming"

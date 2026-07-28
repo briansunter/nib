@@ -2,6 +2,8 @@
 title: "Newsletter Issue 3"
 description: "This week, I wrote a few guides. I released a new plugin to download captions from YouTube directly into your notes to help you study videos. I also include some productivity tips and fun artwork created by OpenAI’s DALL-E image generation technology."
 date: 2022-06-26T00:00:00.000Z
+cover: "/site-assets/get-youtube-captions_1672134947975_0.jpg"
+wordCount: 1380
 tags:
   - "logseq"
   - "newsletter"

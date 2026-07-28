@@ -2,6 +2,8 @@
 title: "Building a Second Brain - Summary"
 description: "My summary of Building a Second Brain by Tiago Forte, which is a guide to developing a productivity system to manage information and produce creative works."
 date: 2022-12-30T00:00:00.000Z
+cover: "/site-assets/basb_1672455079106_0.jpeg"
+wordCount: 3769
 layout: article
 ---
 ![ ](/site-assets/basb_1672455079106_0.jpeg)

@@ -2,6 +2,7 @@
 title: "Machine Learning Study Guide (GPT-3 Generated)"
 description: "AI-generated explanations of machine learning concepts, used to build a structured study guide."
 date: 2022-07-12T00:00:00.000Z
+wordCount: 1046
 tags:
   - "AI"
   - "machine-learning"

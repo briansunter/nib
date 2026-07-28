@@ -2,6 +2,8 @@
 title: "Newsletter Issue 7"
 description: "Launching my new Logseq-powered website, algorithm analysis techniques, the five-minute journal practice, Richard Hamming's advice on doing important research, and the release of Stable Diffusion AI image generation."
 date: 2022-08-10T00:00:00.000Z
+cover: "/site-assets/FYqjtUnX0AAsVJEE_1672133776857_0.jpeg"
+wordCount: 987
 tags:
   - "logseq"
   - "algorithms"

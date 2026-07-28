@@ -30,14 +30,14 @@ import githubDark from '@shikijs/themes/github-dark'
 import { rehypeHeadingIds } from './heading-ids'
 import { remarkMermaid } from './mermaid-plugin'
 import { rehypeTweetCards, remarkTweetCards } from './tweet-plugin'
-import writingEntries from '../content/writing.json'
+import { writingSlugs } from '../data/writing-slugs'
 import { sourceRedirects } from '../redirects'
 
 const pageRoot = path.resolve(process.cwd(), 'src/pages')
 // This manifest is imported as build data instead of scanning relative to
 // import.meta.url, which points inside dist/server after the SSR bundle runs.
 const knownPermalinks = [...new Set([
-  ...writingEntries.map((entry) => entry.slug),
+  ...writingSlugs,
   ...Object.keys(sourceRedirects)
     .map((route) => route.replace(/^\/+|\/+$/g, ''))
     .filter(Boolean),

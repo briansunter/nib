@@ -2,6 +2,8 @@
 title: "Organizing Notes in 3D with AI"
 description: "Using machine learning to automatically organize notes by meaning and exploring them in a browser 3D interface"
 date: 2023-09-27T00:00:00.000Z
+cover: "/site-assets/Screenshot_2023-09-27_at_1.28.29_PM_1695857318835_0.png"
+wordCount: 1618
 tags:
   - "newsletter"
   - "AI"

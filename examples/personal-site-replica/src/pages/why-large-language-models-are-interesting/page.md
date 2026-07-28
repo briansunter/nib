@@ -2,6 +2,8 @@
 title: "Why Large Language Models are Interesting"
 description: "Large language models have a number of interesting properties"
 date: 2022-11-26T00:00:00.000Z
+cover: "/site-assets/Screen_Shot_2022-09-11_at_8.35.17_PM_1668815306606_0.png"
+wordCount: 524
 tags:
   - "AI"
   - "programming"

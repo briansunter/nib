@@ -2,6 +2,8 @@
 title: "Newsletter Issue 9"
 description: "New features for the logseq openai plugin and my thoughts on why Large Language Models are interesting"
 date: 2022-11-26T00:00:00.000Z
+cover: "/site-assets/stop_1672218528540_0.jpg"
+wordCount: 972
 tags:
   - "newsletter"
 layout: article

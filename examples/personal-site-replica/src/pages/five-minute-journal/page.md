@@ -2,6 +2,8 @@
 title: "Five Minute Journal"
 description: "A quick daily practice with prompts for gratitude, intentions, and reflection."
 date: 2021-08-01T00:00:00.000Z
+cover: "/site-assets/image_1661064164296_0.png"
+wordCount: 888
 tags:
   - "writing"
   - "logseq"

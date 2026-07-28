@@ -2,6 +2,8 @@
 title: "How to manage projects in Logseq"
 description: "How can we organize complex tasks that involve multiple steps over multiple days in Logseq?"
 date: 2022-08-21T00:00:00.000Z
+cover: "/site-assets/beebob_checkmark_in_checkbox_app_eea7631b-472d-4e91-acba-590250d7106c_1672269960068_0.jpg"
+wordCount: 1189
 tags:
   - "blog"
 layout: article

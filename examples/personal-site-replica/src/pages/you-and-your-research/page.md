@@ -2,6 +2,8 @@
 title: "You and Your Research"
 description: "Richard Hamming's advice on doing significant work and why most scientists are forgotten."
 date: 2022-08-17T00:00:00.000Z
+cover: "/site-assets/image_1660798082719_0.png"
+wordCount: 1413
 tags:
   - "greatperson"
 layout: article

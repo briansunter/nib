@@ -2,6 +2,8 @@
 title: "Logseq GPT-3 OpenAI Popup"
 description: "A new popup interface for running custom GPT-3 commands in Logseq."
 date: 2023-01-31T00:00:00.000Z
+cover: "/site-assets/summarize_1674095683669_0.gif"
+wordCount: 1234
 tags:
   - "blog"
   - "logseq"

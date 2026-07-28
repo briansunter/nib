@@ -2,6 +2,7 @@
 title: "newsletter-roadmap"
 description: "Roadmap and plans for the newsletter"
 date: 2022-07-10T00:00:00.000Z
+wordCount: 863
 layout: article
 ---
 This is the content plan for my [[newsletter]]
