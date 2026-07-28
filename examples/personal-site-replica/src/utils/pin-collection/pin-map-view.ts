@@ -227,7 +227,7 @@ export function initPinMapView({ signal, openPin }: PinMapViewOptions) {
   );
 
   // Restore view mode from the URL on init - `?view=map` should
-  // re-apply after any astro:page-load.
+  // re-apply after any nib:navigation-load.
   if (readState().view === 'map' && toggle.dataset.mode !== 'map') {
     setMode('map');
   }

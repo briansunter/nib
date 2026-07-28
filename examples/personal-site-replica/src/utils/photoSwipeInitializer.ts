@@ -6,8 +6,7 @@ import { createLightboxHistory, currentHistoryState } from './lightbox-history';
 let activeLightbox: PhotoSwipeLightbox | null = null;
 let filterRefreshController: AbortController | null = null;
 // Slug that the user manually closed during this navigation. Prevents the
-// deep-link logic from re-opening the same lightbox after a ClientRouter
-// popstate swap triggered by browser history navigation.
+// deep-link logic from re-opening the same lightbox after a traversal swap.
 let suppressAutoOpenForSlug: string | null = null;
 const PHOTOSWIPE_STYLE_ID = 'photoswipe-enhancements-v2';
 const URL_PARAM = 'p';

@@ -60,9 +60,11 @@ typed collections for the imported JSON snapshots; the article Markdown
 layout for writing; first-party RSS and sitemap plugins; responsive
 `?nib-image` imports for the avatar, homepage writing covers, and featured
 project covers plus reference-driven optimization for content images; and
-small
-browser islands for theme switching, search, recipe filtering, recipe serving
-scaling, and copying the Bitcoin address.
+scoped client behaviors for theme switching, search, recipe filtering, recipe
+serving scaling, and copying the Bitcoin address. The first-party
+`clientNavigation()` plugin owns same-origin document swaps, history,
+prefetching, focus/scroll restoration, and runtime remounting; the replica has
+no app-owned router or Astro lifecycle compatibility layer.
 
 Writing pages preserve local images, YouTube/Google Maps iframe embeds, and
 local MP4 embeds through Nib's allow-listed media adapter. Homepage writing

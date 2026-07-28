@@ -644,7 +644,7 @@ async function importGalleryRuntime() {
   const styleFiles = ['gallery.css', 'photos.css', 'art.css']
   const utilityFiles = [
     'artMasonryInitializer.ts',
-    'astroLifecycle.ts',
+    'navigationLifecycle.ts',
     'dropdown.ts',
     'lightbox-history.ts',
     'mapInitializer.ts',

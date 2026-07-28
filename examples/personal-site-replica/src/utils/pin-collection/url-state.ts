@@ -8,8 +8,8 @@
  *   ?z=<num>       - current map zoom
  *   ?c=<lat,lng>   - current map center
  *
- * Most updates use `history.replaceState` so Astro's ClientRouter never
- * intercepts as a view transition - same pathname, just query changes.
+ * Most updates use `history.replaceState` so Nib navigation does not treat a
+ * same-pathname query change as a document transition.
  * Opening a pin can opt into `pushState` so browser Back closes the overlay
  * before leaving the page.
  */

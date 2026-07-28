@@ -1,5 +1,5 @@
 import { initSiteAnalytics } from '../lib/analytics'
-import { registerAstroLifecycle } from './astroLifecycle'
+import { registerNavigationLifecycle } from './navigationLifecycle'
 import { initNewsletterForms } from './newsletterInitializer'
 
 let cleanupHeaderNavigation: (() => void) | undefined
@@ -200,26 +200,26 @@ export function initSiteShell(): () => void {
 
   initSiteAnalytics()
 
-  const cleanupHeader = registerAstroLifecycle({
+  const cleanupHeader = registerNavigationLifecycle({
     destroy: () => cleanupHeaderNavigation?.(),
     mount: initHeaderNavigation,
     runImmediately: true,
   })
-  const cleanupSocial = registerAstroLifecycle({
+  const cleanupSocial = registerNavigationLifecycle({
     destroy: () => socialProfilesController?.abort(),
     mount: initSocialProfiles,
-    mountEvent: 'astro:after-swap',
+    mountEvent: 'nib:navigation-after-swap',
     runImmediately: true,
   })
-  const cleanupNewsletter = registerAstroLifecycle({
+  const cleanupNewsletter = registerNavigationLifecycle({
     mount: initNewsletterForms,
-    mountEvent: 'astro:after-swap',
+    mountEvent: 'nib:navigation-after-swap',
     runImmediately: true,
   })
-  const cleanupBackToTop = registerAstroLifecycle({
+  const cleanupBackToTop = registerNavigationLifecycle({
     destroy: () => backToTopController?.abort(),
     mount: initBackToTop,
-    mountEvent: 'astro:after-swap',
+    mountEvent: 'nib:navigation-after-swap',
     runImmediately: true,
   })
 

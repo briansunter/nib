@@ -28,7 +28,7 @@ export function ProjectCard({
     >
       <a
         href={siteHref(`/projects/${project.slug}`)}
-        data-astro-prefetch="tap"
+        data-nib-prefetch="tap"
         data-umami-event="project_card_click"
         data-umami-event-section={analyticsSection}
         data-umami-event-slug={project.slug}

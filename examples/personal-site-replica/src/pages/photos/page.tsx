@@ -170,7 +170,7 @@ export default function PhotosPage({ collections }: PageProps<typeof config>) {
                         >
                           <a
                             href={photo.image ? siteHref(photo.image) : '#'}
-                            data-astro-prefetch="false"
+                            data-nib-prefetch="false"
                             data-pswp-width={width}
                             data-pswp-height={height}
                             data-gallery-slug={photo.slug}

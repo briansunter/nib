@@ -1,4 +1,5 @@
-import { registerAstroLifecycle } from '../utils/astroLifecycle';
+import type { NavigationBeforeSwapDetail } from '@briansunter/nib/client/navigation';
+import { registerNavigationLifecycle } from '../utils/navigationLifecycle';
 import { ANALYTICS_CONFIG, getUmamiScriptAttributes } from './analytics-config';
 
 const UMAMI_SCRIPT_URL = ANALYTICS_CONFIG.umami.scriptUrl;
@@ -47,10 +48,6 @@ type UmamiPayload = Record<string, unknown> & {
   referrer?: string;
   title?: string;
   url?: string;
-};
-
-type AstroBeforeSwapEvent = Event & {
-  newDocument?: Document;
 };
 
 declare global {
@@ -184,7 +181,7 @@ export function initSiteAnalytics() {
 
   if (!isAllowedAnalyticsHostname() || isGlobalPrivacyControlEnabled()) return;
 
-  installZarazClientRouterGuard();
+  installZarazNavigationGuard();
   installEngagementEventTracking();
 
   if (!window[ANALYTICS_CONFIG.globals.initialized]) {
@@ -225,7 +222,7 @@ function installScrollDepthTracking() {
   });
   window.addEventListener('resize', scheduleScrollDepthCheck);
 
-  registerAstroLifecycle({
+  registerNavigationLifecycle({
     mount: () => {
       resetScrollDepthForCurrentPage();
       scheduleScrollDepthCheck();
@@ -386,34 +383,35 @@ export function removeZarazScriptsFromDocument(doc: Document) {
   return removedCount;
 }
 
-export function markZarazScriptsAsAstroExecuted(doc: Document) {
+export function markZarazScriptsAsNibExecuted(doc: Document) {
   let markedCount = 0;
 
   for (const script of Array.from(doc.querySelectorAll('script'))) {
     if (!isCloudflareZarazScript(script)) continue;
-    script.dataset.astroExec = '';
+    script.setAttribute('data-nib-script-executed', '');
     markedCount += 1;
   }
 
   return markedCount;
 }
 
-function installZarazClientRouterGuard() {
+function installZarazNavigationGuard() {
   if (window[ANALYTICS_CONFIG.globals.zarazGuardBound]) return;
   window[ANALYTICS_CONFIG.globals.zarazGuardBound] = true;
-  markZarazScriptsAsAstroExecuted(document);
+  markZarazScriptsAsNibExecuted(document);
 
-  document.addEventListener('astro:before-swap', (event) => {
-    markZarazScriptsAsAstroExecuted(document);
+  document.addEventListener('nib:navigation-before-swap', (event) => {
+    markZarazScriptsAsNibExecuted(document);
 
-    const newDocument = (event as AstroBeforeSwapEvent).newDocument;
+    const newDocument = (event as CustomEvent<NavigationBeforeSwapDetail>).detail
+      .newDocument;
     if (!newDocument) return;
 
     removeZarazScriptsFromDocument(newDocument);
   });
 
-  document.addEventListener('astro:after-swap', () => {
-    markZarazScriptsAsAstroExecuted(document);
+  document.addEventListener('nib:navigation-after-swap', () => {
+    markZarazScriptsAsNibExecuted(document);
   });
 }
 

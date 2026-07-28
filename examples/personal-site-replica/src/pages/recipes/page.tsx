@@ -71,7 +71,7 @@ export default function RecipesPage({ collections }: PageProps<typeof config>) {
               >
                 <a
                   href={siteHref(`/recipes/${recipe.slug}`)}
-                  data-astro-prefetch="hover"
+                  data-nib-prefetch="hover"
                   data-recipe-card-link
                   data-recipe-slug={recipe.slug}
                   className="card-link recipe-list-link"

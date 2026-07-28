@@ -237,10 +237,10 @@ export function generateThemeScript(): string {
   refreshThemeUI();
   document.addEventListener("click", handleThemeToggleClick);
   document.addEventListener("DOMContentLoaded", updateToggleIcons);
-  document.addEventListener("astro:before-swap", (event) => {
-    applyTheme(getEffectiveTheme(), event.newDocument);
+  document.addEventListener("nib:navigation-before-swap", (event) => {
+    applyTheme(getEffectiveTheme(), event.detail.newDocument);
   });
-  document.addEventListener("astro:after-swap", refreshThemeUI);
+  document.addEventListener("nib:navigation-after-swap", refreshThemeUI);
   mediaQuery.addEventListener("change", () => {
     if (!getOverride()) refreshThemeUI();
   });

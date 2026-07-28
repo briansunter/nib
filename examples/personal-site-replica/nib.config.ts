@@ -12,6 +12,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { images } from '@briansunter/nib-images/plugin'
 import { rss } from '@briansunter/nib/rss'
 import { sitemap } from '@briansunter/nib/sitemap'
+import { clientNavigation } from '@briansunter/nib/navigation'
 import {
   art,
   markdown,
@@ -235,6 +236,7 @@ export default defineConfig({
   },
   pageSources: [projectPages, recipePages, tagPages],
   plugins: [
+    clientNavigation(),
     images({
       formats: ['avif', 'webp'],
       widths: [320, 480, 640, 960, 1280],

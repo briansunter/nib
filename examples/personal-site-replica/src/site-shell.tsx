@@ -123,7 +123,7 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
           <div className="flex w-full items-center justify-between px-4 sm:px-6 lg:px-8">
             <a
               href={siteHref('/')}
-              data-astro-prefetch="hover"
+              data-nib-prefetch="hover"
               className="focus-accent rounded-sm text-h3 font-semibold tracking-tight text-ink transition-colors duration-200 hover:text-accent"
             >
               {site.title}
@@ -139,7 +139,7 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
                   <a
                     key={item.href}
                     href={navHref(item.href)}
-                    data-astro-prefetch={!isExternalLink(item.href) ? 'hover' : undefined}
+                    data-nib-prefetch={!isExternalLink(item.href) ? 'hover' : undefined}
                     aria-current={active ? 'page' : undefined}
                     className={navLinkClass(active)}
                   >
@@ -198,7 +198,7 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
                   <a
                     key={item.href}
                     href={navHref(item.href)}
-                    data-astro-prefetch={!isExternalLink(item.href) ? 'hover' : undefined}
+                    data-nib-prefetch={!isExternalLink(item.href) ? 'hover' : undefined}
                     aria-current={active ? 'page' : undefined}
                     className={[
                       'flex min-h-12 items-center rounded-lg px-4 py-3 text-lg font-medium transition-colors duration-200 focus-accent active:bg-surface-hover',
@@ -249,7 +249,7 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
                     <li key={post.slug} className="flex flex-col gap-0.5">
                       <a
                         href={siteHref(`/${post.slug}`)}
-                        data-astro-prefetch="hover"
+                        data-nib-prefetch="hover"
                         data-umami-event="footer_latest_click"
                         data-umami-event-slug={post.slug}
                         title={post.title}
@@ -264,7 +264,7 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
               </ul>
               <a
                 href={siteHref('/pages')}
-                data-astro-prefetch="hover"
+                data-nib-prefetch="hover"
                 data-umami-event="footer_nav_click"
                 data-umami-event-target="archive"
                 className="focus-accent group inline-flex items-center gap-1 text-sm font-medium text-ink-secondary transition-colors duration-200 hover:text-accent rounded-sm"
@@ -324,7 +324,7 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
             <span className="mx-1 select-none text-border" aria-hidden="true">·</span>
             <a
               href={siteHref('/index.xml')}
-              data-astro-prefetch="hover"
+              data-nib-prefetch="hover"
               data-umami-event="footer_nav_click"
               data-umami-event-target="rss"
               className="focus-accent rounded-sm transition-colors duration-200 hover:text-ink"
@@ -334,7 +334,7 @@ export function SiteShell({ children, route, site, collections }: SiteShellProps
             <span className="mx-1 select-none text-border" aria-hidden="true">·</span>
             <a
               href={siteHref('/privacy')}
-              data-astro-prefetch="hover"
+              data-nib-prefetch="hover"
               data-umami-event="footer_nav_click"
               data-umami-event-target="privacy"
               className="focus-accent rounded-sm transition-colors duration-200 hover:text-ink"

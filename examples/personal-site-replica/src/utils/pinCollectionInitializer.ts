@@ -25,7 +25,7 @@ let controller: AbortController | null = null;
 
 export function initPinCollection() {
   // Tear down anything wired up by a previous init() call (re-init on
-  // astro:page-load, HMR, etc.).
+  // nib:navigation-load, HMR, etc.).
   controller?.abort();
   controller = new AbortController();
   const { signal } = controller;

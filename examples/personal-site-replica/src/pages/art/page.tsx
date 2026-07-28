@@ -175,7 +175,7 @@ export default function ArtPage({ collections }: PageProps<typeof config>) {
 
                           <a
                             href={artwork.image ? siteHref(artwork.image) : '#'}
-                            data-astro-prefetch="false"
+                            data-nib-prefetch="false"
                             data-pswp-width={width}
                             data-pswp-height={height}
                             data-gallery-slug={artwork.slug}

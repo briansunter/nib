@@ -1,21 +1,21 @@
-export type AstroLifecycleEvent =
-  | 'astro:after-swap'
-  | 'astro:page-load'
+export type NavigationLifecycleEvent =
+  | 'nib:navigation-after-swap'
+  | 'nib:navigation-load'
   | 'DOMContentLoaded';
 
-export interface AstroLifecycleOptions {
+export interface NavigationLifecycleOptions {
   destroy?: () => void;
   mount: () => void;
-  mountEvent?: AstroLifecycleEvent;
+  mountEvent?: NavigationLifecycleEvent;
   runImmediately?: boolean;
 }
 
-export function registerAstroLifecycle({
+export function registerNavigationLifecycle({
   destroy,
   mount,
-  mountEvent = 'astro:page-load',
+  mountEvent = 'nib:navigation-load',
   runImmediately = false,
-}: AstroLifecycleOptions): () => void {
+}: NavigationLifecycleOptions): () => void {
   document.addEventListener(mountEvent, mount);
 
   const beforeSwap = () => {
@@ -23,7 +23,7 @@ export function registerAstroLifecycle({
   };
 
   if (destroy) {
-    document.addEventListener('astro:before-swap', beforeSwap);
+    document.addEventListener('nib:navigation-before-swap', beforeSwap);
   }
 
   if (runImmediately) {
@@ -38,12 +38,12 @@ export function registerAstroLifecycle({
     document.removeEventListener(mountEvent, mount);
     document.removeEventListener('DOMContentLoaded', mount);
     if (destroy) {
-      document.removeEventListener('astro:before-swap', beforeSwap);
+      document.removeEventListener('nib:navigation-before-swap', beforeSwap);
     }
   };
 }
 
-export function registerAstroPageBehavior(
+export function registerNavigationPageBehavior(
   mount: () => void,
   destroy?: () => void,
 ): () => void {
@@ -60,8 +60,8 @@ export function registerAstroPageBehavior(
     mountedForCurrentPage = false;
   };
 
-  document.addEventListener('astro:page-load', mountCurrentPage);
-  document.addEventListener('astro:before-swap', beforeSwap);
+  document.addEventListener('nib:navigation-load', mountCurrentPage);
+  document.addEventListener('nib:navigation-before-swap', beforeSwap);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', mountCurrentPage, {
@@ -72,8 +72,8 @@ export function registerAstroPageBehavior(
   }
 
   return () => {
-    document.removeEventListener('astro:page-load', mountCurrentPage);
-    document.removeEventListener('astro:before-swap', beforeSwap);
+    document.removeEventListener('nib:navigation-load', mountCurrentPage);
+    document.removeEventListener('nib:navigation-before-swap', beforeSwap);
     document.removeEventListener('DOMContentLoaded', mountCurrentPage);
   };
 }
