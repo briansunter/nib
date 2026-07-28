@@ -283,6 +283,12 @@ Node consumers can import `inspectSite`, `verifySite`, and
 owns frozen route, file, and parsed-page indexes. The browser-facing package
 entry intentionally does not load the filesystem or HTML parser.
 
+Site-owned verification can be passed through `verifySite({ extensions })`.
+Each extension receives that same parsed inspection rather than a source or
+output path, and all of its diagnostics are stamped with the extension name.
+Extensions should express site policy only; route resolution, HTML parsing, and
+artifact ownership remain built-in checks.
+
 Development and preview bind to loopback by default. To expose a server through
 a known hostname such as a Tailscale name, bind explicitly and allow only that
 host; repeat the option for more than one hostname:

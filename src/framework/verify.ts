@@ -91,7 +91,18 @@ export interface InspectSiteOptions {
   readonly output?: string
 }
 
-export interface VerifySiteOptions extends InspectSiteOptions {}
+export interface SiteVerifierExtension {
+  /** Stable diagnostic owner included on every issue from this checker. */
+  readonly name: string
+  /** Read-only verification over the already indexed and parsed publication. */
+  readonly verify: (
+    inspection: SiteInspection,
+  ) => readonly SiteIssue[] | Promise<readonly SiteIssue[]>
+}
+
+export interface VerifySiteOptions extends InspectSiteOptions {
+  readonly extensions?: readonly SiteVerifierExtension[]
+}
 
 export class SiteVerificationError extends Error {
   readonly result: SiteCheckResult
@@ -443,8 +454,56 @@ async function inspectPages(
 function issueOrder(left: SiteIssue, right: SiteIssue): number {
   return (left.route ?? '').localeCompare(right.route ?? '')
     || left.code.localeCompare(right.code)
+    || (left.owner ?? '').localeCompare(right.owner ?? '')
     || (left.reference ?? '').localeCompare(right.reference ?? '')
     || left.message.localeCompare(right.message)
+}
+
+function isSiteIssue(value: unknown): value is SiteIssue {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Partial<SiteIssue>
+  return typeof candidate.code === 'string'
+    && (candidate.severity === 'error' || candidate.severity === 'warning')
+    && typeof candidate.message === 'string'
+}
+
+async function extensionIssues(
+  inspection: SiteInspection,
+  extensions: readonly SiteVerifierExtension[],
+): Promise<readonly SiteIssue[]> {
+  const groups = await Promise.all(extensions.map(async (extension): Promise<readonly SiteIssue[]> => {
+    if (!extension.name.trim()) {
+      return [issue({
+        code: 'EXTENSION_NAME_INVALID',
+        severity: 'error',
+        message: 'A site verifier extension has an empty name',
+        owner: 'nib',
+      })]
+    }
+    try {
+      const values = await extension.verify(inspection)
+      if (!Array.isArray(values) || values.some((value) => !isSiteIssue(value))) {
+        return [issue({
+          code: 'EXTENSION_RESULT_INVALID',
+          severity: 'error',
+          message: `Verifier extension ${extension.name} returned invalid issues`,
+          owner: extension.name,
+        })]
+      }
+      return values.map((value) => issue({
+        ...value,
+        owner: extension.name,
+      }))
+    } catch (error) {
+      return [issue({
+        code: 'EXTENSION_FAILED',
+        severity: 'error',
+        message: `Verifier extension ${extension.name} failed (${errorCode(error)})`,
+        owner: extension.name,
+      })]
+    }
+  }))
+  return Object.freeze(groups.flat().sort(issueOrder))
 }
 
 /** Indexes and parses a static publication once, returning all built-in issues. */
@@ -518,13 +577,18 @@ export function formatSiteIssue(value: SiteIssue): string {
 /** Verifies a publication and throws one aggregate error after every check runs. */
 export async function verifySite(options: VerifySiteOptions): Promise<SiteCheckResult> {
   const inspection = await inspectSite(options)
-  const report = siteInspectionReport(inspection)
-  const warnings = inspection.issues
+  const ownedIssues = await extensionIssues(inspection, options.extensions ?? [])
+  const issues = Object.freeze([...inspection.issues, ...ownedIssues].sort(issueOrder))
+  const report = {
+    ...siteInspectionReport(inspection),
+    issues,
+  }
+  const warnings = issues
     .filter((value) => value.severity === 'warning')
     .map((value) => value.message)
   const result = Object.freeze({
     ...report,
-    ok: !inspection.issues.some((value) => value.severity === 'error'),
+    ok: !issues.some((value) => value.severity === 'error'),
     routeCount: inspection.metrics.routeCount,
     pageCount: inspection.metrics.pageCount,
     resourceCount: inspection.metrics.resourceCount,
