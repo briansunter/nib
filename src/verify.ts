@@ -16,5 +16,6 @@ export type {
   SiteInspectionReport,
   SiteIssue,
   SiteIssueSeverity,
+  SiteVerifierExtension,
   VerifySiteOptions,
 } from './framework/verify'
