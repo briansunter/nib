@@ -1,11 +1,11 @@
 # Nib Base Library Improvement Status
 
-- Active batch: Batch 2 — replica behavior adoption
+- Active batch: Batch 3 — page-style ownership diagnostics
 - Branch/worktree: `master` in `/Volumes/Storage/code/nib`
 - Baseline: `cb98aa7fedb243f8c1ebef18cc38bec197744296`
-- Current revision: Batch 2 framework implementation pending commit after `ca4afe0ff98be4a802a9ee7fde0ce2080746eb43`
-- Completed focused gates: Batch 1 boundary tests (15); Batch 2 typecheck and lifecycle/package/site tests (49)
+- Current revision: Batch 2 replica adoption pending commit after `fd58b989fad80c20672f52c257866909aefb8b5f`
+- Completed focused gates: Batch 1 boundary tests (15); Batch 2 typecheck, lifecycle/package/site tests (49), and full 493-page replica verification
 - Completed complete gates: none
-- Remaining work: Batch 2 replica adoption, Batches 3–7, and the complete validation/documentation gate
+- Remaining work: Batches 3–7 and the complete validation/documentation gate
 - Known failures: none recorded yet
 - Current boundary: Batch 7 requires an explicit ADR decision before implementation
