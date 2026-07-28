@@ -88,6 +88,10 @@ export interface NibPluginSetupResult {
 
 export interface NibClientEntry {
   readonly module: string
+  /**
+   * Exported browser initializer. It may return a cleanup callback or an
+   * object with destroy(), both of which Nib invokes before HMR replacement.
+   */
   readonly initializer: string
 }
 
