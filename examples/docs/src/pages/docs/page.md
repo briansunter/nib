@@ -15,9 +15,10 @@ Nib is a self-contained static-site framework for React, Markdown, data pages, a
 3. [Markdown and layouts](./markdown-and-layouts/) — write content and wrap it with TSX.
 4. [Data pages and collections](./data-pages-and-collections/) — render custom formats and build typed indexes.
 5. [React islands](./react-islands/) — add typed browser interaction without hydrating the page shell.
-6. [Image optimization](./image-optimization/) — add static responsive local images with the optional plugin.
-7. [Plugin content and routing](./plugin-content-and-routing/) — add formats, virtual routes, redirects, sitemap XML, and route inspection.
-8. [GitHub Pages](./github-pages/) — deploy the static output with the correct base path.
+6. [Client navigation](./client-navigation/) — optionally enhance native links with document swaps and View Transitions.
+7. [Image optimization](./image-optimization/) — add static responsive local images with the optional plugin.
+8. [Plugin content and routing](./plugin-content-and-routing/) — add formats, virtual routes, redirects, sitemap XML, and route inspection.
+9. [GitHub Pages](./github-pages/) — deploy the static output with the correct base path.
 
 Maintainers can use [Releases](./releases/) for versioning and npm publishing. The repository [architecture document](https://github.com/briansunter/nib/blob/master/docs/architecture.md) explains the complete rendering pipeline, and the [island design record](https://github.com/briansunter/nib/blob/master/docs/interactive-react-islands.md) captures the rationale. A separate [HTML pages proposal](https://github.com/briansunter/nib/blob/master/docs/html-pages-layouts-and-islands.md) records a possible future markup-first route format; it is not implemented in the current release.
 
@@ -39,4 +40,4 @@ Maintainers can use [Releases](./releases/) for versioning and npm publishing. T
 5. Run your project’s typecheck and `nib build`.
 6. Preview or deploy `dist/client`.
 
-Nib deliberately omits dynamic route parameters, client-side routing, runtime data loaders, server actions, independently hydrated nested roots, and inline JSX in Markdown.
+Nib deliberately omits dynamic route parameters, runtime routes, runtime data loaders, server actions, independently hydrated nested roots, and inline JSX in Markdown. Optional client navigation enhances the same static pages and is never required for their content or links.

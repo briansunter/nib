@@ -20,6 +20,7 @@ import {
   NIB_CLIENT_ENTRY,
   NIB_BEHAVIOR_ENTRY,
   NIB_SERVER_ENTRY,
+  NIB_ENHANCEMENT_ENTRY,
   nibProject,
 } from './project-vite-plugin'
 import { loadNibConfig, resolveBasePath } from './project-config'
@@ -91,6 +92,7 @@ function htmlTemplate(
   islandEntry: string,
   behaviorEntry: string,
   stylesheets: string[],
+  enhancementEntry?: string,
 ): string {
   const styles = stylesheets
     .map((file) => `<link rel="stylesheet" href="${baseHref(base, file)}" />`)
@@ -104,6 +106,9 @@ function htmlTemplate(
     ${styles}
     <!--nib-islands-entry--><script data-nib-islands type="module" src="${baseHref(base, islandEntry)}"></script>
     <!--nib-behaviors-entry--><script data-nib-behaviors type="module" src="${baseHref(base, behaviorEntry)}"></script>
+    ${enhancementEntry === undefined
+      ? ''
+      : `<script data-nib-enhancements type="module" src="${baseHref(base, enhancementEntry)}"></script>`}
   </head>
   <body>
     <div id="root"><!--ssr-outlet--></div>
@@ -111,7 +116,7 @@ function htmlTemplate(
 </html>`
 }
 
-function devHtmlTemplate(): string {
+function devHtmlTemplate(hasEnhancements: boolean): string {
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -121,6 +126,9 @@ function devHtmlTemplate(): string {
     <link rel="stylesheet" href="/src/style.css" />
     <!--nib-islands-entry--><script data-nib-islands type="module" src="/@id/${NIB_CLIENT_ENTRY}"></script>
     <!--nib-behaviors-entry--><script data-nib-behaviors type="module" src="/@id/${NIB_BEHAVIOR_ENTRY}"></script>
+    ${hasEnhancements
+      ? `<script data-nib-enhancements type="module" src="/@id/${NIB_ENHANCEMENT_ENTRY}"></script>`
+      : ''}
   </head>
   <body>
     <div id="root"><!--ssr-outlet--></div>
@@ -137,6 +145,7 @@ export async function siteViteConfig(
   base: string
   trailingSlash: TrailingSlash | undefined
   hosting: import('./types').NibHostingConfig | undefined
+  clientEntries: readonly import('./plugin').NibClientEntry[]
   config: InlineConfig
 }> {
   const loaded = await loadNibConfig(root, command)
@@ -171,6 +180,7 @@ export async function siteViteConfig(
     base,
     trailingSlash: loaded.config.trailingSlash,
     hosting: loaded.config.hosting,
+    clientEntries: setup.clientEntries ?? [],
     config: {
       appType: 'custom',
       base,
@@ -193,6 +203,7 @@ export async function siteViteConfig(
           extensions,
           command,
           pageSourcePatterns(pageSources),
+          setup.clientEntries,
         ),
         nibIslandsEntry(),
       ],
@@ -207,22 +218,30 @@ export async function siteViteConfig(
   }
 }
 
-async function readBuildTemplate(clientDirectory: string, base: string): Promise<string> {
+async function readBuildTemplate(
+  clientDirectory: string,
+  base: string,
+  hasEnhancements: boolean,
+): Promise<string> {
   const manifest = JSON.parse(
     await fs.readFile(path.join(clientDirectory, '.vite/manifest.json'), 'utf8'),
   ) as ViteManifest
   const entries = Object.values(manifest)
   const islands = entries.find((entry) => entry.isEntry && entry.name === 'islands')
   const behaviors = entries.find((entry) => entry.isEntry && entry.name === 'behaviors')
+  const enhancements = entries.find((entry) => entry.isEntry && entry.name === 'enhancements')
   if (!islands) throw new Error('Nib client build did not produce an island runtime entry')
   if (!behaviors) throw new Error('Nib client build did not produce a behavior runtime entry')
+  if (hasEnhancements && !enhancements) {
+    throw new Error('Nib client build did not produce its configured enhancement entry')
+  }
   const styles = entries
     .flatMap((entry) => [
       ...(entry.css ?? []),
       ...(entry.isEntry && entry.file.endsWith('.css') ? [entry.file] : []),
     ])
     .filter((file, index, all) => all.indexOf(file) === index)
-  return htmlTemplate(base, islands.file, behaviors.file, styles)
+  return htmlTemplate(base, islands.file, behaviors.file, styles, enhancements?.file)
 }
 
 function publicationPreviewPlugin(
@@ -273,7 +292,13 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
   const hasStyles = await fs.access(stylePath).then(() => true, () => false)
 
   await fs.rm(output, { recursive: true, force: true })
-  const { base, trailingSlash, hosting, config: clientConfig } = await siteViteConfig(root, 'build', 'client')
+  const {
+    base,
+    trailingSlash,
+    hosting,
+    clientEntries,
+    config: clientConfig,
+  } = await siteViteConfig(root, 'build', 'client')
   await viteBuild({
     ...clientConfig,
     build: {
@@ -284,6 +309,7 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
         input: {
           islands: NIB_CLIENT_ENTRY,
           behaviors: NIB_BEHAVIOR_ENTRY,
+          ...(clientEntries.length > 0 ? { enhancements: NIB_ENHANCEMENT_ENTRY } : {}),
           ...(hasStyles ? { styles: stylePath } : {}),
         },
       },
@@ -308,7 +334,7 @@ async function buildSiteInProduction(options: SiteOperationOptions): Promise<voi
     },
   })
 
-  const template = await readBuildTemplate(clientDirectory, base)
+  const template = await readBuildTemplate(clientDirectory, base, clientEntries.length > 0)
   const serverEntry = path.join(serverDirectory, 'entry-server.js')
   const server = await import(`${pathToFileURL(serverEntry).href}?t=${Date.now()}`) as {
     paths: readonly string[]
@@ -375,7 +401,7 @@ export interface DevSiteOptions extends SiteOperationOptions {
 export async function startDevSite(options: DevSiteOptions): Promise<ViteDevServer> {
   const root = path.resolve(options.root)
   const allowedHosts = normalizedAllowedHosts(options.allowedHosts)
-  const { config } = await siteViteConfig(root, 'serve', 'development')
+  const { clientEntries, config } = await siteViteConfig(root, 'serve', 'development')
   const vite = await createViteServer({
     ...config,
     server: {
@@ -385,7 +411,7 @@ export async function startDevSite(options: DevSiteOptions): Promise<ViteDevServ
       preTransformRequests: false,
     },
   })
-  const template = devHtmlTemplate()
+  const template = devHtmlTemplate(clientEntries.length > 0)
   vite.middlewares.use(async (request, response, next) => {
     try {
       const url = request.url ?? '/'

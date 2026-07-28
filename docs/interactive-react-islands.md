@@ -46,8 +46,9 @@ The desired model is more precise: author all markup with TSX, render everything
 
 ## Non-goals
 
-- Default client-side routing or SPA navigation. Optional navigation is a
-  separate, explicit plugin decision.
+- Default client-side routing or SPA navigation. The implemented
+  `clientNavigation()` plugin is a separate explicit enhancement over the
+  static route map.
 - React Server Components.
 - Server actions or runtime server data loaders.
 - Sharing a React context across separate islands.

@@ -25,7 +25,8 @@ The package owns:
 - document outlets, metadata, base paths, and 404 output;
 - structured document-head contributions and publication manifests;
 - island collection, serialization, client loading, hydration, and cleanup;
-- non-React client behaviors with a separate runtime-free-by-default entry.
+- non-React client behaviors with a separate runtime-free-by-default entry;
+- an optional, site-wide client-navigation entry contributed only by its plugin.
 
 A consumer project owns:
 
@@ -135,6 +136,12 @@ inspection hooks. See
 collision, output, head, and trailing-slash rules. Site and page metadata use
 the same structured head contract as renderer plugins.
 
+Plugin setup may also declare browser initializers by module and export name.
+Nib validates and combines them into one generated static-import entry for the
+client/development graph. The declaration contains strings rather than imported
+browser functions, so `nib.config.ts` and the server graph remain server-safe.
+Sites without a contribution do not build or emit this entry.
+
 Tailwind is optional rather than a framework dependency. The initializer adds
 `@tailwindcss/vite` and opts in through the narrow app-owned `vite` field in
 `nib.config.ts` (`vite: () => tailwindcss()`). Sites that use plain CSS or
@@ -211,7 +218,8 @@ interactive 2FA publish, then configure OIDC and remove any CI token.
 
 ## Virtual modules
 
-`src/framework/project-vite-plugin.ts` generates three modules:
+`src/framework/project-vite-plugin.ts` generates three baseline modules and one
+conditional module:
 
 - `virtual:nib/server-entry` discovers pages, layouts, and islands with literal
   Vite globs, then delegates route setup and document rendering to the deep
@@ -220,6 +228,8 @@ interactive 2FA publish, then configure OIDC and remove any CI token.
   island runtime.
 - `virtual:nib/behavior-entry` discovers `.client.ts(x)` behavior modules
   lazily and starts the non-React behavior runtime.
+- `virtual:nib/enhancement-entry` statically imports configured site-wide
+  browser initializers. It exists only when a plugin contributes one.
 
 All use project-root `/src/...` globs. This keeps route and client-module discovery in
 the framework while ensuring Vite still sees literal glob patterns and can
@@ -247,7 +257,29 @@ folder/named layouts, and creates a static route map. Unknown development
 requests use the custom `/404` route when present and otherwise a generated
 fallback.
 
-Dynamic parameters and a client router are intentionally absent.
+Dynamic parameters and runtime routes are intentionally absent. Native document
+navigation is the default; an optional first-party plugin can swap only pages
+from this same static route set.
+
+## Optional client navigation
+
+`clientNavigation()` from `@briansunter/nib/navigation` contributes
+`startClientNavigation` from `@briansunter/nib/client/navigation` to the
+conditional enhancement entry. The server-safe plugin never imports the
+browser controller.
+
+The controller intercepts only eligible same-origin links and GET forms.
+It fetches and validates complete HTML documents, preloads new styles, asks the
+public runtime coordinator to unmount the old `#root`, synchronizes document
+state, commits history once, restores scroll/focus, and remounts islands and
+behaviors. Abort signals prevent superseded work from touching detached DOM.
+Any unsafe failure uses the destination as a hard navigation, preserving the
+server-rendered fallback.
+
+The browser API owns `data-nib-*` attributes and typed
+`nib:navigation-before-swap`, `nib:navigation-after-swap`, and
+`nib:navigation-load` custom events. It does not emulate another framework's
+lifecycle names or install a private `window` controller.
 
 ## Page types
 
@@ -408,8 +440,9 @@ packed-package consumer tests.
 
 ## Constraints
 
-Nib deliberately omits runtime dynamic route parameters, client-side routing,
-server actions, runtime data loaders, React Server Components, independently
+Nib deliberately omits runtime dynamic route parameters, runtime route
+discovery, default client navigation, server actions, runtime data loaders,
+React Server Components, independently
 hydrated nested island roots, nested named Markdown layouts, and inline JSX in
 Markdown.
 

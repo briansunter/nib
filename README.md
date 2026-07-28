@@ -38,6 +38,7 @@ npm run dev
 - Configurable Unified remark and rehype Markdown extensions.
 - Build-time collections for indexes, navigation, and related content.
 - React islands with `load`, `idle`, and `visible` hydration.
+- Optional static document navigation with native-link fallback.
 - Optional Vite styling adapters; the starter opts into Tailwind without making
   it a framework dependency.
 - Base-path support for GitHub Pages and other subpath deployments.
@@ -360,11 +361,41 @@ export default defineIsland('counter', Counter)
 Island IDs match their path below `src/islands`, and props must be
 JSON-serializable. A route without islands does not include the island runtime.
 
+## Optional client navigation
+
+Nib uses ordinary document navigation by default. A site can explicitly add
+same-origin document swapping, history, scroll/focus restoration, bounded
+prefetching, and View Transitions:
+
+```ts
+// nib.config.ts
+import { defineConfig } from '@briansunter/nib'
+import { clientNavigation } from '@briansunter/nib/navigation'
+
+export default defineConfig({
+  site: { title: 'My site' },
+  plugins: [clientNavigation()],
+})
+```
+
+The plugin contributes one static browser entry only when configured; no
+dynamic import or React DOM dependency is added by navigation. Links remain
+complete native fallbacks when JavaScript is disabled, a destination is
+ineligible, or an enhanced navigation cannot complete safely.
+
+Use `data-nib-prefetch="hover|tap|load|viewport|false"` to control prefetching,
+`data-nib-navigation-reload` to force native navigation, and
+`data-nib-navigation-persist="key"` to preserve a stable element across swaps.
+The browser controller and typed `nib:navigation-*` events are exported from
+`@briansunter/nib/client/navigation`.
+
 ## Scope
 
 Nib is for sites whose routes and data can be resolved at build time. It does
-not add dynamic route parameters, client-side routing, server actions, runtime
-data loaders, React Server Components, or JSX inside Markdown.
+not add dynamic route parameters, runtime routes, server actions, runtime data
+loaders, React Server Components, or JSX inside Markdown. Client navigation is
+an optional enhancement over the same prerendered route map, never the default
+or a source of required content.
 
 ## Documentation
 
@@ -412,6 +443,7 @@ For implementation details and design rationale:
 
 - [Architecture](docs/architecture.md)
 - [React islands](docs/interactive-react-islands.md)
+- [Optional client navigation ADR](docs/adr-optional-client-navigation.md)
 - [HTML pages proposal](docs/html-pages-layouts-and-islands.md) — proposed, not
   part of the current API
 - [Type-safe plugins and image optimization](docs/type-safe-plugins-and-image-optimization.md)

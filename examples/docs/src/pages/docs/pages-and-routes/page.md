@@ -18,7 +18,9 @@ Nib discovers page files under `src/pages` at build time. The final folder conta
 
 Each route folder may contain `page.tsx`, `page.md`, or one configured
 `page.<extension>` source, but not multiple page types. Route names are static;
-Nib does not interpret `[id]` folders or add a client router.
+Nib does not interpret `[id]` folders or create runtime routes. Native links are
+the default; the [client-navigation plugin](../client-navigation/) can
+optionally enhance navigation between these same static documents.
 
 ## TSX pages and metadata
 

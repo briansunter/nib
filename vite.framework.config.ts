@@ -15,6 +15,8 @@ const entries = {
   client: path.resolve('src/client.ts'),
   'client/islands': path.resolve('src/client-islands.ts'),
   'client/behaviors': path.resolve('src/client-behaviors.ts'),
+  'client/navigation': path.resolve('src/client-navigation.ts'),
+  navigation: path.resolve('src/navigation.ts'),
   server: path.resolve('src/server.ts'),
   'internal/client': path.resolve('src/runtime/client.ts'),
   'internal/server': path.resolve('src/runtime/server.ts'),

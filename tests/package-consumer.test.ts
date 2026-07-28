@@ -84,6 +84,10 @@ describe('published package consumer', () => {
     expect(packedFiles).toContain('dist/framework/client-islands.d.ts')
     expect(packedFiles).toContain('dist/framework/client/behaviors.js')
     expect(packedFiles).toContain('dist/framework/client-behaviors.d.ts')
+    expect(packedFiles).toContain('dist/framework/client/navigation.js')
+    expect(packedFiles).toContain('dist/framework/client-navigation.d.ts')
+    expect(packedFiles).toContain('dist/framework/navigation.js')
+    expect(packedFiles).toContain('dist/framework/navigation.d.ts')
     expect(packedFiles).toContain('dist/framework/server.js')
     expect(packedFiles).toContain('dist/framework/server.d.ts')
     expect(packedFiles).toContain('templates/default/nib.config.ts')
@@ -96,6 +100,8 @@ describe('published package consumer', () => {
     expect(browserEntry).not.toContain('tinyglobby')
     const clientEntry = await fs.readFile('dist/framework/client.js', 'utf8')
     expect(clientEntry).not.toMatch(/(?:node:|tinyglobby)/)
+    const navigationEntry = await fs.readFile('dist/framework/client/navigation.js', 'utf8')
+    expect(navigationEntry).not.toMatch(/(?:node:|tinyglobby|react-dom)/)
     const serverEntry = await fs.readFile('dist/framework/server.js', 'utf8')
     const serverModules = [
       serverEntry,
@@ -132,6 +138,21 @@ describe('published package consumer', () => {
       ['init', site, '--no-install'],
       { cwd: launcher },
     )
+    const generatedConfigPath = path.join(site, 'nib.config.ts')
+    const generatedConfig = await fs.readFile(generatedConfigPath, 'utf8')
+    await fs.writeFile(
+      generatedConfigPath,
+      generatedConfig
+        .replace(
+          "import { defineConfig } from '@briansunter/nib'",
+          "import { defineConfig } from '@briansunter/nib'\n"
+          + "import { clientNavigation } from '@briansunter/nib/navigation'",
+        )
+        .replace(
+          '  shell: SiteShell,',
+          '  shell: SiteShell,\n  plugins: [clientNavigation()],',
+        ),
+    )
     await execute(
       'npm',
       ['install', '--no-audit', '--no-fund', '--ignore-scripts', tarball],
@@ -161,6 +182,7 @@ describe('published package consumer', () => {
     expect(home).toContain('Make a site.')
     expect(home).toContain('data-island="counter"')
     expect(about).toContain('About this site')
+    expect(about).toContain('data-nib-enhancements')
     expect(publication).toMatchObject({ version: 1 })
     expect(publication.routes).toEqual(expect.arrayContaining([
       expect.objectContaining({ path: '/about', artifact: 'about/index.html' }),
