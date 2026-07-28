@@ -46,6 +46,11 @@ export interface SemanticSnapshotOptions extends SemanticTraversalOptions {
   readonly normalizeHref?: (href: string) => string
 }
 
+export type SemanticSnapshotRootOptions = Omit<
+  SemanticSnapshotOptions,
+  'root' | 'fallbackRoot'
+>
+
 export interface SemanticHtmlSnapshot {
   readonly version: 1
   readonly normalizer: SemanticTextNormalizer
@@ -336,6 +341,17 @@ export function semanticHtmlSnapshot(
 ): SemanticHtmlSnapshot {
   const document = semanticDocument(html)
   const roots = snapshotRoots(document, options)
+  return semanticSnapshot(roots, options)
+}
+
+/** Creates one versioned snapshot from already parsed semantic roots. */
+export function semanticSnapshot(
+  roots: SemanticRoot | readonly SemanticRoot[],
+  options: SemanticSnapshotRootOptions = {},
+): SemanticHtmlSnapshot {
+  const rootCount = Array.isArray(roots)
+    ? (roots as readonly SemanticRoot[]).length
+    : 1
   const normalizer = options.normalizer ?? 'nib-semantic-v1'
   const traversal: SemanticTraversalOptions = options.pagefindAware === undefined
     ? {}
@@ -368,7 +384,7 @@ export function semanticHtmlSnapshot(
   return Object.freeze({
     version: 1,
     normalizer,
-    rootCount: roots.length,
+    rootCount,
     text: semanticTextContent(roots, { ...traversal, normalizer }),
     headings: Object.freeze(headings),
     dates: Object.freeze(dates),

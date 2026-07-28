@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   compareSemanticHtml,
+  semanticDocument,
   semanticHtmlSnapshot,
+  semanticRoots,
+  semanticSnapshot,
 } from '../src/framework/testing'
 
 describe('semantic publication testing', () => {
@@ -64,5 +67,15 @@ describe('semantic publication testing', () => {
       'text',
       'structures',
     ])
+  })
+
+  it('snapshots selected roots without reparsing the document', () => {
+    const document = semanticDocument(
+      '<main><section data-pagefind-body><h1>Selected</h1></section><p>Chrome</p></main>',
+    )
+    const roots = semanticRoots(document, { attribute: 'data-pagefind-body' })
+
+    expect(semanticSnapshot(roots).text).toBe('Selected')
+    expect(semanticSnapshot(roots).rootCount).toBe(1)
   })
 })

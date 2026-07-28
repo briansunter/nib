@@ -8,6 +8,7 @@ export {
   semanticHasClass,
   semanticHtmlSnapshot,
   semanticRoots,
+  semanticSnapshot,
   semanticTextContent,
 } from './framework/testing'
 export type {
@@ -20,6 +21,7 @@ export type {
   SemanticRoot,
   SemanticRootSelector,
   SemanticSnapshotOptions,
+  SemanticSnapshotRootOptions,
   SemanticTextNormalizer,
   SemanticTraversalOptions,
 } from './framework/testing'
