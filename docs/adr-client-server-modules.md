@@ -1,0 +1,22 @@
+# ADR: explicit client and server modules
+
+Status: accepted
+
+Nib applications may suffix modules with `.client.ts`, `.client.tsx`,
+`.server.ts`, or `.server.tsx` to state which build graph owns them. Production
+client builds reject server modules and production server builds reject client
+modules. Diagnostics include the import chain that crossed the boundary.
+
+Public package imports follow the same rule:
+
+- `@briansunter/nib` contains universal authoring definitions and types;
+- `@briansunter/nib/client` contains browser runtime contracts;
+- `@briansunter/nib/server` contains filesystem-backed loaders.
+
+The historical `file` and `glob` root exports remain as lazy compatibility
+wrappers until a separately approved major release. New code should import
+them from `/server`, whose implementation uses ordinary static Node imports.
+
+Development uses Vite's combined environment and does not reject either suffix
+at configuration time. Each production graph is authoritative, and tests cover
+both targets.
