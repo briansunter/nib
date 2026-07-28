@@ -10,6 +10,7 @@ const entries = {
   sitemap: path.resolve('src/sitemap.ts'),
   rss: path.resolve('src/rss.ts'),
   verify: path.resolve('src/verify.ts'),
+  testing: path.resolve('src/testing.ts'),
   hosting: path.resolve('src/hosting.ts'),
   client: path.resolve('src/client.ts'),
   'client/islands': path.resolve('src/client-islands.ts'),

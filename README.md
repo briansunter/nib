@@ -289,6 +289,12 @@ output path, and all of its diagnostics are stamped with the extension name.
 Extensions should express site policy only; route resolution, HTML parsing, and
 artifact ownership remain built-in checks.
 
+`@briansunter/nib/testing` exposes the same standards parser through
+`semanticHtmlSnapshot()` and `compareSemanticHtml()`. The
+`nib-semantic-v1` normalizer compares visible text, repeated headings and dates,
+links, and structural counts; `nib-typography-v1` retains curly quote
+differences. These are content-parity helpers, not visual-equivalence claims.
+
 Development and preview bind to loopback by default. To expose a server through
 a known hostname such as a Tailscale name, bind explicitly and allow only that
 host; repeat the option for more than one hostname:

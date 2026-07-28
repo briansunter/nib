@@ -31,6 +31,10 @@
       "types": "./dist/framework/verify.d.ts",
       "import": "./dist/framework/verify.js"
     },
+    "./testing": {
+      "types": "./dist/framework/testing.d.ts",
+      "import": "./dist/framework/testing.js"
+    },
     "./hosting": {
       "types": "./dist/framework/hosting.d.ts",
       "import": "./dist/framework/hosting.js"

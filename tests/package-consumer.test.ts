@@ -74,6 +74,8 @@ describe('published package consumer', () => {
     expect(packedFiles).toContain('dist/framework/rss.d.ts')
     expect(packedFiles).toContain('dist/framework/verify.js')
     expect(packedFiles).toContain('dist/framework/verify.d.ts')
+    expect(packedFiles).toContain('dist/framework/testing.js')
+    expect(packedFiles).toContain('dist/framework/testing.d.ts')
     expect(packedFiles).toContain('dist/framework/hosting.js')
     expect(packedFiles).toContain('dist/framework/hosting.d.ts')
     expect(packedFiles).toContain('dist/framework/client.js')
