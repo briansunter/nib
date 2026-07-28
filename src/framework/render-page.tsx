@@ -2,6 +2,10 @@ import { StrictMode, createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup, renderToString } from 'react-dom/server'
 import { serializeIslandProps } from './island-serialization'
 import {
+  MarkdownContentRenderContext,
+  type MarkdownContent,
+} from './markdown-content'
+import {
   IslandRenderContext,
   composedIslandRenderer,
   type HydrationStrategy,
@@ -33,19 +37,47 @@ function behaviorIds(html: string): string[] {
   )]
 }
 
+function contentRenderTree(
+  page: ReactNode,
+  islandRenderer: IslandRenderer,
+): { tree: ReactNode; rendered: Set<MarkdownContent> } {
+  const rendered = new Set<MarkdownContent>()
+  return {
+    rendered,
+    tree: createElement(
+      MarkdownContentRenderContext.Provider,
+      { value: { rendered } },
+      createElement(IslandRenderContext.Provider, { value: islandRenderer }, page),
+    ),
+  }
+}
+
+function assertRequiredContent(
+  rendered: ReadonlySet<MarkdownContent>,
+  required: readonly MarkdownContent[],
+): void {
+  for (const body of required) {
+    if (!rendered.has(body)) {
+      throw new Error(`Markdown content ${body.source} was not rendered by its page or layouts`)
+    }
+  }
+}
+
 function islandTree(island: CollectedIsland): ReactNode {
-  return createElement(
-    IslandRenderContext.Provider,
-    { value: composedIslandRenderer() },
+  return contentRenderTree(
     createElement(
       StrictMode,
       null,
       createElement(island.definition.Component, island.props),
     ),
-  )
+    composedIslandRenderer(),
+  ).tree
 }
 
-export function renderReactPage(page: ReactNode): RenderedReactPage {
+export function renderReactPage(
+  page: ReactNode,
+  requiredContent: readonly MarkdownContent[] = [],
+): RenderedReactPage {
   const collected: CollectedIsland[] = []
   const collector: IslandRenderer = {
     render(request: IslandRenderRequest) {
@@ -64,9 +96,9 @@ export function renderReactPage(page: ReactNode): RenderedReactPage {
     },
   }
 
-  const collectedShell = renderToStaticMarkup(
-    createElement(IslandRenderContext.Provider, { value: collector }, page),
-  )
+  const collectedTree = contentRenderTree(page, collector)
+  const collectedShell = renderToStaticMarkup(collectedTree.tree)
+  assertRequiredContent(collectedTree.rendered, requiredContent)
   if (collected.length === 0) {
     return { html: collectedShell, islands: [], behaviors: behaviorIds(collectedShell) }
   }
@@ -104,9 +136,9 @@ export function renderReactPage(page: ReactNode): RenderedReactPage {
     },
   }
 
-  const html = renderToStaticMarkup(
-    createElement(IslandRenderContext.Provider, { value: emitter }, page),
-  )
+  const emittedTree = contentRenderTree(page, emitter)
+  const html = renderToStaticMarkup(emittedTree.tree)
+  assertRequiredContent(emittedTree.rendered, requiredContent)
   if (cursor !== collected.length) {
     throw new Error('Island render count changed between render passes')
   }

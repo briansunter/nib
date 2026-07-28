@@ -266,7 +266,22 @@ The Markdown Vite adapter:
 5. converts the Markdown tree and applies configured `rehypePlugins`;
 6. serializes HTML through Rehype;
 7. generates a React page module;
-8. exposes the validated frontmatter and optional named layout to the route.
+8. exposes the validated frontmatter, opaque compiled content value, and
+   optional named layout to the route.
+
+`markdownBody(source, { file, profile })` uses that same synchronous renderer
+for generated pages. The returned value carries source identity and
+framework-branded compiled HTML; application code cannot pass an arbitrary
+HTML-shaped object to `Content`. The `Content` component owns
+`dangerouslySetInnerHTML` and accepts a constrained semantic root plus ordinary
+static React attributes.
+
+For file Markdown, Nib binds that content value as
+`PageLayoutProps.Content`. A layout may render the bound component to choose
+the root element, class, and attributes without `cloneElement`. Every server
+render pass tracks the branded value and fails if a plugin or nested layout
+drops it or renders it more than once. Folder layouts can continue wrapping
+`children`; the named content layout remains the innermost layout owner.
 
 Unified plugins receive a VFile with the source path in `history`, allowing
 source-relative diagnostics and asset resolution while Nib retains ownership
@@ -321,7 +336,8 @@ objects to every plugin.
 `src/pages/layout.tsx` wraps every page and nested folder layouts wrap their
 subtree from root to leaf. An optional flat named layout from `src/layouts`
 wraps the page inside that folder stack. Layouts receive children, route and
-site information, collections, data-page `data`, and Markdown `frontmatter`.
+site information, collections, data-page `data`, Markdown `frontmatter`, and
+an optional bound Markdown `Content` renderer.
 `PageLayoutProps` keeps its one-argument backwards-compatible form and accepts
 a third type argument when a layout needs different types for those two
 payloads.

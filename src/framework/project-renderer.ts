@@ -3,6 +3,7 @@ import { loadCollections } from './content-server'
 import { DefaultSiteShell } from './default-shell'
 import { normalizeHeadContribution, renderHead } from './meta'
 import { deepFreeze } from './freeze'
+import { createContentRenderer } from './markdown-content'
 import { renderReactPage } from './render-page'
 import { validateIslandModules, type IslandModule } from './islands'
 import {
@@ -106,7 +107,10 @@ function composePage(
   config: NibConfig,
   collections: unknown,
 ): ReactNode {
-  const pageProps = { route, site: config.site, collections }
+  const Content = route.content === undefined
+    ? undefined
+    : createContentRenderer(route.content)
+  const pageProps = { route, site: config.site, collections, Content }
   let content = createElement(route.component, {
     ...pageProps,
     ...(route.data === undefined ? {} : { data: route.data }),
@@ -269,7 +273,10 @@ export async function createProjectRenderer(
       })
       const head = plugins.head(pageContext)
       const content = plugins.wrapPage(composePage(route, options.config, collections), pageContext)
-      const reactPage = renderReactPage(content)
+      const reactPage = renderReactPage(
+        content,
+        route.content === undefined ? [] : [route.content],
+      )
       const renderedPage = plugins.transformPage({
         status: route.status,
         head: renderHead(route.meta, options.config.site, head),

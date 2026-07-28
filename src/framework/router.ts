@@ -126,6 +126,7 @@ export function createRoutes(
         status: normalizePath(path) === '/404' ? 404 : 200,
         ...(page.data === undefined ? {} : { data: page.data }),
         ...(module.frontmatter === undefined ? {} : { frontmatter: module.frontmatter }),
+        ...(module.content === undefined ? {} : { content: module.content }),
         layouts: routeLayouts(file, page.layout, folders, named),
       })
     }
