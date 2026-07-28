@@ -32,9 +32,9 @@ import { defineConfig } from '@briansunter/nib'
 import { sitemap } from '@briansunter/nib/sitemap'
 
 export default defineConfig({
-  site: { title: 'Docs' },
+  origin: 'https://docs.example.com',
   plugins: [
-    sitemap({ site: 'https://docs.example.com' }),
+    sitemap(),
   ],
 })
 ```
@@ -51,10 +51,9 @@ import { defineConfig } from '@briansunter/nib'
 import { rss } from '@briansunter/nib/rss'
 
 export default defineConfig({
-  site: { title: 'Docs' },
+  origin: 'https://docs.example.com',
   plugins: [
     rss({
-      site: 'https://docs.example.com',
       title: 'Docs updates',
       description: 'Recent updates to the documentation.',
       items: [
@@ -75,7 +74,6 @@ function that receives the current immutable route manifest.
 
 ```ts
 export default defineConfig({
-  site: { title: 'Docs' },
   trailingSlash: 'always',
   redirects: {
     '/old-guide': '/guide',
@@ -102,7 +100,6 @@ The original `markdown` configuration accepts Unified plugins:
 
 ```ts
 export default defineConfig({
-  site: { title: 'Docs' },
   markdown: {
     remarkPlugins: [remarkToc],
     rehypePlugins: [rehypeExternalLinks],

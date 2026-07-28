@@ -24,7 +24,7 @@ function page(islands: string[], behaviors: string[] = []): RenderedPage {
 }
 
 describe('HTML documents', () => {
-  it('renders escaped structured site, page, and plugin head contributions', () => {
+  it('renders escaped structured page and plugin head contributions', () => {
     const html = renderHead(
       {
         title: 'Page',
@@ -40,22 +40,18 @@ describe('HTML documents', () => {
         },
       },
       {
-        head: {
-          title: 'Site head title',
-          description: 'Site head description',
-          elements: [{
-            tag: 'link',
-            attributes: { rel: 'alternate', href: '/rss.xml?x="unsafe"' },
-          }],
-        },
-      },
-      {
         title: 'Renderer title',
         description: 'Renderer description',
-        elements: [{
-          tag: 'meta',
-          attributes: { property: 'og:title', content: 'A & B' },
-        }],
+        elements: [
+          {
+            tag: 'link',
+            attributes: { rel: 'alternate', href: '/rss.xml?x="unsafe"' },
+          },
+          {
+            tag: 'meta',
+            attributes: { property: 'og:title', content: 'A & B' },
+          },
+        ],
       },
     )
     expect(html).toContain('<title>Renderer title</title>')

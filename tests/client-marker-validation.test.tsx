@@ -7,7 +7,7 @@ import { createProjectRenderer } from '../src/framework/project-renderer'
 const OutsideIsland = defineIsland('outside', () => <p>Interactive</p>)
 const MissingBehavior = defineClientBehavior('missing')
 
-const config = { site: { title: 'Site' } }
+const config = {}
 
 describe('project client marker validation', () => {
   it('rejects an island definition rendered outside the discovered islands directory', async () => {
@@ -18,6 +18,7 @@ describe('project client marker validation', () => {
       pages: {
         '/src/pages/page.tsx': {
           default: () => <OutsideIsland />,
+          meta: { title: 'Island' },
         },
       },
       islandModules: {},
@@ -36,6 +37,7 @@ describe('project client marker validation', () => {
       pages: {
         '/src/pages/page.tsx': {
           default: () => <MissingBehavior />,
+          meta: { title: 'Behavior' },
         },
       },
       islandModules: {},
@@ -62,7 +64,7 @@ describe('project client marker validation', () => {
       config,
       root: process.cwd(),
       base: '/',
-      pages: { '/src/pages/page.tsx': { default: Page } },
+      pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Markers' } } },
       islandModules: {
         '/src/islands/outside.tsx': { default: OutsideIsland },
       },

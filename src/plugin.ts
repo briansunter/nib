@@ -9,7 +9,6 @@ export type {
   NibPageRouteRegistration,
   NibPlugin,
   NibPluginRoute,
-  NibPluginSiteConfig,
   NibRedirectRouteRegistration,
   NibResolvedPageRoute,
   NibResolvedRedirectRoute,

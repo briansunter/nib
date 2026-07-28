@@ -2,7 +2,6 @@ import path from 'node:path'
 import { loadConfigFromFile, type ConfigEnv } from 'vite'
 import { pageSourceExtensions, validateDataDefinition } from './content'
 import { deployedOrigin } from './deployed-url'
-import { normalizeHeadContribution } from './meta'
 import { configuredPageSources } from './plugin-contributions'
 import type { NibConfig } from './types'
 
@@ -19,37 +18,32 @@ const pluginFields = new Set([
   'renderer',
 ])
 
+const configFields = new Set([
+  'base',
+  'origin',
+  'trailingSlash',
+  'hosting',
+  'redirects',
+  'vite',
+  'plugins',
+  'shell',
+  'markdown',
+  'pageSources',
+  'collections',
+])
+
 export function validateNibConfig(value: unknown): NibConfig {
-  if (!isRecord(value) || !isRecord(value.site)) {
-    throw new Error('nib.config.ts must export an object with a site configuration')
+  if (!isRecord(value)) {
+    throw new Error('nib.config.ts must export a configuration object')
   }
-  if (typeof value.site.title !== 'string' || value.site.title.trim() === '') {
-    throw new Error('Nib site title must be a non-empty string')
+  const unsupportedField = Object.keys(value).find((field) => !configFields.has(field))
+  if (unsupportedField !== undefined) {
+    throw new Error(`Nib configuration has unsupported field ${unsupportedField}`)
   }
-  for (const field of ['description', 'titleTemplate'] as const) {
-    if (value.site[field] !== undefined && typeof value.site[field] !== 'string') {
-      throw new Error(`Nib site.${field} must be a string`)
-    }
+  if (value.origin !== undefined) {
+    if (typeof value.origin !== 'string') throw new Error('Nib origin must be a string')
+    deployedOrigin(value.origin, undefined, 'Nib origin')
   }
-  if (value.site.navigation !== undefined) {
-    if (
-      !Array.isArray(value.site.navigation)
-      || value.site.navigation.some((item) => (
-        !isRecord(item)
-        || typeof item.label !== 'string'
-        || item.label.trim() === ''
-        || typeof item.href !== 'string'
-        || item.href.trim() === ''
-      ))
-    ) {
-      throw new Error('Nib site.navigation must contain non-empty label and href strings')
-    }
-  }
-  if (value.site.origin !== undefined) {
-    if (typeof value.site.origin !== 'string') throw new Error('Nib site.origin must be a string')
-    deployedOrigin(value.site.origin, undefined, 'Nib site.origin')
-  }
-  normalizeHeadContribution(value.site.head, 'Nib site.head')
   if (value.base !== undefined) {
     if (
       typeof value.base !== 'string'

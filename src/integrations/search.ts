@@ -38,8 +38,8 @@ export interface SearchOptions {
 function pageRouteItem(route: NibResolvedPageRoute): SearchItem {
   return {
     title: route.meta.title,
-    description: route.meta.description,
     href: route.path,
+    ...(route.meta.description === undefined ? {} : { description: route.meta.description }),
   }
 }
 

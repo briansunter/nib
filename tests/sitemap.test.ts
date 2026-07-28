@@ -6,7 +6,6 @@ const context = {
   mode: 'production' as const,
   root: '/site',
   base: '/docs/',
-  site: { title: 'Docs' },
   readCollection: () => {
     throw new Error('No collection capability configured')
   },
@@ -15,7 +14,7 @@ const context = {
 describe('sitemap plugin', () => {
   it('emits only successful page routes with base-safe absolute URLs', async () => {
     const plugin = sitemap({
-      site: 'https://example.test',
+      origin: 'https://example.test',
       filter: (route) => route.path !== '/private/',
     })
     if (!plugin.routes) throw new Error('Sitemap plugin has no route provider')
@@ -41,19 +40,19 @@ describe('sitemap plugin', () => {
     expect(route.body).not.toContain('rss.xml')
   })
 
-  it('rejects non-origin sitemap sites and invalid output paths', () => {
-    expect(() => sitemap({ site: 'ftp://example.test' })).toThrow('HTTP or HTTPS')
-    expect(() => sitemap({ site: 'https://example.test/docs' })).toThrow('origin')
-    expect(() => sitemap({ site: 'https://example.test', path: 'sitemap.xml' }))
+  it('rejects non-origin sitemap URLs and invalid output paths', () => {
+    expect(() => sitemap({ origin: 'ftp://example.test' })).toThrow('HTTP or HTTPS')
+    expect(() => sitemap({ origin: 'https://example.test/docs' })).toThrow('origin')
+    expect(() => sitemap({ origin: 'https://example.test', path: 'sitemap.xml' }))
       .toThrow('absolute route path')
   })
 
-  it('uses site.origin when no plugin-specific origin is supplied', async () => {
+  it('uses the configured origin when no plugin-specific origin is supplied', async () => {
     const plugin = sitemap({})
     if (!plugin.routes) throw new Error('Sitemap plugin has no route provider')
     const route = await plugin.routes({
       ...context,
-      site: { title: 'Docs', origin: 'https://docs.example' },
+      origin: 'https://docs.example',
       routes: Object.freeze([
         Object.freeze({ kind: 'page' as const, path: '/', source: 'page', status: 200, meta: { title: 'Home', description: 'Home page' } }),
       ]),

@@ -4,25 +4,8 @@ import type {
   PageRoute,
   ResolvedPageRoute,
   ResolvedRoute,
-  ResolvedSite,
   RouteSnapshot,
-  SiteConfig,
 } from './types'
-
-/** Copies site configuration into the deeply immutable public shape. */
-export function resolvedSiteSnapshot(site: SiteConfig): ResolvedSite {
-  const head = normalizeHeadContribution(site.head, 'Nib site.head')
-  return deepFreeze({
-    title: site.title,
-    ...(site.origin === undefined ? {} : { origin: site.origin }),
-    ...(site.description === undefined ? {} : { description: site.description }),
-    ...(site.titleTemplate === undefined ? {} : { titleTemplate: site.titleTemplate }),
-    ...(site.navigation === undefined
-      ? {}
-      : { navigation: site.navigation.map((item) => ({ ...item })) }),
-    ...(head === undefined ? {} : { head }),
-  })
-}
 
 /** Removes renderer-only fields before a route crosses a public boundary. */
 export function resolvedRouteSnapshot(route: ResolvedPageRoute): PageRoute

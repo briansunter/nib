@@ -6,37 +6,40 @@ const Page = () => <p>page</p>
 const RootLayout = () => null
 const DocsLayout = () => null
 const NamedLayout = () => null
-const site = { title: 'Site', description: 'Description' }
-
 describe('router', () => {
   it('creates and resolves routes', () => {
-    const routes = createRoutes({ '../pages/page.tsx': { default: Page }, '../pages/404/page.tsx': { default: Page } }, site)
+    const routes = createRoutes({
+      '../pages/page.tsx': { default: Page, meta: { title: 'Home' } },
+      '../pages/404/page.tsx': { default: Page, meta: { title: 'Not found' } },
+    })
     expect(getRoute(routes, '/').status).toBe(200)
     expect(getRoute(routes, '/missing').status).toBe(404)
   })
   it('skips drafts', () => {
-    const routes = createRoutes({ '../pages/draft/page.tsx': { default: Page, meta: { draft: true } } }, site)
+    const routes = createRoutes({
+      '../pages/draft/page.tsx': { default: Page, meta: { title: 'Draft', draft: true } },
+    })
     expect(routes.has('/draft')).toBe(false)
   })
   it('rejects duplicate React and Markdown routes', () => {
     const modules: Record<string, PageModule> = {
-      '../pages/about/page.tsx': { default: Page },
-      '../pages/about/page.md': { default: Page }
+      '../pages/about/page.tsx': { default: Page, meta: { title: 'About TSX' } },
+      '../pages/about/page.md': { default: Page, meta: { title: 'About Markdown' } },
     }
-    expect(() => createRoutes(modules, site)).toThrow('Duplicate route /about')
+    expect(() => createRoutes(modules)).toThrow('Duplicate route /about')
   })
   it('rejects duplicate routes regardless of draft or module order', () => {
-    const draft = { default: Page, meta: { draft: true } }
-    const published = { default: Page }
+    const draft = { default: Page, meta: { title: 'Draft', draft: true } }
+    const published = { default: Page, meta: { title: 'Published' } }
 
     expect(() => createRoutes({
       '../pages/x/page.md': draft,
       '../pages/x/page.tsx': published,
-    }, site)).toThrow('Duplicate route /x')
+    })).toThrow('Duplicate route /x')
     expect(() => createRoutes({
       '../pages/x/page.tsx': published,
       '../pages/x/page.md': draft,
-    }, site)).toThrow('Duplicate route /x')
+    })).toThrow('Duplicate route /x')
   })
   it('generates a fallback when no custom 404 exists', () => {
     const route = getRoute(new Map(), '/missing')
@@ -51,16 +54,18 @@ describe('router', () => {
             path: '/products/pencil',
             component: Page,
             data: { name: 'Pencil' },
+            meta: { title: 'Pencil' },
             layout: 'product',
           },
           {
             path: '/products/notebook',
             component: Page,
             data: { name: 'Notebook' },
+            meta: { title: 'Notebook' },
           },
         ],
       },
-    }, site, {
+    }, {
       folders: {
         '../pages/layout.tsx': { default: RootLayout },
         '../pages/catalog/layout.tsx': { default: DocsLayout },
@@ -80,9 +85,14 @@ describe('router', () => {
   it('accepts generated routes from non-page source files without folder layouts', () => {
     const routes = createRoutes({
       '/src/content/projects.json': {
-        pages: [{ path: '/projects/one', component: Page, data: { name: 'One' } }],
+        pages: [{
+          path: '/projects/one',
+          component: Page,
+          data: { name: 'One' },
+          meta: { title: 'One' },
+        }],
       },
-    }, site, {
+    }, {
       folders: { '../pages/layout.tsx': { default: RootLayout } },
     })
     expect(routes.get('/projects/one')?.data).toEqual({ name: 'One' })
@@ -92,8 +102,19 @@ describe('router', () => {
   it('rejects protocol-relative generated routes instead of normalizing their host away', () => {
     expect(() => createRoutes({
       '/src/content/projects.json': {
-        pages: [{ path: '//evil.example/project', component: Page, data: {} }],
+        pages: [{
+          path: '//evil.example/project',
+          component: Page,
+          data: {},
+          meta: { title: 'Project' },
+        }],
       },
-    }, site)).toThrow('protocol-relative')
+    })).toThrow('protocol-relative')
+  })
+
+  it('requires every page to define a non-empty title', () => {
+    expect(() => createRoutes({
+      '../pages/page.tsx': { default: Page },
+    })).toThrow('must define a non-empty title')
   })
 })

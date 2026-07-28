@@ -28,7 +28,10 @@ export function tomlPages() {
       definePageSource({
         extensions: ['toml'],
         schema: settingsSchema,
-        load: ({ source }) => ({ data: parseToml(source) }),
+        load: ({ source }) => {
+          const data = parseToml(source) as { heading: string; enabled: boolean }
+          return { data, meta: { title: data.heading } }
+        },
         component: SettingsPage,
       }),
     ],

@@ -40,12 +40,14 @@ import { parse } from 'yaml'
 import { MemberPage, memberSchema } from './src/team'
 
 export default defineConfig({
-  site: { title: 'People' },
   pageSources: [
     definePageSource({
       extensions: ['yaml', 'yml'],
       schema: memberSchema,
-      load: ({ source }) => ({ data: parse(source) }),
+      load: ({ source }) => {
+        const data = parse(source)
+        return { data, meta: { title: data.name } }
+      },
       component: MemberPage,
     }),
   ],
@@ -108,6 +110,7 @@ definePageSource({
   load: ({ source }) => JSON.parse(source).map((data) => ({
     path: `/projects/${data.slug}`,
     data,
+    meta: { title: data.name },
   })),
   component: ProjectPage,
 })
@@ -149,7 +152,6 @@ Register it once:
 import { posts } from './src/content'
 
 export default defineConfig({
-  site: { title: 'Journal' },
   collections: { posts },
 })
 ```

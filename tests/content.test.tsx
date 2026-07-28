@@ -42,8 +42,8 @@ describe('generic content', () => {
       extensions: ['csv'],
       schema: itemSchema,
       load: () => [
-        { path: '/items/one/', data: { slug: 'one', count: '1' } },
-        { path: '/items/two/', data: { slug: 'two', count: '2' } },
+        { path: '/items/one/', data: { slug: 'one', count: '1' }, meta: { title: 'One' } },
+        { path: '/items/two/', data: { slug: 'two', count: '2' }, meta: { title: 'Two' } },
       ],
       component: ItemPage,
     })
@@ -68,7 +68,7 @@ describe('generic content', () => {
         if (typeof value !== 'string') throw new Error('expected a string')
         return value.toUpperCase()
       },
-      load: ({ source: contents }) => ({ data: contents }),
+      load: ({ source: contents }) => ({ data: contents, meta: { title: 'Message' } }),
       component: ({ data }: DataPageProps<string>) => <p>{data}</p>,
     })
 
@@ -86,7 +86,7 @@ describe('generic content', () => {
     const source = definePageSource({
       extensions: ['data'],
       schema: itemSchema,
-      load: () => ({ data: { slug: 'one', count: 1 } }),
+      load: () => ({ data: { slug: 'one', count: 1 }, meta: { title: 'One' } }),
       component: pageRenderer(async () => {
         rendererLoads += 1
         return { default: ItemPage }
@@ -277,7 +277,7 @@ describe('generic content', () => {
     const source = definePageSource({
       extensions: ['json', 'yaml'],
       schema: itemSchema,
-      load: () => ({ data: { slug: 'one', count: 1 } }),
+      load: () => ({ data: { slug: 'one', count: 1 }, meta: { title: 'One' } }),
       component: pageRenderer('./src/data-pages', 'ItemPage'),
     })
     const plugin = nibDataPages('/site/nib.config.ts', [source])

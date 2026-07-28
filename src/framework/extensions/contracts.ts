@@ -8,7 +8,6 @@ import type {
   PageRoute,
   PageSourceDefinition,
   RedirectStatus,
-  ResolvedSite,
   RouteSnapshot,
 } from '../types'
 
@@ -16,7 +15,6 @@ export type NibCommand = 'build' | 'serve'
 export type NibMode = 'development' | 'production'
 export type NibViteTarget = 'client' | 'server' | 'development'
 export type Awaitable<Value> = Value | Promise<Value>
-export type NibPluginSiteConfig = ResolvedSite
 export type NibPluginRoute = PageRoute
 
 export interface NibVitePluginContext {
@@ -33,15 +31,15 @@ export interface NibRendererPluginContext {
   readonly mode: NibMode
   readonly root: string
   readonly base: string
-  readonly site: NibPluginSiteConfig
+  readonly origin?: string
 }
 
 export interface NibRenderPageContext {
   readonly command: NibCommand
   readonly route: NibPluginRoute
-  readonly site: NibPluginSiteConfig
   readonly root: string
   readonly base: string
+  readonly origin?: string
   readonly mode: NibMode
 }
 
@@ -65,7 +63,7 @@ export interface NibPageRouteRegistration {
   readonly path: string
   readonly component: ComponentType<any>
   readonly data?: unknown
-  readonly meta?: PageMeta
+  readonly meta: PageMeta
 }
 
 export interface NibResourceRouteRegistration {

@@ -15,6 +15,7 @@ import {
   topics,
 } from './src/content'
 import { SiteShell } from './src/site-shell'
+import { site, siteMetadata } from './src/site'
 
 const postFeed = fromCollection(posts, (entries) => entries.map(({ data }) => ({
   title: data.title,
@@ -34,37 +35,7 @@ const postSearch = fromCollection(posts, (entries) => entries.map(({ data }) => 
 
 export default defineConfig({
   trailingSlash: 'always',
-  site: {
-    title: 'Commonplace',
-    origin: 'https://commonplace.example',
-    description: 'Sample field notes about making, noticing, and learning.',
-    titleTemplate: '%s · Commonplace',
-    navigation: [
-      { label: 'Home', href: '/' },
-      { label: 'Posts', href: '/posts/' },
-      { label: 'About', href: '/about/' },
-    ],
-    head: {
-      elements: [
-        {
-          tag: 'link',
-          attributes: {
-            rel: 'icon',
-            type: 'image/svg+xml',
-            href: '/favicon.svg',
-          },
-        },
-        {
-          tag: 'link',
-          attributes: {
-            rel: 'alternate',
-            type: 'application/rss+xml',
-            href: '/rss.xml',
-          },
-        },
-      ],
-    },
-  },
+  origin: 'https://commonplace.example',
   shell: SiteShell,
   markdown: blogMarkdown,
   pageSources: [topicPages],
@@ -76,6 +47,7 @@ export default defineConfig({
     adapters: ['netlify', 's3'],
   },
   plugins: [
+    siteMetadata,
     images({
       widths: [320, 640, 960],
       content: [{
@@ -86,10 +58,14 @@ export default defineConfig({
         maxWidth: 960,
       }],
     }),
-    metadata({ siteName: 'Commonplace' }),
+    metadata({ siteName: site.name }),
     clientNavigation({ prefetch: 'explicit' }),
-    sitemap({}),
-    rss({ items: postFeed }),
+    sitemap(),
+    rss({
+      title: site.name,
+      description: site.description,
+      items: postFeed,
+    }),
     search({ items: postSearch }),
   ],
 })

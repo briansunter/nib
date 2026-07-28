@@ -1,17 +1,18 @@
 import { siteHref, type SiteShellProps } from '@briansunter/nib'
 import { ThemeToggle } from './components/theme-toggle'
+import { site } from './site'
 
 function normalizedPath(path: string): string {
   return path === '/' ? path : path.replace(/\/+$/, '')
 }
 
-export function SiteShell({ children, route, site }: SiteShellProps) {
+export function SiteShell({ children, route }: SiteShellProps) {
   return (
     <div className="site-frame">
       <header className="site-header">
         <a className="wordmark" href={siteHref('/')}>
           <span aria-hidden="true">✦</span>
-          {site.title}
+          {site.name}
         </a>
         <nav aria-label="Primary navigation">
           {site.navigation?.map((item) => (

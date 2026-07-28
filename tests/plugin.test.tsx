@@ -12,7 +12,6 @@ const Page = () => <h1>Home</h1>
 describe('Nib plugins', () => {
   it('keeps client entries declarative, immutable, and validated once with their owners', () => {
     const client = validateNibConfig({
-      site: { title: 'Site' },
       plugins: [clientNavigation()],
     })
     expect(configuredClientEntries(client)).toEqual([{
@@ -22,7 +21,6 @@ describe('Nib plugins', () => {
     expect(Object.isFrozen(configuredClientEntries(client))).toBe(true)
 
     const explicitClient = validateNibConfig({
-      site: { title: 'Site' },
       plugins: [clientNavigation({ prefetch: 'explicit' })],
     })
     expect(configuredClientEntries(explicitClient)).toEqual([{
@@ -31,14 +29,12 @@ describe('Nib plugins', () => {
     }])
 
     expect(() => validateNibConfig({
-      site: { title: 'Site' },
       plugins: [{
         name: 'invalid-client-entry',
         clientEntries: [{ module: 'browser', initializer: 'not-valid()' }],
       }],
     })).toThrow('JavaScript initializer name')
     expect(() => validateNibConfig({
-      site: { title: 'Site' },
       plugins: [
         {
           name: 'first-owner',
@@ -62,30 +58,24 @@ describe('Nib plugins', () => {
   })
 
   it('validates names and hook shapes before Vite starts', () => {
-    expect(() => validateNibConfig({ site: { title: 'Site' }, plugins: [{}] }))
+    expect(() => validateNibConfig({ plugins: [{}] }))
       .toThrow('non-empty name')
     expect(() => validateNibConfig({
-      site: { title: 'Site' },
       plugins: [{ name: 'same' }, { name: 'same' }],
     })).toThrow('duplicated')
     expect(() => validateNibConfig({
-      site: { title: 'Site' },
       plugins: [{ name: 'invalid', renderer: true }],
     })).toThrow('renderer hook must be a function')
     expect(() => validateNibConfig({
-      site: { title: 'Site' },
       plugins: [{ name: 'invalid', setup: () => undefined }],
     })).toThrow('unsupported field setup')
     expect(() => validateNibConfig({
-      site: { title: 'Site' },
       plugins: [{ name: 'invalid', pageSources: {} }],
     })).toThrow('pageSources must be an array')
     expect(() => validateNibConfig({
-      site: { title: 'Site' },
       plugins: [{ name: 'invalid', clientEntries: {} }],
     })).toThrow('clientEntries must be an array')
     expect(() => validateNibConfig({
-      site: { title: 'Site' },
       plugins: [{ name: ' padded ' }],
     })).toThrow('non-empty name')
   })
@@ -96,8 +86,7 @@ describe('Nib plugins', () => {
       name: 'first',
       renderer(context) {
         expect(context.mode).toBe('production')
-        expect(Object.isFrozen(context.site)).toBe(true)
-        expect(Object.isFrozen(context.site.navigation)).toBe(true)
+        expect(context.origin).toBe('https://example.test')
         return {
           head() {
             events.push('first-head')
@@ -113,7 +102,7 @@ describe('Nib plugins', () => {
           async finalize(context) {
             expect(context.command).toBe('build')
             expect(context.mode).toBe('production')
-            expect(context.site.title).toBe('Site')
+            expect(context.origin).toBe('https://example.test')
             expect(Object.isFrozen(context.publication)).toBe(true)
             expect(Object.isFrozen(context.publication.routes)).toBe(true)
             events.push('first-finalize')
@@ -141,19 +130,19 @@ describe('Nib plugins', () => {
     })
     const renderer = await createProjectRenderer({
       config: {
-        site: { title: 'Site', navigation: [{ label: 'Home', href: '/' }] },
+        origin: 'https://example.test',
         plugins: [first, second],
       },
       root: process.cwd(),
       base: '/',
-      pages: { '/src/pages/page.tsx': { default: Page } },
+      pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
       islandModules: {},
     })
 
     const output = renderer.render('/')
     if (output.kind !== 'page') throw new Error('Expected a page output')
     expect(output.page.html).toBe(
-      '<div data-plugin="first"><section data-plugin="second"><header><a href="/">Site</a></header><main><h1>Home</h1></main></section></div>',
+      '<div data-plugin="first"><section data-plugin="second"><main><h1>Home</h1></main></section></div>',
     )
     expect(output.page.head).toContain('name="first"')
     expect(output.page.head).toContain('<title>Second title</title>')
@@ -179,12 +168,6 @@ describe('Nib plugins', () => {
   it('lets renderer plugins add structured head elements with route context', async () => {
     const renderer = await createProjectRenderer({
       config: {
-        site: {
-          title: 'Site',
-          head: {
-            elements: [{ tag: 'meta', attributes: { name: 'site', content: 'yes' } }],
-          },
-        },
         plugins: [definePlugin({
           name: 'head-plugin',
           renderer() {
@@ -204,12 +187,22 @@ describe('Nib plugins', () => {
       },
       root: process.cwd(),
       base: '/',
-      pages: { '/src/pages/page.tsx': { default: Page } },
+      pages: {
+        '/src/pages/page.tsx': {
+          default: Page,
+          meta: {
+            title: 'Home',
+            head: {
+              elements: [{ tag: 'meta', attributes: { name: 'page', content: 'yes' } }],
+            },
+          },
+        },
+      },
       islandModules: {},
     })
     const output = renderer.render('/')
     if (output.kind !== 'page') throw new Error('Expected a page output')
-    expect(output.page.head).toContain('name="site"')
+    expect(output.page.head).toContain('name="page"')
     expect(output.page.head).toContain('rel="canonical"')
   })
 
@@ -234,17 +227,17 @@ describe('Nib plugins', () => {
           kind: 'page',
           path: '/virtual',
           component: Page,
+          meta: { title: 'Virtual' },
         }
       },
     })
     const renderer = await createProjectRenderer({
       config: {
-        site: { title: 'Site' },
         plugins: [first, second],
       },
       root: process.cwd(),
       base: '/',
-      pages: { '/src/pages/page.tsx': { default: Page } },
+      pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
       islandModules: {},
     })
 
@@ -270,12 +263,11 @@ describe('Nib plugins', () => {
     })
     await expect(createProjectRenderer({
       config: {
-        site: { title: 'Site' },
         plugins: [duplicate('one'), duplicate('two')],
       },
       root: process.cwd(),
       base: '/',
-      pages: { '/src/pages/page.tsx': { default: Page } },
+      pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
       islandModules: {},
     })).rejects.toThrow('Duplicate route /same.xml: one routes()[0] and two routes()[0]')
   })
@@ -283,7 +275,6 @@ describe('Nib plugins', () => {
   it('attributes render hook failures to the originating plugin and route', async () => {
     const renderer = await createProjectRenderer({
       config: {
-        site: { title: 'Site' },
         plugins: [definePlugin({
           name: 'broken',
           renderer: () => ({ wrapPage: () => { throw new Error('original') } }),
@@ -291,7 +282,7 @@ describe('Nib plugins', () => {
       },
       root: process.cwd(),
       base: '/',
-      pages: { '/src/pages/page.tsx': { default: Page } },
+      pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
       islandModules: {},
     })
     expect(() => renderer.render('/')).toThrow('Nib plugin broken failed in wrapPage() for route /')

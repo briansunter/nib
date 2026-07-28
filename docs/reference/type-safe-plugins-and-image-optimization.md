@@ -86,9 +86,6 @@ export default defineConfig({
       cacheDirectory: '.nib/cache/images',
     }),
   ],
-  site: {
-    title: 'My site',
-  },
 })
 ```
 
@@ -250,7 +247,7 @@ export interface NibRendererPluginContext {
   readonly mode: NibMode
   readonly root: string
   readonly base: string
-  readonly site: NibPluginSiteConfig
+  readonly origin?: string
 }
 
 export interface NibRenderPageContext {
@@ -303,8 +300,8 @@ export function definePlugin<const Plugin extends NibPlugin>(
 
 `HeadContribution` and `HeadElement` are exported from both the main package and
 `@briansunter/nib/plugin`. The `head` hook is synchronous and runs before page
-composition; Nib merges its result after site and page metadata, validates it,
-and escapes it into the generated document.
+composition; Nib merges its result after page metadata, validates it, and
+escapes it into the generated document.
 
 `definePlugin` is an identity helper. Its purpose is contextual typing for hook
 parameters and preservation of a plugin factory's concrete return type. Plugin
@@ -348,7 +345,7 @@ const generic on `defineConfig` already preserves the concrete configuration:
 ```ts
 export interface NibConfig {
   base?: string
-  site: SiteConfig
+  origin?: string
   vite?: NibViteConfig
   plugins?: readonly NibPlugin[]
   // Existing fields remain unchanged.

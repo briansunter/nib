@@ -9,7 +9,7 @@ import type {
 import type { ContentRenderer, MarkdownContent } from './markdown-content'
 
 export interface PageMeta {
-  title?: string
+  title: string
   description?: string
   draft?: boolean
   head?: HeadContribution
@@ -72,7 +72,7 @@ export interface PageSourcePage {
   /** Stable collection identity when one input expands into multiple routes. */
   collectionId?: string
   data: unknown
-  meta?: PageMeta
+  meta: PageMeta
   layout?: string
 }
 
@@ -195,26 +195,6 @@ export interface MarkdownDefinition<
   rehypePlugins?: readonly Pluggable[]
 }
 
-export interface SiteConfig {
-  title: string
-  /** Canonical deployed origin, shared by feeds, sitemaps, and future document metadata. */
-  origin?: string
-  description?: string
-  titleTemplate?: string
-  navigation?: Array<{ label: string; href: string }>
-  head?: HeadContribution
-}
-
-/** Site facts after validation, copied into a deeply immutable public snapshot. */
-export type ResolvedSite = Readonly<
-  Omit<SiteConfig, 'navigation'>
-  & {
-    readonly navigation?: readonly Readonly<
-      NonNullable<SiteConfig['navigation']>[number]
-    >[]
-  }
->
-
 export type TrailingSlash = 'always' | 'never' | 'ignore'
 export type RedirectStatus = 301 | 302 | 307 | 308
 
@@ -240,7 +220,8 @@ export type NibViteConfig = (
 
 export interface NibConfig {
   base?: string
-  site: SiteConfig
+  /** Canonical deployed origin shared by canonical metadata and resource serializers. */
+  origin?: string
   trailingSlash?: TrailingSlash
   hosting?: NibHostingConfig
   redirects?: Readonly<Record<string, RedirectDefinition>>
@@ -283,7 +264,6 @@ export interface CollectionCapability<Result = unknown> {
 export interface PageProps<Config extends NibConfig = NibConfig> {
   /** Stable public facts about the route being rendered. */
   readonly route: PageRoute
-  readonly site: ResolvedSite
   readonly collections: LoadedCollections<Config>
 }
 
@@ -312,8 +292,8 @@ export interface SiteShellProps<
   children: ReactNode
 }
 
-/** Metadata after Nib has applied site defaults and title templates. */
-export type ResolvedPageMeta = Readonly<Required<Pick<PageMeta, 'title' | 'description'>> & PageMeta>
+/** Validated, immutable metadata authored by the page. */
+export type ResolvedPageMeta = Readonly<PageMeta>
 
 /** The immutable route facts exposed to pages and plugins. */
 export interface PageRoute {

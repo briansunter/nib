@@ -37,16 +37,16 @@ export interface RssItem {
 /** Context passed to a dynamic item provider. It is the same immutable route snapshot as routes(). */
 export type RssItemsContext = Readonly<Pick<
   NibRoutesPluginContext,
-  'command' | 'mode' | 'root' | 'base' | 'site' | 'routes' | 'readCollection'
+  'command' | 'mode' | 'root' | 'base' | 'origin' | 'routes' | 'readCollection'
 >>
 
 export interface RssOptions {
-  /** Overrides site.origin. */
-  readonly site?: string | URL
-  /** Defaults to site.title. */
-  readonly title?: string
-  /** Defaults to site.description. */
-  readonly description?: string
+  /** Overrides the configured deployment origin. */
+  readonly origin?: string | URL
+  /** RSS channel title. */
+  readonly title: string
+  /** RSS channel description. */
+  readonly description: string
   /** Output route. Defaults to /rss.xml. */
   readonly path?: string
   readonly language?: string
@@ -103,12 +103,12 @@ function itemElement(name: string, value: string | undefined): string | undefine
   return value === undefined ? undefined : `      <${name}>${escapeXml(value)}</${name}>`
 }
 
-function itemXml(item: RssItem, index: number, site: URL, base: string): string[] {
+function itemXml(item: RssItem, index: number, origin: URL, base: string): string[] {
   if (item === null || typeof item !== 'object' || Array.isArray(item)) {
     throw new Error(`Nib RSS item ${index + 1} must be an object`)
   }
   const title = requiredText(item.title, `item ${index + 1} title`)
-  const link = deployedLinkUrl(item.link, site, base, `Nib RSS item ${index + 1} link`)
+  const link = deployedLinkUrl(item.link, origin, base, `Nib RSS item ${index + 1} link`)
   const description = optionalText(item.description, `item ${index + 1} description`)
   const content = optionalText(item.content, `item ${index + 1} content`)
   const guid = optionalText(item.guid, `item ${index + 1} guid`)
@@ -143,7 +143,7 @@ function itemXml(item: RssItem, index: number, site: URL, base: string): string[
     pubDate === undefined ? undefined : `      <pubDate>${escapeXml(pubDate)}</pubDate>`,
     enclosure === undefined
       ? undefined
-      : `      <enclosure url="${escapeXml(deployedLinkUrl(enclosure.url, site, base, `Nib RSS item ${index + 1} enclosure URL`))}" type="${escapeXml(requiredText(enclosure.type, `item ${index + 1} enclosure type`))}"${enclosure.length === undefined ? '' : ` length="${enclosure.length}"`} />`,
+      : `      <enclosure url="${escapeXml(deployedLinkUrl(enclosure.url, origin, base, `Nib RSS item ${index + 1} enclosure URL`))}" type="${escapeXml(requiredText(enclosure.type, `item ${index + 1} enclosure type`))}"${enclosure.length === undefined ? '' : ` length="${enclosure.length}"`} />`,
     '    </item>',
   ].filter((line): line is string => line !== undefined)
 }
@@ -153,9 +153,9 @@ export function rss(options: RssOptions) {
   if (options === null || typeof options !== 'object' || Array.isArray(options)) {
     throw new Error('Nib RSS requires an options object')
   }
-  if (options.site !== undefined) deployedOrigin(options.site, undefined, 'Nib RSS site')
-  if (options.title !== undefined) requiredText(options.title, 'title')
-  if (options.description !== undefined) requiredText(options.description, 'description')
+  if (options.origin !== undefined) deployedOrigin(options.origin, undefined, 'Nib RSS origin')
+  requiredText(options.title, 'title')
+  requiredText(options.description, 'description')
   const routePath = options.path ?? '/rss.xml'
   if (!routePath.startsWith('/')) throw new Error('Nib RSS path must be an absolute route path')
   if (
@@ -182,9 +182,9 @@ export function rss(options: RssOptions) {
   return definePlugin({
     name: '@briansunter/nib/rss',
     async routes(context) {
-      const site = deployedOrigin(options.site, context.site.origin, 'Nib RSS site')
-      const title = requiredText(options.title ?? context.site.title, 'title')
-      const description = requiredText(options.description ?? context.site.description, 'description')
+      const origin = deployedOrigin(options.origin, context.origin, 'Nib RSS origin')
+      const title = requiredText(options.title, 'title')
+      const description = requiredText(options.description, 'description')
       const items = typeof options.items === 'function'
         ? await options.items(context)
         : isCollectionCapability<readonly RssItem[]>(options.items)
@@ -192,9 +192,9 @@ export function rss(options: RssOptions) {
           : options.items
       if (!Array.isArray(items)) throw new Error('Nib RSS items provider must return an array')
 
-      const channelUrl = deployedRouteUrl(site, context.base, '/')
-      const feedUrl = deployedRouteUrl(site, context.base, routePath)
-      const itemEntries = items.flatMap((item, index) => itemXml(item, index, site, context.base))
+      const channelUrl = deployedRouteUrl(origin, context.base, '/')
+      const feedUrl = deployedRouteUrl(origin, context.base, routePath)
+      const itemEntries = items.flatMap((item, index) => itemXml(item, index, origin, context.base))
       return {
         kind: 'resource',
         path: routePath,

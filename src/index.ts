@@ -79,10 +79,8 @@ export type {
   RedirectStatus,
   RedirectRoute,
   ResolvedPageMeta,
-  ResolvedSite,
   ResourceRoute,
   RouteSnapshot,
-  SiteConfig,
   SiteShellProps,
   TrailingSlash,
 } from './framework/types'

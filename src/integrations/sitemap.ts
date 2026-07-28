@@ -2,8 +2,8 @@ import { definePlugin, type NibResolvedPageRoute } from '../framework/plugin'
 import { deployedOrigin, deployedRouteUrl } from '../framework/deployed-url'
 
 export interface SitemapOptions {
-  /** Overrides site.origin. */
-  site?: string | URL
+  /** Overrides the configured deployment origin. */
+  origin?: string | URL
   /** Output route. Defaults to /sitemap.xml. */
   path?: string
   /** Optionally exclude page routes from the sitemap. */
@@ -19,11 +19,13 @@ function escapeXml(value: string): string {
     .replaceAll("'", '&apos;')
 }
 
-export function sitemap(options: SitemapOptions) {
+export function sitemap(options: SitemapOptions = {}) {
   if (options === null || typeof options !== 'object') {
     throw new Error('Nib sitemap requires an options object')
   }
-  if (options.site !== undefined) deployedOrigin(options.site, undefined, 'Nib sitemap site')
+  if (options.origin !== undefined) {
+    deployedOrigin(options.origin, undefined, 'Nib sitemap origin')
+  }
   const routePath = options.path ?? '/sitemap.xml'
   if (!routePath.startsWith('/')) {
     throw new Error('Nib sitemap path must be an absolute route path')
@@ -32,7 +34,7 @@ export function sitemap(options: SitemapOptions) {
   return definePlugin({
     name: '@briansunter/nib/sitemap',
     routes(context) {
-      const site = deployedOrigin(options.site, context.site.origin, 'Nib sitemap site')
+      const origin = deployedOrigin(options.origin, context.origin, 'Nib sitemap origin')
       const entries = context.routes
         .filter((route): route is NibResolvedPageRoute => (
           route.kind === 'page'
@@ -40,7 +42,7 @@ export function sitemap(options: SitemapOptions) {
           && (options.filter?.(route) ?? true)
         ))
         .map((route) => (
-          `  <url><loc>${escapeXml(deployedRouteUrl(site, context.base, route.path))}</loc></url>`
+          `  <url><loc>${escapeXml(deployedRouteUrl(origin, context.base, route.path))}</loc></url>`
         ))
       return {
         kind: 'resource',

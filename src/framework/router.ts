@@ -5,7 +5,6 @@ import type {
   RedirectDefinition,
   ResolvedRoute,
   ResolvedPageRoute,
-  SiteConfig,
   TrailingSlash,
 } from './types'
 import type { OwnedRouteRegistration } from './plugin'
@@ -81,7 +80,6 @@ function routeLayouts(
 
 export function createRoutes(
   modules: Record<string, PageModule>,
-  site: SiteConfig,
   layoutModules: RouteLayouts = {},
   trailingSlash: TrailingSlash = 'ignore',
 ): Map<string, ResolvedPageRoute> {
@@ -121,7 +119,7 @@ export function createRoutes(
         kind: 'page',
         path,
         component: page.component,
-        meta: resolveMeta(page.meta, site),
+        meta: resolveMeta(page.meta, `Page ${source} metadata`),
         source,
         status: normalizePath(path) === '/404' ? 404 : 200,
         ...(page.data === undefined ? {} : { data: page.data }),
@@ -225,7 +223,6 @@ export function addConfiguredRedirects(
 export function addPluginRoutes(
   routes: Map<string, ResolvedRoute>,
   contributions: readonly OwnedRouteRegistration[],
-  site: SiteConfig,
   trailingSlash: TrailingSlash = 'ignore',
 ): void {
   for (const [index, { plugin, route }] of contributions.entries()) {
@@ -243,7 +240,7 @@ export function addPluginRoutes(
         kind: 'page',
         path,
         component: route.component,
-        meta: resolveMeta(route.meta, site),
+        meta: resolveMeta(route.meta, `${label} metadata`),
         source,
         status: normalizePath(path) === '/404' ? 404 : 200,
         ...(route.data === undefined ? {} : { data: route.data }),

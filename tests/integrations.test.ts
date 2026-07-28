@@ -83,11 +83,11 @@ describe('publication integrations', () => {
     })
     const extension = await plugin.renderer?.({
       command: 'build', mode: 'production', root: '/site', base: '/docs/',
-      site: { title: 'Nib', origin: 'https://example.test' },
+      origin: 'https://example.test',
     })
     const head = extension?.head?.({
       command: 'build', mode: 'production', root: '/site', base: '/docs/',
-      site: { title: 'Nib', origin: 'https://example.test' },
+      origin: 'https://example.test',
       route: {
         kind: 'page', path: '/article/', source: 'test', status: 200,
         meta: { title: 'Article', description: 'Description' },
@@ -101,20 +101,19 @@ describe('publication integrations', () => {
     const absolute = metadata({ image: 'https://cdn.example/social.png', structuredData: false })
     const absoluteExtension = await absolute.renderer?.({
       command: 'build', mode: 'production', root: '/site', base: '/',
-      site: { title: 'Nib' },
     })
     const absoluteHead = absoluteExtension?.head?.({
-      command: 'build', mode: 'production', root: '/site', base: '/', site: { title: 'Nib' },
+      command: 'build', mode: 'production', root: '/site', base: '/',
       route: { kind: 'page', path: '/', source: 'test', status: 200, meta: { title: 'Home', description: '' } },
     })
     expect(JSON.stringify(absoluteHead)).toContain('https://cdn.example/social.png')
     const noOriginExtension = await metadata({ image: '/relative.png' }).renderer?.({
-      command: 'build', mode: 'production', root: '/site', base: '/', site: { title: 'Nib' },
+      command: 'build', mode: 'production', root: '/site', base: '/',
     })
     expect(() => noOriginExtension?.head?.({
-      command: 'build', mode: 'production', root: '/site', base: '/', site: { title: 'Nib' },
+      command: 'build', mode: 'production', root: '/site', base: '/',
       route: { kind: 'page', path: '/', source: 'test', status: 200, meta: { title: 'Home', description: '' } },
-    })).toThrow('site.origin')
+    })).toThrow('configured origin')
   })
 
   it('applies route-level image, type, and twitter card overrides independently', async () => {
@@ -127,13 +126,13 @@ describe('publication integrations', () => {
     })
     const extension = await plugin.renderer?.({
       command: 'build', mode: 'production', root: '/site', base: '/',
-      site: { title: 'Nib', origin: 'https://example.test' },
+      origin: 'https://example.test',
     })
 
     // Full override: every route value wins and structured data follows the route type.
     const overriddenHead = extension?.head?.({
       command: 'build', mode: 'production', root: '/site', base: '/',
-      site: { title: 'Nib', origin: 'https://example.test' },
+      origin: 'https://example.test',
       route: {
         kind: 'page', path: '/article/', source: 'test', status: 200,
         meta: {
@@ -159,7 +158,7 @@ describe('publication integrations', () => {
     // Independent fallback: an unset field keeps its plugin default.
     const partial = JSON.stringify(extension?.head?.({
       command: 'build', mode: 'production', root: '/site', base: '/',
-      site: { title: 'Nib', origin: 'https://example.test' },
+      origin: 'https://example.test',
       route: {
         kind: 'page', path: '/page/', source: 'test', status: 200,
         meta: { title: 'Plain Page', description: 'Plain body', type: 'article' },
@@ -176,7 +175,6 @@ describe('publication integrations', () => {
       mode: 'production' as const,
       root: '/site',
       base: '/',
-      site: { title: 'Site' },
       readCollection: () => {
         throw new Error('No collection capability configured')
       },
@@ -208,7 +206,7 @@ describe('publication integrations', () => {
 
   it('converts explicitly trusted Markdown media and rejects other iframe hosts', () => {
     const compiled = markdownToCompiledPage(
-      '# Media\n\n![autoplay](/videos/demo.mp4)\n\n<iframe src="https://www.youtube.com/embed/demo"></iframe>',
+      '---\ntitle: Media\n---\n\n# Media\n\n![autoplay](/videos/demo.mp4)\n\n<iframe src="https://www.youtube.com/embed/demo"></iframe>',
       {
         allowDangerousHtml: true,
         rehypePlugins: [markdownMedia({ iframeHosts: ['www.youtube.com'] })],
@@ -219,7 +217,7 @@ describe('publication integrations', () => {
     expect(compiled.html).toContain('https://www.youtube.com/embed/demo')
 
     const disallowed = markdownToCompiledPage(
-      '<iframe src="https://evil.example/embed"></iframe>',
+      '---\ntitle: Disallowed media\n---\n\n<iframe src="https://evil.example/embed"></iframe>',
       {
         allowDangerousHtml: true,
         rehypePlugins: [markdownMedia({ iframeHosts: ['www.youtube.com'] })],
@@ -243,7 +241,8 @@ describe('publication integrations', () => {
 
   it('preserves safe iframe presentation and permission attributes exactly', () => {
     const compiled = markdownToCompiledPage(
-      '<iframe width="515" height="915" src="https://www.youtube.com/embed/demo" '
+      '---\ntitle: Embedded video\n---\n\n'
+      + '<iframe width="515" height="915" src="https://www.youtube.com/embed/demo" '
       + 'title="Hydrofoil Surfing" loading="lazy" frameborder="0" '
       + 'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" '
       + 'allowfullscreen style="max-width: 600px; border-radius: 8px;"></iframe>',
@@ -265,7 +264,8 @@ describe('publication integrations', () => {
     expect(compiled.html).toContain('style="max-width: 600px; border-radius: 8px;"')
 
     const withoutFullscreen = markdownToCompiledPage(
-      '<iframe src="https://www.youtube.com/embed/demo" title="No fullscreen"></iframe>',
+      '---\ntitle: Video without fullscreen\n---\n\n'
+      + '<iframe src="https://www.youtube.com/embed/demo" title="No fullscreen"></iframe>',
       {
         allowDangerousHtml: true,
         rehypePlugins: [markdownMedia({ iframeHosts: ['www.youtube.com'] })],

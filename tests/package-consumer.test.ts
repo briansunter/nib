@@ -149,8 +149,8 @@ describe('published package consumer', () => {
           + "import { clientNavigation } from '@briansunter/nib/navigation'",
         )
         .replace(
-          '  shell: SiteShell,',
-          '  shell: SiteShell,\n  plugins: [clientNavigation()],',
+          '  plugins: [siteMetadata],',
+          '  plugins: [siteMetadata, clientNavigation()],',
         ),
     )
     await execute(
@@ -300,12 +300,11 @@ import { rss } from '@briansunter/nib/rss'
 import { sitemap } from '@briansunter/nib/sitemap'
 
 export default defineConfig({
-  site: { title: 'Packed images' },
+  origin: 'https://packed.example',
   plugins: [
     images({ widths: [32, 64], formats: ['webp'] }),
-    sitemap({ site: 'https://packed.example' }),
+    sitemap({}),
     rss({
-      site: 'https://packed.example',
       title: 'Packed feed',
       description: 'A packed package consumer feed.',
       items: [{ title: 'Home', link: '/' }],
@@ -316,6 +315,8 @@ export default defineConfig({
     await fs.writeFile(path.join(consumer, 'src/pages/page.tsx'), `
 import { Image } from '@briansunter/nib-images'
 import hero from '../hero.png?nib-image'
+
+export const meta = { title: 'Packed images' }
 
 export default function Page() {
   return <Image src={hero} alt="Packed fixture" width={32} priority />

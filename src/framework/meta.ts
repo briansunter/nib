@@ -3,7 +3,7 @@ import type {
   HeadContribution,
   HeadElement,
   PageMeta,
-  SiteConfig,
+  ResolvedPageMeta,
 } from './types'
 
 const attributeName = /^[A-Za-z_:][A-Za-z0-9:._-]*$/
@@ -122,43 +122,42 @@ function renderElement(element: HeadElement): string {
   return `${opening}>${escapeRawText(element.content ?? '')}</${element.tag}>`
 }
 
-export function resolveMeta(meta: PageMeta | undefined, site: SiteConfig) {
-  normalizeHeadContribution(site.head, 'Nib site.head')
-  const pageHead = normalizeHeadContribution(meta?.head, 'Page metadata head')
-  const rawTitle = meta?.title ?? site.title
-  const title = meta?.title && site.titleTemplate
-    ? site.titleTemplate.replace('%s', meta.title)
-    : rawTitle
-
-  return {
+export function resolveMeta(
+  meta: PageMeta | undefined,
+  label = 'Page metadata',
+): ResolvedPageMeta {
+  if (typeof meta?.title !== 'string' || meta.title.trim() === '') {
+    throw new Error(`${label} must define a non-empty title`)
+  }
+  if (meta.description !== undefined && typeof meta.description !== 'string') {
+    throw new Error(`${label} description must be a string`)
+  }
+  const pageHead = normalizeHeadContribution(meta.head, `${label} head`)
+  return Object.freeze({
     ...meta,
     ...(pageHead === undefined ? {} : { head: pageHead }),
-    title,
-    description: meta?.description ?? site.description ?? ''
-  }
+  })
 }
 
 export function renderHead(
-  meta: ReturnType<typeof resolveMeta>,
-  site?: Pick<SiteConfig, 'head'>,
+  meta: ResolvedPageMeta,
   additional?: HeadContribution,
 ): string {
-  const siteHead = normalizeHeadContribution(site?.head, 'Nib site.head')
   const pageHead = normalizeHeadContribution(meta.head, 'Page metadata head')
   const rendererHead = normalizeHeadContribution(additional, 'Renderer head contribution')
-  const title = rendererHead?.title ?? pageHead?.title ?? siteHead?.title ?? meta.title
+  const title = rendererHead?.title ?? pageHead?.title ?? meta.title
   const description = rendererHead?.description
     ?? pageHead?.description
-    ?? siteHead?.description
     ?? meta.description
   const elements = [
-    ...(siteHead?.elements ?? []),
     ...(pageHead?.elements ?? []),
     ...(rendererHead?.elements ?? []),
   ]
   return [
     `<title>${escapeHtml(title)}</title>`,
-    `<meta name="description" content="${escapeHtml(description)}" />`,
+    ...(description === undefined
+      ? []
+      : [`<meta name="description" content="${escapeHtml(description)}" />`]),
     ...elements.map(renderElement),
   ].join('\n    ')
 }

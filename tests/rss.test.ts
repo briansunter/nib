@@ -6,7 +6,6 @@ const context = {
   mode: 'production' as const,
   root: '/site',
   base: '/journal/',
-  site: { title: 'Journal' },
   readCollection: () => {
     throw new Error('No collection capability configured')
   },
@@ -24,7 +23,7 @@ const context = {
 describe('RSS plugin', () => {
   it('emits base-safe RSS 2.0 XML with escaped, typed item fields', async () => {
     const plugin = rss({
-      site: 'https://example.test',
+      origin: 'https://example.test',
       title: 'Journal & notes',
       description: 'The <good> things',
       language: 'en-US',
@@ -71,7 +70,7 @@ describe('RSS plugin', () => {
 
   it('supports async item providers with the immutable route snapshot', async () => {
     const plugin = rss({
-      site: new URL('https://example.test'),
+      origin: new URL('https://example.test'),
       title: 'Journal',
       description: 'Entries',
       path: '/feeds/journal.xml',
@@ -90,16 +89,16 @@ describe('RSS plugin', () => {
     expect(route.body).toContain('href="https://example.test/journal/feeds/journal.xml"')
   })
 
-  it('uses the configured site metadata when feed identity is not repeated', async () => {
-    const plugin = rss({ items: [{ title: 'Home', link: '/' }] })
+  it('uses the configured origin while keeping feed identity explicit', async () => {
+    const plugin = rss({
+      title: 'Journal',
+      description: 'Entries',
+      items: [{ title: 'Home', link: '/' }],
+    })
     if (!plugin.routes) throw new Error('RSS plugin has no route provider')
     const route = await plugin.routes({
       ...context,
-      site: {
-        title: 'Journal',
-        description: 'Entries',
-        origin: 'https://journal.example',
-      },
+      origin: 'https://journal.example',
     })
     if (!route || Array.isArray(route) || route.kind !== 'resource') {
       throw new Error('Expected an RSS resource route')
@@ -110,23 +109,23 @@ describe('RSS plugin', () => {
 
   it('rejects invalid feed options and item data', async () => {
     expect(() => rss({
-      site: 'ftp://example.test', title: 'Journal', description: 'Entries', items: [],
+      origin: 'ftp://example.test', title: 'Journal', description: 'Entries', items: [],
     })).toThrow('HTTP or HTTPS')
     expect(() => rss({
-      site: 'https://example.test/docs', title: 'Journal', description: 'Entries', items: [],
+      origin: 'https://example.test/docs', title: 'Journal', description: 'Entries', items: [],
     })).toThrow('origin')
     expect(() => rss({
-      site: 'https://example.test', title: 'Journal', description: 'Entries', path: 'rss.xml', items: [],
+      origin: 'https://example.test', title: 'Journal', description: 'Entries', path: 'rss.xml', items: [],
     })).toThrow('absolute route path')
     expect(() => rss({
-      site: 'https://example.test', title: 'Journal', description: 'Entries', ttl: -1, items: [],
+      origin: 'https://example.test', title: 'Journal', description: 'Entries', ttl: -1, items: [],
     })).toThrow('non-negative integer')
     expect(() => rss({
-      site: 'https://example.test', title: 'Journal', description: 'Entries', stylesheet: '', items: [],
+      origin: 'https://example.test', title: 'Journal', description: 'Entries', stylesheet: '', items: [],
     })).toThrow('non-empty string')
 
     const plugin = rss({
-      site: 'https://example.test',
+      origin: 'https://example.test',
       title: 'Journal',
       description: 'Entries',
       items: [{ title: 'Bad link', link: 'relative-link' }],
@@ -137,7 +136,7 @@ describe('RSS plugin', () => {
 
   it('emits stylesheet, dc creator, and channel metadata for original-feed parity', async () => {
     const plugin = rss({
-      site: 'https://example.test',
+      origin: 'https://example.test',
       title: 'Journal',
       description: 'Entries',
       path: '/index.xml',

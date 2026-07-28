@@ -13,7 +13,7 @@ export interface MetadataOptions {
 
 function absoluteUrl(value: string, context: NibRenderPageContext): string {
   if (/^https?:\/\//i.test(value)) return value
-  const origin = deployedOrigin(context.site.origin, undefined, 'Nib metadata')
+  const origin = deployedOrigin(context.origin, undefined, 'Nib metadata')
   return deployedRouteUrl(origin, context.base, value)
 }
 
@@ -29,9 +29,9 @@ function contribution(
   const image = routeMeta.image ?? options.image
   const elements: NonNullable<HeadContribution['elements']>[number][] = []
   let url: string | undefined
-  if (context.site.origin !== undefined) {
+  if (context.origin !== undefined) {
     url = deployedRouteUrl(
-      deployedOrigin(context.site.origin, undefined, 'Nib metadata'),
+      deployedOrigin(context.origin, undefined, 'Nib metadata'),
       context.base,
       context.route.path,
     )
@@ -41,13 +41,17 @@ function contribution(
     elements.push({ tag: 'meta', attributes })
   }
   addMeta({ property: 'og:title', content: context.route.meta.title })
-  addMeta({ property: 'og:description', content: context.route.meta.description })
+  if (context.route.meta.description !== undefined) {
+    addMeta({ property: 'og:description', content: context.route.meta.description })
+  }
   addMeta({ property: 'og:type', content: type })
   if (url !== undefined) addMeta({ property: 'og:url', content: url })
   if (options.siteName !== undefined) addMeta({ property: 'og:site_name', content: options.siteName })
   addMeta({ name: 'twitter:card', content: twitterCard })
   addMeta({ name: 'twitter:title', content: context.route.meta.title })
-  addMeta({ name: 'twitter:description', content: context.route.meta.description })
+  if (context.route.meta.description !== undefined) {
+    addMeta({ name: 'twitter:description', content: context.route.meta.description })
+  }
   if (image !== undefined) {
     addMeta({ property: 'og:image', content: absoluteUrl(image, context) })
     addMeta({ name: 'twitter:image', content: absoluteUrl(image, context) })
@@ -60,7 +64,9 @@ function contribution(
         '@context': 'https://schema.org',
         '@type': type === 'article' ? 'Article' : 'WebPage',
         name: context.route.meta.title,
-        description: context.route.meta.description,
+        ...(context.route.meta.description === undefined
+          ? {}
+          : { description: context.route.meta.description }),
         url,
       }),
     })

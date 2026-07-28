@@ -7,10 +7,7 @@ import { createContentRenderer } from './markdown-content'
 import { renderReactPage } from './render-page'
 import { validateIslandModules, type IslandModule } from './islands'
 import { behaviorFileToId } from './behavior-paths'
-import {
-  resolvedRouteSnapshot,
-  resolvedSiteSnapshot,
-} from './snapshots'
+import { resolvedRouteSnapshot } from './snapshots'
 import {
   addConfiguredRedirects,
   addPluginRoutes,
@@ -44,7 +41,6 @@ import type {
   PageDescriptor,
   CollectionCapability,
   PageRoute,
-  ResolvedSite,
 } from './types'
 
 export interface ProjectRendererOptions {
@@ -127,14 +123,13 @@ export interface ProjectRenderer {
 function composePage(
   route: ResolvedPageRoute,
   publicRoute: PageRoute,
-  site: ResolvedSite,
   shell: NibConfig['shell'],
   collections: unknown,
 ): ReactNode {
   const Content = route.content === undefined
     ? undefined
     : createContentRenderer(route.content)
-  const pageProps = { route: publicRoute, site, collections, Content }
+  const pageProps = { route: publicRoute, collections, Content }
   let content = createElement(route.component, {
     ...pageProps,
     ...(route.data === undefined ? {} : { data: route.data }),
@@ -179,12 +174,11 @@ export async function createProjectRenderer(
     mode: options.command === 'serve' ? 'development' as const : 'production' as const,
     root: options.root,
     base: options.base,
-    site: resolvedSiteSnapshot(options.config.site),
+    ...(options.config.origin === undefined ? {} : { origin: options.config.origin }),
   })
   const configuredPlugins = options.config.plugins ?? []
   const routes: Map<string, ResolvedRoute> = new Map(createRoutes(
     options.pages,
-    options.config.site,
     layoutModules,
     options.config.trailingSlash,
   ))
@@ -200,7 +194,7 @@ export async function createProjectRenderer(
     if (priorName !== undefined) {
       throw new Error(
         `Collection definition is registered as both ${priorName} and ${name}; `
-        + 'each capability collection must have one site identity',
+        + 'each capability collection must have one configuration identity',
       )
     }
     collectionDefinitions.set(definition, name)
@@ -234,7 +228,6 @@ export async function createProjectRenderer(
     addPluginRoutes(
       routes,
       contributedRoutes,
-      options.config.site,
       options.config.trailingSlash,
     )
   }
@@ -287,17 +280,16 @@ export async function createProjectRenderer(
       if (knownRoute === undefined) routeSnapshots.set(publicRoute.path, publicRoute)
       const pageContext: NibRenderPageContext = Object.freeze({
         command: options.command ?? 'build',
-        site: rendererContext.site,
         route: publicRoute,
         root: options.root,
         base: options.base,
+        ...(options.config.origin === undefined ? {} : { origin: options.config.origin }),
         mode: options.command === 'serve' ? 'development' : 'production',
       })
       const head = plugins.head(pageContext)
       const content = plugins.wrapPage(composePage(
         route,
         publicRoute,
-        rendererContext.site,
         options.config.shell,
         collections,
       ), pageContext)
@@ -311,7 +303,7 @@ export async function createProjectRenderer(
         kind: 'page',
         page: {
           status: route.status,
-          head: renderHead(publicRoute.meta, rendererContext.site, head),
+          head: renderHead(publicRoute.meta, head),
           html: reactPage.html,
           islands: reactPage.islands,
           behaviors: reactPage.behaviors,

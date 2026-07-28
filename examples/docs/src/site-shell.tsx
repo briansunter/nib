@@ -1,5 +1,6 @@
 import { siteHref, type SiteShellProps } from '@briansunter/nib'
 import { documentation } from './docs-navigation'
+import { site } from './site'
 
 const repositoryUrl = 'https://github.com/briansunter/nib'
 
@@ -8,7 +9,7 @@ function routePath(href: string): string {
   return withoutTrailingSlash || '/'
 }
 
-export function SiteShell({ children, route, site }: SiteShellProps) {
+export function SiteShell({ children, route }: SiteShellProps) {
   const currentPath = routePath(route.path)
   const isDocsRoute = currentPath === '/docs' || currentPath.startsWith('/docs/')
 
@@ -77,12 +78,12 @@ export function SiteShell({ children, route, site }: SiteShellProps) {
               <p className="mobile-nav__note">Static by default. Interactive by choice.</p>
             </div>
           </details>
-          <a className="site-brand" href={siteHref('/')} aria-label={`${site.title} home`}>
+          <a className="site-brand" href={siteHref('/')} aria-label={`${site.name} home`}>
             <span className="site-brand__mark" aria-hidden="true">
               <img src={siteHref('/nib-mark.svg')} alt="" />
             </span>
             <span className="site-brand__words">
-              <span className="site-brand__name">{site.title}</span>
+              <span className="site-brand__name">{site.name}</span>
               <span className="site-brand__tagline">framework docs</span>
             </span>
           </a>

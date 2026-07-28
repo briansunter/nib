@@ -16,7 +16,6 @@ import { defineConfig } from '@briansunter/nib'
 import { clientNavigation } from '@briansunter/nib/navigation'
 
 export default defineConfig({
-  site: { title: 'My site' },
   plugins: [clientNavigation()],
 })
 ```

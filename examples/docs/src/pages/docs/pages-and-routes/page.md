@@ -24,7 +24,7 @@ optionally enhance navigation between these same static documents.
 
 ## TSX pages and metadata
 
-Export a default component and optional `meta`:
+Export a default component and its required `meta`:
 
 ```tsx
 import type { PageMeta } from '@briansunter/nib'
@@ -39,20 +39,29 @@ export default function AboutPage() {
 }
 ```
 
-The site config supplies defaults. A page’s `title` and `description` override those defaults when present. `draft: true` prevents a page from entering the route map or generated output.
+The page title is required and is the document title by default. Description
+and other metadata fields are optional. `draft: true` prevents a page from
+entering the route map or generated output. Applications that want title
+templates or metadata defaults can implement that policy with a local renderer
+plugin.
 
 TSX pages, layouts, and ordinary components produce static HTML. Put state and event handlers in a [React island](../react-islands/) so only that boundary loads browser JavaScript.
 
 ## Navigation and links
 
-Add top-level links in `nib.config.ts`:
+Keep navigation in an application module such as `src/site.ts`:
 
 ```ts
-navigation: [
-  { label: 'Home', href: '/' },
-  { label: 'Docs', href: '/docs/' },
-]
+export const site = {
+  navigation: [
+    { label: 'Home', href: '/' },
+    { label: 'Docs', href: '/docs/' },
+  ],
+} as const
 ```
+
+Import the value in your shell or another component. Nib treats this as
+ordinary application data and does not constrain its shape.
 
 For internal links in TSX, use `siteHref`:
 

@@ -89,7 +89,7 @@ export function nibMarkdown(configPath = 'nib.config.ts'): Plugin {
         `export const layout = compiled.layout`,
         `export const content = compiled.content`,
         `const defaultClassName = 'nib-markdown'`,
-        `export default function MarkdownPage({ route: _route, site: _site, collections: _collections, data: _data, Content = NibContent, className = defaultClassName, ...articleProps } = {}) {`,
+        `export default function MarkdownPage({ route: _route, collections: _collections, data: _data, Content = NibContent, className = defaultClassName, ...articleProps } = {}) {`,
         `  return createElement(Content, {`,
         `    ...articleProps,`,
         `    ...(Content === NibContent ? { body: compiled.content } : {}),`,

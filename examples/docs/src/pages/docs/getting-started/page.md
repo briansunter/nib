@@ -16,29 +16,25 @@ cd my-site
 npm run dev
 ```
 
-The command creates only your site configuration and source files, installs dependencies, and leaves Nib as a versioned dependency. Framework routing, Vite integration, development SSR, prerendering, document generation, and island hydration stay inside `@briansunter/nib`.
+The command creates only your framework configuration and source files, installs dependencies, and leaves Nib as a versioned dependency. Framework routing, Vite integration, development SSR, prerendering, document generation, and island hydration stay inside `@briansunter/nib`.
 
 ## 2. Set the site identity
 
-Edit `nib.config.ts`:
+Identity and navigation are application data. Put them in `src/site.ts`:
 
 ```ts
-import { defineConfig } from '@briansunter/nib'
-
-export default defineConfig({
-  site: {
-    title: 'My Site',
-    description: 'A short description of my site.',
-    titleTemplate: '%s | My Site',
-    navigation: [
-      { label: 'Home', href: '/' },
-      { label: 'Hello', href: '/hello/' },
-    ],
-  },
-})
+export const site = {
+  name: 'My Site',
+  description: 'A short description of my site.',
+  navigation: [
+    { label: 'Home', href: '/' },
+    { label: 'Hello', href: '/hello/' },
+  ],
+} as const
 ```
 
-The site config supplies default metadata and header navigation.
+Import this value from the site shell, footer, feed setup, or anywhere else
+that needs it. Nib does not assign meaning to its keys.
 
 ## 3. Add an optional Vite adapter
 
@@ -51,7 +47,6 @@ import { defineConfig } from '@briansunter/nib'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  site: { title: 'My Site' },
   vite: () => tailwindcss(),
 })
 ```
@@ -64,6 +59,13 @@ hooks, such as the image optimizer.
 Create `src/pages/hello/page.tsx`:
 
 ```tsx
+import type { PageMeta } from '@briansunter/nib'
+
+export const meta = {
+  title: 'Hello | My Site',
+  description: 'A first page built with Nib.',
+} satisfies PageMeta
+
 export default function HelloPage() {
   return <h1>Hello from Nib</h1>
 }

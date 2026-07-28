@@ -3,7 +3,7 @@ import { glob } from '@briansunter/nib/server'
 import { parse as parseYaml } from 'yaml'
 
 export const markdownSchema = z.object({
-  title: z.string().optional(),
+  title: z.string(),
   description: z.string().optional(),
   draft: z.boolean().optional(),
   layout: z.string().optional(),

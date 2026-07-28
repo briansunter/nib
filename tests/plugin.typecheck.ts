@@ -28,7 +28,7 @@ const plugin = definePlugin({
     }
   },
   renderer(context) {
-    context.site.title
+    context.origin
     return {
       head(render) {
         render.route.path
@@ -55,12 +55,12 @@ const plugin = definePlugin({
   },
 })
 
-const config = defineConfig({ site: { title: 'Typed' }, plugins: [plugin] as const })
+const config = defineConfig({ plugins: [plugin] as const })
 const tuple: readonly [typeof plugin] = config.plugins!
 void tuple
 
 defineConfig({
-  site: { title: 'Typed app Vite' },
+  origin: 'https://typed.example',
   trailingSlash: 'always',
   redirects: {
     '/old': { destination: '/new', status: 308 },
@@ -73,9 +73,13 @@ defineConfig({
 })
 
 defineConfig({
-  site: { title: 'Invalid app Vite' },
   // @ts-expect-error app Vite contributions must be factories.
   vite: true,
+})
+
+defineConfig({
+  // @ts-expect-error configuration keys are closed and typo-safe.
+  orgin: 'https://typo.example',
 })
 
 // @ts-expect-error renderer hooks must be functions.

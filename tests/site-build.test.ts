@@ -130,7 +130,7 @@ describe('framework-owned site builds', () => {
       'utf8',
     )) as Record<string, BuildManifestEntry>
 
-    expect(home).toContain('<title>Home | Journal</title>')
+    expect(home).toContain('<title>Home</title>')
     expect(home).toMatch(/<link rel="stylesheet" href="\/journal\/assets\/[^"]+\.css" \/>/)
     expect(home).toContain('data-site="Journal"')
     expect(home).toContain('data-island="counter"')
@@ -271,11 +271,11 @@ describe('framework-owned site builds', () => {
       )
       await fs.writeFile(
         path.join(temporaryRoot, 'nib.config.ts'),
-        'export default {}',
+        'export default { unsupported: true }',
       )
 
       await expect(buildSite({ root: temporaryRoot })).rejects.toThrow(
-        'nib.config.ts must export an object with a site configuration',
+        'Nib configuration has unsupported field unsupported',
       )
       expect(await fs.readFile(
         path.join(temporaryRoot, 'dist/client/index.html'),

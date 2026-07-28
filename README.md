@@ -41,7 +41,7 @@ search data, redirects, and hosting output.
   routes.
 - Plugin-contributed data formats and virtual page, XML, or text routes.
 - Configured redirects and `always`, `never`, or `ignore` trailing-slash policy.
-- Structured site, page, and renderer-plugin document-head contributions.
+- Required page titles and optional renderer-plugin document-head contributions.
 - Configurable Unified remark and rehype Markdown extensions.
 - Build-time collections for indexes, navigation, and related content.
 - React islands with `load`, `idle`, and `visible` hydration.
@@ -49,8 +49,8 @@ search data, redirects, and hosting output.
 - Optional Vite styling adapters; the starter opts into Tailwind without making
   it a framework dependency.
 - Base-path support for GitHub Pages and other subpath deployments.
-- A single `nib.config.ts` configuration point for site metadata, content sources,
-  collections, an optional app-owned Vite adapter, and an optional shell.
+- A small `nib.config.ts` configuration point for framework behavior, content
+  sources, collections, optional integrations, and an optional shell.
 
 ## Authoring model
 
@@ -78,7 +78,7 @@ Each route folder contains one `page.tsx`, `page.md`, or configured
 `page.<extension>`. Routes are discovered at build time, so there is no client
 router or runtime route loader.
 
-TSX pages may export typed metadata. Markdown pages support `title`,
+Every page supplies typed metadata with a required `title`. Markdown pages support `title`,
 `description`, `draft`, `layout`, and social preview fields (`image`, `type`,
 and `twitterCard`) by default; `defineMarkdown` can replace that schema.
 `definePageSource` handles custom page formats, while
@@ -162,39 +162,47 @@ boundary with `defineClientBehavior` and put its implementation under
 root, JSON props, and an `AbortSignal`. Behavior-only routes keep their complete
 static HTML and do not ship React DOM.
 
-### Document head
+### Site identity and document head
 
-Site configuration and page metadata can add typed head elements without taking
-ownership of Nib's document template. Attributes are escaped and event-handler
-attributes are rejected; script and style text is protected from closing its
-raw-text element.
+Site identity and navigation are application data, not framework configuration.
+Keep them in an ordinary typed module and import that module wherever the
+application needs it:
 
 ```ts
-import { defineConfig } from '@briansunter/nib'
+// src/site.ts
+export const site = {
+  name: 'My site',
+  description: 'Recent writing from My site.',
+  navigation: [
+    { label: 'Home', href: '/' },
+    { label: 'Notes', href: '/notes/' },
+  ],
+} as const
+```
+
+The shell can import `site.navigation`; pages remain the authority for their
+own metadata:
+
+```ts
 import type { PageMeta } from '@briansunter/nib'
 
-export default defineConfig({
-  site: {
-    title: 'My site',
-    head: {
-      elements: [{
-        tag: 'link',
-        attributes: { rel: 'alternate', type: 'application/rss+xml', href: '/rss.xml' },
-      }],
-    },
-  },
-})
-
 export const meta = {
+  title: 'Notes | My site',
+  description: 'Recent notes.',
   head: {
     elements: [{ tag: 'meta', attributes: { name: 'theme-color', content: '#0f172a' } }],
   },
 } satisfies PageMeta
 ```
 
-Renderer plugins can contribute the same `HeadContribution` shape from their
-typed `renderer().head(context)` hook. Nib emits site, page, then plugin
-contributions in that order; later `title` and `description` overrides win.
+There is no `resolveHead` phase. If an application wants a title template or a
+default description, it may express that optional policy as a small local
+renderer plugin; otherwise Nib emits page metadata directly. Renderer plugins
+can also contribute the same `HeadContribution` shape from their typed
+`renderer().head(context)` hook. Nib emits page metadata followed by plugin
+contributions; later `title` and `description` overrides win. Head attributes
+are escaped, event-handler attributes are rejected, and script/style text is
+protected from closing its raw-text element.
 When the `metadata()` plugin is enabled, a page's `image`, `type`, and
 `twitterCard` metadata override the plugin defaults independently, so article
 pages can use their own social preview without duplicating or replacing
@@ -212,11 +220,7 @@ import { defineConfig } from '@briansunter/nib'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  site: {
-    title: 'My site',
-    description: 'Recent writing from My site.',
-    origin: 'https://my-site.example',
-  },
+  origin: 'https://my-site.example',
   vite: () => tailwindcss(),
 })
 ```
@@ -241,7 +245,7 @@ import { rss } from '@briansunter/nib/rss'
 import { sitemap } from '@briansunter/nib/sitemap'
 
 export default defineConfig({
-  site: { title: 'My site' },
+  origin: 'https://my-site.example',
   trailingSlash: 'always',
   redirects: {
     '/old': '/new',
@@ -251,8 +255,10 @@ export default defineConfig({
     },
   },
   plugins: [
-    sitemap({}),
+    sitemap(),
     rss({
+      title: 'My site',
+      description: 'Recent writing from My site.',
       items: [
         { title: 'Hello', link: '/posts/hello/', pubDate: '2026-07-19' },
       ],
@@ -336,7 +342,6 @@ import remarkToc from 'remark-toc'
 import rehypeExternalLinks from 'rehype-external-links'
 
 export default defineConfig({
-  site: { title: 'My site' },
   markdown: {
     remarkPlugins: [[remarkToc, { heading: 'Contents' }]],
     rehypePlugins: [[rehypeExternalLinks, { rel: ['nofollow'] }]],
@@ -384,7 +389,6 @@ import { defineConfig } from '@briansunter/nib'
 import { clientNavigation } from '@briansunter/nib/navigation'
 
 export default defineConfig({
-  site: { title: 'My site' },
   plugins: [clientNavigation()],
 })
 ```
@@ -455,7 +459,6 @@ import { defineConfig } from '@briansunter/nib'
 import { images } from '@briansunter/nib-images/plugin'
 
 export default defineConfig({
-  site: { title: 'My site' },
   plugins: [images()],
 })
 ```

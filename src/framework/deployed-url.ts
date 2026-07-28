@@ -5,7 +5,9 @@ export function deployedOrigin(
   label: string,
 ): URL {
   const candidate = value ?? fallback
-  if (candidate === undefined) throw new Error(`${label} requires site.origin or an explicit site option`)
+  if (candidate === undefined) {
+    throw new Error(`${label} requires a configured origin or an explicit origin option`)
+  }
   const origin = new URL(candidate)
   if (!['http:', 'https:'].includes(origin.protocol)) {
     throw new Error(`${label} must use HTTP or HTTPS`)
@@ -20,14 +22,14 @@ function basePath(base: string): string {
   return base === '/' ? '/' : `/${base.replace(/^\/+|\/+$/g, '')}/`
 }
 
-export function deployedRouteUrl(site: URL, base: string, routePath: string): string {
+export function deployedRouteUrl(origin: URL, base: string, routePath: string): string {
   const relative = routePath === '/' ? '' : routePath.replace(/^\/+/, '')
-  return new URL(`${basePath(base)}${relative}`, site).href
+  return new URL(`${basePath(base)}${relative}`, origin).href
 }
 
 export function deployedLinkUrl(
   value: string | URL,
-  site: URL,
+  origin: URL,
   base: string,
   label: string,
 ): string {
@@ -36,7 +38,7 @@ export function deployedLinkUrl(
     return value.href
   }
   if (typeof value !== 'string' || value.trim() === '') throw new Error(`${label} must be a non-empty string`)
-  if (value.startsWith('/')) return deployedRouteUrl(site, base, value)
+  if (value.startsWith('/')) return deployedRouteUrl(origin, base, value)
   let url: URL
   try {
     url = new URL(value)

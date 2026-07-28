@@ -32,7 +32,7 @@ function getMarkdownMeta(
   const normalizedHead = normalizeHeadContribution(head, 'Markdown page head')
   return {
     meta: {
-      ...(title === undefined ? {} : { title: title as string }),
+      title: title as string,
       ...(description === undefined ? {} : { description: description as string }),
       ...(draft === undefined ? {} : { draft: draft as boolean }),
       ...(normalizedHead === undefined ? {} : { head: normalizedHead }),

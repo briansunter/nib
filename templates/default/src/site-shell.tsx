@@ -1,10 +1,11 @@
 import { siteHref, type SiteShellProps } from '@briansunter/nib'
+import { site } from './site'
 
 function routePath(href: string): string {
   return href.replace(/\/+$/, '') || '/'
 }
 
-export function SiteShell({ children, route, site }: SiteShellProps) {
+export function SiteShell({ children, route }: SiteShellProps) {
   const navigation = site.navigation?.map((item) => ({
     ...item,
     active: routePath(item.href) === route.path,
@@ -19,7 +20,7 @@ export function SiteShell({ children, route, site }: SiteShellProps) {
           </summary>
           <div className="mobile-nav__drawer">
             <span className="mobile-nav__eyebrow">Navigate</span>
-            <span className="mobile-nav__title">{site.title}</span>
+            <span className="mobile-nav__title">{site.name}</span>
             <nav aria-label="Mobile primary">
               {navigation.map((item) => (
                 <a aria-current={item.active ? 'page' : undefined} href={siteHref(item.href)} key={item.href}>
@@ -30,7 +31,7 @@ export function SiteShell({ children, route, site }: SiteShellProps) {
             </nav>
           </div>
         </details>
-        <a href={siteHref('/')}>{site.title}</a>
+        <a href={siteHref('/')}>{site.name}</a>
         <nav aria-label="Main navigation">
           {navigation.map((item) => (
             <a aria-current={item.active ? 'page' : undefined} href={siteHref(item.href)} key={item.href}>

@@ -15,21 +15,16 @@ import { tomlPages, virtualRoutes } from './src/plugins'
 
 export default defineConfig({
   base: '/journal/',
+  origin: 'https://example.test',
   trailingSlash: 'always',
   redirects: {
     '/legacy': '/about',
   },
-  site: {
-    title: 'Journal',
-    description: 'A test journal.',
-    titleTemplate: '%s | Journal',
-  },
   shell: SiteShell,
   plugins: [
     tomlPages(),
-    sitemap({ site: 'https://example.test' }),
+    sitemap(),
     rss({
-      site: 'https://example.test',
       title: 'Journal',
       description: 'A test journal.',
       items: [
@@ -49,7 +44,10 @@ export default defineConfig({
     definePageSource({
       extensions: ['yaml', 'yml'],
       schema: teamMemberSchema,
-      load: ({ source }) => ({ data: parseYaml(source) }),
+      load: ({ source }) => {
+        const data = parseYaml(source) as { name: string }
+        return { data, meta: { title: data.name } }
+      },
       component: TeamMemberPage,
     }),
     definePageSource({

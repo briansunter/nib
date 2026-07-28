@@ -14,7 +14,7 @@ defineMarkdown({ validate: (value) => value })
 definePageSource({
   extensions: ['data'],
   schema,
-  load: () => ({ data: { value: 'ok' } }),
+  load: () => ({ data: { value: 'ok' }, meta: { title: 'Value' } }),
   component: () => null,
 })
 defineCollection({

@@ -6,7 +6,6 @@ import type {
   PageLayoutProps,
   PageProps,
   PageRoute,
-  ResolvedSite,
   SiteShellProps,
 } from '../src/framework/types'
 import { definePlugin } from '../src/framework/plugin'
@@ -25,13 +24,11 @@ describe('project renderer', () => {
     })
     const renderer = await createProjectRenderer({
       config: {
-        site: {
-          title: 'Site',
-          description: 'Description',
-          origin: 'https://example.test',
-        },
+        origin: 'https://example.test',
         collections: { posts },
         plugins: [rss({
+          title: 'Site',
+          description: 'Description',
           items: fromCollection(posts, (entries) => entries.map((entry) => ({
             title: entry.data.title,
             link: `/posts/${entry.id}`,
@@ -40,7 +37,7 @@ describe('project renderer', () => {
       },
       root: process.cwd(),
       base: '/',
-      pages: { '/src/pages/page.tsx': { default: Page } },
+      pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
       islandModules: {},
     })
     const output = renderer.render('/rss.xml')
@@ -61,7 +58,6 @@ describe('project renderer', () => {
 
     await expect(createProjectRenderer({
       config: {
-        site: { title: 'Site' },
         plugins: [{
           name: 'unauthorized-reader',
           routes(context) {
@@ -72,17 +68,22 @@ describe('project renderer', () => {
       },
       root: process.cwd(),
       base: '/',
-      pages: { '/src/pages/page.tsx': { default: Page } },
+      pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
       islandModules: {},
     })).rejects.toThrow('not registered by this site')
   })
 
   it('owns route setup and document data rendering behind one interface', async () => {
     const renderer = await createProjectRenderer({
-      config: { site: { title: 'Site', description: 'Description' } },
+      config: {},
       root: process.cwd(),
       base: '/',
-      pages: { '/src/pages/page.tsx': { default: Page } },
+      pages: {
+        '/src/pages/page.tsx': {
+          default: Page,
+          meta: { title: 'Site', description: 'Description' },
+        },
+      },
       islandModules: {},
     })
 
@@ -92,7 +93,7 @@ describe('project renderer', () => {
       page: {
         status: 200,
         head: '<title>Site</title>\n    <meta name="description" content="Description" />',
-        html: '<header><a href="/">Site</a></header><main><h1>Home</h1></main>',
+        html: '<main><h1>Home</h1></main>',
         islands: [],
         behaviors: [],
       },
@@ -102,7 +103,6 @@ describe('project renderer', () => {
   it('publishes non-404 routes even when their response status is 404', async () => {
     const renderer = await createProjectRenderer({
       config: {
-        site: { title: 'Site' },
         trailingSlash: 'always',
         plugins: [{
           name: 'not-found-resources',
@@ -126,7 +126,7 @@ describe('project renderer', () => {
       },
       root: process.cwd(),
       base: '/',
-      pages: { '/src/pages/page.tsx': { default: Page } },
+      pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
       islandModules: {},
     })
 
@@ -161,12 +161,13 @@ describe('project renderer', () => {
       return Content ? <Content /> : <p>Fallback body</p>
     }
     const renderer = await createProjectRenderer({
-      config: { site: { title: 'Site' } },
+      config: {},
       root: process.cwd(),
       base: '/',
       pages: {
         '/src/pages/page.md': {
           default: GeneratedMarkdownPage,
+          meta: { title: 'Article' },
           layout: 'article',
           content: body,
         },
@@ -187,17 +188,7 @@ describe('project renderer', () => {
     expect(output.page.html).not.toContain('Fallback body')
   })
 
-  it('shares deeply immutable public route and site snapshots across every render seam', async () => {
-    const site = {
-      title: 'Site',
-      navigation: [{ label: 'Home', href: '/' }],
-      head: {
-        elements: [{
-          tag: 'meta' as const,
-          attributes: { name: 'site-owner', content: 'site' },
-        }],
-      },
-    }
+  it('shares deeply immutable public route snapshots across every render seam', async () => {
     const meta = {
       title: 'Home',
       head: {
@@ -208,25 +199,6 @@ describe('project renderer', () => {
       },
     }
     const seenRoutes: PageRoute[] = []
-    const seenSites: ResolvedSite[] = []
-
-    function inspectSite(snapshot: ResolvedSite) {
-      seenSites.push(snapshot)
-      expect(Object.isFrozen(snapshot)).toBe(true)
-      expect(Object.isFrozen(snapshot.navigation)).toBe(true)
-      expect(Object.isFrozen(snapshot.navigation?.[0])).toBe(true)
-      expect(Object.isFrozen(snapshot.head)).toBe(true)
-      expect(Object.isFrozen(snapshot.head?.elements)).toBe(true)
-      expect(Object.isFrozen(snapshot.head?.elements?.[0])).toBe(true)
-      expect(Object.isFrozen(snapshot.head?.elements?.[0]?.attributes)).toBe(true)
-      expect(Reflect.set(snapshot, 'title', 'Changed')).toBe(false)
-      expect(Reflect.set(snapshot.navigation?.[0] ?? {}, 'label', 'Changed')).toBe(false)
-      expect(Reflect.set(
-        snapshot.head?.elements?.[0]?.attributes ?? {},
-        'content',
-        'changed',
-      )).toBe(false)
-    }
 
     function inspectRoute(snapshot: PageRoute) {
       seenRoutes.push(snapshot)
@@ -256,9 +228,8 @@ describe('project renderer', () => {
       )).toBe(false)
     }
 
-    function inspectPage(props: Pick<PageProps, 'route' | 'site'>) {
+    function inspectPage(props: Pick<PageProps, 'route'>) {
       inspectRoute(props.route)
-      inspectSite(props.site)
     }
 
     function SnapshotPage(props: PageProps) {
@@ -271,13 +242,13 @@ describe('project renderer', () => {
     }
     function SnapshotShell(props: SiteShellProps) {
       inspectPage(props)
-      return <main data-site={props.site.title}>{props.children}</main>
+      return <main>{props.children}</main>
     }
 
     const snapshotPlugin = definePlugin({
       name: 'snapshot-inspector',
       routes(context) {
-        inspectSite(context.site)
+        expect(context.origin).toBe('https://example.test')
         const route = context.routes[0]
         if (route?.kind === 'page') {
           expect(Object.isFrozen(context.routes)).toBe(true)
@@ -285,7 +256,7 @@ describe('project renderer', () => {
         }
       },
       renderer(context) {
-        inspectSite(context.site)
+        expect(context.origin).toBe('https://example.test')
         return {
           head(pageContext) {
             inspectPage(pageContext)
@@ -295,14 +266,14 @@ describe('project renderer', () => {
             return page
           },
           async finalize(context) {
-            inspectSite(context.site)
+            expect(context.origin).toBe('https://example.test')
           },
         }
       },
     })
     const renderer = await createProjectRenderer({
       config: {
-        site,
+        origin: 'https://example.test',
         shell: SnapshotShell,
         plugins: [snapshotPlugin],
       },
@@ -320,9 +291,6 @@ describe('project renderer', () => {
       islandModules: {},
     })
 
-    site.title = 'Changed input'
-    site.navigation[0].label = 'Changed input'
-    site.head.elements[0].attributes.content = 'changed-input'
     meta.title = 'Changed input'
     meta.head.elements[0].attributes.content = 'changed-input'
 
@@ -332,23 +300,20 @@ describe('project renderer', () => {
     expect(first).toMatchObject({
       kind: 'page',
       page: {
-        html: '<main data-site="Site"><section><h1>Home</h1></section></main>',
+        html: '<main><section><h1>Home</h1></section></main>',
       },
     })
     expect(new Set(seenRoutes).size).toBe(1)
-    expect(new Set(seenSites).size).toBe(1)
 
     await renderer.finalize({
       clientDirectory: '/tmp/client',
       publication: createPublicationManifest('/', 'ignore', []),
     })
-    expect(new Set(seenSites).size).toBe(1)
   })
 
   it('enforces trailing slashes and configured redirects in development rendering', async () => {
     const renderer = await createProjectRenderer({
       config: {
-        site: { title: 'Site' },
         trailingSlash: 'never',
         redirects: {
           '/old': { destination: '/about/', status: 302 },
@@ -356,7 +321,7 @@ describe('project renderer', () => {
       },
       root: process.cwd(),
       base: '/base/',
-      pages: { '/src/pages/about/page.tsx': { default: Page } },
+      pages: { '/src/pages/about/page.tsx': { default: Page, meta: { title: 'About' } } },
       islandModules: {},
       command: 'serve',
     })

@@ -13,13 +13,13 @@ describe('markdown', () => {
   })
 
   it('allows a site to opt out of the built-in GFM pass', () => {
-    const compiled = markdownToCompiledPage('~~literal~~', { gfm: false })
+    const compiled = markdownToCompiledPage('---\ntitle: Literal\n---\n~~literal~~', { gfm: false })
     expect(compiled.html).toContain('~~literal~~')
     expect(compiled.html).not.toContain('<del>')
   })
 
   it('serializes trusted raw HTML when explicitly enabled', () => {
-    const html = '<div data-embed="owned">Embedded content</div>'
+    const html = '---\ntitle: Embedded content\n---\n<div data-embed="owned">Embedded content</div>'
     expect(markdownToCompiledPage(html).html).not.toContain('<div data-embed="owned">')
     expect(markdownToCompiledPage(html, { allowDangerousHtml: true }).html)
       .toContain('<div data-embed="owned">Embedded content</div>')
@@ -60,9 +60,9 @@ describe('markdown', () => {
   })
 
   it('rejects invalid Markdown layouts while compiling', () => {
-    expect(() => markdownToCompiledPage('---\nlayout: ../docs\n---\n# World'))
+    expect(() => markdownToCompiledPage('---\ntitle: World\nlayout: ../docs\n---\n# World'))
       .toThrow('Markdown layout must be a flat name')
-    expect(() => markdownToCompiledPage('---\nlayout: 42\n---\n# World'))
+    expect(() => markdownToCompiledPage('---\ntitle: World\nlayout: 42\n---\n# World'))
       .toThrow('Markdown frontmatter')
   })
 
@@ -90,7 +90,7 @@ describe('markdown', () => {
   })
 
   it('applies configured remark and rehype plugins in pipeline order', () => {
-    const compiled = markdownToCompiledPage('# World', {
+    const compiled = markdownToCompiledPage('---\ntitle: World\n---\n# World', {
       remarkPlugins: [
         () => (tree: any) => {
           tree.children.push({
@@ -112,7 +112,7 @@ describe('markdown', () => {
 
   it('passes the Markdown source path to Unified plugins', () => {
     let sourcePath: string | undefined
-    markdownToCompiledPage('# World', {
+    markdownToCompiledPage('---\ntitle: World\n---\n# World', {
       remarkPlugins: [
         () => (_tree: any, file: { history: string[] }) => {
           sourcePath = file.history[0]

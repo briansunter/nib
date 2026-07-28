@@ -23,7 +23,7 @@ import type {
 } from './types'
 
 const pageMetaSchema = z.looseObject({
-  title: z.string().optional(),
+  title: z.string().trim().min(1),
   description: z.string().optional(),
   draft: z.boolean().optional(),
   head: z.unknown().optional(),
@@ -367,13 +367,12 @@ function getLayoutName(layout: unknown, label: string): string | undefined {
   return layout
 }
 
-function getPageMeta(meta: unknown, label: string): PageMeta | undefined {
-  if (meta === undefined) return undefined
+function getPageMeta(meta: unknown, label: string): PageMeta {
   const parsed = pageMetaSchema.safeParse(meta)
   if (!parsed.success) throw new Error(`${label} metadata: ${parsed.error.message}`)
   const head = normalizeHeadContribution(parsed.data.head, `${label} head`)
   return {
-    ...(parsed.data.title === undefined ? {} : { title: parsed.data.title }),
+    title: parsed.data.title,
     ...(parsed.data.description === undefined ? {} : { description: parsed.data.description }),
     ...(parsed.data.draft === undefined ? {} : { draft: parsed.data.draft }),
     ...(head === undefined ? {} : { head }),
@@ -418,7 +417,7 @@ export async function compileDataPages<
       path,
       component,
       data,
-      ...(meta ? { meta } : {}),
+      meta,
       ...(layout ? { layout } : {}),
       sourceDefinition: definition,
       collectionId: page.collectionId ?? path.replace(/^\/+|\/+$/g, ''),

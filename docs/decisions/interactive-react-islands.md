@@ -294,7 +294,7 @@ For large, mostly-static lists, render the complete accessible list on the serve
 ## Development experience
 
 - Vite continues to transform TSX and provide React Fast Refresh for island modules.
-- Editing a static page, layout, app shell, or site config triggers a full page reload because there is no persistent page-level React root. That is an acceptable tradeoff for static-by-default output.
+- Editing a static page, layout, app shell, or framework config triggers a full page reload because there is no persistent page-level React root. That is an acceptable tradeoff for static-by-default output.
 - Editing an island should preserve Fast Refresh where the Vite React plugin can do so; otherwise the runtime may replace that island root without navigating.
 - Unknown island IDs, ID/path mismatches, duplicate IDs, invalid strategies, and serialization failures must show source-oriented errors during SSR or build.
 - Hydration mismatches should include the island and instance IDs in `onRecoverableError` output.
