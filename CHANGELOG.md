@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.19.0](https://github.com/briansunter/nib/compare/v0.18.0...v0.19.0) (2026-07-29)
+
+
+### Features
+
+* simplify client interactivity ([c323db2](https://github.com/briansunter/nib/commit/c323db2d6e9ad8e846640848e12f03f92af35f6c))
+* simplify client interactivity ([84b9c02](https://github.com/briansunter/nib/commit/84b9c02d2247061a9a9a4d948d52f6e50dac1f38))
+
 ## [0.18.0](https://github.com/briansunter/nib/compare/v0.17.0...v0.18.0) (2026-07-29)
 
 
