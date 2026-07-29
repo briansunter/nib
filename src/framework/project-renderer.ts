@@ -4,9 +4,13 @@ import { DefaultSiteShell } from './default-shell'
 import { renderHead } from './meta'
 import { deepFreeze } from './freeze'
 import { createContentRenderer } from './markdown-content'
-import { renderReactPage } from './render-page'
+import { renderReactPage, type RenderedReactPage } from './render-page'
 import { validateIslandModules, type IslandModule } from './islands'
-import { behaviorFileToId } from './behavior-paths'
+import {
+  BEHAVIOR_MODULE_GLOB,
+  behaviorFileToId,
+} from './behavior-paths'
+import { ClientOwnershipError } from './client-ownership'
 import { resolvedRouteSnapshot } from './snapshots'
 import {
   addConfiguredRedirects,
@@ -78,7 +82,7 @@ function assertClientModules(
     : `${kind}s ${missing.map((id) => `"${id}"`).join(', ')}`
   const pattern = kind === 'island'
     ? 'src/islands/**/*.tsx'
-    : 'src/behaviors/**/*.client.{ts,tsx}'
+    : BEHAVIOR_MODULE_GLOB.slice(1)
   throw new Error(
     `Route ${route.path} emitted ${marker} without a matching client module in ${pattern}`,
   )
@@ -299,10 +303,22 @@ export async function createProjectRenderer(
         options.config.shell,
         collections,
       ), pageContext)
-      const reactPage = renderReactPage(
-        content,
-        route.content === undefined ? [] : [route.content],
-      )
+      let reactPage: RenderedReactPage
+      try {
+        reactPage = renderReactPage(
+          content,
+          route.content === undefined ? [] : [route.content],
+        )
+      } catch (error) {
+        if (error instanceof ClientOwnershipError) {
+          throw new Error(
+            `Route ${route.path} from ${route.source} has overlapping client ownership. `
+            + error.message,
+            { cause: error },
+          )
+        }
+        throw error
+      }
       assertClientModules(route, 'island', reactPage.islands, islandDefinitions)
       assertClientModules(route, 'behavior', reactPage.behaviors, behaviorIds)
       return {

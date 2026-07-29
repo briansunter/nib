@@ -1,11 +1,10 @@
 import { createElement } from 'react'
 import { describe, expect, it } from 'vitest'
-import { defineClientBehavior } from '../src/framework/behaviors'
-import { defineIsland } from '../src/framework/islands'
+import { Behavior } from '../src/framework/behaviors'
+import { island } from '../src/framework/islands'
 import { createProjectRenderer } from '../src/framework/project-renderer'
 
-const OutsideIsland = defineIsland('outside', () => <p>Interactive</p>)
-const MissingBehavior = defineClientBehavior('missing')
+const OutsideIsland = island(() => <p>Interactive</p>)
 
 const config = {}
 
@@ -25,7 +24,7 @@ describe('project client marker validation', () => {
     })
 
     expect(() => renderer.render('/')).toThrow(
-      'Route / emitted island "outside" without a matching client module in src/islands/**/*.tsx',
+      'must be the default export of a module under src/islands',
     )
   })
 
@@ -36,7 +35,7 @@ describe('project client marker validation', () => {
       base: '/',
       pages: {
         '/src/pages/page.tsx': {
-          default: () => <MissingBehavior />,
+          default: () => <Behavior name="missing" />,
           meta: { title: 'Behavior' },
         },
       },
@@ -46,7 +45,7 @@ describe('project client marker validation', () => {
 
     expect(() => renderer.render('/')).toThrow(
       'Route / emitted behavior "missing" without a matching client module in '
-      + 'src/behaviors/**/*.client.{ts,tsx}',
+      + 'src/behaviors/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}',
     )
   })
 
@@ -55,7 +54,7 @@ describe('project client marker validation', () => {
       return (
         <>
           <OutsideIsland />
-          <MissingBehavior />
+          <Behavior name="missing" />
           {createElement('nib-behavior', { 'data-behavior': 'raw' }, 'Raw marker')}
         </>
       )

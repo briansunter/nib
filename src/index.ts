@@ -16,8 +16,8 @@ export {
 } from './framework/content'
 // Compatibility exports. Prefer @briansunter/nib/server for filesystem loaders.
 export { file, glob } from './framework/content-compat'
-export { defineIsland } from './framework/islands'
-export { defineClientBehavior } from './framework/behaviors'
+export { island } from './framework/islands'
+export { Behavior } from './framework/behaviors'
 export { markdownMedia } from './integrations/markdown-media'
 export {
   Content,
@@ -35,8 +35,7 @@ export type {
   GlobLoaderOptions,
 } from './framework/content-compat'
 export type {
-  ClientBehaviorDefinition,
-  ClientBehaviorProps,
+  BehaviorProps,
 } from './framework/behaviors'
 export type {
   HydrationStrategy,

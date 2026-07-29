@@ -5,6 +5,7 @@ import {
   validateIslandModule,
   type IslandModule,
 } from './islands'
+import { ClientOwnershipContext } from './client-ownership'
 import { parseIslandProps } from './island-serialization'
 export {
   scheduleHydration,
@@ -70,12 +71,16 @@ export async function hydrateIsland(
   return dependencies.hydrateRoot(
     element,
     createElement(
-      IslandRenderContext.Provider,
-      { value: composedIslandRenderer() },
+      ClientOwnershipContext.Provider,
+      { value: { kind: 'island', name: id } },
       createElement(
-        StrictMode,
-        null,
-        createElement(definition.Component, props),
+        IslandRenderContext.Provider,
+        { value: composedIslandRenderer() },
+        createElement(
+          StrictMode,
+          null,
+          createElement(definition.Component, props),
+        ),
       ),
     ),
     {

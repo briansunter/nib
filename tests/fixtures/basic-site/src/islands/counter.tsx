@@ -1,7 +1,7 @@
-import { defineIsland } from '@briansunter/nib'
+import { island } from '@briansunter/nib'
 
 function Counter({ initialCount }: { initialCount: number }) {
   return <button type="button">Count: {initialCount}</button>
 }
 
-export default defineIsland('counter', Counter)
+export default island(Counter)

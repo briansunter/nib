@@ -96,7 +96,9 @@ describe('consumer project Vite adapter', () => {
     expect(client).toContain('@briansunter/nib/client/islands')
     expect(client).toContain('createIslandRuntime')
     expect(client).not.toContain('__nibStartIslandRuntime')
-    expect(behavior).toContain("import.meta.glob('/src/behaviors/**/*.client.{ts,tsx}')")
+    expect(behavior).toContain(
+      'import.meta.glob("/src/behaviors/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}")',
+    )
     expect(behavior).toContain('createBehaviorRuntime')
     expect(behavior).toContain('@briansunter/nib/client/behaviors')
     expect(server).toContain(path.resolve('/site/nib.config.ts'))
@@ -106,7 +108,7 @@ describe('consumer project Vite adapter', () => {
     expect(server).toContain("query: '?nib-page-source'")
     expect(server).toContain("import.meta.glob('/src/pages/**/layout.tsx'")
     expect(server).toContain(
-      "Object.keys(import.meta.glob('/src/behaviors/**/*.client.{ts,tsx}'))",
+      'Object.keys(import.meta.glob("/src/behaviors/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"))',
     )
     expect(server).toContain('createProjectRenderer')
     expect(server).toContain('root: "/site"')

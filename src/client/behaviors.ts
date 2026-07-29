@@ -1,8 +1,8 @@
 export {
+  behavior,
   createBehaviorRuntime,
-  defineBehaviorClient,
+  type Behavior,
   type BehaviorCleanup,
-  type BehaviorClientDefinition,
   type BehaviorClientModule,
   type BehaviorClientModules,
   type BehaviorMount,

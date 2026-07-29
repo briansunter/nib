@@ -1,12 +1,15 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import { defineClientBehavior } from '../src/framework/behaviors'
+import { Behavior } from '../src/framework/behaviors'
+import { island } from '../src/framework/islands'
 import { renderReactPage } from '../src/framework/render-page'
 import {
+  behavior,
   createBehaviorRuntime,
-  defineBehaviorClient,
+  type BehaviorMount,
   type BehaviorMountContext,
 } from '../src/runtime/behaviors'
+import { registeredIsland } from './helpers/islands'
 
 function behaviorElement(
   dataset: Record<string, string>,
@@ -22,9 +25,66 @@ function rootWith(elements: HTMLElement[]): ParentNode {
 }
 
 describe('client behaviors', () => {
-  it('lets prop-free behaviors omit redundant props and hydration defaults', () => {
-    const Reveal = defineClientBehavior('reveal')
-    const rendered = renderReactPage(<Reveal />)
+  it('maps one declarative boundary directly to a client module', () => {
+    const rendered = renderReactPage(
+      <Behavior name="filters/search" when="visible" props={{ count: 2 }}>
+        <button>Filter</button>
+      </Behavior>,
+    )
+
+    expect(rendered.behaviors).toEqual(['filters/search'])
+    expect(rendered.html).toContain('data-behavior="filters/search"')
+    expect(rendered.html).toContain('data-hydrate="visible"')
+    expect(rendered.html).toContain('data-props="{&quot;count&quot;:2}"')
+    expect(rendered.html).toContain('<button>Filter</button>')
+  })
+
+  it('rejects invalid declarative names and activation timing', () => {
+    expect(() => renderReactPage(<Behavior name="Search" />))
+      .toThrow('Invalid island ID')
+    expect(() => renderReactPage(
+      <Behavior name="search" when={'later' as 'load'} />,
+    )).toThrow('Invalid hydration strategy')
+  })
+
+  it('allows sibling behaviors and islands but rejects overlapping ownership', () => {
+    const Counter = registeredIsland(
+      'counter',
+      island(() => <button>Count</button>),
+    )
+    const siblings = renderReactPage(
+      <main>
+        <Behavior name="reveal"><p>Details</p></Behavior>
+        <Counter />
+      </main>,
+    )
+    expect(siblings.behaviors).toEqual(['reveal'])
+    expect(siblings.islands).toEqual(['counter'])
+
+    expect(() => renderReactPage(
+      <Behavior name="reveal"><Counter /></Behavior>,
+    )).toThrow(
+      'island "counter" cannot be nested inside behavior "reveal"',
+    )
+    expect(() => renderReactPage(
+      <Behavior name="outer"><Behavior name="inner" /></Behavior>,
+    )).toThrow(
+      'behavior "inner" cannot be nested inside behavior "outer"',
+    )
+
+    const Conflicted = registeredIsland(
+      'conflicted',
+      island(() => (
+        <Behavior name="reveal"><p>Details</p></Behavior>
+      )),
+    )
+    expect(() => renderReactPage(<Conflicted />)).toThrow(
+      'behavior "reveal" cannot be nested inside island "conflicted"',
+    )
+  })
+
+  it('lets prop-free behaviors omit redundant props and activation timing', () => {
+    const rendered = renderReactPage(<Behavior name="reveal" />)
 
     expect(rendered.behaviors).toEqual(['reveal'])
     expect(rendered.html).toContain('data-hydrate="load"')
@@ -43,11 +103,10 @@ describe('client behaviors', () => {
   })
 
   it('renders server content and serializes validated props', () => {
-    const Reveal = defineClientBehavior<{ label: string }>('reveal')
     const html = renderToStaticMarkup(
-      <Reveal props={{ label: 'Details' }} hydrate="visible">
+      <Behavior name="reveal" props={{ label: 'Details' }} when="visible">
         <button>Details</button>
-      </Reveal>,
+      </Behavior>,
     )
     expect(html).toContain('<nib-behavior')
     expect(html).toContain('data-behavior="reveal"')
@@ -59,7 +118,7 @@ describe('client behaviors', () => {
     const cleanup = vi.fn()
     const mount = vi.fn((_context: BehaviorMountContext<{ label: string }>) => cleanup)
     const load = vi.fn(async () => ({
-      default: defineBehaviorClient(mount),
+      default: mount,
     }))
     const first = behaviorElement({
       behavior: 'reveal',
@@ -86,6 +145,36 @@ describe('client behaviors', () => {
     expect(mount.mock.calls[0]![0].signal.aborted).toBe(true)
   })
 
+  it('accepts plain and contextually typed mount functions', async () => {
+    const plainMount = vi.fn()
+    const typedMount = vi.fn()
+    const plain = behaviorElement({
+      behavior: 'plain',
+      hydrate: 'load',
+      props: '{}',
+    })
+    const typed = behaviorElement({
+      behavior: 'typed',
+      hydrate: 'load',
+      props: '{}',
+    })
+    const root = rootWith([plain, typed])
+    const runtime = createBehaviorRuntime({
+      '/src/behaviors/plain.client.js': async () => ({
+        default: plainMount,
+      }),
+      '/src/behaviors/typed.client.ts': async () => ({
+        default: behavior(typedMount),
+      }),
+    }, {
+      environment: { setTimeout: vi.fn(() => 1) },
+    })
+
+    runtime.mount(root)
+    await vi.waitFor(() => expect(plainMount).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(typedMount).toHaveBeenCalledOnce())
+  })
+
   it('cancels pending idle work before a root is detached', () => {
     let idle: (() => void) | undefined
     const cancelIdleCallback = vi.fn()
@@ -98,7 +187,7 @@ describe('client behaviors', () => {
     const root = rootWith([element])
     const runtime = createBehaviorRuntime({
       '/src/behaviors/reveal.client.ts': async () => ({
-        default: defineBehaviorClient(mount),
+        default: mount,
       }),
     }, {
       environment: {
@@ -119,11 +208,11 @@ describe('client behaviors', () => {
 
   it('cleans a marker detached during module loading and permits remount', async () => {
     let resolveModule!: (module: {
-      default: ReturnType<typeof defineBehaviorClient>
+      default: BehaviorMount
     }) => void
     const mount = vi.fn()
     const load = vi.fn(() => new Promise<{
-      default: ReturnType<typeof defineBehaviorClient>
+      default: BehaviorMount
     }>((resolve) => {
       resolveModule = resolve
     }))
@@ -142,7 +231,7 @@ describe('client behaviors', () => {
 
     runtime.mount(root)
     elements.pop()
-    resolveModule({ default: defineBehaviorClient(mount) })
+    resolveModule({ default: mount })
     await vi.waitFor(() => expect(element.dataset.scheduled).toBeUndefined())
     expect(mount).not.toHaveBeenCalled()
 
@@ -170,7 +259,7 @@ describe('client behaviors', () => {
     const root = rootWith(elements)
     const runtime = createBehaviorRuntime({
       '/src/behaviors/reveal.client.ts': async () => ({
-        default: defineBehaviorClient(mount),
+        default: mount,
       }),
     }, {
       environment: { setTimeout: vi.fn(() => 1) },
@@ -207,7 +296,7 @@ describe('client behaviors', () => {
     const root = rootWith([element])
     const runtime = createBehaviorRuntime({
       '/src/behaviors/reveal.client.ts': async () => ({
-        default: defineBehaviorClient(mount),
+        default: mount,
       }),
     }, {
       environment: { setTimeout: vi.fn(() => 1) },
@@ -238,7 +327,7 @@ describe('client behaviors', () => {
     ])
     const runtime = createBehaviorRuntime({
       '/src/behaviors/reveal.client.ts': async () => ({
-        default: defineBehaviorClient(mount),
+        default: mount,
       }),
     }, {
       environment: { setTimeout: vi.fn(() => 1) },
@@ -256,7 +345,7 @@ describe('client behaviors', () => {
     const reportError = vi.fn()
     const load = vi.fn()
       .mockRejectedValueOnce(new Error('temporary chunk failure'))
-      .mockResolvedValue({ default: defineBehaviorClient(mount) })
+      .mockResolvedValue({ default: mount })
     const element = behaviorElement({
       behavior: 'reveal',
       hydrate: 'load',

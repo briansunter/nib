@@ -4,29 +4,51 @@ import { describe, expect, it } from 'vitest'
 import {
   IslandRenderContext,
   composedIslandRenderer,
-  defineIsland,
+  island,
   isIslandDefinition,
   validateIslandModule,
   validateIslandModules,
 } from '../src/framework/islands'
 import { renderReactPage } from '../src/framework/render-page'
+import { registeredIsland } from './helpers/islands'
 
 describe('React islands', () => {
+  it('derives an island ID from its default-export module path', () => {
+    const Counter = island(({ count }: { count: number }) => <button>{count}</button>)
+
+    expect(Counter.islandId).toBe('')
+    expect(validateIslandModule('./islands/cart/counter.tsx', {
+      default: Counter,
+    })).toBe(Counter)
+    expect(Counter.islandId).toBe('cart/counter')
+    expect(renderReactPage(<Counter count={2} />).islands).toEqual(['cart/counter'])
+  })
+
+  it('requires file validation before rendering an inferred island directly', () => {
+    const Counter = island(() => <button>Count</button>)
+    expect(() => renderReactPage(<Counter />)).toThrow(
+      'must be the default export of a module under src/islands',
+    )
+  })
+
   it('creates typed island definitions and validates module paths', () => {
-    const Counter = defineIsland('counter', ({ count }: { count: number }) => <button>{count}</button>)
+    const Counter = island(({ count }: { count: number }) => <button>{count}</button>)
 
     expect(isIslandDefinition(Counter)).toBe(true)
-    expect(Counter.islandId).toBe('counter')
+    expect(Counter.islandId).toBe('')
     expect(validateIslandModule('./islands/counter.tsx', { default: Counter })).toBe(Counter)
+    expect(Counter.islandId).toBe('counter')
     expect(() => validateIslandModule('./islands/other.tsx', { default: Counter })).toThrow('ID mismatch')
-    expect(() => validateIslandModule('./islands/counter.tsx', { default: () => null })).toThrow('defineIsland')
+    expect(() => validateIslandModule('./islands/counter.tsx', { default: () => null }))
+      .toThrow('default-export island(...)')
   })
 
   it('rejects duplicate island definitions', () => {
-    const Counter = defineIsland('counter', () => <button>Count</button>)
+    const Counter = island(() => <button>Count</button>)
+    const Duplicate = island(() => <button>Duplicate</button>)
     expect(() => validateIslandModules({
       './islands/counter.tsx': { default: Counter },
-      '/src/islands/counter.tsx': { default: Counter },
+      '/src/islands/counter.tsx': { default: Duplicate },
     })).toThrow('Duplicate island ID')
   })
 
@@ -39,11 +61,14 @@ describe('React islands', () => {
   })
 
   it('renders each island as an independent server root', () => {
-    const Field = defineIsland('field', ({ label }: { label: string }) => {
-      const id = useId()
-      return <label htmlFor={id}>{label}<input id={id} /></label>
-    })
-    const rendered = renderReactPage(<main><Field label="Name" hydrate="visible" /></main>)
+    const Field = registeredIsland(
+      'field',
+      island(({ label }: { label: string }) => {
+        const id = useId()
+        return <label htmlFor={id}>{label}<input id={id} /></label>
+      }),
+    )
+    const rendered = renderReactPage(<main><Field label="Name" when="visible" /></main>)
     const expectedIslandHtml = renderToString(
       createElement(
         IslandRenderContext.Provider,
@@ -64,9 +89,12 @@ describe('React islands', () => {
   })
 
   it('deduplicates module IDs while preserving independent instances', () => {
-    const Counter = defineIsland('counter', ({ count }: { count: number }) => <button>{count}</button>)
+    const Counter = registeredIsland(
+      'counter',
+      island(({ count }: { count: number }) => <button>{count}</button>),
+    )
     const rendered = renderReactPage(
-      <main><Counter count={1} /><Counter count={2} hydrate="idle" /></main>,
+      <main><Counter count={1} /><Counter count={2} when="idle" /></main>,
     )
 
     expect(rendered.islands).toEqual(['counter'])
@@ -75,19 +103,25 @@ describe('React islands', () => {
   })
 
   it('composes child islands into the parent root and rejects non-deterministic shell renders', () => {
-    const Inner = defineIsland('inner', ({ label }: { label: string }) => <button>{label}</button>)
-    const Outer = defineIsland('outer', () => (
-      <section><Inner label="Inner" hydrate="visible" /></section>
-    ))
-    const nested = renderReactPage(<Outer hydrate="idle" />)
+    const Inner = registeredIsland(
+      'inner',
+      island(({ label }: { label: string }) => <button>{label}</button>),
+    )
+    const Outer = registeredIsland(
+      'outer',
+      island(() => (
+        <section><Inner label="Inner" when="visible" /></section>
+      )),
+    )
+    const nested = renderReactPage(<Outer when="idle" />)
 
     expect(nested.islands).toEqual(['outer'])
     expect(nested.html).toContain('data-island="outer"')
     expect(nested.html).not.toContain('data-island="inner"')
     expect(nested.html).toContain('<section><button>Inner</button></section>')
 
-    const First = defineIsland('first', () => <button>First</button>)
-    const Second = defineIsland('second', () => <button>Second</button>)
+    const First = registeredIsland('first', island(() => <button>First</button>))
+    const Second = registeredIsland('second', island(() => <button>Second</button>))
     let pass = 0
     function UnstablePage() {
       pass += 1
@@ -97,9 +131,9 @@ describe('React islands', () => {
   })
 
   it('requires the framework renderer and valid hydration strategies', () => {
-    const Counter = defineIsland('counter', () => <button>Count</button>)
+    const Counter = registeredIsland('counter', island(() => <button>Count</button>))
     expect(() => renderToString(<Counter />)).toThrow('must be rendered by Nib')
-    expect(() => renderReactPage(createElement(Counter, { hydrate: 'later' as 'load' })))
+    expect(() => renderReactPage(createElement(Counter, { when: 'later' as 'load' })))
       .toThrow('Invalid hydration strategy')
   })
 })

@@ -1,4 +1,4 @@
-import { defineBehaviorClient } from '@briansunter/nib/client/behaviors'
+import { behavior } from '@briansunter/nib/client'
 import './theme-toggle.css'
 
 const storageKey = 'commonplace-theme'
@@ -14,7 +14,7 @@ function applyTheme(theme: 'light' | 'dark', button: HTMLButtonElement): void {
   if (icon) icon.textContent = theme === 'dark' ? '☀' : '◐'
 }
 
-export default defineBehaviorClient(({ root, signal }) => {
+export default behavior(({ root, signal }) => {
   const button = root.querySelector<HTMLButtonElement>('[data-theme-toggle]')
   if (!button) return
 

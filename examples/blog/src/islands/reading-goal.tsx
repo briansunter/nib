@@ -1,4 +1,4 @@
-import { defineIsland } from '@briansunter/nib'
+import { island } from '@briansunter/nib'
 import { useState } from 'react'
 
 function ReadingGoalComponent({ initial }: { initial: number }) {
@@ -14,4 +14,4 @@ function ReadingGoalComponent({ initial }: { initial: number }) {
   )
 }
 
-export default defineIsland('reading-goal', ReadingGoalComponent)
+export default island(ReadingGoalComponent)

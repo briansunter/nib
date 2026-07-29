@@ -145,6 +145,7 @@ describe('framework-owned site builds', () => {
     expect(about).not.toContain('data-nib-behaviors')
     expect(about).not.toContain('data-nib-enhancements')
     expect(enhanced).toContain('data-behavior="reveal"')
+    expect(enhanced).toContain('data-behavior="plain"')
     expect(enhanced).toContain('data-nib-behaviors')
     expect(enhanced).not.toContain('data-nib-islands')
     const revealEntry = Object.values(viteManifest)
@@ -156,6 +157,9 @@ describe('framework-owned site builds', () => {
       expect(about).not.toContain(stylesheet)
       expect(enhanced).not.toContain(stylesheet)
     }
+    const plainJavaScriptEntry = Object.values(viteManifest)
+      .find((entry) => entry.src?.endsWith('/behaviors/plain.client.js'))
+    expect(plainJavaScriptEntry?.isDynamicEntry).toBe(true)
     const behaviorEntry = Object.values(viteManifest)
       .find((entry) => entry.name === 'behaviors')
     expect(behaviorEntry).toBeDefined()

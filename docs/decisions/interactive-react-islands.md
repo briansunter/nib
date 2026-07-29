@@ -2,7 +2,7 @@
 
 Status: Implemented, including lifecycle controllers and non-React behaviors
 
-Last reviewed: 2026-07-28
+Last reviewed: 2026-07-29
 
 This rationale record describes the current island architecture. The concise
 implementation contract lives in
@@ -13,11 +13,12 @@ documents synchronized when the runtime changes.
 
 Nib uses TSX as its primary component-bearing templating language while hydrating only explicitly interactive React subtrees, or "islands," in the browser.
 
-Pages, layouts, and ordinary components remain server-rendered React. They produce complete static HTML and ship no page-level JavaScript. A component becomes interactive only when it is defined with `defineIsland` and placed under `src/islands`. Each island is server-rendered for useful initial HTML, emitted as an independent React root, and hydrated by a small client runtime according to an explicit strategy such as `load`, `idle`, or `visible`.
+Pages, layouts, and ordinary components remain server-rendered React. They produce complete static HTML and ship no page-level JavaScript. A component becomes interactive only when it is wrapped with `island(Component)` and placed under `src/islands`. Nib derives its stable ID from the module path. Each island is server-rendered for useful initial HTML, emitted as an independent React root, and hydrated by a small client runtime according to an explicit strategy such as `load`, `idle`, or `visible`.
 
-Imperative progressive enhancement uses `defineClientBehavior` plus a matching
-`.client.ts` implementation under `src/behaviors`. It has a separate generated
-entry and does not import React DOM. Both runtimes expose `mount(root)`,
+Imperative progressive enhancement uses `<Behavior name="...">` plus a matching
+plain mount function in a `.client.ts` or `.client.js` module under
+`src/behaviors`. It has a separate generated entry and does not import React
+DOM. Both runtimes expose `mount(root)`,
 `unmount(root)`, and `destroy()` controllers through the public client
 subpaths. Pending scheduling is cancellable and hydrated roots are retained so
 detached documents can be cleaned exactly once.
@@ -79,18 +80,18 @@ export default function ProductsPage() {
     <article>
       <h1>Products</h1>
       <p>This content is rendered once to static HTML.</p>
-      <QuantityPicker initialQuantity={1} hydrate="load" />
+      <QuantityPicker initialQuantity={1} when="load" />
     </article>
   )
 }
 ```
 
-Interactive components live under `src/islands` and use `defineIsland`:
+Interactive components live under `src/islands` and use `island`:
 
 ```tsx
 // src/islands/quantity-picker.tsx
 import { useState } from 'react'
-import { defineIsland } from '@briansunter/nib'
+import { island } from '@briansunter/nib'
 
 interface QuantityPickerProps {
   initialQuantity: number
@@ -112,10 +113,13 @@ function QuantityPicker({ initialQuantity }: QuantityPickerProps) {
   )
 }
 
-export default defineIsland('quantity-picker', QuantityPicker)
+export default island(QuantityPicker)
 ```
 
-`defineIsland` returns a typed React component. It adds the optional framework prop `hydrate` while retaining the implementation component's prop types. It also retains the implementation component on the definition so the browser runtime can hydrate that component rather than the boundary wrapper.
+`island` returns a typed React component. It adds the optional framework prop
+`when` while retaining the implementation component's prop types. It also
+retains the implementation component on the definition so the browser runtime
+can hydrate that component rather than the boundary wrapper.
 
 Island IDs must match their normalized path below `src/islands`:
 
@@ -124,7 +128,10 @@ src/islands/quantity-picker.tsx -> quantity-picker
 src/islands/cart/summary.tsx    -> cart/summary
 ```
 
-This small amount of explicitness avoids a compiler transform and gives the server markup and client module registry the same stable key. The build must reject duplicates and ID/path mismatches.
+The file convention avoids a compiler transform and gives the server markup and
+client module registry the same stable key without making the author repeat the
+path as a string. An island definition must be the default export of its module;
+the build assigns and validates the path-derived ID.
 
 ## Hydration strategies
 
@@ -175,7 +182,7 @@ type JsonValue =
   | { [key: string]: JsonValue }
 
 interface IslandControlProps {
-  hydrate?: HydrationStrategy
+  when?: HydrationStrategy
 }
 
 interface IslandDefinition<Props extends Record<string, JsonValue>> {
@@ -184,8 +191,7 @@ interface IslandDefinition<Props extends Record<string, JsonValue>> {
   Component: React.ComponentType<Props>
 }
 
-declare function defineIsland<Props extends Record<string, JsonValue>>(
-  id: string,
+declare function island<Props extends Record<string, JsonValue>>(
   Component: React.ComponentType<Props>,
 ): IslandDefinition<Props>
 ```
@@ -238,7 +244,9 @@ The runtime creates a lazy module registry with Vite glob imports (the current i
 const islandModules = import.meta.glob<IslandModule>('./islands/**/*.tsx')
 ```
 
-Vite turns the lazy glob entries into dynamic imports and separate chunks. The runtime normalizes each file path to the same ID convention used by `defineIsland`.
+Vite turns the lazy glob entries into dynamic imports and separate chunks. The
+runtime normalizes each file path to the same ID convention assigned to
+`island(Component)` during module validation.
 
 For each `<nib-island>` element, the runtime:
 
@@ -274,13 +282,22 @@ Generating Vite's SSR manifest is optional for the initial implementation. It ca
 
 `page.md` remains static Markdown in the current release. A TSX layout may place islands before, after, or beside its `children`, so documentation and article pages can still have interactive controls.
 
-Arbitrary components inside Markdown should be a separate `page.mdx` feature if it becomes necessary. MDX can compile to the same React page tree and use the same `defineIsland` boundaries. Adding JSX-like syntax directly to the existing Remark HTML pipeline would create a second, less standard component compiler and should be avoided.
+Arbitrary components inside Markdown should be a separate `page.mdx` feature if
+it becomes necessary. MDX can compile to the same React page tree and use the
+same `island(Component)` boundaries. Adding JSX-like syntax directly to the
+existing Remark HTML pipeline would create a second, less standard component
+compiler and should be avoided.
 
 A separate proposal evaluates [`page.html` with typed layout and island bindings](../design/html-pages-layouts-and-islands.md). It keeps HTML declarative and moves React imports and props to a companion TypeScript file instead of inventing component imports inside HTML.
 
 ## State and composition rules
 
 - An island owns one independent React root and context tree.
+- Behaviors and islands may be siblings, but neither may contain the other.
+- Behavior-in-behavior is also rejected. Nib reports all three ownership
+  conflicts while rendering the route in development or at build time.
+- An island may render another island definition; it becomes ordinary React
+  composition inside the outer root rather than a nested hydration boundary.
 - Components that coordinate frequently should be one island.
 - Separate islands may communicate through browser primitives or an explicitly shared external store, but that is an advanced pattern rather than the default.
 - Initial state comes from serialized props and is visible in the HTML source.
@@ -365,7 +382,12 @@ Either could provide small isolated widgets, but it would introduce a second com
 
 ## Decision
 
-Nib implements static TSX pages with opt-in, SSR-rendered React islands. It uses an explicit `defineIsland` API, Vite's lazy glob imports, independent top-level `hydrateRoot` calls, automatic child-island composition, JSON-only island props, and conditional inclusion of the client runtime. Markdown remains static for now; MDX is a later authoring extension that can reuse the same island mechanism.
+Nib implements static TSX pages with opt-in, SSR-rendered React islands. It uses
+the path-derived `island(Component)` API, Vite's lazy glob imports, independent
+top-level `hydrateRoot` calls, automatic child-island composition, JSON-only
+island props, and conditional inclusion of the client runtime. Markdown remains
+static for now; MDX is a later authoring extension that can reuse the same
+island mechanism.
 
 ## References
 

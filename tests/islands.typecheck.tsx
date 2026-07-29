@@ -1,28 +1,39 @@
-import { defineIsland } from '../src/framework/islands'
+import { island } from '../src/framework/islands'
 
-defineIsland('valid', (_props: {
+island((_props: {
+  title: string
+  count?: number
+}) => null)
+
+// @ts-expect-error Functions cannot cross the static HTML serialization boundary.
+island((_props: { onClick: () => void }) => null)
+
+// @ts-expect-error Nib's static server renderer requires synchronous island components.
+island(async () => null)
+
+island((_props: {
   title: string
   count?: number
   options: Array<{ label: string; selected: boolean }>
 }) => null)
 
 // @ts-expect-error Nib's static server renderer requires synchronous island components.
-defineIsland('invalid-async', async () => null)
+island(async () => null)
 
 // @ts-expect-error Functions cannot cross the static HTML serialization boundary.
-defineIsland('invalid-function', (_props: { onClick: () => void }) => null)
+island((_props: { onClick: () => void }) => null)
 
 // @ts-expect-error Class instances cannot cross the static HTML serialization boundary.
-defineIsland('invalid-date', (_props: { createdAt: Date }) => null)
+island((_props: { createdAt: Date }) => null)
 
-// @ts-expect-error hydrate is reserved for the framework hydration strategy.
-defineIsland('invalid-reserved-prop', (_props: { hydrate: string }) => null)
+// @ts-expect-error when is reserved for the framework hydration strategy.
+island((_props: { when: string }) => null)
 
 // @ts-expect-error Broad object props cannot cross the static HTML serialization boundary.
-defineIsland('invalid-object', (_props: { value: object }) => null)
+island((_props: { value: object }) => null)
 
 // @ts-expect-error Required undefined cannot cross the static HTML serialization boundary.
-defineIsland('invalid-required-undefined', (_props: { value: undefined }) => null)
+island((_props: { value: undefined }) => null)
 
 // @ts-expect-error A union branch cannot hide non-serializable props.
-defineIsland('invalid-union', (_props: { value: string } | { onClick: () => void }) => null)
+island((_props: { value: string } | { onClick: () => void }) => null)

@@ -11,17 +11,18 @@ TSX pages, Markdown layouts, and ordinary components produce static HTML. Put on
 ```tsx
 // src/islands/counter.tsx
 import { useState } from 'react'
-import { defineIsland } from '@briansunter/nib'
+import { island } from '@briansunter/nib'
 
 function Counter({ initialCount }: { initialCount: number }) {
   const [count, setCount] = useState(initialCount)
   return <button onClick={() => setCount((value) => value + 1)}>Count: {count}</button>
 }
 
-export default defineIsland('counter', Counter)
+export default island(Counter)
 ```
 
-The ID must match the module path below `src/islands`. For example, `src/islands/cart/summary.tsx` uses `cart/summary`.
+Nib derives the ID from the module path below `src/islands`. For example,
+`src/islands/cart/summary.tsx` uses `cart/summary`.
 
 Import the definition from a TSX page or layout:
 
@@ -30,11 +31,11 @@ Import the definition from a TSX page or layout:
 import Counter from '../../islands/counter'
 
 export default function Page() {
-  return <Counter initialCount={0} hydrate="load" />
+  return <Counter initialCount={0} when="load" />
 }
 ```
 
-## Hydration timing
+## Activation timing
 
 | Value | Behavior |
 | --- | --- |
@@ -50,35 +51,58 @@ Use a behavior when the HTML already exists and the browser only needs event
 listeners or another imperative enhancement:
 
 ```tsx
-// src/components/reveal.tsx
-import { defineClientBehavior } from '@briansunter/nib'
+// src/pages/example/page.tsx
+import { Behavior } from '@briansunter/nib'
 
-export const Reveal = defineClientBehavior<{ open: boolean }>('reveal')
+export default function Page() {
+  return (
+    <Behavior name="reveal" props={{ open: false }}>
+      <button type="button">Toggle details</button>
+      <p data-panel hidden>Complete static details.</p>
+    </Behavior>
+  )
+}
 ```
 
 ```ts
 // src/behaviors/reveal.client.ts
-import { defineBehaviorClient } from '@briansunter/nib/client/behaviors'
+import { behavior } from '@briansunter/nib/client'
 
-export default defineBehaviorClient(({ root, signal }) => {
+export default behavior<{ open: boolean }>(({ root, props, signal }) => {
   const button = root.querySelector('button')
   const panel = root.querySelector<HTMLElement>('[data-panel]')
+  if (panel) panel.hidden = !props.open
   button?.addEventListener('click', () => {
     if (panel) panel.hidden = !panel.hidden
   }, { signal })
 })
 ```
 
-Render `<Reveal props={{ open: false }}>...</Reveal>` around the complete static
-fallback. Behavior IDs match their `.client.ts` path under `src/behaviors`.
-Behavior-only pages ship the behavior runtime, not React DOM. Both runtime
-types support cancellable `load`, `idle`, and `visible` scheduling.
+The behavior name matches its `.client.ts` or `.client.js` path under
+`src/behaviors`. Plain JavaScript may default-export the mount function without
+`behavior(...)`.
+Behavior-only pages ship the behavior runtime, not React DOM. Use
+`when="idle"` or `when="visible"` on `<Behavior>` to defer non-critical work;
+the default is `load`.
+
+## Client ownership
+
+Behaviors and islands can be siblings on the same page. Do not nest one inside
+the other or nest behaviors: one DOM subtree must have one browser owner. Nib
+reports this as a server-render/build error and tells you to use sibling
+boundaries or give one client module the entire subtree. React islands may
+still compose other island definitions; Nib renders those inside the same
+outer React root.
 
 ## Props and boundaries
 
 Island props must be JSON-serializable. Strings, booleans, finite numbers, `null`, arrays, plain objects, and absent optional properties are supported. Functions, React nodes, class instances, dates, maps, sets, cycles, explicit `undefined`, and non-finite numbers fail type checking or the build.
 
-A top-level island owns its own state and context tree. An island may render another island definition; Nib composes the child into the same React root, and the outermost island's `hydrate` strategy controls the whole subtree. This lets interactive pieces share state and context through ordinary React composition without creating conflicting nested hydration roots.
+A top-level island owns its own state and context tree. An island may render
+another island definition; Nib composes the child into the same React root, and
+the outermost island's `when` strategy controls the whole subtree. This lets
+interactive pieces share state and context through ordinary React composition
+without creating conflicting nested hydration roots.
 
 The component must produce the same initial markup on the server and in the browser. Read from `window`, storage, media queries, or other browser-only APIs in an event handler or `useEffect`, not while rendering. This preserves the static fallback and avoids hydration mismatches.
 

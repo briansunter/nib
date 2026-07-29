@@ -69,6 +69,8 @@ src/
 │   └── docs.tsx                 -> named Markdown layout
 ├── islands/
 │   └── counter.tsx              -> opt-in browser interaction
+├── behaviors/
+│   └── reveal.client.ts         -> static DOM enhancement
 ├── content/                     -> optional collection inputs
 ├── site-shell.tsx               -> optional page chrome
 └── style.css
@@ -155,15 +157,47 @@ only by a page, layout, or server-rendered component cannot reach the deployed
 client graph, so Nib reports it as a build/development error instead of
 publishing an unstyled page.
 
-For progressive enhancement without React hydration, define a server-safe
-boundary with `defineClientBehavior` and put its implementation under
-`src/behaviors/**/*.client.ts`. Import `defineBehaviorClient` from
-`@briansunter/nib/client/behaviors`; the implementation receives its scoped
-root, JSON props, and an `AbortSignal`. Behavior-only routes keep their complete
-static HTML and do not ship React DOM. When the project has no files under
-`src/islands`, the production client build omits the island entry and React
-hydration stack entirely. Runtime teardown runs in reverse registration order,
-so a behavior can clean up before an enclosing island releases its DOM.
+For progressive enhancement without React hydration, wrap the existing HTML in
+`<Behavior name="reveal">` and put one matching implementation at
+`src/behaviors/reveal.client.ts`:
+
+```tsx
+import { Behavior } from '@briansunter/nib'
+
+export function Reveal() {
+  return (
+    <Behavior name="reveal">
+      <button type="button">Show details</button>
+      <p data-details hidden>Complete static content.</p>
+    </Behavior>
+  )
+}
+```
+
+```ts
+import { behavior } from '@briansunter/nib/client'
+
+export default behavior(({ root, signal }) => {
+  const button = root.querySelector('button')
+  const details = root.querySelector<HTMLElement>('[data-details]')
+  button?.addEventListener('click', () => {
+    if (details) details.hidden = !details.hidden
+  }, { signal })
+})
+```
+
+The implementation receives its scoped root, JSON props, and an `AbortSignal`.
+Plain JavaScript can default-export the mount function directly. Behavior-only
+routes keep their complete static HTML and do not ship React DOM. When the
+project has no files under `src/islands`, the production client build omits the
+island entry and React hydration stack entirely.
+
+Behaviors and islands may be siblings on the same page. A subtree has exactly
+one client owner, so Nib rejects behavior-in-behavior, behavior-in-island, and
+island-in-behavior nesting while rendering the route. React islands may compose
+other island definitions because they remain inside one React root. If an
+enhancement later needs React state, replace only that feature's `Behavior`
+boundary with an island; the rest of the page does not change.
 
 ### Site identity and document head
 
@@ -378,10 +412,10 @@ resolution possible without changing the generated page API.
 ## React islands
 
 Ordinary React components remain static. Put browser state and event handlers
-under `src/islands` and mark the boundary with `defineIsland`:
+under `src/islands` and mark the boundary with `island`:
 
 ```tsx
-import { defineIsland } from '@briansunter/nib'
+import { island } from '@briansunter/nib'
 import { useState } from 'react'
 
 function Counter({ initialCount }: { initialCount: number }) {
@@ -393,10 +427,10 @@ function Counter({ initialCount }: { initialCount: number }) {
   )
 }
 
-export default defineIsland('counter', Counter)
+export default island(Counter)
 ```
 
-Island IDs match their path below `src/islands`, and props must be
+Nib derives the island ID from its path below `src/islands`, and props must be
 JSON-serializable. A route without islands does not include the island runtime.
 
 ## Optional client navigation
