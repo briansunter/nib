@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.18.0](https://github.com/briansunter/nib/compare/v0.17.0...v0.18.0) (2026-07-29)
+
+
+### Features
+
+* **core:** compile markdown asynchronously ([fa8a503](https://github.com/briansunter/nib/commit/fa8a5032cddaae79840dab8e4d04ef7b89d893e8))
+* **core:** expose frontmatter and data in page render context ([a0834a7](https://github.com/briansunter/nib/commit/a0834a753319c3fa21b5e0def6b2fd799b88c30d))
+* useImage, page render-context data, async markdown pipeline ([652bf9d](https://github.com/briansunter/nib/commit/652bf9d83f5566512960012cdc5464a00fe2afb1))
+
 ## [0.17.0](https://github.com/briansunter/nib/compare/v0.16.0...v0.17.0) (2026-07-28)
 
 

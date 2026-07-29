@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.0](https://github.com/briansunter/nib/compare/nib-images-v0.6.0...nib-images-v0.7.0) (2026-07-29)
+
+
+### Features
+
+* **images:** add useImage build-time image resolver ([0f913b7](https://github.com/briansunter/nib/commit/0f913b78d07b5c93a769f8f7378ead5a6c7ada3e))
+* useImage, page render-context data, async markdown pipeline ([652bf9d](https://github.com/briansunter/nib/commit/652bf9d83f5566512960012cdc5464a00fe2afb1))
+
 ## [0.6.0](https://github.com/briansunter/nib/compare/nib-images-v0.5.1...nib-images-v0.6.0) (2026-07-28)
 
 
