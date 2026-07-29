@@ -1,15 +1,16 @@
-import { createElement, type CSSProperties, type ImgHTMLAttributes } from 'react'
+import { createElement, useCallback, type CSSProperties, type ImgHTMLAttributes } from 'react'
+import type { ImageLayout } from './candidates'
 import {
-  planImageCandidates,
-  type ImageLayout,
-} from './candidates'
+  computeImage,
+  imageOrientation,
+  type ImageOptions,
+  type ImageResult,
+} from './image-builder'
 import type {
   ImageFormat,
   ImageQualityFormat,
   ImageSource,
-  InternalImageSource,
 } from './image-source'
-import { isImageSource } from './image-source'
 import { useImageRegistry } from './image-context'
 
 type ImageEventProp = Extract<keyof ImgHTMLAttributes<HTMLImageElement>, `on${string}`>
@@ -77,120 +78,19 @@ export type ImageProps = CommonProps
   & (ConstrainedImageLayout | FixedImageLayout | FullImageLayout)
   & (PriorityImage | DeferredImage)
 
-const supportedLayouts = new Set<ImageLayout>(['constrained', 'fixed', 'full'])
-function isQualityFormat(value: string): value is ImageQualityFormat {
-  return value === 'avif' || value === 'webp' || value === 'jpeg'
-}
-
-function isImageFormat(value: string): value is ImageFormat {
-  return value === 'avif' || value === 'webp' || value === 'jpeg' || value === 'png'
-}
-
-function requestedQuality(
-  quality: ImageProps['quality'],
-  format: ImageFormat,
-): number | undefined {
-  if (format === 'png') return undefined
-  const value = typeof quality === 'number' ? quality : quality?.[format]
-  if (value !== undefined && (!Number.isSafeInteger(value) || value < 1 || value > 100)) {
-    throw new Error(`@briansunter/nib-images: quality for ${format} must be an integer from 1 to 100`)
-  }
-  return value
-}
-
-function validateQualityOption(quality: ImageProps['quality']): void {
-  if (quality === undefined) return
-  if (typeof quality === 'number') {
-    if (!Number.isSafeInteger(quality) || quality < 1 || quality > 100) {
-      throw new Error('@briansunter/nib-images: quality must be an integer from 1 to 100')
-    }
-    return
-  }
-  if (quality === null || typeof quality !== 'object' || Array.isArray(quality)) {
-    throw new Error('@briansunter/nib-images: quality must be a number or format map')
-  }
-  for (const format of Object.keys(quality)) {
-    if (!isQualityFormat(format)) {
-      throw new Error(`@briansunter/nib-images: quality does not support ${format}`)
-    }
-    requestedQuality(quality, format)
-  }
-}
-
-interface CandidateUrl {
-  readonly url: string
-  readonly width: number
-  readonly density?: number
-}
-
-function formatDensity(value: number): string {
-  return Number(value.toFixed(3)).toString()
-}
-
-function imageOrientation(source: ImageSource): 'landscape' | 'portrait' | 'square' {
-  if (source.width > source.height) return 'landscape'
-  if (source.width < source.height) return 'portrait'
-  return 'square'
-}
-
-function srcSet(entries: readonly CandidateUrl[], fixed: boolean): string {
-  return entries
-    .map(({ url, width, density }) => `${url} ${fixed ? `${formatDensity(density!)}x` : `${width}w`}`)
-    .join(', ')
-}
-
 export function Image(props: ImageProps) {
   const registry = useImageRegistry()
-  if (!isImageSource(props.src)) {
-    throw new Error('@briansunter/nib-images: <Image> src must come from a ?nib-image import')
-  }
-  const source: InternalImageSource = props.src
   if (typeof props.alt !== 'string') {
     throw new Error('@briansunter/nib-images: <Image> alt must be a string')
-  }
-  if (!supportedLayouts.has(props.layout ?? 'constrained')) {
-    throw new Error('@briansunter/nib-images: unsupported layout')
   }
   if (props.priority === true && (props.loading !== undefined || props.fetchPriority !== undefined)) {
     throw new Error('@briansunter/nib-images: priority cannot be combined with loading or fetchPriority')
   }
-  validateQualityOption(props.quality)
-  const defaults = registry.defaults()
-  const layout: ImageLayout = props.layout ?? 'constrained'
-  const plan = planImageCandidates({
-    source,
-    layout,
-    width: props.width,
-    maxWidth: props.maxWidth,
-    widths: props.widths,
-    densities: props.densities,
-    defaultWidths: defaults.widths,
-    sizes: props.sizes,
-  })
-  const { fixed, widths, sizes, fixedCandidates: fixedImageCandidates } = plan
-  const fallback: ImageFormat = source.hasAlpha ? 'png' : 'jpeg'
-  const formats = source.animated || source.format === 'svg' || props.unoptimized
-    ? []
-    : [...new Set(props.formats ?? defaults.formats)]
-  if (formats.some((format) => !isImageFormat(format))) {
-    throw new Error('@briansunter/nib-images: unsupported output format')
-  }
-  const userStyle = props.style
-  const intrinsicStyle = {
-    '--nib-image-source-width': `${source.width}px`,
-    '--nib-image-source-height': `${source.height}px`,
-    '--nib-image-source-aspect': String(source.width / source.height),
-  } as CSSProperties
-  const layoutStyle: CSSProperties = layout === 'full'
-    ? { ...intrinsicStyle, width: '100%', height: 'auto', ...userStyle }
-    : layout === 'constrained'
-      ? { ...intrinsicStyle, maxWidth: '100%', height: 'auto', ...userStyle }
-      : { ...intrinsicStyle, ...userStyle }
+  const result = computeImage(registry, props)
   const {
-    src: _src,
     alt,
     formats: _formats,
-    quality,
+    quality: _quality,
     unoptimized,
     layout: _layout,
     widths: _widths,
@@ -201,56 +101,59 @@ export function Image(props: ImageProps) {
     width: _width,
     maxWidth: _maxWidth,
     sizes: _sizes,
-    style: _style,
+    style: userStyle,
     ...attributes
   } = props
-  const passthrough = Boolean(unoptimized || source.animated || source.format === 'svg')
-  const candidateUrls = (format: ImageFormat) => widths.map((width) => ({
-    width,
-    ...(fixed
-      ? { density: fixedImageCandidates!.find((candidate) => candidate.width === width)!.density }
-      : {}),
-    url: registry.register(source, width, format, requestedQuality(quality, format) ?? defaults.quality[format], passthrough),
-  }))
-  if (passthrough) {
-    const url = registry.register(source, source.width, source.format, 100, true)
-    return createElement('img', {
-      ...attributes,
-      src: url,
-      alt,
-      width: plan.displayWidth,
-      height: plan.displayHeight,
-      'data-nib-orientation': imageOrientation(source),
-      loading: priority ? 'eager' : loading ?? 'lazy',
-      decoding: 'async',
-      ...(priority ? { fetchPriority: 'high' } : fetchPriority === undefined ? {} : { fetchPriority }),
-      style: layoutStyle,
-    })
-  }
-  const fallbackCandidates = candidateUrls(fallback)
-  const fallbackUrl = fixed ? fallbackCandidates[0]!.url : fallbackCandidates.at(-1)!.url
-  const image = createElement('img', {
+  const source = props.src
+  const layout: ImageLayout = props.layout ?? 'constrained'
+  const intrinsicStyle = {
+    '--nib-image-source-width': `${source.width}px`,
+    '--nib-image-source-height': `${source.height}px`,
+    '--nib-image-source-aspect': String(source.width / source.height),
+  } as CSSProperties
+  const layoutStyle: CSSProperties = layout === 'full'
+    ? { ...intrinsicStyle, width: '100%', height: 'auto', ...userStyle }
+    : layout === 'constrained'
+      ? { ...intrinsicStyle, maxWidth: '100%', height: 'auto', ...userStyle }
+      : { ...intrinsicStyle, ...userStyle }
+
+  const imageElement = createElement('img', {
     ...attributes,
-    src: fallbackUrl,
-    srcSet: srcSet(fallbackCandidates, fixed),
-    ...(sizes === undefined ? {} : { sizes }),
+    src: result.src,
+    ...(result.srcSet === undefined ? {} : { srcSet: result.srcSet }),
+    ...(result.sizes === undefined ? {} : { sizes: result.sizes }),
     alt,
-    width: plan.displayWidth,
-    height: plan.displayHeight,
+    width: result.width,
+    height: result.height,
     'data-nib-orientation': imageOrientation(source),
     loading: priority ? 'eager' : loading ?? 'lazy',
     decoding: 'async',
     ...(priority ? { fetchPriority: 'high' } : fetchPriority === undefined ? {} : { fetchPriority }),
     style: layoutStyle,
   })
-  const sources = formats.filter((format) => format !== fallback).map((format) => {
-    const candidates = candidateUrls(format)
-    return createElement('source', {
-      key: format,
-      type: `image/${format === 'jpeg' ? 'jpeg' : format}`,
-      srcSet: srcSet(candidates, fixed),
-      ...(sizes === undefined ? {} : { sizes }),
-    })
-  })
-  return createElement('picture', null, ...sources, image)
+
+  if (result.passthrough || result.sources.length === 0) return imageElement
+  const sources = result.sources.map((entry) => createElement('source', {
+    key: entry.type,
+    type: entry.type,
+    srcSet: entry.srcSet,
+    ...(entry.sizes === undefined ? {} : { sizes: entry.sizes }),
+  }))
+  return createElement('picture', null, ...sources, imageElement)
+}
+
+/**
+ * Resolve optimized image sources for manual rendering or serialization. Returns
+ * a stable builder bound to the build registry (the nib equivalent of Astro's
+ * getImage()), so it can be called freely inside loops/maps without violating
+ * the rules of hooks. The returned {@link ImageResult} carries the fallback
+ * `<img>` src/srcSet plus modern-format `<source>` entries — enough to render a
+ * `<picture>` directly or to hand optimized URLs to client-side code.
+ */
+export function useImage(): (options: ImageOptions) => ImageResult {
+  const registry = useImageRegistry()
+  return useCallback(
+    (options: ImageOptions) => computeImage(registry, options),
+    [registry],
+  )
 }

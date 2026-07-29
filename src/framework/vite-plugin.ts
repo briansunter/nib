@@ -83,7 +83,7 @@ export function nibMarkdown(configPath = 'nib.config.ts'): Plugin {
         `import { Content as NibContent } from '@briansunter/nib'`,
         `import config from ${configImport}`,
         `import { markdownToCompiledPage } from '@briansunter/nib/internal/server'`,
-        `const compiled = markdownToCompiledPage(${JSON.stringify(source)}, config.markdown, { file: ${JSON.stringify(cleanId)} })`,
+        `const compiled = await markdownToCompiledPage(${JSON.stringify(source)}, config.markdown, { file: ${JSON.stringify(cleanId)} })`,
         `export const meta = compiled.meta`,
         `export const frontmatter = compiled.frontmatter`,
         `export const layout = compiled.layout`,

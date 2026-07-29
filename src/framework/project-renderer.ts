@@ -289,6 +289,8 @@ export async function createProjectRenderer(
         base: options.base,
         ...(options.config.origin === undefined ? {} : { origin: options.config.origin }),
         mode: options.command === 'serve' ? 'development' : 'production',
+        ...(route.frontmatter === undefined ? {} : { frontmatter: deepFreeze(route.frontmatter) }),
+        ...(route.data === undefined ? {} : { data: deepFreeze(route.data) }),
       })
       const head = plugins.head(pageContext)
       const content = plugins.wrapPage(composePage(

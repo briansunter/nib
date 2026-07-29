@@ -44,7 +44,7 @@ function getMarkdownMeta(
   }
 }
 
-export function markdownToCompiledPage<
+export async function markdownToCompiledPage<
   Validator extends DataValidator = typeof defaultMarkdownSchema,
 >(
   source: string,
@@ -69,7 +69,7 @@ export function markdownToCompiledPage<
     label: 'Markdown page fields',
   })
   const { meta, layout } = getMarkdownMeta(values)
-  const html = renderMarkdown(parsed.content, definition, context)
+  const html = await renderMarkdown(parsed.content, definition, context)
   return {
     html,
     content: compiledMarkdownContent(html, context?.file ?? 'inline Markdown page'),

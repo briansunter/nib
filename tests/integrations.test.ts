@@ -252,8 +252,8 @@ describe('publication integrations', () => {
     await expect(invalidHref.routes?.(context)).rejects.toThrow('href must be an absolute route')
   })
 
-  it('converts explicitly trusted Markdown media and rejects other iframe hosts', () => {
-    const compiled = markdownToCompiledPage(
+  it('converts explicitly trusted Markdown media and rejects other iframe hosts', async () => {
+    const compiled = await markdownToCompiledPage(
       '---\ntitle: Media\n---\n\n# Media\n\n![autoplay](/videos/demo.mp4)\n\n<iframe src="https://www.youtube.com/embed/demo"></iframe>',
       {
         allowDangerousHtml: true,
@@ -264,7 +264,7 @@ describe('publication integrations', () => {
     expect(compiled.html).toContain('controls')
     expect(compiled.html).toContain('https://www.youtube.com/embed/demo')
 
-    const disallowed = markdownToCompiledPage(
+    const disallowed = await markdownToCompiledPage(
       '---\ntitle: Disallowed media\n---\n\n<iframe src="https://evil.example/embed"></iframe>',
       {
         allowDangerousHtml: true,
@@ -287,8 +287,8 @@ describe('publication integrations', () => {
     expect(tree.children[0].children[1].tagName).toBe('img')
   })
 
-  it('preserves safe iframe presentation and permission attributes exactly', () => {
-    const compiled = markdownToCompiledPage(
+  it('preserves safe iframe presentation and permission attributes exactly', async () => {
+    const compiled = await markdownToCompiledPage(
       '---\ntitle: Embedded video\n---\n\n'
       + '<iframe width="515" height="915" src="https://www.youtube.com/embed/demo" '
       + 'title="Hydrofoil Surfing" loading="lazy" frameborder="0" '
@@ -311,7 +311,7 @@ describe('publication integrations', () => {
     expect(compiled.html).toContain('allowfullscreen')
     expect(compiled.html).toContain('style="max-width: 600px; border-radius: 8px;"')
 
-    const withoutFullscreen = markdownToCompiledPage(
+    const withoutFullscreen = await markdownToCompiledPage(
       '---\ntitle: Video without fullscreen\n---\n\n'
       + '<iframe src="https://www.youtube.com/embed/demo" title="No fullscreen"></iframe>',
       {

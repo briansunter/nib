@@ -5,34 +5,34 @@ import { markdownToCompiledPage } from '../src/framework/markdown'
 import { nibMarkdown } from '../src/framework/vite-plugin'
 
 describe('markdown', () => {
-  it('compiles GFM Markdown and frontmatter', () => {
-    const compiled = markdownToCompiledPage('---\ntitle: Hello\n---\n~~old~~\n\n- [x] done')
+  it('compiles GFM Markdown and frontmatter', async () => {
+    const compiled = await markdownToCompiledPage('---\ntitle: Hello\n---\n~~old~~\n\n- [x] done')
     expect(compiled.meta.title).toBe('Hello')
     expect(compiled.html).toContain('<del>old</del>')
     expect(compiled.layout).toBeUndefined()
   })
 
-  it('allows a site to opt out of the built-in GFM pass', () => {
-    const compiled = markdownToCompiledPage('---\ntitle: Literal\n---\n~~literal~~', { gfm: false })
+  it('allows a site to opt out of the built-in GFM pass', async () => {
+    const compiled = await markdownToCompiledPage('---\ntitle: Literal\n---\n~~literal~~', { gfm: false })
     expect(compiled.html).toContain('~~literal~~')
     expect(compiled.html).not.toContain('<del>')
   })
 
-  it('serializes trusted raw HTML when explicitly enabled', () => {
+  it('serializes trusted raw HTML when explicitly enabled', async () => {
     const html = '---\ntitle: Embedded content\n---\n<div data-embed="owned">Embedded content</div>'
-    expect(markdownToCompiledPage(html).html).not.toContain('<div data-embed="owned">')
-    expect(markdownToCompiledPage(html, { allowDangerousHtml: true }).html)
+    expect((await markdownToCompiledPage(html)).html).not.toContain('<div data-embed="owned">')
+    expect((await markdownToCompiledPage(html, { allowDangerousHtml: true })).html)
       .toContain('<div data-embed="owned">Embedded content</div>')
   })
 
-  it('keeps layout frontmatter separate from page metadata', () => {
-    const compiled = markdownToCompiledPage('---\ntitle: Hello\nlayout: docs\n---\n# World')
+  it('keeps layout frontmatter separate from page metadata', async () => {
+    const compiled = await markdownToCompiledPage('---\ntitle: Hello\nlayout: docs\n---\n# World')
     expect(compiled.meta).toEqual({ title: 'Hello' })
     expect(compiled.layout).toBe('docs')
   })
 
-  it('preserves social metadata fields from Markdown frontmatter', () => {
-    const compiled = markdownToCompiledPage(
+  it('preserves social metadata fields from Markdown frontmatter', async () => {
+    const compiled = await markdownToCompiledPage(
       '---\n'
       + 'title: Hello\n'
       + 'image: /cover.png\n'
@@ -52,31 +52,31 @@ describe('markdown', () => {
     expect(compiled.meta).not.toHaveProperty('layout')
   })
 
-  it('rejects invalid social metadata field types in Markdown frontmatter', () => {
-    expect(() => markdownToCompiledPage('---\ntype: profile\n---\n# World'))
-      .toThrow('Markdown frontmatter')
-    expect(() => markdownToCompiledPage('---\ntwitterCard: hero\n---\n# World'))
-      .toThrow('Markdown frontmatter')
+  it('rejects invalid social metadata field types in Markdown frontmatter', async () => {
+    await expect(markdownToCompiledPage('---\ntype: profile\n---\n# World'))
+      .rejects.toThrow('Markdown frontmatter')
+    await expect(markdownToCompiledPage('---\ntwitterCard: hero\n---\n# World'))
+      .rejects.toThrow('Markdown frontmatter')
   })
 
-  it('rejects invalid Markdown layouts while compiling', () => {
-    expect(() => markdownToCompiledPage('---\ntitle: World\nlayout: ../docs\n---\n# World'))
-      .toThrow('Markdown layout must be a flat name')
-    expect(() => markdownToCompiledPage('---\ntitle: World\nlayout: 42\n---\n# World'))
-      .toThrow('Markdown frontmatter')
+  it('rejects invalid Markdown layouts while compiling', async () => {
+    await expect(markdownToCompiledPage('---\ntitle: World\nlayout: ../docs\n---\n# World'))
+      .rejects.toThrow('Markdown layout must be a flat name')
+    await expect(markdownToCompiledPage('---\ntitle: World\nlayout: 42\n---\n# World'))
+      .rejects.toThrow('Markdown frontmatter')
   })
 
-  it('validates Markdown frontmatter types at the compiler seam', () => {
-    expect(() => markdownToCompiledPage('---\ntitle: 42\n---\n# World'))
-      .toThrow('Markdown frontmatter')
-    expect(() => markdownToCompiledPage('---\ndescription: [wrong]\n---\n# World'))
-      .toThrow('Markdown frontmatter')
-    expect(() => markdownToCompiledPage('---\ndraft: "false"\n---\n# World'))
-      .toThrow('Markdown frontmatter')
+  it('validates Markdown frontmatter types at the compiler seam', async () => {
+    await expect(markdownToCompiledPage('---\ntitle: 42\n---\n# World'))
+      .rejects.toThrow('Markdown frontmatter')
+    await expect(markdownToCompiledPage('---\ndescription: [wrong]\n---\n# World'))
+      .rejects.toThrow('Markdown frontmatter')
+    await expect(markdownToCompiledPage('---\ndraft: "false"\n---\n# World'))
+      .rejects.toThrow('Markdown frontmatter')
   })
 
-  it('supports custom typed frontmatter while retaining page metadata', () => {
-    const compiled = markdownToCompiledPage(
+  it('supports custom typed frontmatter while retaining page metadata', async () => {
+    const compiled = await markdownToCompiledPage(
       '---\ntitle: Hello\ntags: [nib, typed]\n---\n# World',
       {
         schema: z.object({
@@ -89,8 +89,8 @@ describe('markdown', () => {
     expect(compiled.meta.title).toBe('Hello')
   })
 
-  it('applies configured remark and rehype plugins in pipeline order', () => {
-    const compiled = markdownToCompiledPage('---\ntitle: World\n---\n# World', {
+  it('applies configured remark and rehype plugins in pipeline order', async () => {
+    const compiled = await markdownToCompiledPage('---\ntitle: World\n---\n# World', {
       remarkPlugins: [
         () => (tree: any) => {
           tree.children.push({
@@ -110,9 +110,9 @@ describe('markdown', () => {
     expect(compiled.html).toContain('<p>Added by remark</p>')
   })
 
-  it('passes the Markdown source path to Unified plugins', () => {
+  it('passes the Markdown source path to Unified plugins', async () => {
     let sourcePath: string | undefined
-    markdownToCompiledPage('---\ntitle: World\n---\n# World', {
+    await markdownToCompiledPage('---\ntitle: World\n---\n# World', {
       remarkPlugins: [
         () => (_tree: any, file: { history: string[] }) => {
           sourcePath = file.history[0]
@@ -130,7 +130,7 @@ describe('markdown', () => {
     const result = await load(path.resolve('examples/docs/src/pages/docs/getting-started/page.md'))
     if (typeof result !== 'string') throw new Error('Markdown plugin did not return module source')
 
-    expect(result).toContain('markdownToCompiledPage')
+    expect(result).toContain('await markdownToCompiledPage')
     expect(result).toContain('file:')
     expect(result).toContain('export const frontmatter = compiled.frontmatter')
     expect(result).toContain('export const layout = compiled.layout')

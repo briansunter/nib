@@ -64,13 +64,13 @@ export function compiledMarkdownContent(html: string, file: string): MarkdownCon
   })
 }
 
-/** Compiles generated-page Markdown with the same synchronous pipeline as file pages. */
-export function markdownBody(source: string, options: MarkdownBodyOptions): MarkdownContent {
+/** Compiles generated-page Markdown with the same pipeline as file pages. */
+export async function markdownBody(source: string, options: MarkdownBodyOptions): Promise<MarkdownContent> {
   if (typeof source !== 'string') throw new Error('markdownBody source must be a string')
   const file = sourceIdentity(options?.file)
   try {
     return compiledMarkdownContent(
-      renderMarkdown(source, options.profile, { file }),
+      await renderMarkdown(source, options.profile, { file }),
       file,
     )
   } catch (error) {
