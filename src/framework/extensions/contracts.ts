@@ -41,6 +41,10 @@ export interface NibRenderPageContext {
   readonly base: string
   readonly origin?: string
   readonly mode: NibMode
+  /** Full parsed frontmatter (custom fields beyond PageMeta); undefined when absent. */
+  readonly frontmatter?: unknown
+  /** Data-page payload (page sources / collections); undefined for markdown-only routes. */
+  readonly data?: unknown
 }
 
 export interface NibFinalizeContext extends NibRendererPluginContext {
