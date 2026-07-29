@@ -7,7 +7,8 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import sharp from 'sharp'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Image } from '../src/image-component'
+import { Image, useImage } from '../src/image-component'
+import type { ImageResult } from '../src/image-builder'
 import { ImageRegistryProvider } from '../src/image-context'
 import { ImageBuildRegistry } from '../src/image-registry'
 import { createImageSource } from '../src/image-source'
@@ -220,6 +221,40 @@ describe('static Image component', () => {
     expect(html).not.toContain('--nib-image-comfort-width')
     expect(html).toContain('sizes="100vw"')
     expect(html).not.toContain('data-nib-islands')
+  })
+
+  it('useImage resolves optimized sources for manual rendering and serialization', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-useimage-'))
+    temporaryDirectories.push(root)
+    const registry = new ImageBuildRegistry(
+      normalizeImagesOptions(root, { widths: [40, 80], formats: ['avif', 'webp'] }),
+      '/',
+      'production',
+    )
+    const source = await fixtureSource()
+    const results: ImageResult[] = []
+    function Probe() {
+      const getImage = useImage()
+      results.push(getImage({ src: source, layout: 'full' }))
+      return null
+    }
+    renderToStaticMarkup(createElement(
+      ImageRegistryProvider,
+      { registry, children: createElement(Probe) },
+    ))
+    expect(results).toHaveLength(1)
+    const result = results[0]!
+    expect(result.src).toMatch(/^\/assets\/nib\/.+\.png$/)
+    expect(result.srcSet).toContain(' 40w')
+    expect(result.srcSet).toContain(' 80w')
+    expect(result.sizes).toBe('100vw')
+    expect(result.width).toBe(80)
+    expect(result.height).toBe(40)
+    expect(result.sources.map((entry) => entry.type)).toEqual(['image/avif', 'image/webp'])
+    expect(result.sources[0]!.srcSet).toContain(' 80w')
+    // The same transforms <Image> would register, available without a render.
+    expect(registry.requests().some((request) => request.format === 'avif' && request.width === 80))
+      .toBe(true)
   })
 
   it('uses correct fixed-density descriptors and display dimensions', async () => {
