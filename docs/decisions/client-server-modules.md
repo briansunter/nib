@@ -4,10 +4,11 @@ Status: accepted
 
 Last reviewed: 2026-07-28
 
-Nib applications may suffix modules with `.client.ts`, `.client.tsx`,
-`.server.ts`, or `.server.tsx` to state which build graph owns them. Production
-client builds reject server modules and production server builds reject client
-modules. Diagnostics include the import chain that crossed the boundary.
+Nib applications may suffix JavaScript or TypeScript modules with `.client` or
+`.server` before the file extension to state which build graph owns them (for
+example, `.client.js` or `.server.tsx`). Production client builds reject server
+modules and production server builds reject client modules. Diagnostics include
+the import chain that crossed the boundary.
 
 Public package imports follow the same rule:
 

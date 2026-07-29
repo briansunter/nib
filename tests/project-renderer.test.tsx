@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { Behavior } from '../src/framework/behaviors'
 import { createProjectRenderer } from '../src/framework/project-renderer'
 import {
   defineCollection,
@@ -20,6 +21,38 @@ import { rss } from '../src/rss'
 const Page = () => <h1>Home</h1>
 
 describe('project renderer', () => {
+  it('attributes overlapping client ownership to the route during rendering', async () => {
+    function InvalidPage() {
+      return (
+        <Behavior name="outer">
+          <Behavior name="inner"><p>Details</p></Behavior>
+        </Behavior>
+      )
+    }
+    const renderer = await createProjectRenderer({
+      config: {},
+      root: process.cwd(),
+      base: '/',
+      pages: {
+        '/src/pages/page.tsx': {
+          default: InvalidPage,
+          meta: { title: 'Invalid' },
+        },
+      },
+      islandModules: {},
+      behaviorClientFiles: [
+        '/src/behaviors/outer.client.ts',
+        '/src/behaviors/inner.client.ts',
+      ],
+    })
+
+    expect(() => renderer.render('/')).toThrow(
+      'Route / from /src/pages/page.tsx has overlapping client ownership. '
+      + 'Client ownership conflict: behavior "inner" cannot be nested inside '
+      + 'behavior "outer". Use sibling boundaries or let one client module own the subtree.',
+    )
+  })
+
   it('keeps draft data pages out of page-source collections', async () => {
     const source = definePageSource({
       extensions: ['json'],

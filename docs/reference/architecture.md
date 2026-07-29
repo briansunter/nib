@@ -158,6 +158,15 @@ does not emit React DOM, hydration, or island-serialization chunks. Client
 runtime controllers tear down in reverse registration order so behavior
 cleanup runs before an enclosing React root is destroyed.
 
+Application behaviors use `<Behavior name="feature">` around complete static
+HTML and a matching `src/behaviors/feature.client.ts` or `.client.js`
+default-exported mount function. The generated behavior entry discovers
+modules lazily, so a route loads only the features named by its rendered
+boundaries. React islands use
+`island(Component)` under `src/islands`; their stable IDs come from module
+paths, removing an otherwise duplicated identifier without adding a source
+transform.
+
 Tailwind is optional rather than a framework dependency. The initializer adds
 `@tailwindcss/vite` and opts in through the narrow app-owned `vite` field in
 `nib.config.ts` (`vite: () => tailwindcss()`). Sites that use plain CSS or
@@ -412,7 +421,7 @@ Static routes therefore contain HTML and CSS without the island runtime.
 
 ## React islands
 
-A React island is an explicit hydration seam created with `defineIsland`. It
+A React island is an explicit hydration seam created with `island(Component)`. It
 has a stable path-matching ID, JSON-serializable props, and a `load`, `idle`, or
 `visible` strategy.
 

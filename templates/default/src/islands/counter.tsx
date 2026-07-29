@@ -1,4 +1,4 @@
-import { defineIsland } from '@briansunter/nib'
+import { island } from '@briansunter/nib'
 import { useState } from 'react'
 
 function CounterComponent({ initialCount }: { initialCount: number }) {
@@ -10,5 +10,5 @@ function CounterComponent({ initialCount }: { initialCount: number }) {
   )
 }
 
-export const Counter = defineIsland('counter', CounterComponent)
+export const Counter = island(CounterComponent)
 export default Counter

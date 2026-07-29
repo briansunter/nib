@@ -7,8 +7,6 @@ import {
 } from '../framework/hydration-scheduler'
 import { parseIslandProps } from '../framework/island-serialization'
 
-const BEHAVIOR_CLIENT_DEFINITION = Symbol.for('nib.behavior-client-definition')
-
 export interface BehaviorMountContext<Props extends object = Record<string, unknown>> {
   root: HTMLElement
   props: Props
@@ -20,10 +18,8 @@ export type BehaviorMount<Props extends object = Record<string, unknown>> = (
   context: BehaviorMountContext<Props>,
 ) => BehaviorCleanup | Promise<BehaviorCleanup>
 
-export interface BehaviorClientDefinition<Props extends object = Record<string, unknown>> {
-  readonly [BEHAVIOR_CLIENT_DEFINITION]: true
-  readonly mount: BehaviorMount<Props>
-}
+/** A plain browser mount function for a route-scoped behavior module. */
+export type Behavior<Props extends object = Record<string, unknown>> = BehaviorMount<Props>
 
 export interface BehaviorClientModule {
   default: unknown
@@ -50,28 +46,27 @@ interface MountedBehavior {
   cleanup?: () => void
 }
 
-export function defineBehaviorClient<Props extends object = Record<string, unknown>>(
+/**
+ * Gives a plain behavior mount function contextual TypeScript inference.
+ * JavaScript modules may default-export the mount function directly.
+ */
+export function behavior<Props extends object = Record<string, unknown>>(
   mount: BehaviorMount<Props>,
-): BehaviorClientDefinition<Props> {
+): BehaviorMount<Props> {
   if (typeof mount !== 'function') throw new Error('Client behavior mount must be a function')
-  return Object.freeze({
-    [BEHAVIOR_CLIENT_DEFINITION]: true as const,
-    mount,
-  })
+  return mount
 }
 
 function validateBehaviorModule(
   file: string,
   module: BehaviorClientModule,
-): BehaviorClientDefinition {
-  const definition = module.default as Partial<BehaviorClientDefinition> | undefined
-  if (
-    definition?.[BEHAVIOR_CLIENT_DEFINITION] !== true
-    || typeof definition.mount !== 'function'
-  ) {
-    throw new Error(`Behavior module ${file} must default-export defineBehaviorClient(...)`)
+): BehaviorMount {
+  if (typeof module.default !== 'function') {
+    throw new Error(
+      `Behavior module ${file} must default-export a behavior mount function`,
+    )
   }
-  return definition as BehaviorClientDefinition
+  return module.default as BehaviorMount
 }
 
 function elementsWithin(root: ParentNode): HTMLElement[] {
@@ -98,11 +93,11 @@ export function createBehaviorRuntime(
   modules: BehaviorClientModules,
   options: CreateBehaviorRuntimeOptions = {},
 ): BehaviorRuntime {
-  const loaders = new Map<string, () => Promise<BehaviorClientDefinition>>()
+  const loaders = new Map<string, () => Promise<BehaviorMount>>()
   for (const [file, loadModule] of Object.entries(modules)) {
     const id = behaviorFileToId(file)
     if (loaders.has(id)) throw new Error(`Duplicate behavior ID: ${id}`)
-    let loaded: Promise<BehaviorClientDefinition> | undefined
+    let loaded: Promise<BehaviorMount> | undefined
     loaders.set(id, () => {
       if (loaded !== undefined) return loaded
       loaded = loadModule()
@@ -173,13 +168,13 @@ export function createBehaviorRuntime(
             cleanup(element, state)
             return
           }
-          void load().then(async (definition) => {
+          void load().then(async (mountBehavior) => {
             if (!state.active) return
             if (!rootContains(root, element)) {
               cleanup(element, state)
               return
             }
-            const result = await definition.mount({
+            const result = await mountBehavior({
               root: element,
               props: parseIslandProps(element.dataset.props ?? ''),
               signal: state.controller.signal,

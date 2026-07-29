@@ -5,7 +5,7 @@ const hydrateRoot = vi.hoisted(() => vi.fn())
 vi.mock('react-dom/client', () => ({ hydrateRoot }))
 
 import { createIslandRuntime } from '../src/runtime/client'
-import { defineIsland } from '../src/framework/islands'
+import { island, type IslandDefinition } from '../src/framework/islands'
 
 function rootWith(elements: HTMLElement[]): Document {
   return {
@@ -27,7 +27,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('island client entry', () => {
   it('discovers a consumer module and hydrates a valid island once', async () => {
-    const Counter = defineIsland('counter', ({ count: _count }: { count: number }) => null)
+    const Counter = island(({ count: _count }: { count: number }) => null)
     const element = islandElement({
       hydrate: 'load',
       island: 'counter',
@@ -46,7 +46,7 @@ describe('island client entry', () => {
   })
 
   it('shares one in-flight module load across island instances', async () => {
-    const Counter = defineIsland('counter', () => null)
+    const Counter = island(() => null)
     const load = vi.fn(async () => ({ default: Counter }))
     const first = islandElement({
       hydrate: 'load',
@@ -107,7 +107,7 @@ describe('island client entry', () => {
   })
 
   it('unmounts hydrated roots once and cancels detached pending work', async () => {
-    const Counter = defineIsland('counter', () => null)
+    const Counter = island(() => null)
     const immediate = islandElement({
       hydrate: 'load',
       island: 'counter',
@@ -157,8 +157,8 @@ describe('island client entry', () => {
   })
 
   it('does not hydrate after an in-flight module load is unmounted', async () => {
-    let resolveModule: ((module: { default: ReturnType<typeof defineIsland> }) => void) | undefined
-    const loading = new Promise<{ default: ReturnType<typeof defineIsland> }>((resolve) => {
+    let resolveModule: ((module: { default: IslandDefinition<any> }) => void) | undefined
+    const loading = new Promise<{ default: IslandDefinition<any> }>((resolve) => {
       resolveModule = resolve
     })
     const element = islandElement({
@@ -175,7 +175,7 @@ describe('island client entry', () => {
 
     runtime.mount(root)
     runtime.unmount(root)
-    resolveModule?.({ default: defineIsland('counter', () => null) })
+    resolveModule?.({ default: island(() => null) })
     await loading
     await Promise.resolve()
 
@@ -184,8 +184,8 @@ describe('island client entry', () => {
 
   it('does not hydrate a root detached during its module load', async () => {
     let attached = true
-    let resolveModule: ((module: { default: ReturnType<typeof defineIsland> }) => void) | undefined
-    const loading = new Promise<{ default: ReturnType<typeof defineIsland> }>((resolve) => {
+    let resolveModule: ((module: { default: IslandDefinition<any> }) => void) | undefined
+    const loading = new Promise<{ default: IslandDefinition<any> }>((resolve) => {
       resolveModule = resolve
     })
     const load = vi.fn(() => loading)
@@ -208,7 +208,7 @@ describe('island client entry', () => {
     runtime.mount(root)
     await vi.waitFor(() => expect(load).toHaveBeenCalledOnce())
     attached = false
-    resolveModule?.({ default: defineIsland('counter', () => null) })
+    resolveModule?.({ default: island(() => null) })
     await loading
     await vi.waitFor(() => expect(element.dataset.scheduled).toBeUndefined())
 
@@ -217,7 +217,7 @@ describe('island client entry', () => {
   })
 
   it('clears a rejected loader so a later mount can retry', async () => {
-    const Counter = defineIsland('counter', () => null)
+    const Counter = island(() => null)
     const load = vi.fn()
       .mockRejectedValueOnce(new Error('temporary chunk failure'))
       .mockResolvedValueOnce({ default: Counter })
@@ -259,7 +259,7 @@ describe('island client entry', () => {
     hydrateRoot
       .mockReturnValueOnce({ unmount: firstUnmount })
       .mockReturnValueOnce({ unmount: secondUnmount })
-    const Counter = defineIsland('counter', () => null)
+    const Counter = island(() => null)
     const runtime = createIslandRuntime({
       '/src/islands/counter.tsx': async () => ({ default: Counter }),
     })

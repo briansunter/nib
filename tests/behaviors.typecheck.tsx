@@ -1,20 +1,13 @@
-import { defineClientBehavior } from '../src/framework/behaviors'
+import { Behavior } from '../src/framework/behaviors'
+import { behavior } from '../src/runtime/behaviors'
 
-defineClientBehavior<{ label: string; count?: number }>('valid')
-
-const Empty = defineClientBehavior('empty')
-;<Empty />
-
-const Required = defineClientBehavior<{ label: string }>('required')
-// @ts-expect-error required behavior props cannot be omitted
-;<Required />
-;<Required props={{ label: 'Details' }} />
+;<Behavior name="valid" />
+;<Behavior name="valid" props={{ label: 'Details', count: 2 }} />
 
 // @ts-expect-error behavior props must be JSON-serializable
-defineClientBehavior<{ onClick: () => void }>('invalid-function')
+;<Behavior name="invalid" props={{ onClick: () => undefined }} />
 
-// @ts-expect-error behavior props must be JSON-serializable
-defineClientBehavior<{ createdAt: Date }>('invalid-date')
-
-// @ts-expect-error broad object props do not prove serializability
-defineClientBehavior<{ value: object }>('invalid-object')
+behavior<{ label: string }>(({ root, props, signal }) => {
+  root.dataset.label = props.label
+  signal.throwIfAborted()
+})

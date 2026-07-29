@@ -21,7 +21,7 @@ function islandEntry(file: string): boolean {
 }
 
 function behaviorEntry(file: string): boolean {
-  return /\/src\/behaviors\/.*\.client\.(?:ts|tsx)$/.test(file)
+  return /\/src\/behaviors\/.*\.client\.(?:[cm]?[jt]s|[jt]sx)$/.test(file)
 }
 
 function applicationModule(applicationRoot: string, id: string): boolean {

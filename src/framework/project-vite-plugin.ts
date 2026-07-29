@@ -1,5 +1,6 @@
 import path from 'node:path'
 import type { Plugin } from 'vite'
+import { BEHAVIOR_MODULE_GLOB } from './behavior-paths'
 import type { NibClientEntry, NibCommand } from './plugin'
 
 export const NIB_CLIENT_ENTRY = 'virtual:nib/client-entry'
@@ -63,7 +64,7 @@ export function nibProject(
       if (id === RESOLVED_BEHAVIOR_ENTRY) {
         return [
           `import { createBehaviorRuntime, registerClientRuntime } from '@briansunter/nib/client/behaviors'`,
-          `const modules = import.meta.glob('/src/behaviors/**/*.client.{ts,tsx}')`,
+          `const modules = import.meta.glob(${JSON.stringify(BEHAVIOR_MODULE_GLOB)})`,
           `const runtime = createBehaviorRuntime(modules)`,
           `const unregisterRuntime = registerClientRuntime(runtime)`,
           `runtime.mount(document)`,
@@ -120,7 +121,7 @@ export function nibProject(
         `const folderLayouts = import.meta.glob('/src/pages/**/layout.tsx', { eager: true })`,
         `const namedLayouts = import.meta.glob('/src/layouts/*.tsx', { eager: true })`,
         `const islandModules = import.meta.glob('/src/islands/**/*.tsx', { eager: true })`,
-        `const behaviorClientFiles = Object.keys(import.meta.glob('/src/behaviors/**/*.client.{ts,tsx}'))`,
+        `const behaviorClientFiles = Object.keys(import.meta.glob(${JSON.stringify(BEHAVIOR_MODULE_GLOB)}))`,
         `const renderer = await createProjectRenderer({`,
         `  config,`,
         `  root: ${projectRoot},`,

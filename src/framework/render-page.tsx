@@ -1,6 +1,7 @@
 import { StrictMode, createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup, renderToString } from 'react-dom/server'
 import { BehaviorRenderContext } from './behaviors'
+import { ClientOwnershipContext } from './client-ownership'
 import { serializeIslandProps } from './island-serialization'
 import {
   MarkdownContentRenderContext,
@@ -19,7 +20,7 @@ interface CollectedIsland {
   definition: IslandDefinition<any>
   props: Record<string, unknown>
   serializedProps: string
-  hydrate: HydrationStrategy
+  when: HydrationStrategy
   instanceId: string
   identifierPrefix: string
   html: string
@@ -65,9 +66,18 @@ function assertRequiredContent(
 function islandTree(island: CollectedIsland, behaviors: Set<string>): ReactNode {
   return contentRenderTree(
     createElement(
-      StrictMode,
-      null,
-      createElement(island.definition.Component, island.props),
+      ClientOwnershipContext.Provider,
+      {
+        value: {
+          kind: 'island',
+          name: island.definition.islandId,
+        },
+      },
+      createElement(
+        StrictMode,
+        null,
+        createElement(island.definition.Component, island.props),
+      ),
     ),
     composedIslandRenderer(),
     behaviors,
@@ -88,7 +98,7 @@ export function renderReactPage(
         definition: request.definition,
         props: request.props,
         serializedProps: serializeIslandProps(request.props),
-        hydrate: request.hydrate,
+        when: request.when,
         instanceId,
         identifierPrefix: `${instanceId}-`,
         html: '',
@@ -120,7 +130,7 @@ export function renderReactPage(
       const serializedProps = serializeIslandProps(request.props)
       if (
         island.definition !== request.definition
-        || island.hydrate !== request.hydrate
+        || island.when !== request.when
         || island.serializedProps !== serializedProps
       ) {
         throw new Error(`Island ${request.definition.islandId} changed between render passes`)
@@ -130,7 +140,7 @@ export function renderReactPage(
         'data-island': island.definition.islandId,
         'data-instance': island.instanceId,
         'data-prefix': island.identifierPrefix,
-        'data-hydrate': island.hydrate,
+        'data-hydrate': island.when,
         'data-props': island.serializedProps,
         style: { display: 'contents' },
         dangerouslySetInnerHTML: { __html: island.html },

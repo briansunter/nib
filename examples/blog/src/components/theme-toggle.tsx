@@ -1,10 +1,8 @@
-import { defineClientBehavior } from '@briansunter/nib'
-
-const ThemeToggleBehavior = defineClientBehavior('theme-toggle')
+import { Behavior } from '@briansunter/nib'
 
 export function ThemeToggle() {
   return (
-    <ThemeToggleBehavior hydrate="load">
+    <Behavior name="theme-toggle">
       <button
         aria-label="Switch color theme"
         aria-pressed="false"
@@ -15,6 +13,6 @@ export function ThemeToggle() {
         <span aria-hidden="true" data-theme-icon="">◐</span>
         <span>Theme</span>
       </button>
-    </ThemeToggleBehavior>
+    </Behavior>
   )
 }

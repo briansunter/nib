@@ -8,7 +8,7 @@ import {
   type IslandHydrationEnvironment,
   type IslandHydrateRootOptions,
 } from '../src/framework/island-runtime'
-import { defineIsland } from '../src/framework/islands'
+import { island } from '../src/framework/islands'
 
 function element(children: Element[] = [], parentElement: Element | null = null): HTMLElement {
   return { children, parentElement } as unknown as HTMLElement
@@ -91,11 +91,11 @@ describe('island hydration runtime', () => {
   })
 
   it('loads, validates, parses, and hydrates an island module', async () => {
-    const Label = defineIsland('label', ({ count }: { count: number }) => (
+    const Label = island(({ count }: { count: number }) => (
       createElement('span', null, `Count: ${count}`)
     ))
-    const Counter = defineIsland('counter', ({ count }: { count: number }) => (
-      createElement('div', null, createElement(Label, { count, hydrate: 'visible' }))
+    const Counter = island(({ count }: { count: number }) => (
+      createElement('div', null, createElement(Label, { count, when: 'visible' }))
     ))
     const hydrateRoot = vi.fn((
       _element: HTMLElement,
@@ -136,7 +136,7 @@ describe('island hydration runtime', () => {
       islandElement({ island: 'missing', instance: 'nib-0', prefix: 'nib-0-', props: '{}' }),
       dependencies,
     )).rejects.toThrow('No client module found')
-    dependencies.loaders.set('counter', async () => ({ default: defineIsland('counter', () => null) }))
+    dependencies.loaders.set('counter', async () => ({ default: island(() => null) }))
     await expect(hydrateIsland(
       islandElement({ island: 'counter', instance: 'nib-0', prefix: 'nib-0-', props: '{' }),
       dependencies,

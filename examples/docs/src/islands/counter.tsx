@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { defineIsland } from '@briansunter/nib'
+import { island } from '@briansunter/nib'
 
 interface CounterProps {
   initialCount: number
@@ -18,4 +18,4 @@ function Counter({ initialCount }: CounterProps) {
   )
 }
 
-export default defineIsland('counter', Counter)
+export default island(Counter)

@@ -37,7 +37,7 @@ export default defineHtmlPage({
   islands: {
     counter: bindIsland(Counter, {
       props: { initialCount: 0 },
-      hydrate: 'visible',
+      when: 'visible',
     }),
   },
 })
@@ -174,12 +174,12 @@ declare function bindIsland<Props extends object>(
   definition: IslandDefinition<Props>,
   options: {
     props: Props
-    hydrate?: HydrationStrategy
+    when?: HydrationStrategy
   },
 ): BoundIsland
 ```
 
-`bindIsland` infers `Props` from the result of `defineIsland`. The existing
+`bindIsland` infers `Props` from the result of `island(Component)`. The existing
 compile-time and runtime JSON rules still apply. Functions, React nodes, dates,
 maps, sets, class instances, cycles, explicit `undefined`, and non-finite
 numbers remain invalid.

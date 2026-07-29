@@ -125,7 +125,7 @@ export default function HelloPage() {
   return (
     <>
       <h1>Hello from Nib</h1>
-      <Counter initialCount={0} hydrate="load" />
+      <Counter initialCount={0} when="load" />
     </>
   )
 }
