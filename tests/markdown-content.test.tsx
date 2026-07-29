@@ -6,8 +6,8 @@ import {
 import { renderReactPage } from '../src/framework/render-page'
 
 describe('Markdown content values', () => {
-  it('uses the shared profile and lets the renderer own a semantic root', () => {
-    const body = markdownBody('# Generated', {
+  it('uses the shared profile and lets the renderer own a semantic root', async () => {
+    const body = await markdownBody('# Generated', {
       file: '/site/src/content/generated.md',
       profile: {
         rehypePlugins: [
@@ -33,8 +33,8 @@ describe('Markdown content values', () => {
     expect(Object.isFrozen(body)).toBe(true)
   })
 
-  it('requires each route body exactly once per render pass', () => {
-    const body = markdownBody('Body', { file: '/site/body.md' })
+  it('requires each route body exactly once per render pass', async () => {
+    const body = await markdownBody('Body', { file: '/site/body.md' })
     expect(() => renderReactPage(<main>Missing</main>, [body]))
       .toThrow('was not rendered')
     expect(() => renderReactPage(
@@ -46,17 +46,17 @@ describe('Markdown content values', () => {
     )).toThrow('rendered more than once')
   })
 
-  it('rejects forged content, event handlers, and source-located plugin errors', () => {
+  it('rejects forged content, event handlers, and source-located plugin errors', async () => {
     expect(() => renderReactPage(
       <Content body={{ kind: 'nib-markdown-content', source: 'bad', html: '<b>bad</b>' } as never} />,
     )).toThrow('value from markdownBody')
 
-    const body = markdownBody('Body', { file: '/site/body.md' })
+    const body = await markdownBody('Body', { file: '/site/body.md' })
     expect(() => renderReactPage(
       <Content body={body} onClick={() => undefined} />,
     )).toThrow('root props must be static')
 
-    expect(() => markdownBody('Body', {
+    await expect(markdownBody('Body', {
       file: '/site/broken.md',
       profile: {
         remarkPlugins: [
@@ -65,6 +65,6 @@ describe('Markdown content values', () => {
           },
         ],
       },
-    })).toThrow('Markdown body /site/broken.md: profile failed')
+    })).rejects.toThrow('Markdown body /site/broken.md: profile failed')
   })
 })

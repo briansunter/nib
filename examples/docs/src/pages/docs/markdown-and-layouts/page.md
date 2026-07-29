@@ -104,7 +104,7 @@ Generated data pages can use the same pipeline:
 ```tsx
 import { Content, markdownBody } from '@briansunter/nib'
 
-const body = markdownBody(project.bodyMarkdown, {
+const body = await markdownBody(project.bodyMarkdown, {
   file: `src/content/projects/${project.slug}.md`,
   profile: markdown,
 })
@@ -115,7 +115,7 @@ export function ProjectProse() {
 ```
 
 The profile is an ordinary `defineMarkdown()` definition, so plugin order,
-raw-HTML policy, source-located errors, and synchronous build behavior stay
+raw-HTML policy, source-located errors, and build behavior stay
 identical between file pages and generated prose.
 
 Layout names are flat filenames. `src/layouts/docs.tsx` works; nested layout paths are intentionally unsupported.

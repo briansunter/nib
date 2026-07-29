@@ -213,7 +213,7 @@ describe('project renderer', () => {
   })
 
   it('lets a named layout own one Markdown semantic root through Content', async () => {
-    const body = markdownBody('# Body', { file: '/src/pages/page.md' })
+    const body = await markdownBody('# Body', { file: '/src/pages/page.md' })
     function FolderLayout({ children }: PageLayoutProps) {
       return <main>{children}</main>
     }
