@@ -15,7 +15,7 @@ import {
   pageSourceIndex,
   pageSourcePatterns,
 } from '../src/framework/content'
-import { file, glob, loadCollections } from '../src/framework/content-server'
+import { file, glob, jsonFile, loadCollections } from '../src/framework/content-server'
 import type { DataPageProps } from '../src/framework/types'
 import { nibDataPages } from '../src/framework/vite-plugin'
 
@@ -410,5 +410,66 @@ describe('generic content', () => {
     const sourceModule = await load('\0virtual:nib/page-sources')
     expect(sourceModule).toContain('configuredPageSources(config)')
     expect(sourceModule).not.toContain('setup')
+  })
+
+  it('loads and validates a JSON array file as one collection entry per element', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-jsonfile-'))
+    temporaryDirectories.push(root)
+    await fs.mkdir(path.join(root, 'data'), { recursive: true })
+    await fs.writeFile(
+      path.join(root, 'data/quotes.json'),
+      JSON.stringify([
+        { text: 'Hello', views: '12' },
+        { text: 'World', views: '30' },
+      ]),
+    )
+
+    const quoteSchema = z.object({
+      text: z.string(),
+      views: z.coerce.number(),
+    })
+
+    const collections = await loadCollections({
+      quotes: jsonFile({
+        file: 'data/quotes.json',
+        schema: quoteSchema,
+        id: (entry) => entry.text.toLowerCase(),
+      }),
+    }, root)
+
+    expect(collections.quotes).toEqual([
+      { id: 'hello', data: { text: 'Hello', views: 12 } },
+      { id: 'world', data: { text: 'World', views: 30 } },
+    ])
+  })
+
+  it('falls back to array-index ids and rejects a non-array jsonFile', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-jsonfile-index-'))
+    temporaryDirectories.push(root)
+    await fs.mkdir(path.join(root, 'data'), { recursive: true })
+    await fs.writeFile(
+      path.join(root, 'data/tags.json'),
+      JSON.stringify([{ label: 'Alpha' }, { label: 'Beta' }]),
+    )
+    await fs.writeFile(path.join(root, 'data/single.json'), '{"not":"an array"}')
+
+    const tagged = await loadCollections({
+      tags: jsonFile({
+        file: 'data/tags.json',
+        schema: z.object({ label: z.string() }),
+      }),
+    }, root)
+    expect(tagged.tags.map((entry) => entry.id)).toEqual(['0', '1'])
+    expect(tagged.tags.map((entry) => entry.data)).toEqual([
+      { label: 'Alpha' },
+      { label: 'Beta' },
+    ])
+
+    await expect(loadCollections({
+      broken: jsonFile({
+        file: 'data/single.json',
+        schema: z.object({ not: z.string() }),
+      }),
+    }, root)).rejects.toThrow('jsonFile data/single.json must contain a JSON array')
   })
 })

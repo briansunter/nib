@@ -1,4 +1,5 @@
 export { defineConfig } from './framework/config'
+export { createBuildCache, cacheKey } from './framework/cache'
 export {
   defineDataPage,
   defineLayout,
@@ -8,6 +9,7 @@ export {
   defineCollection,
   defineMarkdown,
   definePageSource,
+  defineDerivedPages,
   fromPageSource,
   fromMarkdownPages,
   fromPages,
@@ -19,6 +21,7 @@ export { file, glob } from './framework/content-compat'
 export { island } from './framework/islands'
 export { Behavior } from './framework/behaviors'
 export { markdownMedia } from './integrations/markdown-media'
+export { buildInfo } from './integrations/build-info'
 export {
   Content,
   isMarkdownContent,
@@ -43,6 +46,11 @@ export type {
   IslandDefinition,
 } from './framework/islands'
 export type {
+  NibBuildOutput,
+  StagedDirectory,
+} from './framework/types'
+export type { CacheEntryOptions, NibBuildCache } from './framework/cache'
+export type {
   CollectionDefinition,
   CollectionCapability,
   PageSourceCollectionDefinition,
@@ -52,6 +60,8 @@ export type {
   CollectionLoaderContext,
   CollectionLoaderResult,
   DataPageProps,
+  DerivedPage,
+  DerivedPagesDefinition,
   DataSchema,
   DataValidator,
   HeadAttributeValue,
@@ -62,9 +72,12 @@ export type {
   LoadedCollectionDefinitions,
   LoadedCollections,
   MarkdownDefinition,
+  MarkdownMetaContext,
   MarkdownSourceContext,
+  MetadataImage,
   NibConfig,
   NibHostingAdapter,
+  NibHostingAdapterConfig,
   NibHostingConfig,
   NibViteConfig,
   PageLayoutProps,
@@ -82,6 +95,7 @@ export type {
   ResourceRoute,
   RouteSnapshot,
   SiteShellProps,
+  SiteConfigFor,
   TrailingSlash,
 } from './framework/types'
 export type {

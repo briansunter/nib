@@ -172,3 +172,63 @@ export function file(options: FileLoaderOptions) {
     options.load(await context.read(options.file))
   )
 }
+
+export interface JsonFileLoaderOptions<Data> {
+  file: string
+  schema: DataSchema<Data>
+  /** Entry id; defaults to the array index. */
+  id?: (entry: Data, index: number) => string
+}
+
+/** Loads one JSON array file as a validated collection (one entry per element). */
+export function jsonFile<Data>(
+  options: JsonFileLoaderOptions<Data>,
+): CollectionDefinition<DataSchema<Data>> {
+  return {
+    schema: options.schema,
+    loader: async ({ read }): Promise<CollectionLoaderResult> => {
+      const parsed: unknown = JSON.parse(await read(options.file))
+      if (!Array.isArray(parsed)) {
+        throw new Error(`jsonFile ${options.file} must contain a JSON array`)
+      }
+      return parsed.map((entry, index) => ({
+        id: options.id ? options.id(entry as Data, index) : String(index),
+        data: entry,
+      }))
+    },
+  }
+}
+
+export interface JsonGlobLoaderOptions<Data> {
+  base: string
+  pattern: string | string[]
+  schema: DataSchema<Data>
+  /** Entry id; defaults to the file id (relative path without extension). */
+  id?: (file: GlobLoaderFile, data: Data) => string
+  /** Optional per-file transform; defaults to JSON.parse of the file source. */
+  parse?: (file: GlobLoaderFile) => unknown | Promise<unknown>
+}
+
+/** Loads many JSON files as one validated collection (one entry per file). */
+export function jsonGlob<Data>(
+  options: JsonGlobLoaderOptions<Data>,
+): CollectionDefinition<DataSchema<Data>> {
+  return {
+    schema: options.schema,
+    loader: async ({ root }): Promise<CollectionLoaderResult> => {
+      const base = await safeProjectFile(root, options.base)
+      const files = await findFiles(options.pattern, { cwd: base, onlyFiles: true })
+      return Promise.all(files.sort().map(async (relativeFile: string) => {
+        const file = path.posix.join(options.base.replaceAll('\\', '/'), relativeFile)
+        const extension = path.posix.extname(relativeFile)
+        const globFile: GlobLoaderFile = {
+          id: relativeFile.slice(0, extension ? -extension.length : undefined),
+          file,
+          source: await fs.readFile(await safeProjectFile(root, file), 'utf8'),
+        }
+        const data = options.parse ? await options.parse(globFile) : JSON.parse(globFile.source)
+        return { id: options.id ? options.id(globFile, data as Data) : globFile.id, data }
+      }))
+    },
+  }
+}

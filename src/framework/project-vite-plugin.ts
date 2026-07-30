@@ -115,6 +115,7 @@ export function nibProject(
         `import {`,
         `  createProjectRenderer,`,
         `} from '@briansunter/nib/internal/server'`,
+        `import { definitions as __nibDerivedDefinitions, components as __nibDerivedComponents } from 'virtual:nib/derived-pages'`,
         // Keep source modules behind a private query so Vite's built-in JSON
         // loader does not parse a page-source adapter's generated JS as JSON.
         `const pages = import.meta.glob(${JSON.stringify(pagePatterns)}, { eager: true, query: '?nib-page-source' })`,
@@ -132,6 +133,7 @@ export function nibProject(
         `  namedLayouts,`,
         `  islandModules,`,
         `  behaviorClientFiles,`,
+        `  derivedPages: { definitions: __nibDerivedDefinitions, components: __nibDerivedComponents },`,
         `})`,
         `export const paths = renderer.paths`,
         `export const render = renderer.render`,

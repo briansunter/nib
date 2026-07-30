@@ -3,6 +3,7 @@ import { Behavior } from '../src/framework/behaviors'
 import { createProjectRenderer } from '../src/framework/project-renderer'
 import {
   defineCollection,
+  defineDerivedPages,
   definePageSource,
   fromCollection,
   fromPageSource,
@@ -433,5 +434,117 @@ describe('project renderer', () => {
       status: 302,
       destination: '/base/about',
     })
+  })
+
+  it('generates one derived route per collection entry and renders its data', async () => {
+    const things = defineCollection({
+      loader: async () => [
+        { id: 'one', data: { name: 'One', count: 1 } },
+        { id: 'two', data: { name: 'Two', count: 2 } },
+      ],
+      validate: (value) => value as { name: string; count: number },
+    })
+    function ThingPage({ data }: { data: { name: string; count: number } }) {
+      return <p>{data.name}:{data.count}</p>
+    }
+    const derived = defineDerivedPages({
+      pages: fromCollection(things, (entries) => entries.map((entry) => ({
+        path: `/things/${entry.id}`,
+        data: entry.data,
+        meta: { title: entry.data.name },
+      }))),
+      component: ThingPage,
+    })
+    const renderer = await createProjectRenderer({
+      config: { collections: { things } },
+      root: process.cwd(),
+      base: '/',
+      pages: {},
+      islandModules: {},
+      derivedPages: { definitions: [derived], components: [ThingPage] },
+    })
+
+    expect(renderer.paths).toEqual(['/things/one', '/things/two'])
+    const output = renderer.render('/things/one')
+    expect(output.kind).toBe('page')
+    if (output.kind !== 'page') throw new Error('Expected page')
+    expect(output.page.html).toBe('<main><p>One:1</p></main>')
+    expect(output.page.head).toContain('<title>One</title>')
+  })
+
+  it('rejects two collection entries that map to the same derived route', async () => {
+    const things = defineCollection({
+      loader: async () => [
+        { id: 'one', data: { name: 'One' } },
+        { id: 'two', data: { name: 'Two' } },
+      ],
+      validate: (value) => value as { name: string },
+    })
+    function ThingPage({ data }: { data: { name: string } }) {
+      return <p>{data.name}</p>
+    }
+    const derived = defineDerivedPages({
+      pages: fromCollection(things, (entries) => entries.map((entry) => ({
+        path: '/things/same',
+        data: entry.data,
+        meta: { title: entry.data.name },
+      }))),
+      component: ThingPage,
+    })
+
+    await expect(createProjectRenderer({
+      config: { collections: { things } },
+      root: process.cwd(),
+      base: '/',
+      pages: {},
+      islandModules: {},
+      derivedPages: { definitions: [derived], components: [ThingPage] },
+    })).rejects.toThrow('Derived pages[0] produced duplicate route /things/same')
+  })
+
+  it('lets a markdown route and a derived route coexist without colliding', async () => {
+    const body = await markdownBody('# Note', { file: '/src/pages/note/page.md' })
+    function NotePage({ Content }: { Content?: ContentRenderer }) {
+      return Content ? <Content /> : <p>fallback</p>
+    }
+    const things = defineCollection({
+      loader: async () => [{ id: 'one', data: { name: 'One' } }],
+      validate: (value) => value as { name: string },
+    })
+    function ThingPage({ data }: { data: { name: string } }) {
+      return <p>{data.name}</p>
+    }
+    const derived = defineDerivedPages({
+      pages: fromCollection(things, (entries) => entries.map((entry) => ({
+        path: `/things/${entry.id}`,
+        data: entry.data,
+        meta: { title: entry.data.name },
+      }))),
+      component: ThingPage,
+    })
+    const renderer = await createProjectRenderer({
+      config: { collections: { things } },
+      root: process.cwd(),
+      base: '/',
+      pages: {
+        '/src/pages/note/page.md': {
+          default: NotePage,
+          meta: { title: 'Note' },
+          content: body,
+        },
+      },
+      islandModules: {},
+      derivedPages: { definitions: [derived], components: [ThingPage] },
+    })
+
+    expect(renderer.paths).toEqual(['/note', '/things/one'])
+    const note = renderer.render('/note')
+    expect(note.kind).toBe('page')
+    if (note.kind !== 'page') throw new Error('Expected page')
+    expect(note.page.html).toContain('<h1>Note</h1>')
+    const thing = renderer.render('/things/one')
+    expect(thing.kind).toBe('page')
+    if (thing.kind !== 'page') throw new Error('Expected page')
+    expect(thing.page.html).toBe('<main><p>One</p></main>')
   })
 })

@@ -1,11 +1,13 @@
 import {
+  defineCollection,
+  defineDerivedPages,
   defineMarkdown,
-  definePageSource,
+  fromCollection,
   fromMarkdownPages,
-  fromPageSource,
   z,
   type PageDescriptor,
 } from '@briansunter/nib'
+import { jsonFile } from '@briansunter/nib/server'
 import { TopicPage } from './data-pages'
 
 export const blogFrontmatterSchema = z.object({
@@ -54,25 +56,19 @@ export const topicSchema = z.object({
 
 export type Topic = z.infer<typeof topicSchema>
 
-export const topicPages = definePageSource({
-  extensions: ['json'],
+export const topics = defineCollection(jsonFile({
+  file: 'src/pages/topics/page.json',
   schema: topicSchema,
-  load: ({ source }) => {
-    const topics = JSON.parse(source) as unknown[]
-    return topics.map((data) => {
-      const topic = topicSchema.parse(data)
-      return {
-        path: `/topics/${topic.slug}/`,
-        collectionId: topic.slug,
-        data: topic,
-        meta: {
-          title: topic.title,
-          description: topic.description,
-        },
-      }
-    })
-  },
+  id: (topic) => topic.slug,
+}))
+
+// Topics are a deterministic projection of the topics collection: one derived
+// route per entry, generated after the collection loads.
+export const topicPages = defineDerivedPages({
+  pages: fromCollection(topics, (entries) => entries.map(({ data: topic }) => ({
+    path: `/topics/${topic.slug}/`,
+    data: topic,
+    meta: { title: topic.title, description: topic.description },
+  }))),
   component: TopicPage,
 })
-
-export const topics = fromPageSource(topicPages)

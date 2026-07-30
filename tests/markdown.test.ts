@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
+import { defineMarkdown } from '../src/framework/content'
 import { markdownToCompiledPage } from '../src/framework/markdown'
 import { nibMarkdown } from '../src/framework/vite-plugin'
 
@@ -87,6 +88,27 @@ describe('markdown', () => {
     )
     expect(compiled.frontmatter.tags).toEqual(['nib', 'typed'])
     expect(compiled.meta.title).toBe('Hello')
+  })
+
+  it('lets a Markdown definition override route metadata via the meta callback', async () => {
+    const compiled = await markdownToCompiledPage(
+      '---\ntitle: Hello\n---\n# World',
+      defineMarkdown({
+        schema: z.object({ title: z.string() }),
+        meta: ({ defaults }) => ({ ...defaults, type: 'article' }),
+      }),
+    )
+    expect(compiled.meta.type).toBe('article')
+    expect(compiled.meta.title).toBe('Hello')
+  })
+
+  it('keeps the default metadata when no meta callback is supplied', async () => {
+    const compiled = await markdownToCompiledPage(
+      '---\ntitle: Hello\n---\n# World',
+      defineMarkdown({ schema: z.object({ title: z.string() }) }),
+    )
+    expect(compiled.meta).toEqual({ title: 'Hello' })
+    expect(compiled.meta.type).toBeUndefined()
   })
 
   it('applies configured remark and rehype plugins in pipeline order', async () => {

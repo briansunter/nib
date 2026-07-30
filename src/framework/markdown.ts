@@ -9,6 +9,7 @@ import type {
   InferDataValidator,
   MarkdownDefinition,
   MarkdownSourceContext,
+  MetadataImage,
   PageMeta,
 } from './types'
 
@@ -36,7 +37,7 @@ function getMarkdownMeta(
       ...(description === undefined ? {} : { description: description as string }),
       ...(draft === undefined ? {} : { draft: draft as boolean }),
       ...(normalizedHead === undefined ? {} : { head: normalizedHead }),
-      ...(image === undefined ? {} : { image: image as string }),
+      ...(image === undefined ? {} : { image: image as MetadataImage }),
       ...(type === undefined ? {} : { type: type as 'website' | 'article' }),
       ...(twitterCard === undefined ? {} : { twitterCard: twitterCard as 'summary' | 'summary_large_image' }),
     },
@@ -69,12 +70,22 @@ export async function markdownToCompiledPage<
     label: 'Markdown page fields',
   })
   const { meta, layout } = getMarkdownMeta(values)
+  let resolvedMeta = meta
+  if (definition?.meta !== undefined) {
+    const override = definition.meta({
+      frontmatter: frontmatter as never,
+      path: context?.file ?? '',
+      source: parsed.content,
+      defaults: meta,
+    })
+    if (override !== undefined) resolvedMeta = override
+  }
   const html = await renderMarkdown(parsed.content, definition, context)
   return {
     html,
     content: compiledMarkdownContent(html, context?.file ?? 'inline Markdown page'),
     frontmatter,
-    meta,
+    meta: resolvedMeta,
     layout,
   }
 }
