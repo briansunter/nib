@@ -1,7 +1,10 @@
-import { createElement, type ReactNode } from 'react'
+import { createElement, type ComponentType, type ReactNode } from 'react'
+import path from 'node:path'
 import { loadCollections } from './content-server'
+import { createBuildCache } from './cache'
+import { createBuildOutput } from './build-output'
 import { DefaultSiteShell } from './default-shell'
-import { renderHead } from './meta'
+import { renderHead, resolveMeta } from './meta'
 import { deepFreeze } from './freeze'
 import { createContentRenderer } from './markdown-content'
 import { renderReactPage, type RenderedReactPage } from './render-page'
@@ -25,6 +28,7 @@ import {
   publicRouteHref,
   stripBasePath,
 } from './publication'
+import { canonicalRoutePath } from './paths'
 import {
   createRendererPluginPipeline,
   resolvedRouteSnapshots,
@@ -35,6 +39,7 @@ import {
 } from './plugin'
 import type {
   CollectionEntry,
+  DerivedPagesDefinition,
   NibConfig,
   PageModule,
   PageSourceDefinition,
@@ -57,6 +62,37 @@ export interface ProjectRendererOptions {
   namedLayouts?: RouteLayouts['named']
   islandModules: Record<string, IslandModule>
   behaviorClientFiles?: readonly string[]
+  derivedPages?: {
+    definitions: readonly DerivedPagesDefinition<any>[]
+    components: readonly (ComponentType<any> | undefined)[]
+  }
+}
+
+const derivedRendererLoads = new WeakMap<object, Promise<ComponentType<any>>>()
+
+async function resolveDerivedComponent(
+  definition: DerivedPagesDefinition<any>,
+  imported: ComponentType<any> | undefined,
+  label: string,
+): Promise<ComponentType<any>> {
+  if (imported !== undefined) return imported
+  const component = definition.component
+  if (typeof component === 'function') return component
+  const renderer = component as { load?: () => Promise<unknown> }
+  if (typeof renderer.load !== 'function') {
+    throw new Error(`${label} derived page renderer module must be imported through Nib's Vite derived-pages module`)
+  }
+  const cached = derivedRendererLoads.get(renderer)
+  if (cached !== undefined) return cached
+  const load = renderer.load().then((loaded): ComponentType<any> => {
+    const resolved = typeof loaded === 'function'
+      ? (loaded as ComponentType<any>)
+      : (loaded as { default?: ComponentType<any> })?.default
+    if (typeof resolved !== 'function') throw new Error(`${label} derived page renderer must resolve to a React component`)
+    return resolved
+  })
+  derivedRendererLoads.set(renderer, load)
+  return load
 }
 
 function behaviorClientIds(files: readonly string[]): ReadonlySet<string> {
@@ -221,6 +257,48 @@ export async function createProjectRenderer(
     const entries = (collections as Record<string, readonly CollectionEntry[]>)[name] ?? []
     return deepFreeze(capability.map(entries))
   }
+  if (options.derivedPages !== undefined && options.derivedPages.definitions.length > 0) {
+    const named = layoutModules.named ?? {}
+    for (const [index, definition] of options.derivedPages.definitions.entries()) {
+      const label = `Derived pages[${index}]`
+      const component = await resolveDerivedComponent(
+        definition,
+        options.derivedPages.components[index],
+        label,
+      )
+      const pageSpecs = readCollection(definition.pages)
+      const seen = new Set<string>()
+      for (const [pageIndex, page] of pageSpecs.entries()) {
+        const path = canonicalRoutePath(page.path, options.config.trailingSlash)
+        const key = normalizePath(path)
+        if (seen.has(key)) throw new Error(`${label} produced duplicate route ${path}`)
+        if (routes.has(key)) {
+          throw new Error(`Duplicate route ${path}: ${routes.get(key)?.source} and ${label}[${pageIndex}]`)
+        }
+        seen.add(key)
+        if (page.meta?.draft === true) continue
+        const layouts: ComponentType<any>[] = []
+        const layoutName = page.layout ?? definition.layout
+        if (layoutName !== undefined) {
+          const layoutModule = (named as Record<string, { default?: ComponentType<any> }>)[layoutName]
+          if (layoutModule === undefined || typeof layoutModule.default !== 'function') {
+            throw new Error(`${label} references unknown layout ${layoutName}`)
+          }
+          layouts.push(layoutModule.default)
+        }
+        routes.set(key, Object.freeze({
+          kind: 'page',
+          path,
+          component,
+          meta: resolveMeta(page.meta, `${label}[${pageIndex}] metadata`),
+          source: `${label}[${pageIndex}]`,
+          status: normalizePath(path) === '/404' ? 404 : 200,
+          data: deepFreeze(page.data),
+          layouts,
+        }))
+      }
+    }
+  }
   addConfiguredRedirects(
     routes,
     options.config.redirects,
@@ -335,10 +413,15 @@ export async function createProjectRenderer(
     async finalize(context) {
       if (finalized) throw new Error('Nib project renderer can only finalize once')
       finalized = true
+      // The context is shallow-frozen; the cache (like output) is not passed
+      // through deepFreeze, so its methods remain callable across finalizers.
       const finalContext: NibFinalizeContext = Object.freeze({
         ...rendererContext,
         clientDirectory: context.clientDirectory,
         publication: deepFreeze(context.publication),
+        readCollection,
+        output: createBuildOutput(context.clientDirectory, context.publication),
+        cache: createBuildCache(path.join(options.root, '.nib', 'cache')),
       })
       await plugins.finalize(finalContext)
     },

@@ -1,11 +1,12 @@
 import { z } from 'zod'
-import { normalizeHeadContribution } from './meta'
+import { normalizeHeadContribution, normalizeMetadataImage } from './meta'
 import { normalizePath } from './paths'
 import type {
   CollectionDefinition,
   PageSourceCollectionDefinition,
   DataSchema,
   DataValidator,
+  DerivedPagesDefinition,
   GeneratedPage,
   InferDataValidator,
   MarkdownDefinition,
@@ -27,7 +28,13 @@ const pageMetaSchema = z.looseObject({
   description: z.string().optional(),
   draft: z.boolean().optional(),
   head: z.unknown().optional(),
-  image: z.string().optional(),
+  image: z.union([z.string(), z.object({
+    src: z.string(),
+    alt: z.string().optional(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+    type: z.string().optional(),
+  })]).optional(),
   type: z.enum(['website', 'article']).optional(),
   twitterCard: z.enum(['summary', 'summary_large_image']).optional(),
 })
@@ -66,6 +73,26 @@ export function definePageSource(
   return definition
 }
 
+/** Defines routes derived from a validated collection (collection → derived pages). */
+export function defineDerivedPages<Data>(
+  definition: DerivedPagesDefinition<Data>,
+): DerivedPagesDefinition<Data> {
+  if (
+    definition?.pages?.kind !== 'collection-capability'
+    || typeof definition.pages.map !== 'function'
+  ) {
+    throw new Error('defineDerivedPages requires a pages collection capability (use fromCollection(...))')
+  }
+  if (
+    typeof definition.component !== 'function'
+    && (definition.component === null || typeof definition.component !== 'object'
+      || (typeof definition.component.load !== 'function' && typeof definition.component.module !== 'string'))
+  ) {
+    throw new Error('defineDerivedPages requires a React component or pageRenderer()')
+  }
+  return definition
+}
+
 /**
  * Defers a data-page renderer. Prefer the module form for transformed imports:
  * Nib emits that import only after Vite has installed the graph's adapters.
@@ -91,17 +118,17 @@ export function fromPageSource<const Validator extends DataValidator>(
   return { source }
 }
 
-export interface FromPagesOptions<Selected> {
-  match(page: PageDescriptor): boolean
-  id(page: PageDescriptor): string
-  select(page: PageDescriptor): Selected
-  sort?(left: PageDescriptor, right: PageDescriptor): number
+export interface FromPagesOptions<Frontmatter, Selected> {
+  match(page: PageDescriptor<Frontmatter>): boolean
+  id(page: PageDescriptor<Frontmatter>): string
+  select(page: PageDescriptor<Frontmatter>): Selected
+  sort?(left: PageDescriptor<Frontmatter>, right: PageDescriptor<Frontmatter>): number
 }
 
 /** Derives a typed collection from immutable validated page descriptors. */
-export function fromPages<Selected>(
-  options: FromPagesOptions<Selected>,
-): PageCollectionDefinition<Selected> {
+export function fromPages<Frontmatter, Selected>(
+  options: FromPagesOptions<Frontmatter, Selected>,
+): PageCollectionDefinition<Frontmatter, Selected> {
   if (
     typeof options?.match !== 'function'
     || typeof options.id !== 'function'
@@ -118,9 +145,25 @@ export function fromPages<Selected>(
 
 /** Like fromPages(), but considers only authored Markdown route modules. */
 export function fromMarkdownPages<Selected>(
-  options: FromPagesOptions<Selected>,
-): PageCollectionDefinition<Selected> {
-  const definition = fromPages(options)
+  options: FromPagesOptions<unknown, Selected>,
+): PageCollectionDefinition<unknown, Selected>
+
+/**
+ * Derives a typed Markdown collection, inferring page.frontmatter from the
+ * supplied Markdown definition's schema. Because the markdown definition owns
+ * the schema, the match/id/select/sort callbacks receive typed frontmatter.
+ */
+export function fromMarkdownPages<const Validator extends DataValidator, Selected>(
+  markdown: MarkdownDefinition<Validator>,
+  options: FromPagesOptions<InferDataValidator<Validator>, Selected>,
+): PageCollectionDefinition<InferDataValidator<Validator>, Selected>
+
+export function fromMarkdownPages<Frontmatter, Selected>(
+  optionsOrMarkdown: FromPagesOptions<Frontmatter, Selected> | MarkdownDefinition<any>,
+  maybeOptions?: FromPagesOptions<Frontmatter, Selected>,
+): PageCollectionDefinition<Frontmatter, Selected> {
+  const options = (maybeOptions ?? optionsOrMarkdown) as FromPagesOptions<Frontmatter, Selected>
+  const definition = fromPages<Frontmatter, Selected>(options)
   return Object.freeze({ ...definition, markdownOnly: true })
 }
 
@@ -371,12 +414,13 @@ function getPageMeta(meta: unknown, label: string): PageMeta {
   const parsed = pageMetaSchema.safeParse(meta)
   if (!parsed.success) throw new Error(`${label} metadata: ${parsed.error.message}`)
   const head = normalizeHeadContribution(parsed.data.head, `${label} head`)
+  const image = normalizeMetadataImage(parsed.data.image, `${label} image`)
   return {
     title: parsed.data.title,
     ...(parsed.data.description === undefined ? {} : { description: parsed.data.description }),
     ...(parsed.data.draft === undefined ? {} : { draft: parsed.data.draft }),
     ...(head === undefined ? {} : { head }),
-    ...(parsed.data.image === undefined ? {} : { image: parsed.data.image }),
+    ...(image === undefined ? {} : { image }),
     ...(parsed.data.type === undefined ? {} : { type: parsed.data.type }),
     ...(parsed.data.twitterCard === undefined ? {} : { twitterCard: parsed.data.twitterCard }),
   }

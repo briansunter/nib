@@ -7,6 +7,17 @@ import type {
   NibVitePluginContext,
 } from './extensions/contracts'
 import type { ContentRenderer, MarkdownContent } from './markdown-content'
+import type { PublicationManifestRoute } from './publication'
+
+export type MetadataImage =
+  | string
+  | {
+      src: string
+      alt?: string
+      width?: number
+      height?: number
+      type?: string
+    }
 
 export interface PageMeta {
   title: string
@@ -14,7 +25,7 @@ export interface PageMeta {
   draft?: boolean
   head?: HeadContribution
   /** Route-level social preview image; overrides the metadata plugin default. */
-  image?: string
+  image?: MetadataImage
   /** Open Graph object type; overrides the metadata plugin default. */
   type?: 'website' | 'article'
   /** Twitter card style; overrides the metadata plugin default. */
@@ -26,6 +37,7 @@ export type HeadAttributeValue = string | number | boolean
 
 /** A structured document-head element rendered by Nib with escaped attributes. */
 export interface HeadElement {
+  readonly key?: string
   readonly tag: HeadTagName
   readonly attributes?: Readonly<Record<string, HeadAttributeValue>>
   readonly content?: string
@@ -41,6 +53,13 @@ export interface HeadContribution {
 export interface MarkdownSourceContext {
   /** Absolute or project-relative source path exposed to Unified plugins. */
   readonly file: string
+}
+
+export interface MarkdownMetaContext<Frontmatter> {
+  readonly frontmatter: Frontmatter
+  readonly path: string
+  readonly source: string
+  readonly defaults: PageMeta
 }
 
 export interface DataSchema<Data = unknown> {
@@ -67,11 +86,11 @@ export interface PageSourceContext {
   defaultPath: string
 }
 
-export interface PageSourcePage {
+export interface PageSourcePage<Data = unknown> {
   path?: string
   /** Stable collection identity when one input expands into multiple routes. */
   collectionId?: string
-  data: unknown
+  data: Data
   meta: PageMeta
   layout?: string
 }
@@ -92,6 +111,24 @@ export interface PageSourceRenderer<Data = any> {
 export type PageSourceComponent<Data = any> =
   | ComponentType<DataPageProps<Data, any>>
   | PageSourceRenderer<Data>
+
+/** One route generated from a validated collection entry. */
+export interface DerivedPage<Data = unknown> {
+  path: string
+  data: Data
+  meta: PageMeta
+  layout?: string
+}
+
+/** Generates routes from a collection capability after collections load. */
+export interface DerivedPagesDefinition<Data = unknown> {
+  /** Maps validated collection entries to derived page specs (sync). */
+  readonly pages: CollectionCapability<readonly DerivedPage<Data>[]>
+  /** React component or deferred pageRenderer() for each derived page. */
+  readonly component: PageSourceComponent<Data>
+  /** Optional default named layout applied to every derived page. */
+  readonly layout?: string
+}
 
 export interface PageSourceDefinition<
   Validator extends DataValidator = DataValidator,
@@ -159,13 +196,13 @@ export interface PageDescriptor<Frontmatter = unknown, Data = unknown> {
 }
 
 /** Derives immutable collection entries from validated page descriptors. */
-export interface PageCollectionDefinition<Selected = unknown> {
+export interface PageCollectionDefinition<Frontmatter = unknown, Selected = unknown> {
   readonly pages: true
   readonly markdownOnly: boolean
-  readonly match: (page: PageDescriptor) => boolean
-  readonly id: (page: PageDescriptor) => string
-  readonly select: (page: PageDescriptor) => Selected
-  readonly sort?: (left: PageDescriptor, right: PageDescriptor) => number
+  readonly match: (page: PageDescriptor<Frontmatter>) => boolean
+  readonly id: (page: PageDescriptor<Frontmatter>) => string
+  readonly select: (page: PageDescriptor<Frontmatter>) => Selected
+  readonly sort?: (left: PageDescriptor<Frontmatter>, right: PageDescriptor<Frontmatter>) => number
 }
 
 export type AnyCollectionDefinition<
@@ -173,7 +210,7 @@ export type AnyCollectionDefinition<
 > =
   | CollectionDefinition<Validator>
   | PageSourceCollectionDefinition<Validator>
-  | PageCollectionDefinition<unknown>
+  | PageCollectionDefinition<any, any>
 
 export interface MarkdownDefinition<
   Validator extends DataValidator = DataValidator,
@@ -193,6 +230,18 @@ export interface MarkdownDefinition<
   allowDangerousHtml?: boolean
   /** Unified rehype plugins, applied before HTML serialization. */
   rehypePlugins?: readonly Pluggable[]
+  /**
+   * Computes route metadata from validated frontmatter after Nib's default
+   * extraction. Return a PageMeta to replace the defaults (spread `defaults`
+   * to keep them), or return nothing to keep the defaults. The default
+   * extraction runs unchanged when this is absent.
+   *
+   * Declared as a method so a `MarkdownDefinition<SpecificValidator>` remains
+   * assignable to `MarkdownDefinition<any>` (the site-config slot): method
+   * parameters are checked bivariantly, which neutralizes the contravariance
+   * that would otherwise make the frontmatter-typed callback reject widening.
+   */
+  meta?(context: MarkdownMetaContext<InferDataValidator<Validator>>): PageMeta | void
 }
 
 export type TrailingSlash = 'always' | 'never' | 'ignore'
@@ -200,9 +249,15 @@ export type RedirectStatus = 301 | 302 | 307 | 308
 
 export type NibHostingAdapter = 'netlify' | 'vercel' | 'cloudflare' | 's3'
 
+export interface NibHostingAdapterConfig {
+  readonly name: NibHostingAdapter
+  /** S3: materialize a <path>.html companion for every HTML route artifact. */
+  readonly htmlAliases?: boolean
+}
+
 export interface NibHostingConfig {
   /** Generate deploy-specific companions from the publication manifest. */
-  readonly adapters?: readonly NibHostingAdapter[]
+  readonly adapters?: readonly (NibHostingAdapter | NibHostingAdapterConfig)[]
 }
 
 export type RedirectDefinition =
@@ -231,6 +286,7 @@ export interface NibConfig {
   markdown?: MarkdownDefinition<any>
   pageSources?: readonly PageSourceDefinition<any>[]
   collections?: Record<string, AnyCollectionDefinition<any>>
+  derivedPages?: readonly DerivedPagesDefinition<any>[]
 }
 
 export type CollectionData<Definition> =
@@ -238,7 +294,7 @@ export type CollectionData<Definition> =
     ? InferDataValidator<Validator>
     : Definition extends PageSourceCollectionDefinition<infer Validator>
       ? InferDataValidator<Validator>
-      : Definition extends PageCollectionDefinition<infer Selected>
+      : Definition extends PageCollectionDefinition<infer Frontmatter, infer Selected>
         ? Selected
     : never
 
@@ -290,6 +346,13 @@ export interface SiteShellProps<
   Config extends NibConfig = NibConfig,
 > extends PageProps<Config> {
   children: ReactNode
+}
+
+/** Minimal config shape keyed off a site's collections, for typing shells and props. */
+export type SiteConfigFor<
+  Collections extends Record<string, AnyCollectionDefinition>,
+> = {
+  collections: Collections
 }
 
 /** Validated, immutable metadata authored by the page. */
@@ -385,3 +448,30 @@ export type RenderedOutput =
       status: RedirectStatus
       destination: string
     }
+
+/** A private staging directory for a transactional build output. */
+export interface StagedDirectory {
+  /** Absolute path of the staging directory; write generated files here. */
+  readonly path: string
+  /** Atomically publish the staged directory contents to <output>/<target>. */
+  publishTo(target: string): Promise<void>
+}
+
+/**
+ * Guarded build-output API for finalizers. Reuses the publication manifest's
+ * route artifacts for reads, and writes through a path-contained, atomic API
+ * so build plugins stop reimplementing safe resolution and directory swaps.
+ */
+export interface NibBuildOutput {
+  /** Reads a published page/resource route's artifact as text. */
+  readText(route: PublicationManifestRoute): Promise<string>
+  /** Reads a published page/resource route's artifact as bytes. */
+  readBytes(route: PublicationManifestRoute): Promise<Uint8Array>
+  /**
+   * Writes a generated artifact into the output directory. Rejects absolute
+   * paths and traversal, creates parent directories, and replaces atomically.
+   */
+  write(artifact: string, body: string | Uint8Array): Promise<void>
+  /** Creates a private staging directory for a transactional output (e.g. Pagefind). */
+  stageDirectory(name: string): Promise<StagedDirectory>
+}

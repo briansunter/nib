@@ -39,8 +39,8 @@ export default defineConfig({
   origin: 'https://commonplace.example',
   shell: SiteShell,
   markdown: blogMarkdown,
-  pageSources: [topicPages],
   collections: { posts, topics },
+  derivedPages: [topicPages],
   redirects: {
     '/notes/': '/posts/',
   },

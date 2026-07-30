@@ -1,10 +1,17 @@
 import { isFileRoute, publicRouteHref } from './publication'
 import type { PublicationManifest, PublicationManifestRoute } from './publication'
-import type { NibHostingAdapter } from './types'
+import type { NibHostingAdapter, NibHostingAdapterConfig } from './types'
 
 export interface HostingArtifact {
   readonly path: string
   readonly body: string
+}
+
+/** Normalizes either adapter form into a config object for per-adapter dispatch. */
+export function normalizeHostingAdapter(
+  adapter: NibHostingAdapter | NibHostingAdapterConfig,
+): NibHostingAdapterConfig {
+  return typeof adapter === 'string' ? { name: adapter } : adapter
 }
 
 interface HostingRedirectRule {
@@ -96,9 +103,10 @@ function s3File(manifest: PublicationManifest): string {
 
 export function hostingArtifacts(
   manifest: PublicationManifest,
-  adapter: NibHostingAdapter,
+  adapter: NibHostingAdapter | NibHostingAdapterConfig,
 ): readonly HostingArtifact[] {
-  if (adapter === 'netlify') {
+  const config = normalizeHostingAdapter(adapter)
+  if (config.name === 'netlify') {
     assertNetlifyRedirects(manifest)
     // Netlify normalizes trailing slashes before matching redirect rules, so
     // forced slash aliases can loop. Its static-file routing owns that policy.
@@ -109,11 +117,11 @@ export function hostingArtifacts(
         .join('\n')}\n`,
     }]
   }
-  if (adapter === 'vercel') return [{ path: 'vercel.json', body: vercelFile(manifest) }]
-  if (adapter === 'cloudflare') return [
+  if (config.name === 'vercel') return [{ path: 'vercel.json', body: vercelFile(manifest) }]
+  if (config.name === 'cloudflare') return [
     { path: '_redirects', body: redirectsFile(manifest) },
     { path: '_headers', body: headersFile(manifest) },
   ]
-  if (adapter === 's3') return [{ path: 's3-website.json', body: s3File(manifest) }]
-  throw new Error(`Unsupported Nib hosting adapter: ${String(adapter)}`)
+  if (config.name === 's3') return [{ path: 's3-website.json', body: s3File(manifest) }]
+  throw new Error(`Unsupported Nib hosting adapter: ${config.name}`)
 }

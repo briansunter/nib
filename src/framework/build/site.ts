@@ -28,7 +28,7 @@ import { loadNibConfig, resolveBasePath } from '../project-config'
 import {
   configuredClientEntries,
 } from '../plugin-contributions'
-import { configuredPageSources } from '../content/page-sources'
+import { configuredDerivedPages, configuredPageSources } from '../content/page-sources'
 import {
   createPublicationArtifactPlan,
   createPublicationManifestFromRoutes,
@@ -43,7 +43,7 @@ import {
 } from '../plugin'
 import { writeHostingArtifacts } from '../hosting-writer'
 import type { RenderedOutput, TrailingSlash } from '../types'
-import { nibDataPages, nibMarkdown } from '../vite-plugin'
+import { nibDataPages, nibDerivedPages, nibMarkdown } from '../vite-plugin'
 import { targetBoundaryGuard } from '../target-boundary'
 import { pageStyleOwnershipGuard } from '../style-ownership'
 import {
@@ -110,6 +110,7 @@ export async function siteViteConfig(
     configPath: loaded.configPath,
   })
   const pageSources = configuredPageSources(loaded.config)
+  const derivedPageDefinitions = configuredDerivedPages(loaded.config)
   const clientEntries = configuredClientEntries(loaded.config)
   const extensions = pageSourceExtensions(pageSources)
   const appVitePlugins = loaded.config.vite === undefined
@@ -139,6 +140,7 @@ export async function siteViteConfig(
         pageStyleOwnershipGuard(root, target),
         nibMarkdown(loaded.configPath),
         nibDataPages(loaded.configPath, pageSources),
+        nibDerivedPages(loaded.configPath, derivedPageDefinitions),
         ...appVitePlugins,
         ...contributedPlugins,
         react(),

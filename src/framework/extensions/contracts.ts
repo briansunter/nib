@@ -1,9 +1,11 @@
 import type { ComponentType, ReactNode } from 'react'
 import type { PluginOption } from 'vite'
+import type { NibBuildCache } from '../cache'
 import type { PublicationManifest } from '../publication'
 import type {
   CollectionCapability,
   DataValidator,
+  NibBuildOutput,
   PageMeta,
   PageRoute,
   PageSourceDefinition,
@@ -50,6 +52,10 @@ export interface NibRenderPageContext {
 export interface NibFinalizeContext extends NibRendererPluginContext {
   readonly clientDirectory: string
   readonly publication: PublicationManifest
+  readCollection<Result>(capability: CollectionCapability<Result>): Result
+  readonly output: NibBuildOutput
+  /** Format-neutral persistent build cache for deterministic generators (e.g. OG images). */
+  readonly cache: NibBuildCache
 }
 
 export interface NibClientEntry {

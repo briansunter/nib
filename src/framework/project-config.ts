@@ -30,6 +30,7 @@ const configFields = new Set([
   'markdown',
   'pageSources',
   'collections',
+  'derivedPages',
 ])
 
 export function validateNibConfig(value: unknown): NibConfig {
@@ -66,13 +67,25 @@ export function validateNibConfig(value: unknown): NibConfig {
   if (value.hosting !== undefined) {
     if (!isRecord(value.hosting)) throw new Error('Nib hosting must be an object')
     if (value.hosting.adapters !== undefined) {
-      if (
-        !Array.isArray(value.hosting.adapters)
-        || value.hosting.adapters.some((adapter) => (
-          !['netlify', 'vercel', 'cloudflare', 's3'].includes(adapter as string)
-        ))
-      ) {
-        throw new Error('Nib hosting adapters must be netlify, vercel, cloudflare, or s3')
+      if (!Array.isArray(value.hosting.adapters)) {
+        throw new Error('Nib hosting adapters must be an array')
+      }
+      const knownAdapters = ['netlify', 'vercel', 'cloudflare', 's3']
+      for (const entry of value.hosting.adapters) {
+        const adapter = typeof entry === 'string' ? { name: entry } : entry
+        if (
+          !isRecord(adapter)
+          || typeof adapter.name !== 'string'
+          || !knownAdapters.includes(adapter.name)
+        ) {
+          throw new Error('Nib hosting adapters must be netlify, vercel, cloudflare, or s3')
+        }
+        if (
+          adapter.htmlAliases !== undefined
+          && typeof adapter.htmlAliases !== 'boolean'
+        ) {
+          throw new Error('Nib hosting adapter htmlAliases must be a boolean')
+        }
       }
     }
   }
@@ -187,6 +200,9 @@ export function validateNibConfig(value: unknown): NibConfig {
   }
   if (value.pageSources !== undefined) {
     if (!Array.isArray(value.pageSources)) throw new Error('Nib pageSources must be an array')
+  }
+  if (value.derivedPages !== undefined) {
+    if (!Array.isArray(value.derivedPages)) throw new Error('Nib derivedPages must be an array')
   }
   if (value.collections !== undefined) {
     if (!isRecord(value.collections)) throw new Error('Nib collections must be an object')

@@ -1,6 +1,19 @@
-import { describe, expect, it } from 'vitest'
-import { hostingArtifacts } from '../src/framework/hosting'
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
+import { afterEach, describe, expect, it } from 'vitest'
+import { hostingArtifacts, normalizeHostingAdapter } from '../src/framework/hosting'
+import { writeHostingArtifacts } from '../src/framework/hosting-writer'
 import type { PublicationManifest } from '../src/framework/publication'
+import { buildInfo } from '../src/integrations/build-info'
+
+const temporaryDirectories: string[] = []
+
+afterEach(async () => {
+  await Promise.all(temporaryDirectories.splice(0).map((directory) => (
+    fs.rm(directory, { recursive: true, force: true })
+  )))
+})
 
 const manifest: PublicationManifest = {
   version: 1,
@@ -136,5 +149,147 @@ describe('hosting redirects', () => {
     expect(() => hostingArtifacts(manifest, 'unknown' as never)).toThrow(
       'Unsupported Nib hosting adapter: unknown',
     )
+  })
+})
+
+describe('normalizeHostingAdapter', () => {
+  it('wraps a string adapter name in a config object', () => {
+    expect(normalizeHostingAdapter('s3')).toEqual({ name: 's3' })
+  })
+
+  it('passes an adapter config object through unchanged', () => {
+    const config = { name: 's3', htmlAliases: true } as const
+    expect(normalizeHostingAdapter(config)).toBe(config)
+  })
+})
+
+describe('hosting adapter forms', () => {
+  it('accepts both the string and object form for the s3 adapter', () => {
+    const withString = hostingArtifacts(manifest, 's3')
+    const withObject = hostingArtifacts(manifest, { name: 's3' })
+    expect(withString).toHaveLength(1)
+    expect(withString[0]?.path).toBe('s3-website.json')
+    expect(withObject).toEqual(withString)
+  })
+})
+
+describe('writeHostingArtifacts s3 html aliases', () => {
+  it('materializes a <path>.html companion for HTML routes and leaves resources alone', async () => {
+    const clientDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-hosting-aliases-'))
+    temporaryDirectories.push(clientDirectory)
+
+    const homeBytes = '<title>Home</title>'
+    const aboutBytes = '<title>About</title>'
+    const feedBytes = '<feed />'
+    // The home artifact is intentionally distinct from index.html so the
+    // '/' -> 'index.html' alias copy is observable rather than a no-op.
+    await fs.writeFile(path.join(clientDirectory, 'home.html'), homeBytes)
+    await fs.mkdir(path.join(clientDirectory, 'about'), { recursive: true })
+    await fs.writeFile(path.join(clientDirectory, 'about/index.html'), aboutBytes)
+    await fs.writeFile(path.join(clientDirectory, 'feed.xml'), feedBytes)
+
+    const htmlManifest: PublicationManifest = {
+      version: 1,
+      base: '/',
+      trailingSlash: 'never',
+      routes: [
+        {
+          kind: 'page',
+          path: '/',
+          artifact: 'home.html',
+          status: 200,
+          contentType: 'text/html; charset=utf-8',
+        },
+        {
+          kind: 'page',
+          path: '/about',
+          artifact: 'about/index.html',
+          status: 200,
+          contentType: 'text/html; charset=utf-8',
+        },
+        {
+          kind: 'resource',
+          path: '/feed.xml',
+          artifact: 'feed.xml',
+          status: 200,
+          contentType: 'application/xml',
+        },
+      ],
+    }
+
+    await writeHostingArtifacts(clientDirectory, htmlManifest, {
+      adapters: [{ name: 's3', htmlAliases: true }],
+    })
+
+    // '/' maps to index.html, copying the distinct home artifact forward.
+    const indexCompanion = await fs.readFile(path.join(clientDirectory, 'index.html'), 'utf8')
+    expect(indexCompanion).toBe(homeBytes)
+
+    // An HTML page route gets a <path>.html companion with identical bytes.
+    const aboutCompanion = await fs.readFile(path.join(clientDirectory, 'about.html'), 'utf8')
+    expect(aboutCompanion).toBe(aboutBytes)
+
+    // A non-HTML resource route gets no companion.
+    await expect(fs.access(path.join(clientDirectory, 'feed.xml.html'))).rejects.toThrow()
+  })
+
+  it('skips html companions when htmlAliases is not enabled', async () => {
+    const clientDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-hosting-no-aliases-'))
+    temporaryDirectories.push(clientDirectory)
+
+    await fs.mkdir(path.join(clientDirectory, 'about'), { recursive: true })
+    await fs.writeFile(path.join(clientDirectory, 'about/index.html'), '<title>About</title>')
+
+    const htmlManifest: PublicationManifest = {
+      version: 1,
+      base: '/',
+      trailingSlash: 'never',
+      routes: [
+        {
+          kind: 'page',
+          path: '/about',
+          artifact: 'about/index.html',
+          status: 200,
+          contentType: 'text/html; charset=utf-8',
+        },
+      ],
+    }
+
+    await writeHostingArtifacts(clientDirectory, htmlManifest, { adapters: [{ name: 's3' }] })
+    await expect(fs.access(path.join(clientDirectory, 'about.html'))).rejects.toThrow()
+  })
+})
+
+describe('buildInfo plugin', () => {
+  it('emits an app-owned JSON resource from static values', async () => {
+    const plugin = buildInfo({
+      path: '/build-info.json',
+      values: { schemaVersion: 1, sourceSha: 'abc' },
+    })
+    const route = (await plugin.routes?.({} as never)) as {
+      kind: string
+      path: string
+      contentType: string
+      body: string
+    }
+    expect(route).toMatchObject({ kind: 'resource', path: '/build-info.json' })
+    expect(route.contentType).toContain('application/json')
+    expect(route.body).toContain('"sourceSha":"abc"')
+    expect(JSON.parse(route.body)).toEqual({ schemaVersion: 1, sourceSha: 'abc' })
+  })
+
+  it('evaluates function values at build time', async () => {
+    const plugin = buildInfo({
+      path: '/build-info.json',
+      values: () => ({ builtAt: '2026-01-01', schemaVersion: 2 }),
+    })
+    const route = (await plugin.routes?.({} as never)) as { kind: string; body: string }
+    expect(route.body).toContain('"builtAt":"2026-01-01"')
+    expect(JSON.parse(route.body)).toEqual({ builtAt: '2026-01-01', schemaVersion: 2 })
+  })
+
+  it('rejects non-json and non-absolute paths', () => {
+    expect(() => buildInfo({ path: '/build-info.txt', values: {} })).toThrow('json route')
+    expect(() => buildInfo({ path: 'build-info.json', values: {} })).toThrow('json route')
   })
 })

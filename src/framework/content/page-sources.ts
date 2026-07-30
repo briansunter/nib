@@ -1,4 +1,4 @@
-import type { NibConfig, PageSourceDefinition } from '../types'
+import type { DerivedPagesDefinition, NibConfig, PageSourceDefinition } from '../types'
 
 /** Collects every declared or collection-referenced source once by identity. */
 export function configuredPageSources(
@@ -12,4 +12,11 @@ export function configuredPageSources(
     )),
   ]
   return Object.freeze([...new Set(definitions)])
+}
+
+/** Collects declared derived-page definitions once by identity. */
+export function configuredDerivedPages(
+  config: Pick<NibConfig, 'derivedPages'>,
+): readonly DerivedPagesDefinition<any>[] {
+  return Object.freeze([...new Set(config.derivedPages ?? [])])
 }

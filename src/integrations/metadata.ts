@@ -1,6 +1,7 @@
 import { deployedOrigin, deployedRouteUrl } from '../framework/deployed-url'
+import { metadataImageSrc, normalizeMetadataImage } from '../framework/meta'
 import type { NibPlugin, NibRenderPageContext } from '../framework/plugin'
-import type { HeadContribution } from '../framework/types'
+import type { HeadAttributeValue, HeadContribution, HeadElement } from '../framework/types'
 
 export interface MetadataOptions {
   /** A deployed route or absolute URL used for social previews. */
@@ -26,8 +27,9 @@ function contribution(
   // plugin default without emitting the default value alongside it.
   const type = routeMeta.type ?? options.type
   const twitterCard = routeMeta.twitterCard ?? options.twitterCard
-  const image = routeMeta.image ?? options.image
-  const elements: NonNullable<HeadContribution['elements']>[number][] = []
+  const routeImage = normalizeMetadataImage(routeMeta.image, 'Page metadata image')
+  const image = routeImage ?? options.image
+  const elements: HeadElement[] = []
   let url: string | undefined
   if (context.origin !== undefined) {
     url = deployedRouteUrl(
@@ -35,29 +37,46 @@ function contribution(
       context.base,
       context.route.path,
     )
-    elements.push({ tag: 'link', attributes: { rel: 'canonical', href: url } })
+    elements.push({ key: 'canonical', tag: 'link', attributes: { rel: 'canonical', href: url } })
   }
-  const addMeta = (attributes: Record<string, string>) => {
-    elements.push({ tag: 'meta', attributes })
+  const addMeta = (attributes: Record<string, HeadAttributeValue>, key: string) => {
+    elements.push({ key, tag: 'meta', attributes })
   }
-  addMeta({ property: 'og:title', content: context.route.meta.title })
+  addMeta({ property: 'og:title', content: context.route.meta.title }, 'og:title')
   if (context.route.meta.description !== undefined) {
-    addMeta({ property: 'og:description', content: context.route.meta.description })
+    addMeta({ property: 'og:description', content: context.route.meta.description }, 'og:description')
   }
-  addMeta({ property: 'og:type', content: type })
-  if (url !== undefined) addMeta({ property: 'og:url', content: url })
-  if (options.siteName !== undefined) addMeta({ property: 'og:site_name', content: options.siteName })
-  addMeta({ name: 'twitter:card', content: twitterCard })
-  addMeta({ name: 'twitter:title', content: context.route.meta.title })
+  addMeta({ property: 'og:type', content: type }, 'og:type')
+  if (url !== undefined) addMeta({ property: 'og:url', content: url }, 'og:url')
+  if (options.siteName !== undefined) addMeta({ property: 'og:site_name', content: options.siteName }, 'og:site_name')
+  addMeta({ name: 'twitter:card', content: twitterCard }, 'twitter:card')
+  addMeta({ name: 'twitter:title', content: context.route.meta.title }, 'twitter:title')
   if (context.route.meta.description !== undefined) {
-    addMeta({ name: 'twitter:description', content: context.route.meta.description })
+    addMeta({ name: 'twitter:description', content: context.route.meta.description }, 'twitter:description')
   }
-  if (image !== undefined) {
-    addMeta({ property: 'og:image', content: absoluteUrl(image, context) })
-    addMeta({ name: 'twitter:image', content: absoluteUrl(image, context) })
+  const imageSrc = metadataImageSrc(image)
+  if (imageSrc !== undefined) {
+    addMeta({ property: 'og:image', content: absoluteUrl(imageSrc, context) }, 'og:image')
+    addMeta({ name: 'twitter:image', content: absoluteUrl(imageSrc, context) }, 'twitter:image')
+    if (typeof image === 'object') {
+      if (image.alt !== undefined) {
+        addMeta({ property: 'og:image:alt', content: image.alt }, 'og:image:alt')
+        addMeta({ name: 'twitter:image:alt', content: image.alt }, 'twitter:image:alt')
+      }
+      if (image.width !== undefined) {
+        addMeta({ property: 'og:image:width', content: image.width }, 'og:image:width')
+      }
+      if (image.height !== undefined) {
+        addMeta({ property: 'og:image:height', content: image.height }, 'og:image:height')
+      }
+      if (image.type !== undefined) {
+        addMeta({ property: 'og:image:type', content: image.type }, 'og:image:type')
+      }
+    }
   }
   if (options.structuredData && url !== undefined) {
     elements.push({
+      key: 'structured-data',
       tag: 'script',
       attributes: { type: 'application/ld+json' },
       content: JSON.stringify({

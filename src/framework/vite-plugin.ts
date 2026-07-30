@@ -3,7 +3,7 @@ import path from 'node:path'
 import type { Plugin } from 'vite'
 import { pageSourceIndex } from './content'
 import { fileToRoute } from './paths'
-import type { PageSourceDefinition, PageSourceRenderer } from './types'
+import type { DerivedPagesDefinition, PageSourceDefinition, PageSourceRenderer } from './types'
 
 const NIB_PAGE_SOURCES = 'virtual:nib/page-sources'
 const RESOLVED_PAGE_SOURCES = `\0${NIB_PAGE_SOURCES}`
@@ -163,6 +163,46 @@ export function nibDataPages(
       // in resolveId is what keeps the module out of Vite's id-based import
       // analysis skip list; both are needed for `.json` sources in dev.)
       return { code, moduleType: 'js' }
+    },
+  }
+}
+
+const NIB_DERIVED_PAGES = 'virtual:nib/derived-pages'
+const RESOLVED_DERIVED_PAGES = `\0${NIB_DERIVED_PAGES}`
+
+export function nibDerivedPages(
+  configPath: string,
+  definitions: ReadonlyArray<DerivedPagesDefinition<any>> | undefined,
+): Plugin {
+  const configImport = JSON.stringify(path.resolve(configPath))
+  const renderers = (definitions ?? []).map((definition, index) => {
+    const component = definition?.component
+    if (!component || typeof component === 'function') return undefined
+    const renderer = component as PageSourceRenderer
+    if (typeof renderer.module !== 'string') return undefined
+    const source = JSON.stringify(path.resolve(path.dirname(configPath), renderer.module))
+    const local = `__nibDerivedRenderer${index}`
+    const statement = (renderer.exportName === undefined || renderer.exportName === 'default')
+      ? `import ${local} from ${source}`
+      : `import { ${renderer.exportName} as ${local} } from ${source}`
+    return { local, statement }
+  })
+  return {
+    name: 'nib-derived-pages',
+    resolveId(id) { return id === NIB_DERIVED_PAGES ? RESOLVED_DERIVED_PAGES : null },
+    load(id) {
+      if (id !== RESOLVED_DERIVED_PAGES) return null
+      const statements = renderers
+        .filter((r): r is { local: string; statement: string } => r !== undefined)
+        .map((r) => r.statement)
+      const components = renderers.map((r) => (r ? r.local : 'undefined')).join(', ')
+      return [
+        `import config from ${configImport}`,
+        `import { configuredDerivedPages } from '@briansunter/nib/internal/server'`,
+        ...statements,
+        `export const definitions = configuredDerivedPages(config)`,
+        `export const components = [${components}]`,
+      ].join('\n')
     },
   }
 }

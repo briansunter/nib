@@ -2,6 +2,7 @@ import type {
   HeadAttributeValue,
   HeadContribution,
   HeadElement,
+  MetadataImage,
   PageMeta,
   ResolvedPageMeta,
 } from './types'
@@ -79,6 +80,9 @@ export function normalizeHeadContribution(
   const elements = (value.elements ?? []).map((element, index) => {
     const elementLabel = `${label}.elements[${index}]`
     if (!isRecord(element)) throw new Error(`${elementLabel} must be an object`)
+    if (element.key !== undefined && typeof element.key !== 'string') {
+      throw new Error(`${elementLabel}.key must be a string`)
+    }
     const tag = element.tag
     if (typeof tag !== 'string' || !isHeadTag(tag)) {
       throw new Error(`${elementLabel}.tag must be meta, link, script, or style`)
@@ -94,6 +98,7 @@ export function normalizeHeadContribution(
       throw new Error(`${elementLabel} script elements cannot have both src and content`)
     }
     return Object.freeze({
+      ...(typeof element.key === 'string' ? { key: element.key } : {}),
       tag,
       ...(attributes === undefined ? {} : { attributes }),
       ...(element.content === undefined ? {} : { content: element.content }),
@@ -152,10 +157,11 @@ export function renderHead(
   const description = rendererHead?.description
     ?? pageHead?.description
     ?? meta.description
-  const elements = [
+  const combined = [
     ...(pageHead?.elements ?? []),
     ...(rendererHead?.elements ?? []),
   ]
+  const elements = dedupeKeyedElements(combined)
   return [
     `<title>${escapeHtml(title)}</title>`,
     ...(description === undefined
@@ -163,4 +169,62 @@ export function renderHead(
       : [`<meta name="description" content="${escapeHtml(description)}" />`]),
     ...elements.map(renderElement),
   ].join('\n    ')
+}
+
+function dedupeKeyedElements(elements: readonly HeadElement[]): HeadElement[] {
+  const out: HeadElement[] = []
+  const keyIndex = new Map<string, number>()
+  for (const element of elements) {
+    if (element.key !== undefined) {
+      const existing = keyIndex.get(element.key)
+      if (existing !== undefined) { out[existing] = element; continue }
+      keyIndex.set(element.key, out.length)
+    }
+    out.push(element)
+  }
+  return out
+}
+
+/** Validates a MetadataImage union (string or structured object). */
+export function normalizeMetadataImage(value: unknown, label: string): MetadataImage | undefined {
+  if (value === undefined) return undefined
+  if (typeof value === 'string') return value
+  if (!isRecord(value)) throw new Error(`${label} must be a string or an object`)
+  const { src } = value
+  if (typeof src !== 'string') throw new Error(`${label}.src must be a string`)
+  const result: {
+    src: string
+    alt?: string
+    width?: number
+    height?: number
+    type?: string
+  } = { src }
+  if (value.alt !== undefined) {
+    if (typeof value.alt !== 'string') throw new Error(`${label}.alt must be a string`)
+    result.alt = value.alt
+  }
+  if (value.width !== undefined) {
+    if (typeof value.width !== 'number' || !Number.isFinite(value.width)) {
+      throw new Error(`${label}.width must be a finite number`)
+    }
+    result.width = value.width
+  }
+  if (value.height !== undefined) {
+    if (typeof value.height !== 'number' || !Number.isFinite(value.height)) {
+      throw new Error(`${label}.height must be a finite number`)
+    }
+    result.height = value.height
+  }
+  if (value.type !== undefined) {
+    if (typeof value.type !== 'string') throw new Error(`${label}.type must be a string`)
+    result.type = value.type
+  }
+  return Object.freeze(result)
+}
+
+/** Reads the URL of a MetadataImage value regardless of which form it takes. */
+export function metadataImageSrc(image: MetadataImage | undefined): string | undefined {
+  if (image === undefined) return undefined
+  if (typeof image === 'string') return image
+  return image.src
 }
