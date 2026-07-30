@@ -19,7 +19,7 @@ export {
 // Compatibility exports. Prefer @briansunter/nib/server for filesystem loaders.
 export { file, glob } from './framework/content-compat'
 export { island } from './framework/islands'
-export { Behavior } from './framework/behaviors'
+export { Behavior, Enhance, LazyBehavior } from './framework/behaviors'
 export { markdownMedia } from './integrations/markdown-media'
 export { buildInfo } from './integrations/build-info'
 export {

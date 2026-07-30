@@ -17,6 +17,22 @@ export {
   type CreateBehaviorRuntimeOptions,
 } from './runtime/behaviors'
 export {
+  debounce,
+  later,
+  loadScript,
+  observeIntersections,
+  observeMutations,
+  on,
+  onScroll,
+  reflectButtonGroup,
+  setParams,
+  splitTags,
+  waitForElement,
+  type LoadScriptOptions,
+  type ReflectButtonOptions,
+  type UrlUpdateMode,
+} from './runtime/behavior-utils'
+export {
   destroyClientRuntimes,
   mountClientRuntimes,
   registerClientRuntime,

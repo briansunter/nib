@@ -2,7 +2,7 @@ import { isHydrationStrategy } from '../framework/hydration'
 import {
   scheduleHydration,
   type ScheduledHydration,
-} from '../framework/hydration-scheduler'
+} from '../framework/client-mount-scheduler'
 import { islandFileToId } from '../framework/island-paths'
 import type {
   IslandHydrateRoot,

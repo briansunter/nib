@@ -1,11 +1,11 @@
 import { behaviorFileToId } from '../framework/behavior-paths'
-import { isHydrationStrategy } from '../framework/hydration'
+import { isClientMountStrategy } from '../framework/hydration'
 import {
-  scheduleHydration,
-  type HydrationEnvironment,
-  type ScheduledHydration,
-} from '../framework/hydration-scheduler'
-import { parseIslandProps } from '../framework/island-serialization'
+  scheduleClientMount,
+  type ClientMountEnvironment,
+  type ScheduledClientMount,
+} from '../framework/client-mount-scheduler'
+import { parseClientProps } from '../framework/island-serialization'
 
 export interface BehaviorMountContext<Props extends object = Record<string, unknown>> {
   root: HTMLElement
@@ -13,13 +13,18 @@ export interface BehaviorMountContext<Props extends object = Record<string, unkn
   signal: AbortSignal
 }
 
-export type BehaviorCleanup = void | (() => void)
 export type BehaviorMount<Props extends object = Record<string, unknown>> = (
   context: BehaviorMountContext<Props>,
-) => BehaviorCleanup | Promise<BehaviorCleanup>
+) => void | Promise<void>
 
 /** A plain browser mount function for a route-scoped behavior module. */
 export type Behavior<Props extends object = Record<string, unknown>> = BehaviorMount<Props>
+
+/**
+ * @deprecated Behaviors register cleanup with `context.signal` rather than
+ * returning a callback. Retained for back-compat type references.
+ */
+export type BehaviorCleanup = void | (() => void)
 
 export interface BehaviorClientModule {
   default: unknown
@@ -34,7 +39,7 @@ export interface BehaviorRuntime {
 }
 
 export interface CreateBehaviorRuntimeOptions {
-  environment?: HydrationEnvironment
+  environment?: ClientMountEnvironment
   reportError?: (id: string, error: unknown) => void
 }
 
@@ -42,13 +47,15 @@ interface MountedBehavior {
   active: boolean
   owner: ParentNode
   controller: AbortController
-  scheduled?: ScheduledHydration
-  cleanup?: () => void
+  scheduled?: ScheduledClientMount
 }
 
 /**
  * Gives a plain behavior mount function contextual TypeScript inference.
  * JavaScript modules may default-export the mount function directly.
+ *
+ * @deprecated Prefer a plain typed function (`satisfies Behavior`). This helper
+ * only validates its argument is a function and returns it unchanged.
  */
 export function behavior<Props extends object = Record<string, unknown>>(
   mount: BehaviorMount<Props>,
@@ -70,11 +77,14 @@ function validateBehaviorModule(
 }
 
 function elementsWithin(root: ParentNode): HTMLElement[] {
-  const elements = [...root.querySelectorAll<HTMLElement>('nib-behavior[data-behavior]')]
+  const elements = [
+    ...root.querySelectorAll<HTMLElement>('nib-behavior[data-behavior]'),
+    ...root.querySelectorAll<HTMLElement>('[data-nib-behavior]'),
+  ]
   if (
     typeof HTMLElement !== 'undefined'
     && root instanceof HTMLElement
-    && root.matches('nib-behavior[data-behavior]')
+    && (root.matches('nib-behavior[data-behavior]') || root.matches('[data-nib-behavior]'))
   ) {
     elements.unshift(root)
   }
@@ -117,12 +127,9 @@ export function createBehaviorRuntime(
     if (!state.active) return
     state.active = false
     state.scheduled?.cancel()
-    state.controller.abort()
     delete element.dataset.scheduled
     mounted.delete(element)
-    const applicationCleanup = state.cleanup
-    delete state.cleanup
-    applicationCleanup?.()
+    state.controller.abort()
   }
 
   function cleanupAll(entries: readonly [HTMLElement, MountedBehavior][]) {
@@ -144,10 +151,14 @@ export function createBehaviorRuntime(
       if (destroyed) throw new Error('Cannot mount a destroyed Nib behavior runtime')
       for (const element of elementsWithin(root)) {
         if (mounted.has(element)) continue
-        const id = element.dataset.behavior
+        const id = element.dataset.behavior ?? element.dataset.nibBehavior
         const strategy = element.dataset.hydrate
-        if (!id || !isHydrationStrategy(strategy)) {
-          reportError(id ?? 'unknown', new Error(`Invalid behavior hydration metadata`))
+        if (!id) {
+          reportError('unknown', new Error(`Invalid behavior mount metadata`))
+          continue
+        }
+        if (strategy !== undefined && !isClientMountStrategy(strategy)) {
+          reportError(id, new Error(`Invalid behavior mount metadata`))
           continue
         }
         const load = loaders.get(id)
@@ -162,7 +173,7 @@ export function createBehaviorRuntime(
         }
         mounted.set(element, state)
         element.dataset.scheduled = 'true'
-        state.scheduled = scheduleHydration(element, strategy, () => {
+        const runMount = () => {
           if (!state.active) return
           if (!rootContains(root, element)) {
             cleanup(element, state)
@@ -174,29 +185,25 @@ export function createBehaviorRuntime(
               cleanup(element, state)
               return
             }
-            const result = await mountBehavior({
+            await mountBehavior({
               root: element,
-              props: parseIslandProps(element.dataset.props ?? ''),
+              props: parseClientProps(element.dataset.props ?? ''),
               signal: state.controller.signal,
             })
             if (!state.active || !rootContains(root, element)) {
               if (state.active) cleanup(element, state)
-              if (typeof result === 'function') {
-                try {
-                  result()
-                } catch (error) {
-                  reportError(id, error)
-                }
-              }
-              return
             }
-            if (typeof result === 'function') state.cleanup = result
           }).catch((error) => {
             if (!state.active) return
             cleanup(element, state)
             reportError(id, error)
           })
-        }, options.environment)
+        }
+        if (strategy === undefined) {
+          queueMicrotask(runMount)
+        } else {
+          state.scheduled = scheduleClientMount(element, strategy, runMount, options.environment)
+        }
       }
     },
     unmount(root = document) {

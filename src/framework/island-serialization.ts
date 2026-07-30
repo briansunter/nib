@@ -112,3 +112,9 @@ export function parseIslandProps(serialized: string): Record<string, unknown> {
   validatePropsObject(parsed)
   return parsed
 }
+
+/**
+ * Neutral serialization aliases shared by behaviors and islands. Behaviors
+ * route through these so they no longer import island-named primitives.
+ */
+export { serializeIslandProps as serializeClientProps, parseIslandProps as parseClientProps }

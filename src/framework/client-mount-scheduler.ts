@@ -1,6 +1,6 @@
-import type { HydrationStrategy } from './hydration'
+import type { ClientMountStrategy } from './hydration'
 
-export interface HydrationEnvironment {
+export interface ClientMountEnvironment {
   requestIdleCallback?: (callback: () => void) => number
   cancelIdleCallback?: (handle: number) => void
   setTimeout: (callback: () => void, delay: number) => number
@@ -8,7 +8,7 @@ export interface HydrationEnvironment {
   IntersectionObserver?: typeof window.IntersectionObserver
 }
 
-export interface ScheduledHydration {
+export interface ScheduledClientMount {
   cancel(): void
 }
 
@@ -17,21 +17,21 @@ export function visibilityTargets(element: HTMLElement): Element[] {
   return children.length > 0 ? children : [element.parentElement ?? element]
 }
 
-export function scheduleHydration(
+export function scheduleClientMount(
   element: HTMLElement,
-  strategy: HydrationStrategy,
-  hydrate: () => void,
-  environment: HydrationEnvironment = window,
-): ScheduledHydration {
+  strategy: ClientMountStrategy,
+  mount: () => void,
+  environment: ClientMountEnvironment = window,
+): ScheduledClientMount {
   let finished = false
   let cancelPending = () => {}
-  const hydrateOnce = () => {
+  const mountOnce = () => {
     if (finished) return
     finished = true
     cancelPending()
-    hydrate()
+    mount()
   }
-  const scheduled: ScheduledHydration = {
+  const scheduled: ScheduledClientMount = {
     cancel() {
       if (finished) return
       finished = true
@@ -40,30 +40,40 @@ export function scheduleHydration(
   }
 
   if (strategy === 'load') {
-    hydrateOnce()
+    mountOnce()
     return scheduled
   }
   if (strategy === 'idle') {
     if (typeof environment.requestIdleCallback === 'function') {
-      const handle = environment.requestIdleCallback(hydrateOnce)
+      const handle = environment.requestIdleCallback(mountOnce)
       cancelPending = () => environment.cancelIdleCallback?.(handle)
     } else {
-      const handle = environment.setTimeout(hydrateOnce, 1)
+      const handle = environment.setTimeout(mountOnce, 1)
       cancelPending = () => environment.clearTimeout?.(handle)
     }
     return scheduled
   }
 
   if (!environment.IntersectionObserver) {
-    hydrateOnce()
+    mountOnce()
     return scheduled
   }
 
   const observer = new environment.IntersectionObserver((entries) => {
     if (finished || !entries.some((entry) => entry.isIntersecting)) return
-    hydrateOnce()
+    mountOnce()
   }, { rootMargin: '200px' })
   cancelPending = () => observer.disconnect()
   for (const target of visibilityTargets(element)) observer.observe(target)
   return scheduled
+}
+
+/**
+ * @deprecated aliases kept so island-side hydration terminology still resolves.
+ * Prefer the `ClientMount*` names above.
+ */
+export {
+  scheduleClientMount as scheduleHydration,
+  type ClientMountEnvironment as HydrationEnvironment,
+  type ScheduledClientMount as ScheduledHydration,
 }

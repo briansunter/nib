@@ -1,6 +1,6 @@
 import path from 'node:path'
 import type { Plugin } from 'vite'
-import { BEHAVIOR_MODULE_GLOB } from './behavior-paths'
+import { BEHAVIOR_MODULE_GLOB, behaviorFileToId } from './behavior-paths'
 import type { NibClientEntry, NibCommand } from './plugin'
 
 export const NIB_CLIENT_ENTRY = 'virtual:nib/client-entry'
@@ -139,6 +139,17 @@ export function nibProject(
         `export const render = renderer.render`,
         `export const finalize = renderer.finalize`,
       ].join('\n')
+    },
+    transform(code, id) {
+      // Stamp every discovered .client module with its behavior id so an
+      // imported module reference (`<Enhance behavior={module}>`) can resolve
+      // to the same id the runtime keys the module under.
+      if (!/\.client\.(?:[cm]?[jt]s|[jt]sx)$/.test(id)) return null
+      const behaviorId = behaviorFileToId(id)
+      return {
+        code: `${code}\nexport const __nibBehaviorId = ${JSON.stringify(behaviorId)}\n`,
+        map: null,
+      }
     },
   }
 }

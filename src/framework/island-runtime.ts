@@ -12,7 +12,7 @@ export {
   visibilityTargets,
   type HydrationEnvironment as IslandHydrationEnvironment,
   type ScheduledHydration,
-} from './hydration-scheduler'
+} from './client-mount-scheduler'
 
 export interface IslandHydrateRootOptions {
   identifierPrefix: string

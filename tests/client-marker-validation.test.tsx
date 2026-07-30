@@ -45,7 +45,7 @@ describe('project client marker validation', () => {
 
     expect(() => renderer.render('/')).toThrow(
       'Route / emitted behavior "missing" without a matching client module in '
-      + 'src/behaviors/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}',
+      + 'src/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}',
     )
   })
 
