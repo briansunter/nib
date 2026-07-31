@@ -53,7 +53,8 @@ explicitly changes Nib's scope.
 2. Put browser state, effects, refs, and event handlers in
    `src/islands/<id>.tsx`.
 3. Default-export `island(Component)`; Nib derives the ID from the module path.
-4. Use `when="load"`, `"idle"`, or `"visible"` at the call site.
+4. Use `defer="idle"` or `defer="visible"` only for expensive behavior
+   startup; omission means immediate startup.
 5. Match the module path below `src/islands` to the feature it owns.
 6. Pass JSON-serializable props only.
 7. Read browser-only state in an effect or event handler so initial server and
@@ -63,13 +64,11 @@ Island definitions may render other island definitions. Nib composes them into
 one React root, so place `when` on the outermost island; that strategy controls
 the whole subtree.
 
-Use `<Behavior name="feature">` with
-`src/behaviors/feature.client.ts` or `.client.js` when complete static HTML only
-needs event listeners or imperative DOM enhancement. Default-export a plain
-mount function, optionally wrapped in `behavior(...)` for TypeScript inference.
-Behaviors and islands may be siblings. Never nest a behavior in a behavior or
-island, or an island in a behavior; the route build rejects overlapping client
-ownership.
+Use `<Behavior name="feature">` with exactly one existing element and
+`src/behaviors/feature.client.ts` or `.client.js` when static HTML only needs
+event listeners or imperative DOM enhancement. Default-export a plain typed
+function with `{ root, signal }`. Behaviors may nest on different elements;
+behavior/island overlap remains rejected.
 
 `visible` observes all element children and uses the parent element for a
 text-only island root. Keep initial markup deterministic across SSR and the

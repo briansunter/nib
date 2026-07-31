@@ -5,33 +5,14 @@ export {
   type IslandRuntime,
 } from './runtime/client'
 export {
-  behavior,
   createBehaviorRuntime,
-  type Behavior,
-  type BehaviorCleanup,
+  type BehaviorContext,
   type BehaviorClientModule,
   type BehaviorClientModules,
-  type BehaviorMount,
-  type BehaviorMountContext,
+  type ClientBehavior,
   type BehaviorRuntime,
   type CreateBehaviorRuntimeOptions,
 } from './runtime/behaviors'
-export {
-  debounce,
-  later,
-  loadScript,
-  observeIntersections,
-  observeMutations,
-  on,
-  onScroll,
-  reflectButtonGroup,
-  setParams,
-  splitTags,
-  waitForElement,
-  type LoadScriptOptions,
-  type ReflectButtonOptions,
-  type UrlUpdateMode,
-} from './runtime/behavior-utils'
 export {
   destroyClientRuntimes,
   mountClientRuntimes,

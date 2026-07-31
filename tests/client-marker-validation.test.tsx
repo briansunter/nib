@@ -35,7 +35,7 @@ describe('project client marker validation', () => {
       base: '/',
       pages: {
         '/src/pages/page.tsx': {
-          default: () => <Behavior name="missing" />,
+          default: () => <Behavior name="missing"><div /></Behavior>,
           meta: { title: 'Behavior' },
         },
       },
@@ -45,17 +45,17 @@ describe('project client marker validation', () => {
 
     expect(() => renderer.render('/')).toThrow(
       'Route / emitted behavior "missing" without a matching client module in '
-      + 'src/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}',
+      + 'src/behaviors/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}',
     )
   })
 
-  it('accepts discovered module IDs and ignores unsupported hand-authored markers', async () => {
+  it('accepts discovered module IDs and ignores hand-authored attributes', async () => {
     function Page() {
       return (
         <>
           <OutsideIsland />
-          <Behavior name="missing" />
-          {createElement('nib-behavior', { 'data-behavior': 'raw' }, 'Raw marker')}
+          <Behavior name="missing"><div /></Behavior>
+          {createElement('div', { 'data-raw-marker': 'true' }, 'Raw marker')}
         </>
       )
     }
@@ -74,6 +74,6 @@ describe('project client marker validation', () => {
     if (output.kind !== 'page') throw new Error('Expected page output')
     expect(output.page.islands).toEqual(['outside'])
     expect(output.page.behaviors).toEqual(['missing'])
-    expect(output.page.html).toContain('data-behavior="raw"')
+    expect(output.page.html).toContain('data-raw-marker="true"')
   })
 })

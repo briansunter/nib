@@ -7,30 +7,36 @@ import {
   loadScript,
   observeIntersections,
   observeMutations,
-  on,
-  reflectButtonGroup,
-  setParams,
-  splitTags,
+  onScroll,
   waitForElement,
 } from '../src/runtime/behavior-utils'
 
 afterEach(() => {
   vi.useRealTimers()
   document.head.replaceChildren()
-  window.history.replaceState(null, '', '/')
 })
 
-describe('on', () => {
-  it('binds a listener and removes it on abort', () => {
+describe('onScroll', () => {
+  it('cancels a queued frame and guards the callback on abort', () => {
     const controller = new AbortController()
     const handler = vi.fn()
-    on(window, 'custom', handler, controller.signal)
-    window.dispatchEvent(new Event('custom'))
-    expect(handler).toHaveBeenCalledTimes(1)
+    let callback: FrameRequestCallback | undefined
+    const request = vi.spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((next) => {
+        callback = next
+        return 17
+      })
+    const cancel = vi.spyOn(window, 'cancelAnimationFrame')
+    onScroll(handler, controller.signal)
+    window.dispatchEvent(new Event('scroll'))
+    expect(request).toHaveBeenCalledOnce()
 
     controller.abort()
-    window.dispatchEvent(new Event('custom'))
-    expect(handler).toHaveBeenCalledTimes(1)
+    expect(cancel).toHaveBeenCalledWith(17)
+    callback?.(0)
+    expect(handler).not.toHaveBeenCalled()
+    request.mockRestore()
+    cancel.mockRestore()
   })
 })
 
@@ -64,6 +70,16 @@ describe('later', () => {
 
     controller.abort()
     cancel()
+    vi.advanceTimersByTime(100)
+    expect(fn).not.toHaveBeenCalled()
+  })
+
+  it('does not schedule when the signal is already aborted', () => {
+    vi.useFakeTimers()
+    const controller = new AbortController()
+    controller.abort()
+    const fn = vi.fn()
+    later(fn, 50, controller.signal)
     vi.advanceTimersByTime(100)
     expect(fn).not.toHaveBeenCalled()
   })
@@ -113,49 +129,22 @@ describe('waitForElement', () => {
     controller2.abort()
     await expect(aborting).rejects.toBeDefined()
   })
-})
 
-describe('setParams', () => {
-  it('merges owned params and preserves unrelated params, hash, and history state', () => {
-    window.history.replaceState({ keep: true }, '', '/page?existing=1#hash')
-    setParams((params) => {
-      params.set('q', 'nib')
-      params.delete('existing')
-    })
-    expect(window.location.pathname).toBe('/page')
-    expect(window.location.search).toBe('?q=nib')
-    expect(window.location.hash).toBe('#hash')
-    expect(window.history.state).toEqual({ keep: true })
-  })
+  it('rejects immediately when already aborted and disconnects after success', async () => {
+    const aborted = new AbortController()
+    aborted.abort()
+    await expect(waitForElement(document.body, '.existing', aborted.signal))
+      .rejects.toBeDefined()
 
-  it('supports push mode', () => {
-    window.history.replaceState(null, '', '/page')
-    setParams((params) => params.set('q', 'x'), 'push')
-    expect(window.location.search).toBe('?q=x')
-  })
-})
-
-describe('splitTags', () => {
-  it('trims, lowercases, dedupes, and drops empties', () => {
-    expect(splitTags(' Rust , rust, ,Web ')).toEqual(['rust', 'web'])
-    expect(splitTags('a|b|a', '|')).toEqual(['a', 'b'])
-  })
-})
-
-describe('reflectButtonGroup', () => {
-  it('sets aria-pressed and toggles the active class, attribute, and extra class', () => {
-    const button = document.createElement('button')
-    reflectButtonGroup(button, true, { extraClass: 'filter-active', attribute: 'data-active' })
-    expect(button.getAttribute('aria-pressed')).toBe('true')
-    expect(button.classList.contains('is-selected')).toBe(true)
-    expect(button.classList.contains('filter-active')).toBe(true)
-    expect(button.hasAttribute('data-active')).toBe(true)
-
-    reflectButtonGroup(button, false, { extraClass: 'filter-active', attribute: 'data-active' })
-    expect(button.getAttribute('aria-pressed')).toBe('false')
-    expect(button.classList.contains('is-selected')).toBe(false)
-    expect(button.classList.contains('filter-active')).toBe(false)
-    expect(button.hasAttribute('data-active')).toBe(false)
+    const disconnect = vi.spyOn(MutationObserver.prototype, 'disconnect')
+    const controller = new AbortController()
+    const pending = waitForElement(document.body, '.eventual', controller.signal)
+    const span = document.createElement('span')
+    span.className = 'eventual'
+    document.body.append(span)
+    await expect(pending).resolves.toBe(span)
+    expect(disconnect).toHaveBeenCalled()
+    disconnect.mockRestore()
   })
 })
 
@@ -164,11 +153,17 @@ describe('loadScript', () => {
     const controller = new AbortController()
     const first = loadScript('/one.js', { signal: controller.signal })
     const second = loadScript('/one.js', { signal: controller.signal })
-    expect(first).toBe(second)
+    // Each caller gets its own abort-aware promise while the underlying
+    // script request remains shared.
+    expect(first).not.toBe(second)
     expect(document.querySelectorAll('script[src="/one.js"]')).toHaveLength(1)
     document.querySelector<HTMLScriptElement>('script[src="/one.js"]')!
       .dispatchEvent(new Event('load'))
     await expect(first).resolves.toBeUndefined()
+    const laterController = new AbortController()
+    const later = loadScript('/one.js', { signal: laterController.signal })
+    await expect(later).resolves.toBeUndefined()
+    expect(document.querySelectorAll('script[src="/one.js"]')).toHaveLength(1)
   })
 
   it('rejects on error and rejects on abort', async () => {
@@ -182,5 +177,17 @@ describe('loadScript', () => {
     const aborting = loadScript('/abort.js', { signal: abortController.signal })
     abortController.abort()
     await expect(aborting).rejects.toBeDefined()
+  })
+
+  it('keeps the shared request alive when one caller aborts', async () => {
+    const firstController = new AbortController()
+    const secondController = new AbortController()
+    const first = loadScript('/shared.js', { signal: firstController.signal })
+    const second = loadScript('/shared.js', { signal: secondController.signal })
+    firstController.abort()
+    await expect(first).rejects.toBeDefined()
+    document.querySelector<HTMLScriptElement>('script[src="/shared.js"]')!
+      .dispatchEvent(new Event('load'))
+    await expect(second).resolves.toBeUndefined()
   })
 })

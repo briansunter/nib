@@ -6,32 +6,28 @@ Last reviewed: 2026-07-29
 
 Nib will support non-React progressive enhancement through an explicit,
 server-safe `<Behavior name="...">` boundary. The name maps directly to one
-browser module below `src/behaviors` and carries optional JSON-serializable
-props without importing that implementation into the server graph.
+browser module below `src/behaviors` without importing that implementation into
+the server graph.
 
-The module default-exports a plain mount function. The optional `behavior(...)`
-helper provides contextual TypeScript types without changing the runtime value.
-JavaScript needs no helper. This leaves one declaration at the JSX call site
-and one implementation file; applications do not maintain a parallel registry
-or adapter whose only job is to forward to another initializer.
+The module default-exports a plain typed mount function satisfying
+`ClientBehavior`. JavaScript needs no helper. This leaves one declaration at the
+JSX call site and one implementation file; applications do not maintain a
+parallel registry or adapter whose only job is to forward to another
+initializer.
 
-Behavior roots use `when="load"`, `when="idle"`, or `when="visible"`, matching
-the island scheduling vocabulary without calling imperative mounting
-"hydration." The browser implementation receives only its root, validated
-props, and an `AbortSignal`. Cleanup is driven by aborting the signal before a
-root is detached.
+Behavior roots start immediately by default. Expensive features opt into
+`defer="idle"` or `defer="visible"`; imperative mounting is not called
+"hydration." The browser implementation receives its root and an `AbortSignal`.
+Cleanup is driven by aborting the signal before a root is detached.
 
-Nib emits the behavior boundary with framework-owned `display: contents`
-styling. Layout and semantics therefore belong to its server-rendered children,
-not the implementation marker.
+Nib places `data-nib-behavior` directly on the one existing element supplied as
+the behavior child. It emits no wrapper or framework-owned layout styling.
 
 Pages without an island or behavior remain runtime-free. Behavior-only pages do
 not import or ship `react-dom/client`. Essential content must remain in the
 server-rendered HTML.
 
-One DOM subtree has one client owner. Behaviors and islands may be siblings on
-the same page, and React islands may compose other island definitions into the
-same React root. Nib rejects behavior-in-behavior, behavior-in-island, and
-island-in-behavior nesting during server rendering with an ownership error.
-Authors must use sibling boundaries or let one client module own the complete
-subtree.
+Behaviors may nest when their markers land on different existing elements.
+Nib rejects behavior-in-island and island-in-behavior nesting during server
+rendering with an ownership error. Multiple behaviors on the exact same element
+remain invalid.

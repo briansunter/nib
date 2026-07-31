@@ -1,13 +1,7 @@
 import { Behavior } from '../src/framework/behaviors'
-import { behavior } from '../src/runtime/behaviors'
 
-;<Behavior name="valid" />
-;<Behavior name="valid" props={{ label: 'Details', count: 2 }} />
+;<Behavior name="valid"><div /></Behavior>
+;<Behavior name="deferred" defer="visible"><div /></Behavior>
 
-// @ts-expect-error behavior props must be JSON-serializable
-;<Behavior name="invalid" props={{ onClick: () => undefined }} />
-
-behavior<{ label: string }>(({ root, props, signal }) => {
-  root.dataset.label = props.label
-  signal.throwIfAborted()
-})
+// @ts-expect-error behaviors only accept idle or visible deferral
+;<Behavior name="invalid" defer="load"><div /></Behavior>

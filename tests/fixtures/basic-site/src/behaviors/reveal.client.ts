@@ -1,7 +1,7 @@
-import { behavior } from '@briansunter/nib/client'
+import type { ClientBehavior } from '@briansunter/nib/client'
 import './reveal.css'
 
-export default behavior<{ label: string }>(({ root, props, signal }) => {
+export default (({ root, signal }) => {
   const button = root.querySelector('button')
   const panel = root.querySelector<HTMLElement>('[data-panel]')
   if (!button || !panel) return
@@ -9,5 +9,4 @@ export default behavior<{ label: string }>(({ root, props, signal }) => {
     panel.hidden = !panel.hidden
   }
   button.addEventListener('click', toggle, { signal })
-  root.dataset.label = typeof props.label === 'string' ? props.label : ''
-})
+}) satisfies ClientBehavior

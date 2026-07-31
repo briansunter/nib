@@ -2,6 +2,7 @@ export interface ManifestEntry {
   css?: string[]
   file: string
   imports?: string[]
+  dynamicImports?: string[]
   isEntry?: boolean
   name?: string
 }
@@ -39,12 +40,14 @@ interface HtmlTemplateEntry {
 export interface HtmlTemplateEntries {
   readonly island?: HtmlTemplateEntry
   readonly behavior: HtmlTemplateEntry
-  readonly enhancement?: HtmlTemplateEntry
+  readonly clientBootstrap?: HtmlTemplateEntry
   readonly stylesheets: readonly string[]
 }
 
+export const BEHAVIOR_ROUTE_PRELOAD_MARKER = '<!--nib-behavior-route-preloads-->'
+
 function modulePreloadLinks(
-  owner: 'islands' | 'behaviors' | 'enhancements',
+  owner: 'islands' | 'behaviors' | 'client-bootstrap',
   preloads: readonly string[],
 ): string {
   return preloads
@@ -74,11 +77,12 @@ export function htmlTemplate(entries: HtmlTemplateEntries): string {
       ? ''
       : `<!--nib-islands-entry--><script data-nib-islands type="module" src="${entries.island.source}"></script>`}
     ${behaviorPreloads}
+    ${BEHAVIOR_ROUTE_PRELOAD_MARKER}
     <!--nib-behaviors-entry--><script data-nib-behaviors type="module" src="${entries.behavior.source}"></script>
-    ${entries.enhancement === undefined
+    ${entries.clientBootstrap === undefined
       ? ''
-      : `${modulePreloadLinks('enhancements', entries.enhancement.preloads)}
-    <script data-nib-enhancements type="module" src="${entries.enhancement.source}"></script>`}
+      : `${modulePreloadLinks('client-bootstrap', entries.clientBootstrap.preloads)}
+    <script data-nib-client-bootstrap type="module" src="${entries.clientBootstrap.source}"></script>`}
   </head>
   <body>
     <div id="root"><!--ssr-outlet--></div>

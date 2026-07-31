@@ -1,11 +1,7 @@
-const ISLAND_SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+import { validateClientId } from './client-paths'
 
 export function validateIslandId(id: string): string {
-  const normalized = id.replaceAll('\\', '/').replace(/^\/+|\/+$/g, '')
-  if (!normalized || normalized.split('/').some((segment) => !ISLAND_SEGMENT.test(segment))) {
-    throw new Error(`Invalid island ID: ${id}`)
-  }
-  return normalized
+  return validateClientId(id, 'island')
 }
 
 export function islandFileToId(file: string): string {

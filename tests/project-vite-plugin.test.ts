@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   NIB_CLIENT_ENTRY,
   NIB_BEHAVIOR_ENTRY,
-  NIB_ENHANCEMENT_ENTRY,
+  NIB_CLIENT_BOOTSTRAP_ENTRY,
   NIB_SERVER_ENTRY,
   nibProject,
 } from '../src/framework/project-vite-plugin'
@@ -97,7 +97,7 @@ describe('consumer project Vite adapter', () => {
     expect(client).toContain('createIslandRuntime')
     expect(client).not.toContain('__nibStartIslandRuntime')
     expect(behavior).toContain(
-      'import.meta.glob("/src/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}")',
+      'import.meta.glob("/src/behaviors/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}")',
     )
     expect(behavior).toContain('createBehaviorRuntime')
     expect(behavior).toContain('@briansunter/nib/client/behaviors')
@@ -108,7 +108,7 @@ describe('consumer project Vite adapter', () => {
     expect(server).toContain("query: '?nib-page-source'")
     expect(server).toContain("import.meta.glob('/src/pages/**/layout.tsx'")
     expect(server).toContain(
-      'Object.keys(import.meta.glob("/src/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"))',
+      'Object.keys(import.meta.glob("/src/behaviors/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"))',
     )
     expect(server).toContain('createProjectRenderer')
     expect(server).toContain('root: "/site"')
@@ -117,7 +117,7 @@ describe('consumer project Vite adapter', () => {
     expect(server).toContain('export const finalize = renderer.finalize')
     expect(server).toContain('@briansunter/nib/internal/server')
     expect(resolve('other')).toBeNull()
-    expect(resolve(NIB_ENHANCEMENT_ENTRY)).toBeNull()
+    expect(resolve(NIB_CLIENT_BOOTSTRAP_ENTRY)).toBeNull()
     expect(load('other')).toBeNull()
   })
 
@@ -156,7 +156,7 @@ describe('consumer project Vite adapter', () => {
       [],
       [{
         module: '@briansunter/nib/client/navigation',
-        initializer: 'startClientNavigation',
+        initializer: 'initializeClientNavigation',
       }],
     )
     if (typeof plugin.resolveId !== 'function' || typeof plugin.load !== 'function') {
@@ -164,39 +164,25 @@ describe('consumer project Vite adapter', () => {
     }
     const resolve = plugin.resolveId as (id: string) => string | null
     const load = plugin.load as (id: string) => string | null
-    const entryId = resolve(NIB_ENHANCEMENT_ENTRY)
-    if (!entryId) throw new Error('Nib enhancement entry did not resolve')
+    const entryId = resolve(NIB_CLIENT_BOOTSTRAP_ENTRY)
+    if (!entryId) throw new Error('Nib client bootstrap entry did not resolve')
     expect(load(entryId)).toBe([
-      'import { startClientNavigation as __nibClientInitializer0 } from "@briansunter/nib/client/navigation"',
-      'const __nibClientCleanups = []',
-      "const __nibRegisterClientCleanup = (result) => {",
-      "  if (typeof result === 'function') __nibClientCleanups.push(result)",
-      "  else if (result && typeof result.destroy === 'function') __nibClientCleanups.push(() => result.destroy())",
-      '}',
-      'const __nibCleanupClientEnhancements = () => {',
-      '  const failures = []',
-      '  while (__nibClientCleanups.length > 0) {',
-      '    try { __nibClientCleanups.pop()() } catch (error) { failures.push(error) }',
-      '  }',
-      `  if (failures.length > 0) throw new AggregateError(failures, 'Nib client enhancement cleanup failed')`,
-      '}',
+      'import { initializeClientNavigation as __nibClientInitializer0 } from "@briansunter/nib/client/navigation"',
+      'const __nibClientBootstrapController = new AbortController()',
+      'const __nibClientBootstrapSignal = __nibClientBootstrapController.signal',
       'try {',
-      '  __nibRegisterClientCleanup(__nibClientInitializer0())',
+      '  __nibClientInitializer0(__nibClientBootstrapSignal)',
       '} catch (error) {',
-      '  try {',
-      '    __nibCleanupClientEnhancements()',
-      '  } catch (cleanupError) {',
-      `    throw new AggregateError([error, cleanupError], 'Nib client enhancement initialization failed')`,
-      '  }',
+      '  __nibClientBootstrapController.abort(error)',
       '  throw error',
       '}',
       'if (import.meta.hot) import.meta.hot.dispose(() => {',
-      '  __nibCleanupClientEnhancements()',
+      '  __nibClientBootstrapController.abort()',
       '})',
     ].join('\n'))
   })
 
-  it('rolls back initialized enhancements in reverse order when startup fails', () => {
+  it('aborts the shared bootstrap signal when startup fails', () => {
     const plugin = nibProject(
       '/site/nib.config.ts',
       '/site',
@@ -204,9 +190,9 @@ describe('consumer project Vite adapter', () => {
       'build',
       [],
       [
-        { module: 'first', initializer: 'startFirst' },
-        { module: 'second', initializer: 'startSecond' },
-        { module: 'third', initializer: 'startThird' },
+        { module: 'first', initializer: 'initializeFirst' },
+        { module: 'second', initializer: 'initializeSecond' },
+        { module: 'third', initializer: 'initializeThird' },
       ],
     )
     if (typeof plugin.resolveId !== 'function' || typeof plugin.load !== 'function') {
@@ -214,12 +200,13 @@ describe('consumer project Vite adapter', () => {
     }
     const resolve = plugin.resolveId as (id: string) => string | null
     const load = plugin.load as (id: string) => string | null
-    const entryId = resolve(NIB_ENHANCEMENT_ENTRY)
-    if (!entryId) throw new Error('Nib enhancement entry did not resolve')
+    const entryId = resolve(NIB_CLIENT_BOOTSTRAP_ENTRY)
+    if (!entryId) throw new Error('Nib client bootstrap entry did not resolve')
     const source = load(entryId)
-    if (!source) throw new Error('Nib enhancement entry did not load')
+    if (!source) throw new Error('Nib client bootstrap entry did not load')
 
     const events: string[] = []
+    const signals: AbortSignal[] = []
     const startupError = new Error('third initializer failed')
     let disposeCallback: (() => void) | undefined
     const execute = new Function(
@@ -235,16 +222,17 @@ describe('consumer project Vite adapter', () => {
     let thrown: unknown
     try {
       execute(
-        () => {
+        (signal: AbortSignal) => {
           events.push('start:first')
-          return () => events.push('cleanup:first')
+          signals.push(signal)
         },
-        () => {
+        (signal: AbortSignal) => {
           events.push('start:second')
-          return { destroy: () => events.push('cleanup:second') }
+          signals.push(signal)
         },
-        () => {
+        (signal: AbortSignal) => {
           events.push('start:third')
+          signals.push(signal)
           throw startupError
         },
         {
@@ -258,13 +246,9 @@ describe('consumer project Vite adapter', () => {
     }
 
     expect(thrown).toBe(startupError)
-    expect(events).toEqual([
-      'start:first',
-      'start:second',
-      'start:third',
-      'cleanup:second',
-      'cleanup:first',
-    ])
+    expect(events).toEqual(['start:first', 'start:second', 'start:third'])
+    expect(signals).toHaveLength(3)
+    expect(signals.every((signal) => signal.aborted)).toBe(true)
     expect(disposeCallback).toBeUndefined()
   })
 })

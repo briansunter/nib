@@ -60,6 +60,7 @@ export interface NibFinalizeContext extends NibRendererPluginContext {
 
 export interface NibClientEntry {
   readonly module: string
+  /** Exported initializer with the signature `(signal: AbortSignal) => void`. */
   readonly initializer: string
 }
 

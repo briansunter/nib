@@ -10,7 +10,8 @@ const template = `<!doctype html><head><!--head-outlet-->
 <script data-nib-islands type="module" src="/assets/islands.js"></script>
 <link data-nib-runtime-preload="behaviors" rel="modulepreload" href="/assets/behaviors-runtime.js" />
 <script data-nib-behaviors type="module" src="/assets/behaviors.js"></script>
-<link data-nib-runtime-preload="enhancements" rel="modulepreload" href="/assets/navigation.js" />
+<link data-nib-runtime-preload="client-bootstrap" rel="modulepreload" href="/assets/navigation.js" />
+<script data-nib-client-bootstrap type="module" src="/assets/navigation.js"></script>
 </head><body><!--ssr-outlet--></body>`
 
 function page(islands: string[], behaviors: string[] = []): RenderedPage {
@@ -86,7 +87,8 @@ describe('HTML documents', () => {
     expect(html).not.toContain('data-nib-runtime-preload="islands"')
     expect(html).not.toContain('data-nib-runtime-preload="behaviors"')
     expect(html).toContain('href="/assets/refresh.js"')
-    expect(html).toContain('data-nib-runtime-preload="enhancements"')
+    expect(html).toContain('data-nib-runtime-preload="client-bootstrap"')
+    expect(html).toContain('data-nib-client-bootstrap')
     expect(html).toContain('<title>Page</title>')
     expect(html).toContain('<main>Page</main>')
   })

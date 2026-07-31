@@ -1,5 +1,7 @@
 export {
   createClientNavigation,
+  initializeClientNavigation,
+  initializeExplicitClientNavigation,
   startClientNavigation,
   startExplicitClientNavigation,
   stopClientNavigation,

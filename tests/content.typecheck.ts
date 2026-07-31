@@ -94,6 +94,7 @@ type InferredCollectionShape =
       : false
     : false
 const _okInferredFrontmatter: true = null as unknown as InferredCollectionShape
+void _okInferredFrontmatter
 
 // 2. The single-arg fromMarkdownPages(options) overload stays backward
 //    compatible: with no markdown definition, frontmatter is unknown.
@@ -110,6 +111,7 @@ type LegacyFrontmatterIsUnknown =
       : false
     : false
 const _okLegacyFrontmatterUnknown: true = null as unknown as LegacyFrontmatterIsUnknown
+void _okLegacyFrontmatterUnknown
 
 fromMarkdownPages({
   match: () => true,
@@ -141,6 +143,7 @@ type WritingEntryIsTyped =
     ? true
     : false
 const _okWritingEntryTyped: true = null as unknown as WritingEntryIsTyped
+void _okWritingEntryTyped
 
 // The entry data flows concretely: slug is a string, not `any`.
 type WritingSlugIsString =
@@ -152,3 +155,4 @@ type WritingSlugIsString =
       : false
     : false
 const _okWritingSlugIsString: true = null as unknown as WritingSlugIsString
+void _okWritingSlugIsString

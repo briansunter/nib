@@ -84,6 +84,8 @@ describe('published package consumer', () => {
     expect(packedFiles).toContain('dist/framework/client/islands.d.ts')
     expect(packedFiles).toContain('dist/framework/client/behaviors.js')
     expect(packedFiles).toContain('dist/framework/client/behaviors.d.ts')
+    expect(packedFiles).toContain('dist/framework/client/lifecycle.js')
+    expect(packedFiles).toContain('dist/framework/client/lifecycle.d.ts')
     expect(packedFiles).toContain('dist/framework/client/navigation.js')
     expect(packedFiles).toContain('dist/framework/client/navigation.d.ts')
     expect(packedFiles).toContain('dist/framework/navigation.js')
@@ -190,7 +192,7 @@ describe('published package consumer', () => {
     expect(home).toContain('Make a site.')
     expect(home).toContain('data-island="counter"')
     expect(about).toContain('About this site')
-    expect(about).toContain('data-nib-enhancements')
+    expect(about).toContain('data-nib-client-bootstrap')
     expect(publication).toMatchObject({ version: 1 })
     expect(publication.routes).toEqual(expect.arrayContaining([
       expect.objectContaining({ path: '/about', artifact: 'about/index.html' }),

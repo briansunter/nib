@@ -82,7 +82,7 @@ describe('page stylesheet ownership', () => {
     await expect(plugin.resolveId.call(
       context,
       './client-entry',
-      '\0virtual:nib/enhancement-entry',
+      '\0virtual:nib/client-bootstrap-entry',
       {} as never,
     )).resolves.toBeNull()
     await expect(plugin.resolveId.call(

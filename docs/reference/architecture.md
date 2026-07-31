@@ -146,11 +146,12 @@ collision, output, head, and trailing-slash rules. Site and page metadata use
 the same structured head contract as renderer plugins.
 
 Plugins may also declare browser initializers through `clientEntries` module and
-export names. Nib validates ownership and combines them into one generated
-static-import entry for the client/development graph. The declaration contains
-strings rather than imported browser functions, so `nib.config.ts` and the
-server graph remain server-safe. Sites without a contribution do not build or
-emit this entry.
+export names. Each initializer has the shape `(signal: AbortSignal) => void`.
+Nib validates ownership and combines them into one generated client-bootstrap
+entry for the client/development graph. The declaration contains strings
+rather than imported browser functions, so `nib.config.ts` and the server graph
+remain server-safe. Sites without a contribution do not build or emit this
+entry.
 
 The production client graph includes the island entry only when
 `src/islands/**/*.tsx` contains a module. A behavior-only application therefore
@@ -158,9 +159,9 @@ does not emit React DOM, hydration, or island-serialization chunks. Client
 runtime controllers tear down in reverse registration order so behavior
 cleanup runs before an enclosing React root is destroyed.
 
-Application behaviors use `<Behavior name="feature">` around complete static
-HTML and a matching `src/behaviors/feature.client.ts` or `.client.js`
-default-exported mount function. The generated behavior entry discovers
+Application behaviors use `<Behavior name="feature">` on one existing element
+and a matching `src/behaviors/feature.client.ts` or `.client.js`
+default-exported `{ root, signal }` function. The generated behavior entry discovers
 modules lazily, so a route loads only the features named by its rendered
 boundaries. React islands use
 `island(Component)` under `src/islands`; their stable IDs come from module
@@ -256,10 +257,10 @@ conditional module:
   island runtime.
 - `virtual:nib/behavior-entry` discovers `.client.ts(x)` behavior modules
   lazily and starts the non-React behavior runtime.
-- `virtual:nib/enhancement-entry` statically imports configured site-wide
-  browser initializers. It exists only when a plugin contributes one. An
-  initializer may return a cleanup callback or a controller with `destroy()`;
-  the generated entry runs cleanups in reverse order before HMR replacement.
+- `virtual:nib/client-bootstrap-entry` statically imports configured site-wide
+  browser initializers. It exists only when a plugin contributes one. Each
+  initializer receives the shared `AbortSignal`; the generated entry aborts
+  that signal on startup failure or HMR replacement.
 
 All use project-root `/src/...` globs. This keeps route and client-module discovery in
 the framework while ensuring Vite still sees literal glob patterns and can
@@ -293,10 +294,10 @@ from this same static route set.
 
 ## Optional client navigation
 
-`clientNavigation()` from `@briansunter/nib/navigation` contributes
-`startClientNavigation` from `@briansunter/nib/client/navigation` to the
-conditional enhancement entry. The server-safe plugin never imports the
-browser controller.
+`clientNavigation()` from `@briansunter/nib/navigation` contributes an
+`initializeClientNavigation` initializer from `@briansunter/nib/client/navigation`
+to the conditional client bootstrap entry. The server-safe plugin never
+imports the browser controller.
 
 The controller intercepts only eligible same-origin links and GET forms.
 It fetches and validates complete HTML documents, preloads new styles, asks the

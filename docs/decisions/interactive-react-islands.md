@@ -293,9 +293,11 @@ A separate proposal evaluates [`page.html` with typed layout and island bindings
 ## State and composition rules
 
 - An island owns one independent React root and context tree.
-- Behaviors and islands may be siblings, but neither may contain the other.
-- Behavior-in-behavior is also rejected. Nib reports all three ownership
-  conflicts while rendering the route in development or at build time.
+- Behaviors and islands may be siblings, but they may not overlap.
+- Behaviors may nest when each marker lands on a different existing DOM
+  element; each behavior receives an independent lifetime and root.
+- A behavior may not be placed directly on an island-owned element, and an
+  island may not be rendered inside a behavior-owned subtree.
 - An island may render another island definition; it becomes ordinary React
   composition inside the outer root rather than a nested hydration boundary.
 - Components that coordinate frequently should be one island.

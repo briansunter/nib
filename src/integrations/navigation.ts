@@ -21,8 +21,8 @@ export function clientNavigation(
     clientEntries: [{
       module: '@briansunter/nib/client/navigation',
       initializer: prefetch === 'explicit'
-        ? 'startExplicitClientNavigation'
-        : 'startClientNavigation',
+        ? 'initializeExplicitClientNavigation'
+        : 'initializeClientNavigation',
     }],
   })
 }

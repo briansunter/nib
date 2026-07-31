@@ -22,13 +22,15 @@ import { rss } from '../src/rss'
 const Page = () => <h1>Home</h1>
 
 describe('project renderer', () => {
-  it('attributes overlapping client ownership to the route during rendering', async () => {
-    function InvalidPage() {
-      return (
-        <Behavior name="outer">
-          <Behavior name="inner"><p>Details</p></Behavior>
-        </Behavior>
-      )
+  it('allows nested independent behavior ownership', async () => {
+    function NestedPage() {
+        return (
+          <Behavior name="outer">
+            <article>
+              <Behavior name="inner"><p>Details</p></Behavior>
+            </article>
+          </Behavior>
+        )
     }
     const renderer = await createProjectRenderer({
       config: {},
@@ -36,7 +38,7 @@ describe('project renderer', () => {
       base: '/',
       pages: {
         '/src/pages/page.tsx': {
-          default: InvalidPage,
+          default: NestedPage,
           meta: { title: 'Invalid' },
         },
       },
@@ -47,11 +49,10 @@ describe('project renderer', () => {
       ],
     })
 
-    expect(() => renderer.render('/')).toThrow(
-      'Route / from /src/pages/page.tsx has overlapping client ownership. '
-      + 'Client ownership conflict: behavior "inner" cannot be nested inside '
-      + 'behavior "outer". Use sibling boundaries or let one client module own the subtree.',
-    )
+    const output = renderer.render('/')
+    if (output.kind !== 'page') throw new Error('Expected page output')
+    expect(output.page.behaviors).toEqual(['outer', 'inner'])
+    expect(output.page.html).toContain('data-nib-behavior="inner"')
   })
 
   it('keeps draft data pages out of page-source collections', async () => {

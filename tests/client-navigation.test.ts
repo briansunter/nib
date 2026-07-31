@@ -635,7 +635,7 @@ describe('optional client navigation', () => {
     document.head.innerHTML = `
       <title>Home</title>
       <link rel="stylesheet" href="data:text/css,server">
-      <script data-nib-enhancements type="application/json" src="/assets/enhancements.js"></script>
+      <script data-nib-client-bootstrap type="application/json" src="/assets/client-bootstrap.js"></script>
       <link rel="stylesheet" href="data:text/css,lazy-client">
     `
     vi.mocked(fetch).mockResolvedValue(page(
@@ -643,7 +643,7 @@ describe('optional client navigation', () => {
       'Next',
       '<h1>Next</h1>',
       `<link rel="stylesheet" href="data:text/css,server">
-       <script data-nib-enhancements type="application/json" src="/assets/enhancements.js"></script>`,
+       <script data-nib-client-bootstrap type="application/json" src="/assets/client-bootstrap.js"></script>`,
     ))
     controller = createClientNavigation()
     controller.mount()

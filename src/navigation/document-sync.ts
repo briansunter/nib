@@ -6,7 +6,7 @@ export const TRANSIENT_BASE_ATTRIBUTE = 'data-nib-navigation-base'
 const RUNTIME_SCRIPT_ATTRIBUTES = [
   'data-nib-islands',
   'data-nib-behaviors',
-  'data-nib-enhancements',
+  'data-nib-client-bootstrap',
 ] as const
 const RUNTIME_SCRIPT_SELECTOR = RUNTIME_SCRIPT_ATTRIBUTES
   .map((attribute) => `script[${attribute}][src]`)

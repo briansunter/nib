@@ -90,6 +90,13 @@ export const frameworkPackageEntries = Object.freeze([
     types: './dist/framework/client/behaviors.d.ts',
   },
   {
+    name: 'client/lifecycle',
+    exportKey: './client/lifecycle',
+    source: 'src/client/lifecycle.ts',
+    javascript: './dist/framework/client/lifecycle.js',
+    types: './dist/framework/client/lifecycle.d.ts',
+  },
+  {
     name: 'client/navigation',
     exportKey: './client/navigation',
     source: 'src/client/navigation.ts',

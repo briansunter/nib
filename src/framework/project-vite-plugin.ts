@@ -1,16 +1,16 @@
 import path from 'node:path'
 import type { Plugin } from 'vite'
-import { BEHAVIOR_MODULE_GLOB, behaviorFileToId } from './behavior-paths'
+import { BEHAVIOR_MODULE_GLOB } from './behavior-paths'
 import type { NibClientEntry, NibCommand } from './plugin'
 
 export const NIB_CLIENT_ENTRY = 'virtual:nib/client-entry'
 export const NIB_BEHAVIOR_ENTRY = 'virtual:nib/behavior-entry'
-export const NIB_ENHANCEMENT_ENTRY = 'virtual:nib/enhancement-entry'
+export const NIB_CLIENT_BOOTSTRAP_ENTRY = 'virtual:nib/client-bootstrap-entry'
 export const NIB_SERVER_ENTRY = 'virtual:nib/server-entry'
 
 const RESOLVED_CLIENT_ENTRY = `\0${NIB_CLIENT_ENTRY}`
 const RESOLVED_BEHAVIOR_ENTRY = `\0${NIB_BEHAVIOR_ENTRY}`
-const RESOLVED_ENHANCEMENT_ENTRY = `\0${NIB_ENHANCEMENT_ENTRY}`
+const RESOLVED_CLIENT_BOOTSTRAP_ENTRY = `\0${NIB_CLIENT_BOOTSTRAP_ENTRY}`
 const RESOLVED_SERVER_ENTRY = `\0${NIB_SERVER_ENTRY}`
 
 export function nibProject(
@@ -35,8 +35,8 @@ export function nibProject(
     resolveId(id) {
       if (id === NIB_CLIENT_ENTRY) return RESOLVED_CLIENT_ENTRY
       if (id === NIB_BEHAVIOR_ENTRY) return RESOLVED_BEHAVIOR_ENTRY
-      if (id === NIB_ENHANCEMENT_ENTRY && clientEntries.length > 0) {
-        return RESOLVED_ENHANCEMENT_ENTRY
+      if (id === NIB_CLIENT_BOOTSTRAP_ENTRY && clientEntries.length > 0) {
+        return RESOLVED_CLIENT_BOOTSTRAP_ENTRY
       }
       if (id === NIB_SERVER_ENTRY) return RESOLVED_SERVER_ENTRY
       return null
@@ -74,37 +74,23 @@ export function nibProject(
           `})`,
         ].join('\n')
       }
-      if (id === RESOLVED_ENHANCEMENT_ENTRY) {
+      if (id === RESOLVED_CLIENT_BOOTSTRAP_ENTRY) {
         return [
           ...clientEntries.map((entry, index) => (
             `import { ${entry.initializer} as __nibClientInitializer${index} } from ${JSON.stringify(entry.module)}`
           )),
-          `const __nibClientCleanups = []`,
-          `const __nibRegisterClientCleanup = (result) => {`,
-          `  if (typeof result === 'function') __nibClientCleanups.push(result)`,
-          `  else if (result && typeof result.destroy === 'function') __nibClientCleanups.push(() => result.destroy())`,
-          `}`,
-          `const __nibCleanupClientEnhancements = () => {`,
-          `  const failures = []`,
-          `  while (__nibClientCleanups.length > 0) {`,
-          `    try { __nibClientCleanups.pop()() } catch (error) { failures.push(error) }`,
-          `  }`,
-          `  if (failures.length > 0) throw new AggregateError(failures, 'Nib client enhancement cleanup failed')`,
-          `}`,
+          `const __nibClientBootstrapController = new AbortController()`,
+          `const __nibClientBootstrapSignal = __nibClientBootstrapController.signal`,
           `try {`,
           ...clientEntries.map((_, index) => (
-            `  __nibRegisterClientCleanup(__nibClientInitializer${index}())`
+            `  __nibClientInitializer${index}(__nibClientBootstrapSignal)`
           )),
           `} catch (error) {`,
-          `  try {`,
-          `    __nibCleanupClientEnhancements()`,
-          `  } catch (cleanupError) {`,
-          `    throw new AggregateError([error, cleanupError], 'Nib client enhancement initialization failed')`,
-          `  }`,
+          `  __nibClientBootstrapController.abort(error)`,
           `  throw error`,
           `}`,
           `if (import.meta.hot) import.meta.hot.dispose(() => {`,
-          `  __nibCleanupClientEnhancements()`,
+          `  __nibClientBootstrapController.abort()`,
           `})`,
         ].join('\n')
       }
@@ -139,17 +125,6 @@ export function nibProject(
         `export const render = renderer.render`,
         `export const finalize = renderer.finalize`,
       ].join('\n')
-    },
-    transform(code, id) {
-      // Stamp every discovered .client module with its behavior id so an
-      // imported module reference (`<Enhance behavior={module}>`) can resolve
-      // to the same id the runtime keys the module under.
-      if (!/\.client\.(?:[cm]?[jt]s|[jt]sx)$/.test(id)) return null
-      const behaviorId = behaviorFileToId(id)
-      return {
-        code: `${code}\nexport const __nibBehaviorId = ${JSON.stringify(behaviorId)}\n`,
-        map: null,
-      }
     },
   }
 }

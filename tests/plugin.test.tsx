@@ -16,7 +16,7 @@ describe('Nib plugins', () => {
     })
     expect(configuredClientEntries(client)).toEqual([{
       module: '@briansunter/nib/client/navigation',
-      initializer: 'startClientNavigation',
+      initializer: 'initializeClientNavigation',
     }])
     expect(Object.isFrozen(configuredClientEntries(client))).toBe(true)
 
@@ -25,7 +25,7 @@ describe('Nib plugins', () => {
     })
     expect(configuredClientEntries(explicitClient)).toEqual([{
       module: '@briansunter/nib/client/navigation',
-      initializer: 'startExplicitClientNavigation',
+      initializer: 'initializeExplicitClientNavigation',
     }])
 
     expect(() => validateNibConfig({

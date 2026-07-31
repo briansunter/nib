@@ -796,6 +796,20 @@ export function startExplicitClientNavigation(): ClientNavigationController {
   return startNavigation({ prefetch: 'explicit' })
 }
 
+/** Initializes navigation with the generated client-bootstrap lifetime. */
+export function initializeClientNavigation(signal: AbortSignal): void {
+  const controller = createClientNavigation({ prefetch: 'hover' })
+  controller.mount()
+  signal.addEventListener('abort', () => controller.destroy(), { once: true })
+}
+
+/** Initializes explicit-only navigation with the generated client-bootstrap lifetime. */
+export function initializeExplicitClientNavigation(signal: AbortSignal): void {
+  const controller = createClientNavigation({ prefetch: 'explicit' })
+  controller.mount()
+  signal.addEventListener('abort', () => controller.destroy(), { once: true })
+}
+
 /** Destroys the generated plugin-owned controller, primarily for HMR and tests. */
 export function stopClientNavigation(): void {
   startedController?.destroy()

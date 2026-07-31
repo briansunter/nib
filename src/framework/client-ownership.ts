@@ -7,7 +7,7 @@ export interface ClientOwner {
 
 /**
  * Tracks which client runtime owns the current subtree during server render.
- * One DOM subtree must have one client owner; sibling boundaries remain valid.
+ * Behaviors may compose, but an island and a behavior may not overlap.
  */
 export const ClientOwnershipContext = createContext<ClientOwner | null>(null)
 

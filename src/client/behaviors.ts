@@ -1,12 +1,9 @@
 export {
-  behavior,
   createBehaviorRuntime,
-  type Behavior,
-  type BehaviorCleanup,
+  type BehaviorContext,
   type BehaviorClientModule,
   type BehaviorClientModules,
-  type BehaviorMount,
-  type BehaviorMountContext,
+  type ClientBehavior,
   type BehaviorRuntime,
   type CreateBehaviorRuntimeOptions,
 } from '../runtime/behaviors'

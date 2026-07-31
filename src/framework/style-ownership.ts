@@ -35,7 +35,7 @@ function applicationModule(applicationRoot: string, id: string): boolean {
 
 function clientOwnedModule(applicationRoot: string, id: string): boolean {
   const file = cleanModuleId(id)
-  return id.includes('virtual:nib/enhancement-entry')
+  return id.includes('virtual:nib/client-bootstrap-entry')
     || (
       file.startsWith(applicationRoot)
       && (

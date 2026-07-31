@@ -26,7 +26,7 @@ interface BuildManifestEntry {
 
 function runtimePreloads(
   html: string,
-  owner: 'islands' | 'behaviors' | 'enhancements',
+  owner: 'islands' | 'behaviors' | 'client-bootstrap',
 ): string[] {
   const tags = html.match(
     new RegExp(`<link\\b[^>]*data-nib-runtime-preload="${owner}"[^>]*>`, 'g'),
@@ -143,9 +143,10 @@ describe('framework-owned site builds', () => {
     expect(about).toContain('<section data-eyebrow="Company">')
     expect(about).not.toContain('data-nib-islands')
     expect(about).not.toContain('data-nib-behaviors')
-    expect(about).not.toContain('data-nib-enhancements')
-    expect(enhanced).toContain('data-behavior="reveal"')
-    expect(enhanced).toContain('data-behavior="plain"')
+    expect(about).not.toContain('data-nib-client-bootstrap')
+    expect(enhanced).toContain('data-nib-behavior="reveal"')
+    expect(enhanced).toContain('data-nib-behavior="plain"')
+    expect(enhanced).toContain('data-nib-defer="visible"')
     expect(enhanced).toContain('data-nib-behaviors')
     expect(enhanced).not.toContain('data-nib-islands')
     const revealEntry = Object.values(viteManifest)
@@ -174,7 +175,15 @@ describe('framework-owned site builds', () => {
     expect(behaviorPreloads.length).toBeGreaterThan(0)
     expect(runtimePreloads(home, 'islands')).toEqual(islandPreloads)
     expect(runtimePreloads(home, 'behaviors')).toEqual([])
-    expect(runtimePreloads(enhanced, 'behaviors')).toEqual(behaviorPreloads)
+    expect(runtimePreloads(enhanced, 'behaviors')).toEqual(
+      expect.arrayContaining(behaviorPreloads),
+    )
+    expect(runtimePreloads(enhanced, 'behaviors')).toEqual(expect.arrayContaining([
+      `/journal/${revealEntry!.file}`,
+    ]))
+    expect(runtimePreloads(enhanced, 'behaviors')).not.toContain(
+      `/journal/${plainJavaScriptEntry!.file}`,
+    )
     expect(runtimePreloads(enhanced, 'islands')).toEqual([])
     expect(runtimePreloads(about, 'islands')).toEqual([])
     expect(runtimePreloads(about, 'behaviors')).toEqual([])

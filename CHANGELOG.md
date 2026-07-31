@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.20.0] (2026-07-30)
+
+
+### BREAKING CHANGES
+
+* simplify behaviors to wrapper-free, root-scoped enhancements with optional `defer`
+
+### Features
+
+* allow independent behavior composition while preserving island overlap protection
+* expose signal-bound lifecycle helpers under `@briansunter/nib/client/lifecycle`
+* preload immediate route behaviors without preloading deferred behavior modules
+
 ## [0.19.0](https://github.com/briansunter/nib/compare/v0.18.0...v0.19.0) (2026-07-29)
 
 

@@ -21,7 +21,7 @@ import {
   NIB_CLIENT_ENTRY,
   NIB_BEHAVIOR_ENTRY,
   NIB_SERVER_ENTRY,
-  NIB_ENHANCEMENT_ENTRY,
+  NIB_CLIENT_BOOTSTRAP_ENTRY,
   nibProject,
 } from '../project-vite-plugin'
 import { loadNibConfig, resolveBasePath } from '../project-config'
@@ -46,7 +46,9 @@ import type { RenderedOutput, TrailingSlash } from '../types'
 import { nibDataPages, nibDerivedPages, nibMarkdown } from '../vite-plugin'
 import { targetBoundaryGuard } from '../target-boundary'
 import { pageStyleOwnershipGuard } from '../style-ownership'
+import { behaviorFileToId } from '../behavior-paths'
 import {
+  BEHAVIOR_ROUTE_PRELOAD_MARKER,
   htmlTemplate,
   manifestModulePreloads,
   type ManifestEntry,
@@ -57,6 +59,11 @@ export { manifestModulePreloads } from './html-template'
 
 export interface SiteOperationOptions {
   root: string
+}
+
+interface BuildTemplate {
+  template: string
+  behaviorPreloads: ReadonlyMap<string, string>
 }
 
 function publicationBatchSize(): number {
@@ -169,21 +176,21 @@ async function readBuildTemplate(
   clientDirectory: string,
   base: string,
   hasIslands: boolean,
-  hasEnhancements: boolean,
-): Promise<string> {
+  hasClientBootstrap: boolean,
+): Promise<BuildTemplate> {
   const manifest = JSON.parse(
     await fs.readFile(path.join(clientDirectory, '.vite/manifest.json'), 'utf8'),
   ) as ViteManifest
   const entries = Object.values(manifest)
   const islands = entries.find((entry) => entry.isEntry && entry.name === 'islands')
   const behaviors = entries.find((entry) => entry.isEntry && entry.name === 'behaviors')
-  const enhancements = entries.find((entry) => entry.isEntry && entry.name === 'enhancements')
+  const clientBootstrap = entries.find((entry) => entry.isEntry && entry.name === 'client-bootstrap')
   if (hasIslands && !islands) {
     throw new Error('Nib client build did not produce its configured island runtime entry')
   }
   if (!behaviors) throw new Error('Nib client build did not produce a behavior runtime entry')
-  if (hasEnhancements && !enhancements) {
-    throw new Error('Nib client build did not produce its configured enhancement entry')
+  if (hasClientBootstrap && !clientBootstrap) {
+    throw new Error('Nib client build did not produce its configured client bootstrap entry')
   }
   const preloads = (entry: ManifestEntry): string[] => (
     manifestModulePreloads(manifest, entry).map((file) => baseHref(base, file))
@@ -197,7 +204,18 @@ async function readBuildTemplate(
       ...(entry.isEntry && entry.file.endsWith('.css') ? [entry.file] : []),
     ])
     .filter((file, index, all) => all.indexOf(file) === index)
-  return htmlTemplate({
+  const behaviorPreloads = new Map<string, string>()
+  for (const module of behaviors.dynamicImports ?? []) {
+    try {
+      const id = behaviorFileToId(module)
+      const entry = manifest[module]
+      if (entry !== undefined) behaviorPreloads.set(id, entry.file)
+    } catch {
+      // Only discovered behavior entry modules are route preload candidates.
+    }
+  }
+  return {
+    template: htmlTemplate({
     ...(islands === undefined
       ? {}
       : {
@@ -210,16 +228,18 @@ async function readBuildTemplate(
       source: baseHref(base, behaviors.file),
       preloads: preloads(behaviors),
     },
-    ...(enhancements === undefined
+    ...(clientBootstrap === undefined
       ? {}
       : {
-          enhancement: {
-            source: baseHref(base, enhancements.file),
-            preloads: preloads(enhancements),
+          clientBootstrap: {
+            source: baseHref(base, clientBootstrap.file),
+            preloads: preloads(clientBootstrap),
           },
         }),
     stylesheets: styles.map((file) => baseHref(base, file)),
-  })
+    }),
+    behaviorPreloads,
+  }
 }
 
 function publicationPreviewPlugin(
@@ -300,9 +320,41 @@ async function assertPublicationArtifactsAvailable(
   }
 }
 
-function renderedBody(template: string, output: RenderedOutput): string {
+function routeBehaviorPreloads(
+  pageHtml: string,
+  behaviorPreloads: ReadonlyMap<string, string>,
+  base: string,
+): string {
+  const immediateIds = new Set<string>()
+  const marker = /<[^>]*\bdata-nib-behavior="([^"]+)"[^>]*>/gi
+  for (const match of pageHtml.matchAll(marker)) {
+    const element = match[0]
+    if (/\bdata-nib-defer=/.test(element)) continue
+    immediateIds.add(match[1]!)
+  }
+  return [...immediateIds]
+    .map((id) => behaviorPreloads.get(id))
+    .filter((file): file is string => file !== undefined)
+    .map((file) => (
+      `<link data-nib-runtime-preload="behaviors" rel="modulepreload" href="${baseHref(base, file)}" />`
+    ))
+    .join('\n    ')
+}
+
+function renderedBody(
+  template: string,
+  output: RenderedOutput,
+  behaviorPreloads: ReadonlyMap<string, string> = new Map(),
+  base = '/',
+): string {
+  const routeTemplate = output.kind === 'page'
+    ? template.replace(
+      BEHAVIOR_ROUTE_PRELOAD_MARKER,
+      routeBehaviorPreloads(output.page.html, behaviorPreloads, base),
+    )
+    : template.replace(BEHAVIOR_ROUTE_PRELOAD_MARKER, '')
   return output.kind === 'page'
-    ? renderDocument(template, output.page)
+    ? renderDocument(routeTemplate, output.page)
     : output.kind === 'resource'
       ? output.body
       : renderRedirectDocument(output.destination)
@@ -313,6 +365,8 @@ async function renderAndWritePublication(
   plan: readonly PublicationArtifactPlanEntry[],
   clientDirectory: string,
   template: string,
+  behaviorPreloads: ReadonlyMap<string, string>,
+  base: string,
 ): Promise<readonly PublicationManifestRoute[]> {
   const manifestRoutes: PublicationManifestRoute[] = []
   const batchSize = publicationBatchSize()
@@ -323,7 +377,7 @@ async function renderAndWritePublication(
     const batch = plan.slice(start, start + batchSize).map(({ routePath, artifact }) => {
       const output = server.render(routePath)
       manifestRoutes.push(createPublicationManifestRoute({ routePath, artifact, output }))
-      return { artifact, body: renderedBody(template, output) }
+      return { artifact, body: renderedBody(template, output, behaviorPreloads, base) }
     })
     await waitForAll(batch.map(async ({ artifact, body }) => {
       const primaryFile = path.join(clientDirectory, artifact)
@@ -400,7 +454,7 @@ async function buildStagedSite(root: string, output: string): Promise<void> {
         input: {
           ...(hasIslands ? { islands: NIB_CLIENT_ENTRY } : {}),
           behaviors: NIB_BEHAVIOR_ENTRY,
-          ...(clientEntries.length > 0 ? { enhancements: NIB_ENHANCEMENT_ENTRY } : {}),
+          ...(clientEntries.length > 0 ? { 'client-bootstrap': NIB_CLIENT_BOOTSTRAP_ENTRY } : {}),
           ...(hasStyles ? { styles: stylePath } : {}),
         },
       },
@@ -426,7 +480,7 @@ async function buildStagedSite(root: string, output: string): Promise<void> {
     },
   })
 
-  const template = await readBuildTemplate(
+  const buildTemplate = await readBuildTemplate(
     clientDirectory,
     base,
     hasIslands,
@@ -448,7 +502,9 @@ async function buildStagedSite(root: string, output: string): Promise<void> {
     server,
     plan,
     clientDirectory,
-    template,
+    buildTemplate.template,
+    buildTemplate.behaviorPreloads,
+    base,
   )
   const publicationManifest = createPublicationManifestFromRoutes(
     base,
@@ -536,8 +592,8 @@ export async function startDevSite(options: DevSiteOptions): Promise<ViteDevServ
     ...(clientEntries.length === 0
       ? {}
       : {
-          enhancement: {
-            source: `/@id/${NIB_ENHANCEMENT_ENTRY}`,
+          clientBootstrap: {
+            source: `/@id/${NIB_CLIENT_BOOTSTRAP_ENTRY}`,
             preloads: [],
           },
         }),

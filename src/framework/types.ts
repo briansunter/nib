@@ -294,7 +294,7 @@ export type CollectionData<Definition> =
     ? InferDataValidator<Validator>
     : Definition extends PageSourceCollectionDefinition<infer Validator>
       ? InferDataValidator<Validator>
-      : Definition extends PageCollectionDefinition<infer Frontmatter, infer Selected>
+      : Definition extends PageCollectionDefinition<infer _Frontmatter, infer Selected>
         ? Selected
     : never
 

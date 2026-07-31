@@ -1,12 +1,12 @@
-import { validateIslandId } from './island-paths'
+import { validateClientId } from './client-paths'
 
 /**
- * All `.client` modules under `src/` are discoverable: those under `src/behaviors/`
- * keep a readable relative id; co-located modules (anywhere else under `src/`)
- * get a stable hash id so `<Enhance behavior={module}>` can resolve them.
+ * Only explicit behavior entry modules under `src/behaviors/` are discoverable.
+ * Supporting browser modules elsewhere in `src/` must not become behavior
+ * entries accidentally.
  */
 export const BEHAVIOR_MODULE_GLOB =
-  '/src/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}'
+  '/src/behaviors/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}'
 
 /**
  * Canonicalize any path form (absolute build id or glob key) to the slice from
@@ -19,13 +19,9 @@ function canonicalBehaviorPath(file: string): string {
   return srcIndex >= 0 ? clean.slice(srcIndex) : `/${clean.replace(/^\.?\//, '')}`
 }
 
-/** Deterministic lowercase hex hash (djb2) — pure JS, runs in browser + Node. */
-function hashPath(value: string): string {
-  let hash = 5381
-  for (let i = 0; i < value.length; i += 1) {
-    hash = ((hash << 5) + hash + value.charCodeAt(i)) | 0
-  }
-  return (hash >>> 0).toString(16)
+/** Validate a behavior name without reporting an island-specific error. */
+export function validateBehaviorId(id: string): string {
+  return validateClientId(id, 'behavior')
 }
 
 export function behaviorFileToId(file: string): string {
@@ -41,10 +37,8 @@ export function behaviorFileToId(file: string): string {
   }
   const marker = '/behaviors/'
   const markerIndex = withoutExtension.lastIndexOf(marker)
-  if (markerIndex >= 0) {
-    return validateIslandId(withoutExtension.slice(markerIndex + marker.length))
+  if (markerIndex < 0) {
+    throw new Error(`Behavior module must be under src/behaviors: ${file}`)
   }
-  // Co-located module: stable hash id (the source path may contain uppercase or
-  // other characters that are not valid island-id segments).
-  return `colocated-${hashPath(withoutExtension)}`
+  return validateBehaviorId(withoutExtension.slice(markerIndex + marker.length))
 }

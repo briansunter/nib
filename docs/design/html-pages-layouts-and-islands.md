@@ -67,7 +67,7 @@ Putting a component ID and JSON props directly in HTML would appear simpler:
 <nib-island
   data-component="counter"
   data-props='{"initialCount":0}'
-  data-hydrate="visible"
+  data-nib-defer="visible"
 ></nib-island>
 ```
 

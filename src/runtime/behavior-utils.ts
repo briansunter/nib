@@ -6,10 +6,8 @@
  * manual `signal.addEventListener('abort', ...)` teardown.
  */
 
-export type UrlUpdateMode = 'replace' | 'push'
-
-/** addEventListener with the signal always bound (forwards passive/capture/once). No-ops on a null target, matching `el?.addEventListener`. Pass an explicit type argument for typed event properties, e.g. `on<KeyboardEvent>(document, 'keydown', (e) => e.key, signal)`. */
-export function on<T extends Event = Event>(
+/** Internal addEventListener helper used by lifecycle primitives. */
+function on<T extends Event = Event>(
   target: EventTarget | null,
   type: string,
   handler: (event: T) => void,
@@ -23,13 +21,25 @@ export function on<T extends Event = Event>(
 /** A passive, rAF-throttled scroll listener that cleans up on abort. */
 export function onScroll(handler: () => void, signal: AbortSignal): void {
   let ticking = false
+  let frame: number | undefined
+  const cancelFrame = (): void => {
+    if (frame === undefined) return
+    window.cancelAnimationFrame(frame)
+    frame = undefined
+    ticking = false
+  }
   on(
     window,
     'scroll',
     () => {
       if (ticking) return
       ticking = true
-      window.requestAnimationFrame(() => {
+      frame = window.requestAnimationFrame(() => {
+        frame = undefined
+        if (signal.aborted) {
+          ticking = false
+          return
+        }
         handler()
         ticking = false
       })
@@ -37,6 +47,7 @@ export function onScroll(handler: () => void, signal: AbortSignal): void {
     signal,
     { passive: true },
   )
+  signal.addEventListener('abort', cancelFrame, { once: true })
 }
 
 /** A debounced call whose pending timer is cleared on abort. */
@@ -57,6 +68,7 @@ export function debounce<A extends unknown[]>(
 
 /** A one-shot timer that auto-cancels on abort; returns a cancel function. */
 export function later(fn: () => void, ms: number, signal: AbortSignal): () => void {
+  if (signal.aborted) return () => {}
   const timer = window.setTimeout(fn, ms)
   const cancel = (): void => window.clearTimeout(timer)
   signal.addEventListener('abort', cancel, { once: true })
@@ -99,77 +111,35 @@ export function waitForElement<T extends Element = Element>(
   selector: string,
   signal: AbortSignal,
 ): Promise<T> {
+  if (signal.aborted) {
+    return Promise.reject(signal.reason ?? new Error('waitForElement aborted'))
+  }
   const existing = root.querySelector<T>(selector)
   if (existing) return Promise.resolve(existing)
 
   return new Promise<T>((resolve, reject) => {
+    let settled = false
+    const cleanup = (): void => {
+      observer.disconnect()
+      signal.removeEventListener('abort', onAbort)
+    }
+    const onAbort = (): void => {
+      if (settled) return
+      settled = true
+      cleanup()
+      reject(signal.reason ?? new Error('waitForElement aborted'))
+    }
     const observer = new MutationObserver(() => {
       const element = root.querySelector<T>(selector)
       if (!element) return
-      observer.disconnect()
+      if (settled) return
+      settled = true
+      cleanup()
       resolve(element)
     })
     observer.observe(root, { childList: true, subtree: true })
-    signal.addEventListener(
-      'abort',
-      () => {
-        observer.disconnect()
-        reject(signal.reason ?? new Error('waitForElement aborted'))
-      },
-      { once: true },
-    )
+    signal.addEventListener('abort', onAbort, { once: true })
   })
-}
-
-/** Merge only owned search params, preserving unrelated params, hash, and history state. */
-export function setParams(
-  updater: (params: URLSearchParams) => void,
-  mode: UrlUpdateMode = 'replace',
-): void {
-  const url = new URL(window.location.href)
-  updater(url.searchParams)
-  window.history[mode === 'push' ? 'pushState' : 'replaceState'](
-    window.history.state,
-    '',
-    `${url.pathname}${url.search}${url.hash}`,
-  )
-}
-
-/** Splits / trims / lowercases / dedupes a data-attribute tag string. */
-export function splitTags(value: string, separator = ','): string[] {
-  return [
-    ...new Set(
-      value
-        .split(separator)
-        .map((tag) => tag.trim().toLowerCase())
-        .filter(Boolean),
-    ),
-  ]
-}
-
-export interface ReflectButtonOptions {
-  /** Active class to toggle. Default 'is-selected'; pass null to skip the class toggle. */
-  readonly class?: string | null
-  /** Extra class toggled alongside the active class. */
-  readonly extraClass?: string
-  /** Attribute set when active and removed when inactive (e.g. 'data-active'). */
-  readonly attribute?: string
-}
-
-/** Reflect a boolean onto a button: aria-pressed + class (and optional attribute). */
-export function reflectButtonGroup(
-  button: HTMLElement,
-  active: boolean,
-  options: ReflectButtonOptions = {},
-): void {
-  button.setAttribute('aria-pressed', String(active))
-  const className = options.class === undefined ? 'is-selected' : options.class
-  if (className !== null) button.classList.toggle(className, active)
-  if (options.extraClass) button.classList.toggle(options.extraClass, active)
-  if (options.attribute) {
-    if (active) button.setAttribute(options.attribute, '')
-    else button.removeAttribute(options.attribute)
-  }
 }
 
 export interface LoadScriptOptions {
@@ -182,39 +152,72 @@ export interface LoadScriptOptions {
 
 const scriptLoaders = new Map<string, Promise<void>>()
 
-/** Lazily load a third-party script, deduping concurrent loads for the same src. */
-export function loadScript(src: string, options: LoadScriptOptions): Promise<void> {
-  if (options.signal.aborted) {
-    return Promise.reject(options.signal.reason ?? new Error('loadScript aborted'))
+function raceWithAbort<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) {
+    return Promise.reject(signal.reason ?? new Error('loadScript aborted'))
   }
-  const cached = scriptLoaders.get(src)
-  if (cached) return cached
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = (): void => {
+      cleanup()
+      reject(signal.reason ?? new Error('loadScript aborted'))
+    }
+    const cleanup = (): void => signal.removeEventListener('abort', onAbort)
+    signal.addEventListener('abort', onAbort, { once: true })
+    promise.then(
+      (value) => {
+        cleanup()
+        resolve(value)
+      },
+      (error: unknown) => {
+        cleanup()
+        reject(error)
+      },
+    )
+  })
+}
 
-  const promise = new Promise<void>((resolve, reject) => {
-    const script = document.createElement('script')
-    if (options.module) script.type = 'module'
-    script.src = src
-    script.async = true
-    if (options.dataAttr) script.setAttribute(options.dataAttr, '')
-    document.head.append(script)
-
-    const finish = (outcome: () => void): void => {
+function createScriptLoad(src: string, options: Omit<LoadScriptOptions, 'signal'>): Promise<void> {
+  const absoluteSrc = new URL(src, document.baseURI).href
+  const existing = [...document.scripts].find((script) => (
+    script.src === absoluteSrc || script.getAttribute('src') === src
+  ))
+  if (existing) {
+    if (existing.dataset.nibLoaded === 'true') return Promise.resolve()
+  }
+  return new Promise<void>((resolve, reject) => {
+    const script = existing ?? document.createElement('script')
+    if (!existing) {
+      if (options.module) script.type = 'module'
+      script.src = src
+      script.async = true
+      if (options.dataAttr) script.setAttribute(options.dataAttr, '')
+      document.head.append(script)
+    }
+    const onLoad = (): void => {
+      script.dataset.nibLoaded = 'true'
+      cleanup()
+      resolve()
+    }
+    const onError = (): void => {
+      cleanup()
+      scriptLoaders.delete(src)
+      reject(new Error(`Failed to load script: ${src}`))
+    }
+    const cleanup = (): void => {
       script.removeEventListener('load', onLoad)
       script.removeEventListener('error', onError)
-      options.signal.removeEventListener('abort', onAbort)
-      scriptLoaders.delete(src)
-      outcome()
     }
-    const onLoad = (): void => finish(resolve)
-    const onError = (): void => finish(() => reject(new Error(`Failed to load script: ${src}`)))
-    const onAbort = (): void =>
-      finish(() => reject(options.signal.reason ?? new Error('loadScript aborted')))
-
     script.addEventListener('load', onLoad, { once: true })
     script.addEventListener('error', onError, { once: true })
-    options.signal.addEventListener('abort', onAbort, { once: true })
   })
+}
 
-  scriptLoaders.set(src, promise)
-  return promise
+/** Lazily load a third-party script, deduping concurrent loads for the same src. */
+export function loadScript(src: string, options: LoadScriptOptions): Promise<void> {
+  let shared = scriptLoaders.get(src)
+  if (shared === undefined) {
+    shared = createScriptLoad(src, options)
+    scriptLoaders.set(src, shared)
+  }
+  return raceWithAbort(shared, options.signal)
 }

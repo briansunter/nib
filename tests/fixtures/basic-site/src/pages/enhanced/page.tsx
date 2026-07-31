@@ -5,11 +5,13 @@ export const meta = { title: 'Enhanced' }
 export default function EnhancedPage() {
   return (
     <>
-      <Behavior name="reveal" props={{ label: 'Details' }}>
-        <button type="button">Toggle details</button>
-        <p data-panel="" hidden>Server-rendered details.</p>
+      <Behavior name="reveal">
+        <div>
+          <button type="button">Toggle details</button>
+          <p data-panel="" hidden>Server-rendered details.</p>
+        </div>
       </Behavior>
-      <Behavior name="plain">
+      <Behavior name="plain" defer="visible">
         <button type="button">Plain JavaScript behavior</button>
       </Behavior>
     </>

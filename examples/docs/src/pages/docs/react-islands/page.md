@@ -56,9 +56,11 @@ import { Behavior } from '@briansunter/nib'
 
 export default function Page() {
   return (
-    <Behavior name="reveal" props={{ open: false }}>
-      <button type="button">Toggle details</button>
-      <p data-panel hidden>Complete static details.</p>
+    <Behavior name="reveal">
+      <section>
+        <button type="button">Toggle details</button>
+        <p data-panel hidden>Complete static details.</p>
+      </section>
     </Behavior>
   )
 }
@@ -66,33 +68,30 @@ export default function Page() {
 
 ```ts
 // src/behaviors/reveal.client.ts
-import { behavior } from '@briansunter/nib/client'
+import type { ClientBehavior } from '@briansunter/nib/client'
 
-export default behavior<{ open: boolean }>(({ root, props, signal }) => {
+export default (({ root, signal }) => {
   const button = root.querySelector('button')
   const panel = root.querySelector<HTMLElement>('[data-panel]')
-  if (panel) panel.hidden = !props.open
   button?.addEventListener('click', () => {
     if (panel) panel.hidden = !panel.hidden
   }, { signal })
-})
+}) satisfies ClientBehavior
 ```
 
 The behavior name matches its `.client.ts` or `.client.js` path under
-`src/behaviors`. Plain JavaScript may default-export the mount function without
-`behavior(...)`.
+`src/behaviors`. Plain JavaScript may default-export the mount function directly.
 Behavior-only pages ship the behavior runtime, not React DOM. Use
-`when="idle"` or `when="visible"` on `<Behavior>` to defer non-critical work;
-the default is `load`.
+`defer="idle"` or `defer="visible"` on `<Behavior>` to defer non-critical work;
+the default is immediate.
 
 ## Client ownership
 
-Behaviors and islands can be siblings on the same page. Do not nest one inside
-the other or nest behaviors: one DOM subtree must have one browser owner. Nib
-reports this as a server-render/build error and tells you to use sibling
-boundaries or give one client module the entire subtree. React islands may
-still compose other island definitions; Nib renders those inside the same
-outer React root.
+Behaviors and islands can be siblings on the same page. Behaviors may nest when
+each attaches to a different existing element. Nib rejects behavior/island
+overlap and rejects multiple behavior markers on the same element. React
+islands may still compose other island definitions; Nib renders those inside
+the same outer React root.
 
 ## Props and boundaries
 
