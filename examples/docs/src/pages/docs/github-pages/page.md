@@ -18,7 +18,7 @@ The example site is live at <https://briansunter.github.io/nib/>.
 
 ## Project-site base paths
 
-GitHub project sites are served below `/<repository>/`, not `/`. In Actions, Nib reads `GITHUB_REPOSITORY` and configures Vite with `/nib/` for this repository. That keeps assets, internal links, and dynamically imported island chunks working at the deployed URL.
+GitHub project sites are served below `/<repository>/`, not `/`. In Actions, Nib reads `GITHUB_REPOSITORY` and configures Vite with `/nib/` for this repository. That keeps assets, internal links, and dynamically imported behavior chunks working at the deployed URL.
 
 Internal links in TSX should use `siteHref`:
 
@@ -32,4 +32,4 @@ For a user site or custom domain, set `SITE_BASE_PATH=/` in the workflow environ
 
 ## Output
 
-The build produces one `index.html` per known route, a `404.html` fallback, CSS, assets, and JavaScript only for routes with React islands. GitHub Pages needs only `dist/client`; no production Node server is required.
+The build produces one `index.html` per known route, a `404.html` fallback, CSS, assets, and behavior JavaScript only on routes that opt in. GitHub Pages needs only `dist/client`; no production Node server is required.

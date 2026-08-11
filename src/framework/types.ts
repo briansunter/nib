@@ -431,7 +431,6 @@ export interface RenderedPage {
   status: number
   head: string
   html: string
-  islands: string[]
   behaviors: string[]
 }
 

@@ -6,7 +6,9 @@ import {
   HISTORY_INDEX,
   HISTORY_SCROLL_X,
   HISTORY_SCROLL_Y,
+  HISTORY_WRITE_EVENT,
   navigationState,
+  type NavigationHistoryWriteDetail,
   replaceHistoryScroll,
   stateNumber,
 } from './history'
@@ -21,7 +23,7 @@ import {
   linkFromEvent,
   prefetchMode,
 } from './link-policy'
-import { announceRoute, scrollToHash } from './accessibility'
+import { announceRoute, focusRouteContent, scrollToHash } from './accessibility'
 import { persistenceIndex, restorePersistedElements } from './persistence'
 import {
   abortable,
@@ -243,6 +245,7 @@ class NibClientNavigation implements ClientNavigationController {
       signal,
     })
     window.addEventListener('popstate', this.onPopState, { signal })
+    window.addEventListener(HISTORY_WRITE_EVENT, this.onHistoryWrite as EventListener, { signal })
     window.addEventListener('scroll', this.onScroll, {
       passive: true,
       signal,
@@ -471,7 +474,8 @@ class NibClientNavigation implements ClientNavigationController {
     const nextIndex = hasIndex
       ? storedIndex
       : Math.max(0, this.currentIndex - 1)
-    const direction: NavigationDirection = nextIndex < this.currentIndex
+    const previousIndex = this.currentIndex
+    const direction: NavigationDirection = nextIndex < previousIndex
       ? 'back'
       : 'forward'
     const to = new URL(location.href)
@@ -490,7 +494,13 @@ class NibClientNavigation implements ClientNavigationController {
       }, '')
     }
 
-    if (to.pathname === from.pathname && to.search === from.search) {
+    if (
+      to.pathname === from.pathname
+      && (
+        to.search === from.search
+        || nextIndex === previousIndex
+      )
+    ) {
       this.currentUrl = to
       if (!scrollToHash(to)) {
         window.scrollTo({
@@ -507,6 +517,20 @@ class NibClientNavigation implements ClientNavigationController {
       history: 'traverse',
       restoreScroll,
     })
+  }
+
+  private onHistoryWrite = (event: CustomEvent<NavigationHistoryWriteDetail>) => {
+    const detail = event.detail
+    if (detail.handled) return
+    this.snapshotScroll()
+    history[detail.mode === 'push' ? 'pushState' : 'replaceState']({
+      ...detail.state,
+      [HISTORY_INDEX]: this.currentIndex,
+      [HISTORY_SCROLL_X]: window.scrollX,
+      [HISTORY_SCROLL_Y]: window.scrollY,
+    }, '', detail.url)
+    this.currentUrl = detail.url
+    detail.handled = true
   }
 
   private hardNavigate(url: URL) {
@@ -707,8 +731,8 @@ class NibClientNavigation implements ClientNavigationController {
         ['data-nib-navigation-direction', 'data-nib-navigation-fallback'],
       )
       copyAttributes(nextDocument.body, document.body)
-      restoreFocus = restorePersistedElements(currentRoot, nextRoot)
       unmountClientRuntimes(currentRoot)
+      restoreFocus = restorePersistedElements(currentRoot, nextRoot)
       currentRoot.replaceWith(nextRoot)
       commit()
     }
@@ -728,13 +752,15 @@ class NibClientNavigation implements ClientNavigationController {
 
     commit()
     restoreFocus?.()
+    const handledHash = scrollToHash(to)
+    if (restoreFocus === undefined && !handledHash) focusRouteContent()
     if (context.restoreScroll) {
       window.scrollTo({
         left: context.restoreScroll.x,
         top: context.restoreScroll.y,
         behavior: 'auto',
       })
-    } else if (!scrollToHash(to)) {
+    } else if (!handledHash) {
       window.scrollTo({ left: 0, top: 0, behavior: 'auto' })
     }
 

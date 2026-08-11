@@ -1,87 +1,62 @@
 ---
 name: nib
-description: Build, change, debug, validate, and release Nib static sites. Use when working in a Nib repository on file-routed TSX, Markdown, or configured data pages, typed collections, folder layouts, React islands, static prerendering, base paths, GitHub Pages deployment, or the @briansunter/nib release workflow.
+description: Build, change, debug, validate, and release Nib static sites. Use for file-routed TSX, Markdown or configured data pages, typed collections, layouts, client behaviors, prerendering, base paths, deployment, or the @briansunter/nib release workflow.
 ---
 
 # Maintain Nib
 
-Treat Nib as a framework dependency with a static-first rendering model. Preserve
-complete HTML for every route and add browser JavaScript only through explicit
-React islands or client behaviors.
+Treat Nib as a static-first framework dependency. React and TSX author complete
+server-rendered HTML; browser JavaScript enters only through explicit client
+behaviors or configured client integrations.
 
 ## Read the right source
 
 - Read `README.md` for the user-facing model and commands.
-- Read `docs/reference/architecture.md` before changing routing, rendering, Markdown,
-  islands, document output, or base paths.
-- Read the relevant page under `examples/docs/src/pages/docs` when changing a documented
-  behavior.
-- Inspect `package.json`, `.github/workflows`, and
-  `scripts/check-version-policy.ts` before release work.
-
-Keep these names exact:
-
-- Nib: product and repository.
-- `@briansunter/nib`: npm package only.
-- TSX page and Markdown page: page types.
-- React island: interactive hydration boundary.
-- prerender: build operation.
+- Read `docs/reference/architecture.md` before changing routing, rendering,
+  behaviors, document output, builds, or base paths.
+- Read the matching guide under `examples/docs/src/pages/docs` when changing a
+  documented contract.
+- Inspect package metadata and release scripts before release work.
 
 ## Make page changes
 
-1. Put a route at `src/pages/<route>/page.tsx`, `page.md`, or a configured
-   `page.<extension>` file, never multiple page types in one folder.
-2. Export a default component and a typed `meta` object with a non-empty title
-   from every TSX page.
-3. Markdown frontmatter always has a title and may use `description`, `draft`,
-   `layout`, `image`, `type`, and `twitterCard`; custom fields belong in the
-   configured Markdown schema.
-4. Put flat Markdown layouts at `src/layouts/<name>.tsx`.
-5. Keep navigation data app-owned and render links with `siteHref`; Nib derives
-   the route registry from pages and configured page sources.
-6. Use `siteHref` for internal TSX links so configured base paths are retained.
-7. Use `definePageSource` for one-to-one or one-to-many custom data routes and
-   `defineCollection` for typed build-time lists.
+1. Put a route at `src/pages/<route>/page.tsx`, `page.md`, or one configured
+   `page.<extension>` file.
+2. Give every page a non-empty title.
+3. Keep named Markdown layouts flat under `src/layouts` and folder layouts next
+   to their page subtree.
+4. Keep navigation app-owned and use `siteHref` for internal TSX links.
+5. Use page sources for generated routes and collections for typed build-time
+   lists.
 
-Do not add dynamic parameters, a client router, runtime data loaders, server
-actions, nested layout names, or inline JSX in Markdown unless the task
-explicitly changes Nib's scope.
+Do not add runtime route parameters, server actions, runtime data loaders,
+whole-page browser rendering, or inline JSX in Markdown without explicitly
+changing Nib's scope.
 
-## Make island changes
+## Make behavior changes
 
-1. Keep pages, layouts, and ordinary components static.
-2. Put browser state, effects, refs, and event handlers in
-   `src/islands/<id>.tsx`.
-3. Default-export `island(Component)`; Nib derives the ID from the module path.
-4. Use `defer="idle"` or `defer="visible"` only for expensive behavior
-   startup; omission means immediate startup.
-5. Match the module path below `src/islands` to the feature it owns.
-6. Pass JSON-serializable props only.
-7. Read browser-only state in an effect or event handler so initial server and
-   browser markup match.
+1. Keep essential content in the server-rendered element.
+2. Wrap exactly one intrinsic element with `<Behavior name="feature">`.
+3. Put the matching default export at
+   `src/behaviors/feature/index.client.ts` or `.js`.
+4. Type it as `(root: HTMLElement, signal: AbortSignal) => void | Promise<void>`
+   with `ClientBehavior` from `@briansunter/nib`.
+5. Scope DOM queries to `root` and register listeners with `{ signal }`.
+6. Use `defer="idle"` only for non-urgent startup and `defer="visible"` only
+   when observing the marked root is correct.
+7. Import feature CSS from the behavior module; Nib links it on owning routes.
 
-Island definitions may render other island definitions. Nib composes them into
-one React root, so place `when` on the outermost island; that strategy controls
-the whole subtree.
-
-Use `<Behavior name="feature">` with exactly one existing element and
-`src/behaviors/feature.client.ts` or `.client.js` when static HTML only needs
-event listeners or imperative DOM enhancement. Default-export a plain typed
-function with `{ root, signal }`. Behaviors may nest on different elements;
-behavior/island overlap remains rejected.
-
-`visible` observes all element children and uses the parent element for a
-text-only island root. Keep initial markup deterministic across SSR and the
-browser.
+Do not author `data-nib-behavior`, `data-nib-defer`, or a parallel registry.
+Nested behaviors must own distinct elements and clean up deepest first.
 
 ## Preserve static output
 
-- Keep `siteHref`, Vite `base`, asset URLs, and dynamic imports base-aware.
-- Keep the marked island entry on routes with islands and remove it from static
-  routes.
-- Deploy `dist/client`; treat `dist/server` as an intermediate prerendering
-  bundle.
-- Preserve `404.html` generation and trailing-slash routes.
+- Keep `siteHref`, Vite `base`, assets, and lazy imports base-aware.
+- Confirm routes without behaviors omit the behavior script.
+- Confirm a project without client features still runs Vite plugin build hooks
+  but links no framework JavaScript.
+- Deploy `dist/client`; treat `dist/server` as an intermediate bundle.
+- Preserve the static 404 and trailing-slash policy.
 
 ## Validate in proportion to the change
 
@@ -98,33 +73,21 @@ Then inspect the relevant output:
 | Change | Additional proof |
 | --- | --- |
 | Route, metadata, or layout | Open the generated route in `dist/client` |
-| React island | Confirm SSR markup, client entry, and browser interaction |
-| Static rendering | Confirm a no-island route has no `data-nib-islands` script |
-| Base path or deployment | Run `SITE_BASE_PATH=/nib/ bun run build` and inspect URLs |
-| Base-path development | Run `SITE_BASE_PATH=/nib/ bun run dev` and request `/nib/` plus a nested route |
-| Documentation | Check local Markdown links and search for stale terminology |
-| Release | Run `bun run check:version-policy` and inspect the package tarball |
+| Client behavior | Confirm static markup, route script/CSS, interaction, and cleanup |
+| Static rendering | Confirm the route has no `data-nib-behaviors` script |
+| Base path | Build and request a root plus nested route with `SITE_BASE_PATH` |
+| Documentation | Build docs and check local links and stale terminology |
+| Release | Run version-policy checks and inspect the package tarball |
 
-Use `bun run dev` for request-level SSR checks and `bun run preview` for the
-generated static site.
+Use `bun run dev` for request-level SSR and `bun run preview` for generated
+static output.
 
 ## Release safely
 
 - Use `fix:` for patch releases and `feat:` for minor releases.
 - Keep versions in `0.x.y`; major versions are blocked.
-- Publish the scoped package through the trusted-publishing workflow.
-- Do not claim a release is live without confirming the GitHub release and npm
-  package.
+- Publish through the trusted-publishing workflow.
+- Do not claim a release is live without checking GitHub and npm.
 
-## Keep documentation synchronized
-
-When behavior or names change, update all affected layers:
-
-1. `README.md`;
-2. the relevant `examples/docs/src/pages/docs/**/page.md`;
-3. `docs/reference/architecture.md` for implementation contracts;
-4. this skill;
-5. package metadata and customer-facing site copy.
-
-Prefer one canonical explanation with links over copying long passages between
-files.
+Keep `README.md`, the docs example, architecture reference, this skill, package
+exports, templates, and consumer tests synchronized when a contract changes.

@@ -33,8 +33,6 @@ export interface InspectedPage {
   readonly titleCount: number
   readonly imageCount: number
   readonly missingAltCount: number
-  readonly hasIslandRuntime: boolean
-  readonly islandCount: number
 }
 
 export interface SiteInspectionMetrics {

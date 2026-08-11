@@ -69,34 +69,6 @@ export const frameworkPackageEntries = Object.freeze([
     types: './dist/framework/hosting.d.ts',
   },
   {
-    name: 'client',
-    exportKey: './client',
-    source: 'src/client.ts',
-    javascript: './dist/framework/client.js',
-    types: './dist/framework/client.d.ts',
-  },
-  {
-    name: 'client/islands',
-    exportKey: './client/islands',
-    source: 'src/client/islands.ts',
-    javascript: './dist/framework/client/islands.js',
-    types: './dist/framework/client/islands.d.ts',
-  },
-  {
-    name: 'client/behaviors',
-    exportKey: './client/behaviors',
-    source: 'src/client/behaviors.ts',
-    javascript: './dist/framework/client/behaviors.js',
-    types: './dist/framework/client/behaviors.d.ts',
-  },
-  {
-    name: 'client/lifecycle',
-    exportKey: './client/lifecycle',
-    source: 'src/client/lifecycle.ts',
-    javascript: './dist/framework/client/lifecycle.js',
-    types: './dist/framework/client/lifecycle.d.ts',
-  },
-  {
     name: 'client/navigation',
     exportKey: './client/navigation',
     source: 'src/client/navigation.ts',
@@ -123,5 +95,12 @@ export const frameworkPackageEntries = Object.freeze([
     source: 'src/internal/server.ts',
     javascript: './dist/framework/internal/server.js',
     types: './dist/framework/internal/server.d.ts',
+  },
+  {
+    name: 'internal/client',
+    exportKey: './internal/client',
+    source: 'src/internal/client.ts',
+    javascript: './dist/framework/internal/client.js',
+    types: './dist/framework/internal/client.d.ts',
   },
 ] as const satisfies readonly PackageEntry[])

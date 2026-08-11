@@ -44,11 +44,9 @@ describe('page stylesheet ownership', () => {
   it('allows styles owned by deployable client graphs', async () => {
     await expect(resolveEdge('client', './page.css', '/site/src/pages/page.tsx'))
       .resolves.toBeNull()
-    await expect(resolveEdge('server', './counter.css', '/site/src/islands/counter.tsx'))
+    await expect(resolveEdge('server', './map.css', '/site/src/behaviors/map/index.client.ts'))
       .resolves.toBeNull()
-    await expect(resolveEdge('server', './map.css', '/site/src/behaviors/map.client.ts'))
-      .resolves.toBeNull()
-    await expect(resolveEdge('server', './legacy.css', '/site/src/behaviors/legacy.client.js'))
+    await expect(resolveEdge('server', './legacy.css', '/site/src/behaviors/legacy/index.client.js'))
       .resolves.toBeNull()
     await expect(resolveEdge('server', './tokens.css', '/site/src/style.css'))
       .resolves.toBeNull()
@@ -56,7 +54,7 @@ describe('page stylesheet ownership', () => {
       .resolves.toBeNull()
   })
 
-  it('does not mistake ordinary behavior and island helpers for client entries', async () => {
+  it('does not mistake ordinary behavior helpers for client entries', async () => {
     await expect(resolveEdge(
       'server',
       './helper.css',
@@ -64,8 +62,8 @@ describe('page stylesheet ownership', () => {
     )).rejects.toThrow('cannot deploy stylesheet')
     await expect(resolveEdge(
       'server',
-      './helper.css',
-      '/site/src/islands/helper.ts',
+      './nested-helper.css',
+      '/site/src/behaviors/map/helper.ts',
     )).rejects.toThrow('cannot deploy stylesheet')
   })
 

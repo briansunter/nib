@@ -1,55 +1,15 @@
-import { StrictMode, createElement, type ReactNode } from 'react'
-import { renderToStaticMarkup, renderToString } from 'react-dom/server'
+import { createElement, type ReactNode } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { BehaviorRenderContext } from './behaviors'
-import { ClientOwnershipContext } from './client-ownership'
-import { serializeIslandProps } from './island-serialization'
+import { htmlAttribute, parseHtmlDocument } from './html-document'
 import {
   MarkdownContentRenderContext,
   type MarkdownContent,
 } from './markdown-content'
-import {
-  IslandRenderContext,
-  composedIslandRenderer,
-  type HydrationStrategy,
-  type IslandDefinition,
-  type IslandRenderRequest,
-  type IslandRenderer,
-} from './islands'
-
-interface CollectedIsland {
-  definition: IslandDefinition<any>
-  props: Record<string, unknown>
-  serializedProps: string
-  when: HydrationStrategy
-  instanceId: string
-  identifierPrefix: string
-  html: string
-}
 
 export interface RenderedReactPage {
   html: string
-  islands: string[]
   behaviors: string[]
-}
-
-function contentRenderTree(
-  page: ReactNode,
-  islandRenderer: IslandRenderer,
-  behaviors: Set<string>,
-): { tree: ReactNode; rendered: Set<MarkdownContent> } {
-  const rendered = new Set<MarkdownContent>()
-  return {
-    rendered,
-    tree: createElement(
-      MarkdownContentRenderContext.Provider,
-      { value: { rendered } },
-      createElement(
-        IslandRenderContext.Provider,
-        { value: islandRenderer },
-        createElement(BehaviorRenderContext.Provider, { value: behaviors }, page),
-      ),
-    ),
-  }
 }
 
 function assertRequiredContent(
@@ -63,101 +23,52 @@ function assertRequiredContent(
   }
 }
 
-function islandTree(island: CollectedIsland, behaviors: Set<string>): ReactNode {
-  return contentRenderTree(
-    createElement(
-      ClientOwnershipContext.Provider,
-      {
-        value: {
-          kind: 'island',
-          name: island.definition.islandId,
-        },
-      },
-      createElement(
-        StrictMode,
-        null,
-        createElement(island.definition.Component, island.props),
-      ),
-    ),
-    composedIslandRenderer(),
-    behaviors,
-  ).tree
+function assertBehaviorMarkers(
+  html: string,
+  expected: ReadonlyMap<string, number>,
+): void {
+  const actual = new Map<string, number>()
+  let reservedDeferWithoutBehavior = false
+  let foreignNamespaceRoot = false
+  for (const element of parseHtmlDocument(html).elements) {
+    const id = htmlAttribute(element, 'data-nib-behavior')
+    const defer = htmlAttribute(element, 'data-nib-defer')
+    if (id === undefined) {
+      if (defer !== undefined) reservedDeferWithoutBehavior = true
+      continue
+    }
+    if (element.namespaceURI !== 'http://www.w3.org/1999/xhtml') {
+      foreignNamespaceRoot = true
+    }
+    actual.set(id, (actual.get(id) ?? 0) + 1)
+  }
+  if (foreignNamespaceRoot) {
+    throw new Error('Behavior roots must be HTML elements')
+  }
+  const matches = !reservedDeferWithoutBehavior
+    && actual.size === expected.size
+    && [...expected].every(([id, count]) => actual.get(id) === count)
+  if (!matches) {
+    throw new Error(
+      'data-nib-behavior and data-nib-defer are framework-owned; '
+      + 'declare client enhancements with <Behavior>',
+    )
+  }
 }
 
 export function renderReactPage(
   page: ReactNode,
   requiredContent: readonly MarkdownContent[] = [],
 ): RenderedReactPage {
-  const collected: CollectedIsland[] = []
-  const behaviors = new Set<string>()
-  const collector: IslandRenderer = {
-    render(request: IslandRenderRequest) {
-      const index = collected.length
-      const instanceId = `nib-${index}`
-      collected.push({
-        definition: request.definition,
-        props: request.props,
-        serializedProps: serializeIslandProps(request.props),
-        when: request.when,
-        instanceId,
-        identifierPrefix: `${instanceId}-`,
-        html: '',
-      })
-      return null
-    },
-  }
-
-  const collectedTree = contentRenderTree(page, collector, behaviors)
-  const collectedShell = renderToStaticMarkup(collectedTree.tree)
-  assertRequiredContent(collectedTree.rendered, requiredContent)
-  if (collected.length === 0) {
-    return { html: collectedShell, islands: [], behaviors: [...behaviors] }
-  }
-
-  for (const island of collected) {
-    island.html = renderToString(islandTree(island, behaviors), {
-      identifierPrefix: island.identifierPrefix,
-    })
-  }
-
-  let cursor = 0
-  const emitter: IslandRenderer = {
-    render(request: IslandRenderRequest) {
-      const island = collected[cursor]
-      cursor += 1
-      if (!island) throw new Error('Island render was not deterministic between passes')
-
-      const serializedProps = serializeIslandProps(request.props)
-      if (
-        island.definition !== request.definition
-        || island.when !== request.when
-        || island.serializedProps !== serializedProps
-      ) {
-        throw new Error(`Island ${request.definition.islandId} changed between render passes`)
-      }
-
-      return createElement('nib-island', {
-        'data-island': island.definition.islandId,
-        'data-instance': island.instanceId,
-        'data-prefix': island.identifierPrefix,
-        'data-hydrate': island.when,
-        'data-props': island.serializedProps,
-        style: { display: 'contents' },
-        dangerouslySetInnerHTML: { __html: island.html },
-      })
-    },
-  }
-
-  const emittedTree = contentRenderTree(page, emitter, behaviors)
-  const html = renderToStaticMarkup(emittedTree.tree)
-  assertRequiredContent(emittedTree.rendered, requiredContent)
-  if (cursor !== collected.length) {
-    throw new Error('Island render count changed between render passes')
-  }
-
-  return {
-    html,
-    islands: [...new Set(collected.map((island) => island.definition.islandId))],
-    behaviors: [...behaviors],
-  }
+  const behaviors = new Map<string, number>()
+  const rendered = new Set<MarkdownContent>()
+  const tree = createElement(
+    MarkdownContentRenderContext.Provider,
+    { value: { rendered } },
+    createElement(BehaviorRenderContext.Provider, { value: behaviors }, page),
+  )
+  const html = renderToStaticMarkup(tree)
+  assertRequiredContent(rendered, requiredContent)
+  assertBehaviorMarkers(html, behaviors)
+  return { html, behaviors: [...behaviors.keys()] }
 }

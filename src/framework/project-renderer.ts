@@ -8,12 +8,10 @@ import { renderHead, resolveMeta } from './meta'
 import { deepFreeze } from './freeze'
 import { createContentRenderer } from './markdown-content'
 import { renderReactPage, type RenderedReactPage } from './render-page'
-import { validateIslandModules, type IslandModule } from './islands'
 import {
   BEHAVIOR_MODULE_GLOB,
   behaviorFileToId,
 } from './behavior-paths'
-import { ClientOwnershipError } from './client-ownership'
 import { resolvedRouteSnapshot } from './snapshots'
 import {
   addConfiguredRedirects,
@@ -60,7 +58,6 @@ export interface ProjectRendererOptions {
   pages: Record<string, PageModule>
   folderLayouts?: RouteLayouts['folders']
   namedLayouts?: RouteLayouts['named']
-  islandModules: Record<string, IslandModule>
   behaviorClientFiles?: readonly string[]
   derivedPages?: {
     definitions: readonly DerivedPagesDefinition<any>[]
@@ -107,20 +104,16 @@ function behaviorClientIds(files: readonly string[]): ReadonlySet<string> {
 
 function assertClientModules(
   route: ResolvedPageRoute,
-  kind: 'island' | 'behavior',
   emittedIds: readonly string[],
   discoveredIds: { has(id: string): boolean },
 ): void {
   const missing = emittedIds.filter((id) => !discoveredIds.has(id))
   if (missing.length === 0) return
   const marker = missing.length === 1
-    ? `${kind} "${missing[0]}"`
-    : `${kind}s ${missing.map((id) => `"${id}"`).join(', ')}`
-  const pattern = kind === 'island'
-    ? 'src/islands/**/*.tsx'
-    : BEHAVIOR_MODULE_GLOB.slice(1)
+    ? `behavior "${missing[0]}"`
+    : `behaviors ${missing.map((id) => `"${id}"`).join(', ')}`
   throw new Error(
-    `Route ${route.path} emitted ${marker} without a matching client module in ${pattern}`,
+    `Route ${route.path} emitted ${marker} without a matching client module in ${BEHAVIOR_MODULE_GLOB.slice(1)}`,
   )
 }
 
@@ -207,7 +200,6 @@ function publicRedirectDestination(base: string, destination: string): string {
 export async function createProjectRenderer(
   options: ProjectRendererOptions,
 ): Promise<ProjectRenderer> {
-  const islandDefinitions = validateIslandModules(options.islandModules)
   const behaviorIds = behaviorClientIds(options.behaviorClientFiles ?? [])
   const layoutModules: RouteLayouts = {
     ...(options.folderLayouts === undefined ? {} : { folders: options.folderLayouts }),
@@ -381,31 +373,17 @@ export async function createProjectRenderer(
         options.config.shell,
         collections,
       ), pageContext)
-      let reactPage: RenderedReactPage
-      try {
-        reactPage = renderReactPage(
-          content,
-          route.content === undefined ? [] : [route.content],
-        )
-      } catch (error) {
-        if (error instanceof ClientOwnershipError) {
-          throw new Error(
-            `Route ${route.path} from ${route.source} has overlapping client ownership. `
-            + error.message,
-            { cause: error },
-          )
-        }
-        throw error
-      }
-      assertClientModules(route, 'island', reactPage.islands, islandDefinitions)
-      assertClientModules(route, 'behavior', reactPage.behaviors, behaviorIds)
+      const reactPage: RenderedReactPage = renderReactPage(
+        content,
+        route.content === undefined ? [] : [route.content],
+      )
+      assertClientModules(route, reactPage.behaviors, behaviorIds)
       return {
         kind: 'page',
         page: {
           status: route.status,
           head: renderHead(publicRoute.meta, head),
           html: reactPage.html,
-          islands: reactPage.islands,
           behaviors: reactPage.behaviors,
         },
       }

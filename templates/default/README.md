@@ -22,4 +22,4 @@ canonical routes to their static artifacts.
 
 Edit `nib.config.ts`, replace the pages under `src/pages`, add configured data
 page sources or collections when needed, and put interactive components under
-`src/islands`. The deployable static output is `dist/client`.
+`src/behaviors`. The deployable static output is `dist/client`.

@@ -4,7 +4,6 @@ const EXECUTED_SCRIPT_ATTRIBUTE = 'data-nib-script-executed'
 const RERUN_SCRIPT_ATTRIBUTE = 'data-nib-script-rerun'
 export const TRANSIENT_BASE_ATTRIBUTE = 'data-nib-navigation-base'
 const RUNTIME_SCRIPT_ATTRIBUTES = [
-  'data-nib-islands',
   'data-nib-behaviors',
   'data-nib-client-bootstrap',
 ] as const
@@ -312,7 +311,7 @@ export function syncHead(
       desired.push(document.importNode(next, true))
     }
   }
-  // Vite inserts lazy island/behavior stylesheets at runtime. They are absent
+  // Vite inserts lazy behavior stylesheets at runtime. They are absent
   // from fetched HTML and must survive swaps because its module preload cache
   // will not insert the same stylesheet twice.
   for (const current of currentNodes) {

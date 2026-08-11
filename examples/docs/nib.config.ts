@@ -6,6 +6,9 @@ import { site } from './src/site'
 export default defineConfig({
   vite: () => tailwindcss(),
   shell: SiteShell,
+  redirects: {
+    '/docs/react-islands/': '/docs/client-behaviors/',
+  },
   plugins: [
     siteMetadata({
       title: site.name,

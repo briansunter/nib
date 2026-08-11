@@ -96,7 +96,7 @@ export default function ArticleLayout({
 `Content` is bound to the route's compiled Markdown. The layout chooses its
 semantic root and static attributes without cloning or inspecting a child
 element. Nib rejects a render that drops or duplicates the body. Layouts may
-place [React islands](../react-islands/) before, after, or beside `Content`.
+place [client behaviors](../client-behaviors/) before, after, or around `Content`.
 Inline JSX inside `page.md` is not supported.
 
 Generated data pages can use the same pipeline:
@@ -124,4 +124,4 @@ For folder-based composition, create `src/pages/layout.tsx` or a nested `src/pag
 
 ## Markdown page versus TSX page
 
-Choose a Markdown page when the route is primarily content. Choose a TSX page when it needs custom static component composition or a page-specific structure. Put browser state and event handlers in an explicit React island. Both page types are server-rendered and become static HTML in `dist/client`.
+Choose a Markdown page when the route is primarily content. Choose a TSX page when it needs custom static component composition or a page-specific structure. Attach browser state and event handlers through an explicit client behavior. Both page types are server-rendered and become static HTML in `dist/client`.

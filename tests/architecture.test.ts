@@ -262,7 +262,7 @@ describe('repository architecture', () => {
   it('keeps browser entry graphs free of Node and server-only dependencies', () => {
     const graph = runtimeGraph(path.join(repositoryRoot, 'src'))
     const browserEntries = frameworkPackageEntries.filter((entry) => (
-      entry.name === 'client' || entry.name.startsWith('client/')
+      entry.name.startsWith('client/') || entry.name === 'internal/client'
     ))
     for (const entry of browserEntries) {
       for (const file of transitiveFiles(graph, entry.source)) {

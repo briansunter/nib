@@ -1,9 +1,8 @@
+/** @internal Runtime entry used by Nib's generated browser modules. */
 export {
   createBehaviorRuntime,
-  type BehaviorContext,
   type BehaviorClientModule,
   type BehaviorClientModules,
-  type ClientBehavior,
   type BehaviorRuntime,
   type CreateBehaviorRuntimeOptions,
 } from '../runtime/behaviors'

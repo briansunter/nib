@@ -2,7 +2,7 @@
 
 Status: accepted and implemented
 
-Last reviewed: 2026-07-28
+Last reviewed: 2026-08-11
 
 ## Context
 
@@ -11,7 +11,7 @@ and hard-navigation behavior are complete without JavaScript. A standalone
 reference site nevertheless contained a proven document-navigation layer that
 lived in application code. It coordinates fetched HTML, history, scroll and
 focus, view transitions, persistent DOM, head and script synchronization,
-prefetching, and the public island/behavior runtime coordinator.
+prefetching, and the internal behavior runtime coordinator.
 
 Keeping that implementation application-owned duplicates framework lifecycle
 logic and left the reference site coupled to Astro event and attribute names. Making
@@ -40,8 +40,8 @@ module. The generated client entry uses static imports and includes the
 navigation controller only when the plugin contributes it.
 
 The plugin is site-wide because document navigation owns history and the
-current document, not an individual page subtree. It uses the public client
-runtime coordinator to unmount islands and behaviors before replacing
+current document, not an individual page subtree. It uses Nib's private
+runtime coordinator to unmount behaviors before replacing
 `#root`, then mounts the new document after the swap.
 
 ## Public browser contract
@@ -140,13 +140,23 @@ to a hard navigation.
 The controller preserves native fallback, modified-click behavior, hash
 navigation, back/forward direction, scroll restoration, and focus. After a
 successful route swap it creates one live-region announcement from the title,
-`h1`, or pathname. Hash targets receive focus only when normally focusable.
-View transitions are optional enhancement; unsupported or failed transitions
-use the same swap and lifecycle path.
+`h1`, or pathname. Naturally focusable hash targets and explicit `tabindex`
+targets, including `tabindex="-1"` skip-link destinations, receive focus. View
+transitions are optional enhancement; unsupported or failed transitions use
+the same swap and lifecycle path.
 
-Application `replaceState` calls may preserve their own fields. Nib owns only
-namespaced navigation index and scroll keys and repairs those keys when taking
-a snapshot.
+Cross-document swaps retain focus inside a persisted element when applicable;
+an explicit hash target takes precedence. Otherwise the controller focuses the
+new route's `main`, `#main-content`, or first `h1` with `preventScroll`, adding
+`tabindex="-1"` when the target is not already focusable.
+
+Nib owns its namespaced navigation index and scroll keys. Feature controllers
+that push or replace same-document query/hash state use
+`writeNavigationHistory()` from `@briansunter/nib/client/navigation`; direct
+History API writes would bypass the controller's loaded-document bookkeeping.
+Feature entries retain the current document index so Back and Forward can be
+handled locally without a fetch or runtime remount. Page navigation alone
+advances the document index.
 
 ## Consequences
 
@@ -156,8 +166,8 @@ a snapshot.
   the controller.
 - The reference site can delete its application navigation controller and Astro
   lifecycle compatibility after migration.
-- Runtime consumers must use the typed Nib lifecycle rather than private
-  globals or framework-emulation event names.
+- Runtime consumers use the typed navigation events rather than private globals
+  or framework-emulation event names.
 - This decision does not add runtime routes, server rendering, data loaders,
   or JavaScript-required content.
 
@@ -167,14 +177,14 @@ a snapshot.
 - same-origin and cross-origin redirects;
 - base paths, trailing slashes, query strings, and hashes;
 - head/style/script ordering, CSP attributes, and rerun policy;
-- static → island/behavior → static transitions with exact cleanup;
+- static → behavior → static transitions with exact cleanup;
 - duplicate persistence keys and focus/selection restoration;
 - push, replace, back, and forward scroll restoration;
 - native fallback for opt-out links, downloads, targets, forms, non-HTML
   responses, missing roots, fetch errors, and disabled plugin;
 - prefetch TTL, eviction, connection policy, and observer cleanup;
 - view-transition success, rejection, abort, and unsupported fallback;
-- no listener, observer, React root, behavior, cache, or timer accumulation;
+- no listener, observer, behavior, cache, or timer accumulation;
 - full reference-site interaction and 493-page parity verification after adoption.
 
 Approval changes only this ADR's status from `proposed` to `accepted`.

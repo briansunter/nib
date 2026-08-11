@@ -1,7 +1,6 @@
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  NIB_CLIENT_ENTRY,
   NIB_BEHAVIOR_ENTRY,
   NIB_CLIENT_BOOTSTRAP_ENTRY,
   NIB_SERVER_ENTRY,
@@ -45,7 +44,6 @@ function runVirtualRuntimeEntry(source: string): {
     .replace(/import\.meta\.glob\([^\n]*\)/g, 'discoverModules()')
     .replaceAll('import.meta.hot', 'hot')
   const execute = new Function(
-    'createIslandRuntime',
     'createBehaviorRuntime',
     'registerClientRuntime',
     'discoverModules',
@@ -54,7 +52,6 @@ function runVirtualRuntimeEntry(source: string): {
     executable,
   )
   execute(
-    createRuntime,
     createRuntime,
     registerClientRuntime,
     () => modules,
@@ -71,7 +68,7 @@ function runVirtualRuntimeEntry(source: string): {
 }
 
 describe('consumer project Vite adapter', () => {
-  it('provides framework-owned virtual entries for consumer routes and islands', () => {
+  it('provides framework-owned virtual entries for routes and behaviors', () => {
     const plugin = nibProject(
       '/site/nib.config.ts',
       '/site',
@@ -84,23 +81,17 @@ describe('consumer project Vite adapter', () => {
     }
     const resolve = plugin.resolveId as (id: string) => string | null
     const load = plugin.load as (id: string) => string | null
-    const clientId = resolve(NIB_CLIENT_ENTRY)
     const behaviorId = resolve(NIB_BEHAVIOR_ENTRY)
     const serverId = resolve(NIB_SERVER_ENTRY)
-    if (!clientId || !behaviorId || !serverId) throw new Error('Nib virtual entries did not resolve')
+    if (!behaviorId || !serverId) throw new Error('Nib virtual entries did not resolve')
 
-    const client = load(clientId)
     const behavior = load(behaviorId)
     const server = load(serverId)
-    expect(client).toContain("import.meta.glob('/src/islands/**/*.tsx')")
-    expect(client).toContain('@briansunter/nib/client/islands')
-    expect(client).toContain('createIslandRuntime')
-    expect(client).not.toContain('__nibStartIslandRuntime')
     expect(behavior).toContain(
-      'import.meta.glob("/src/behaviors/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}")',
+      'import.meta.glob("/src/behaviors/**/index.client.{js,ts}")',
     )
     expect(behavior).toContain('createBehaviorRuntime')
-    expect(behavior).toContain('@briansunter/nib/client/behaviors')
+    expect(behavior).toContain('@briansunter/nib/internal/client')
     expect(server).toContain(path.resolve('/site/nib.config.ts'))
     expect(server).toContain('"/src/pages/**/page.tsx"')
     expect(server).toContain('"/src/pages/**/page.yaml"')
@@ -108,7 +99,7 @@ describe('consumer project Vite adapter', () => {
     expect(server).toContain("query: '?nib-page-source'")
     expect(server).toContain("import.meta.glob('/src/pages/**/layout.tsx'")
     expect(server).toContain(
-      'Object.keys(import.meta.glob("/src/behaviors/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}"))',
+      'Object.keys(import.meta.glob("/src/behaviors/**/index.client.{js,ts}"))',
     )
     expect(server).toContain('createProjectRenderer')
     expect(server).toContain('root: "/site"')
@@ -121,7 +112,7 @@ describe('consumer project Vite adapter', () => {
     expect(load('other')).toBeNull()
   })
 
-  it('unregisters and destroys island and behavior runtimes during HMR disposal', () => {
+  it('unregisters and destroys the behavior runtime during HMR disposal', () => {
     const plugin = nibProject('/site/nib.config.ts')
     if (typeof plugin.resolveId !== 'function' || typeof plugin.load !== 'function') {
       throw new Error('Nib project plugin is missing virtual module hooks')
@@ -129,22 +120,20 @@ describe('consumer project Vite adapter', () => {
     const resolve = plugin.resolveId as (id: string) => string | null
     const load = plugin.load as (id: string) => string | null
 
-    for (const entry of [NIB_CLIENT_ENTRY, NIB_BEHAVIOR_ENTRY]) {
-      const resolved = resolve(entry)
-      if (!resolved) throw new Error(`Nib virtual entry ${entry} did not resolve`)
-      const source = load(resolved)
-      if (!source) throw new Error(`Nib virtual entry ${entry} did not load`)
-      const execution = runVirtualRuntimeEntry(source)
-      expect(execution.events).toEqual(['create', 'register', 'mount'])
-      execution.dispose()
-      expect(execution.events).toEqual([
-        'create',
-        'register',
-        'mount',
-        'unregister',
-        'destroy',
-      ])
-    }
+    const resolved = resolve(NIB_BEHAVIOR_ENTRY)
+    if (!resolved) throw new Error('Nib behavior entry did not resolve')
+    const source = load(resolved)
+    if (!source) throw new Error('Nib behavior entry did not load')
+    const execution = runVirtualRuntimeEntry(source)
+    expect(execution.events).toEqual(['create', 'register', 'mount'])
+    execution.dispose()
+    expect(execution.events).toEqual([
+      'create',
+      'register',
+      'mount',
+      'unregister',
+      'destroy',
+    ])
   })
 
   it('statically imports configured browser initializers into one optional entry', () => {

@@ -16,18 +16,13 @@ function sourceRoot(root: string): string {
   return `${canonical.replaceAll('\\', '/')}/`
 }
 
-function islandEntry(file: string): boolean {
-  return /\/src\/islands\/.*\.tsx$/.test(file)
-}
-
 function behaviorEntry(file: string): boolean {
-  return /\/src\/behaviors\/.*\.client\.(?:[cm]?[jt]s|[jt]sx)$/.test(file)
+  return /\/src\/behaviors\/.+\/index\.client\.(?:js|ts)$/.test(file)
 }
 
 function applicationModule(applicationRoot: string, id: string): boolean {
   const file = cleanModuleId(id)
   return file.startsWith(applicationRoot)
-    && !islandEntry(file)
     && !behaviorEntry(file)
     && file !== `${applicationRoot}style.css`
     && moduleTarget(file) !== 'client'
@@ -39,8 +34,7 @@ function clientOwnedModule(applicationRoot: string, id: string): boolean {
     || (
       file.startsWith(applicationRoot)
       && (
-        islandEntry(file)
-        || behaviorEntry(file)
+        behaviorEntry(file)
         || moduleTarget(file) === 'client'
       )
     )
@@ -75,7 +69,7 @@ export function pageStyleOwnershipGuard(
       if (!cleanModuleId(resolvedId).endsWith('.css')) return null
       throw new Error([
         `Nib cannot deploy stylesheet ${source} imported by ${cleanModuleId(importer)}.`,
-        'Move the import to src/style.css, an island or .client behavior module,',
+        'Move the import to src/style.css, a behavior index.client module,',
         'or a plugin-owned client entry. Route-scoped page CSS is not supported.',
       ].join(' '))
     },

@@ -14,6 +14,7 @@ vi.mock('../src/runtime/coordinator', () => ({
 
 import {
   createClientNavigation,
+  writeNavigationHistory,
   type ClientNavigationController,
   type NavigationBeforeSwapDetail,
   type NavigationLifecycleDetail,
@@ -84,6 +85,39 @@ afterEach(() => {
 })
 
 describe('optional client navigation', () => {
+  it('keeps same-document feature history synchronized without remounting', async () => {
+    history.replaceState(null, '', '/photos')
+    controller = createClientNavigation()
+    controller.mount()
+
+    writeNavigationHistory('/photos?p=first', {
+      mode: 'push',
+      state: { galleryEntry: true },
+    })
+    expect(location.search).toBe('?p=first')
+    expect(history.state).toMatchObject({
+      __nibNavigationIndex: 0,
+      galleryEntry: true,
+    })
+
+    writeNavigationHistory('/photos?p=second', {
+      state: { ...history.state, galleryEntry: true },
+    })
+    expect(location.search).toBe('?p=second')
+    expect(history.state.__nibNavigationIndex).toBe(0)
+
+    history.back()
+    await vi.waitFor(() => expect(location.pathname + location.search).toBe('/photos'))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(fetch).not.toHaveBeenCalled()
+    expect(runtime.unmount).not.toHaveBeenCalled()
+    history.forward()
+    await vi.waitFor(() => expect(location.search).toBe('?p=second'))
+    expect(fetch).not.toHaveBeenCalled()
+    expect(runtime.unmount).not.toHaveBeenCalled()
+    expect(runtime.mount).not.toHaveBeenCalled()
+  })
+
   it('mounts idempotently and emits typed lifecycle events around one swap', async () => {
     vi.mocked(fetch).mockResolvedValue(page('/next?from=test', 'Next', '<h1>Next page</h1>'))
     const events: string[] = []
@@ -183,16 +217,21 @@ describe('optional client navigation', () => {
 
   it('retains a persisted control, focus, and selection across documents', async () => {
     document.querySelector('#root')!.innerHTML = `
-      <input data-nib-navigation-persist="search" value="preserved value">
+      <input data-nib-navigation-persist="search" data-nib-behavior="search" value="preserved value">
       <a href="/results">Results</a>
     `
+    const currentRoot = document.querySelector<HTMLElement>('#root')!
     const input = document.querySelector('input')!
     input.focus()
     input.setSelectionRange(2, 7)
+    runtime.unmount.mockImplementation((root: ParentNode) => {
+      expect(root).toBe(currentRoot)
+      expect(root.contains(input)).toBe(true)
+    })
     vi.mocked(fetch).mockResolvedValue(page(
       '/results',
       'Results',
-      '<input data-nib-navigation-persist="search" value="replacement"><h1>Results</h1>',
+      '<input data-nib-navigation-persist="search" data-nib-behavior="search" value="replacement"><h1>Results</h1>',
     ))
     controller = createClientNavigation()
     controller.mount()
@@ -204,6 +243,37 @@ describe('optional client navigation', () => {
     expect(document.activeElement).toBe(input)
     expect(input.selectionStart).toBe(2)
     expect(input.selectionEnd).toBe(7)
+    expect(runtime.unmount).toHaveBeenCalledOnce()
+    expect(runtime.mount).toHaveBeenCalledWith(document)
+    expect(runtime.unmount.mock.invocationCallOrder[0])
+      .toBeLessThan(runtime.mount.mock.invocationCallOrder[0]!)
+  })
+
+  it('focuses route content after normal navigation and history traversal', async () => {
+    document.querySelector('#root')!.innerHTML = `
+      <main id="main-content"><a id="next" href="/next">Next</a></main>
+    `
+    vi.mocked(fetch).mockImplementation((input) => {
+      const pathname = new URL(String(input), location.href).pathname
+      return Promise.resolve(pathname === '/next'
+        ? page('/next', 'Next', '<main id="main-content"><h1>Next</h1></main>')
+        : page('/', 'Home', '<main id="main-content"><h1>Home</h1></main>'))
+    })
+    controller = createClientNavigation()
+    controller.mount()
+    document.querySelector<HTMLAnchorElement>('#next')!.focus()
+
+    await controller.navigate('/next')
+    expect(document.activeElement).toBe(document.querySelector('#main-content'))
+    expect(document.activeElement?.getAttribute('tabindex')).toBe('-1')
+
+    history.back()
+    await vi.waitFor(() => expect(document.title).toBe('Home'))
+    expect(document.activeElement).toBe(document.querySelector('#main-content'))
+
+    history.forward()
+    await vi.waitFor(() => expect(document.title).toBe('Next'))
+    expect(document.activeElement).toBe(document.querySelector('#main-content'))
   })
 
   it('normalizes matching persistence keys before replacement', async () => {
@@ -329,8 +399,8 @@ describe('optional client navigation', () => {
     expect(fetch).toHaveBeenCalledOnce()
   })
 
-  it('dispatches hashchange for an intercepted same-document navigation', async () => {
-    document.querySelector('#root')!.innerHTML = '<h1 id="target">Target</h1>'
+  it('focuses explicit skip targets and dispatches one same-document hashchange', async () => {
+    document.querySelector('#root')!.innerHTML = '<main id="target" tabindex="-1">Target</main>'
     const oldURL = location.href
     const newURL = new URL('/#target', oldURL).href
     const changes: Array<{ newURL: string; oldURL: string }> = []
@@ -344,6 +414,7 @@ describe('optional client navigation', () => {
     await controller.navigate('/#target')
 
     expect(location.hash).toBe('#target')
+    expect(document.activeElement).toBe(document.querySelector('#target'))
     expect(changes).toEqual([{ oldURL, newURL }])
     expect(fetch).not.toHaveBeenCalled()
   })
@@ -369,7 +440,7 @@ describe('optional client navigation', () => {
     vi.mocked(fetch).mockResolvedValue(page(
       '/canonical/',
       'Canonical',
-      '<h1 id="target">Canonical</h1>',
+      '<main id="target" tabindex="-1"><h1>Canonical</h1></main>',
     ))
     const scrollIntoView = vi.spyOn(HTMLElement.prototype, 'scrollIntoView')
       .mockImplementation(() => {})
@@ -381,6 +452,7 @@ describe('optional client navigation', () => {
     expect(location.pathname).toBe('/canonical/')
     expect(location.hash).toBe('#target')
     expect(scrollIntoView).toHaveBeenCalledOnce()
+    expect(document.activeElement).toBe(document.querySelector('#target'))
   })
 
   it('activates the destination base before inserting relative resources', async () => {
@@ -606,7 +678,7 @@ describe('optional client navigation', () => {
   it('hard-navigates when a retained Nib runtime entry changes deployment hash', async () => {
     document.head.innerHTML = `
       <title>Home</title>
-      <script data-nib-islands type="application/json" src="/assets/islands-old.js"></script>
+      <script data-nib-behaviors type="application/json" src="/assets/behaviors-old.js"></script>
     `
     vi.mocked(fetch)
       .mockResolvedValueOnce(page('/static', 'Static', '<h1>Static</h1>'))
@@ -614,14 +686,14 @@ describe('optional client navigation', () => {
         '/new-deployment',
         'New deployment',
         '<h1>New</h1>',
-        '<script data-nib-islands type="application/json" src="/assets/islands-new.js"></script>',
+        '<script data-nib-behaviors type="application/json" src="/assets/behaviors-new.js"></script>',
       ))
     controller = createClientNavigation()
     controller.mount()
 
     await controller.navigate('/static')
-    expect(document.querySelector('script[data-nib-islands]')?.getAttribute('src'))
-      .toBe('/assets/islands-old.js')
+    expect(document.querySelector('script[data-nib-behaviors]')?.getAttribute('src'))
+      .toBe('/assets/behaviors-old.js')
     const unmountCalls = runtime.unmount.mock.calls.length
 
     await controller.navigate('/new-deployment')

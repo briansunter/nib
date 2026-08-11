@@ -115,7 +115,7 @@ describe('static Image component', () => {
       .toThrow('cache.verification')
   })
 
-  it('rejects image metadata imports from client and island graphs', async () => {
+  it('rejects image metadata imports from browser-target graphs', async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-'))
     temporaryDirectories.push(root)
     const options = normalizeImagesOptions(root)
@@ -125,14 +125,14 @@ describe('static Image component', () => {
     expect(() => resolveId.call(
       { environment: { name: 'client' } } as any,
       '@briansunter/nib-images',
-      '/src/islands/gallery.tsx',
+      '/src/behaviors/gallery/index.client.ts',
       { isEntry: false },
-    )).toThrow('cannot be included in a React island')
+    )).toThrow('cannot be included in browser-target modules')
     const load = plugin.load as (...args: any[]) => unknown
     await expect(load.call(
       { environment: { name: 'client' } },
       path.join(root, 'hero.png?nib-image'),
-    )).rejects.toThrow('cannot be included in a React island')
+    )).rejects.toThrow('cannot be included in browser-target modules')
   })
 
   it('rejects symlinks that escape allowed source roots', async () => {
@@ -220,7 +220,7 @@ describe('static Image component', () => {
     expect(html).toContain('--nib-image-source-aspect:2')
     expect(html).not.toContain('--nib-image-comfort-width')
     expect(html).toContain('sizes="100vw"')
-    expect(html).not.toContain('data-nib-islands')
+    expect(html).not.toContain('data-nib-behaviors')
   })
 
   it('useImage resolves optimized sources for manual rendering and serialization', async () => {

@@ -45,6 +45,10 @@ describe('site scaffolding', () => {
     })
     await expect(fs.readFile(path.join(target, 'src/pages/page.tsx'), 'utf8')).resolves
       .toContain("from '@briansunter/nib'")
+    await expect(fs.readFile(
+      path.join(target, 'src/behaviors/counter/index.client.ts'),
+      'utf8',
+    )).resolves.toContain('(root, signal)')
 
     const manifest = JSON.parse(
       await fs.readFile(path.join(target, 'package.json'), 'utf8'),

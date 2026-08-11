@@ -16,12 +16,12 @@ import {
 import { glob } from 'tinyglobby'
 import { renderDocument, renderRedirectDocument } from '../document'
 import { pageSourceExtensions, pageSourcePatterns } from '../content'
-import { nibIslandsEntry } from '../island-vite-plugin'
+import { nibClientEntry } from '../client-entry-plugin'
 import {
-  NIB_CLIENT_ENTRY,
   NIB_BEHAVIOR_ENTRY,
   NIB_SERVER_ENTRY,
   NIB_CLIENT_BOOTSTRAP_ENTRY,
+  NIB_EMPTY_CLIENT_ENTRY,
   nibProject,
 } from '../project-vite-plugin'
 import { loadNibConfig, resolveBasePath } from '../project-config'
@@ -46,11 +46,12 @@ import type { RenderedOutput, TrailingSlash } from '../types'
 import { nibDataPages, nibDerivedPages, nibMarkdown } from '../vite-plugin'
 import { targetBoundaryGuard } from '../target-boundary'
 import { pageStyleOwnershipGuard } from '../style-ownership'
-import { behaviorFileToId } from '../behavior-paths'
+import { BEHAVIOR_MODULE_GLOB, behaviorFileToId } from '../behavior-paths'
 import {
   BEHAVIOR_ROUTE_PRELOAD_MARKER,
   htmlTemplate,
   manifestModulePreloads,
+  manifestStylesheets,
   type ManifestEntry,
   type ViteManifest,
 } from './html-template'
@@ -63,7 +64,13 @@ export interface SiteOperationOptions {
 
 interface BuildTemplate {
   template: string
-  behaviorPreloads: ReadonlyMap<string, string>
+  behaviorAssets: ReadonlyMap<string, BehaviorRouteAssets>
+  emittedAssets: ReadonlySet<string>
+}
+
+interface BehaviorRouteAssets {
+  readonly module: string
+  readonly stylesheets: readonly string[]
 }
 
 function publicationBatchSize(): number {
@@ -159,7 +166,7 @@ export async function siteViteConfig(
           pageSourcePatterns(pageSources),
           clientEntries,
         ),
-        nibIslandsEntry(),
+        nibClientEntry(),
       ],
       resolve: {
         dedupe: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
@@ -175,59 +182,54 @@ export async function siteViteConfig(
 async function readBuildTemplate(
   clientDirectory: string,
   base: string,
-  hasIslands: boolean,
+  hasBehaviors: boolean,
   hasClientBootstrap: boolean,
 ): Promise<BuildTemplate> {
   const manifest = JSON.parse(
     await fs.readFile(path.join(clientDirectory, '.vite/manifest.json'), 'utf8'),
   ) as ViteManifest
   const entries = Object.values(manifest)
-  const islands = entries.find((entry) => entry.isEntry && entry.name === 'islands')
   const behaviors = entries.find((entry) => entry.isEntry && entry.name === 'behaviors')
   const clientBootstrap = entries.find((entry) => entry.isEntry && entry.name === 'client-bootstrap')
-  if (hasIslands && !islands) {
-    throw new Error('Nib client build did not produce its configured island runtime entry')
+  if (hasBehaviors && !behaviors) {
+    throw new Error('Nib client build did not produce its configured behavior runtime entry')
   }
-  if (!behaviors) throw new Error('Nib client build did not produce a behavior runtime entry')
   if (hasClientBootstrap && !clientBootstrap) {
     throw new Error('Nib client build did not produce its configured client bootstrap entry')
   }
   const preloads = (entry: ManifestEntry): string[] => (
     manifestModulePreloads(manifest, entry).map((file) => baseHref(base, file))
   )
-  // Dynamic island and behavior CSS is loaded with its owning chunk. Linking
-  // every manifest stylesheet here would make unrelated routes download it.
+  // Only entry-owned CSS is global. Styles imported by a behavior module are
+  // collected below and linked only from routes that render that behavior.
   const styles = entries
     .filter((entry) => entry.isEntry)
-    .flatMap((entry) => [
-      ...(entry.css ?? []),
-      ...(entry.isEntry && entry.file.endsWith('.css') ? [entry.file] : []),
-    ])
+    .flatMap((entry) => manifestStylesheets(manifest, entry))
     .filter((file, index, all) => all.indexOf(file) === index)
-  const behaviorPreloads = new Map<string, string>()
-  for (const module of behaviors.dynamicImports ?? []) {
+  const behaviorAssets = new Map<string, BehaviorRouteAssets>()
+  for (const module of behaviors?.dynamicImports ?? []) {
     try {
       const id = behaviorFileToId(module)
       const entry = manifest[module]
-      if (entry !== undefined) behaviorPreloads.set(id, entry.file)
+      if (entry !== undefined) {
+        behaviorAssets.set(id, {
+          module: entry.file,
+          stylesheets: manifestStylesheets(manifest, entry),
+        })
+      }
     } catch {
       // Only discovered behavior entry modules are route preload candidates.
     }
   }
-  return {
-    template: htmlTemplate({
-    ...(islands === undefined
+  const template = htmlTemplate({
+    ...(behaviors === undefined
       ? {}
       : {
-          island: {
-            source: baseHref(base, islands.file),
-            preloads: preloads(islands),
+          behavior: {
+            source: baseHref(base, behaviors.file),
+            preloads: preloads(behaviors),
           },
         }),
-    behavior: {
-      source: baseHref(base, behaviors.file),
-      preloads: preloads(behaviors),
-    },
     ...(clientBootstrap === undefined
       ? {}
       : {
@@ -237,9 +239,35 @@ async function readBuildTemplate(
           },
         }),
     stylesheets: styles.map((file) => baseHref(base, file)),
-    }),
-    behaviorPreloads,
+  })
+  const emittedAssets = new Set([
+    ...styles.map((file) => baseHref(base, file)),
+    ...(behaviors === undefined ? [] : preloads(behaviors)),
+    ...(clientBootstrap === undefined ? [] : preloads(clientBootstrap)),
+  ])
+  return {
+    template,
+    behaviorAssets,
+    emittedAssets,
   }
+}
+
+async function removePrivateInertClientEntry(clientDirectory: string): Promise<void> {
+  const manifestFile = path.join(clientDirectory, '.vite/manifest.json')
+  const manifest = JSON.parse(await fs.readFile(manifestFile, 'utf8')) as ViteManifest
+  const inert = Object.values(manifest).find((entry) => (
+    entry.isEntry && entry.name === 'nib-empty-client'
+  ))
+  if (inert === undefined) {
+    throw new Error('Nib client build did not produce its private inert entry')
+  }
+  const inertFile = path.join(clientDirectory, inert.file)
+  await fs.rm(inertFile, { force: true })
+  await fs.rmdir(path.dirname(inertFile)).catch((error: unknown) => {
+    const code = fileSystemErrorCode(error)
+    if (code !== 'ENOTEMPTY' && code !== 'ENOENT') throw error
+  })
+  await fs.rm(path.dirname(manifestFile), { recursive: true, force: true })
 }
 
 function publicationPreviewPlugin(
@@ -320,9 +348,11 @@ async function assertPublicationArtifactsAvailable(
   }
 }
 
-function routeBehaviorPreloads(
+function routeBehaviorAssets(
   pageHtml: string,
-  behaviorPreloads: ReadonlyMap<string, string>,
+  behaviorIds: readonly string[],
+  behaviorAssets: ReadonlyMap<string, BehaviorRouteAssets>,
+  emittedAssets: ReadonlySet<string>,
   base: string,
 ): string {
   const immediateIds = new Set<string>()
@@ -332,25 +362,47 @@ function routeBehaviorPreloads(
     if (/\bdata-nib-defer=/.test(element)) continue
     immediateIds.add(match[1]!)
   }
-  return [...immediateIds]
-    .map((id) => behaviorPreloads.get(id))
-    .filter((file): file is string => file !== undefined)
-    .map((file) => (
-      `<link data-nib-runtime-preload="behaviors" rel="modulepreload" href="${baseHref(base, file)}" />`
-    ))
-    .join('\n    ')
+  const emitted = new Set(emittedAssets)
+  const stylesheets = behaviorIds.flatMap((id) => (
+    behaviorAssets.get(id)?.stylesheets ?? []
+  ))
+  const links: string[] = []
+  for (const file of stylesheets) {
+    const href = baseHref(base, file)
+    if (emitted.has(href)) continue
+    emitted.add(href)
+    links.push(`<link data-nib-behavior-style rel="stylesheet" href="${href}" />`)
+  }
+  for (const id of immediateIds) {
+    const file = behaviorAssets.get(id)?.module
+    if (file === undefined) continue
+    const href = baseHref(base, file)
+    if (emitted.has(href)) continue
+    emitted.add(href)
+    links.push(
+      `<link data-nib-runtime-preload="behaviors" rel="modulepreload" href="${href}" />`,
+    )
+  }
+  return links.join('\n    ')
 }
 
 function renderedBody(
   template: string,
   output: RenderedOutput,
-  behaviorPreloads: ReadonlyMap<string, string> = new Map(),
+  behaviorAssets: ReadonlyMap<string, BehaviorRouteAssets> = new Map(),
+  emittedAssets: ReadonlySet<string> = new Set(),
   base = '/',
 ): string {
   const routeTemplate = output.kind === 'page'
     ? template.replace(
       BEHAVIOR_ROUTE_PRELOAD_MARKER,
-      routeBehaviorPreloads(output.page.html, behaviorPreloads, base),
+      routeBehaviorAssets(
+        output.page.html,
+        output.page.behaviors,
+        behaviorAssets,
+        emittedAssets,
+        base,
+      ),
     )
     : template.replace(BEHAVIOR_ROUTE_PRELOAD_MARKER, '')
   return output.kind === 'page'
@@ -365,7 +417,8 @@ async function renderAndWritePublication(
   plan: readonly PublicationArtifactPlanEntry[],
   clientDirectory: string,
   template: string,
-  behaviorPreloads: ReadonlyMap<string, string>,
+  behaviorAssets: ReadonlyMap<string, BehaviorRouteAssets>,
+  emittedAssets: ReadonlySet<string>,
   base: string,
 ): Promise<readonly PublicationManifestRoute[]> {
   const manifestRoutes: PublicationManifestRoute[] = []
@@ -377,7 +430,10 @@ async function renderAndWritePublication(
     const batch = plan.slice(start, start + batchSize).map(({ routePath, artifact }) => {
       const output = server.render(routePath)
       manifestRoutes.push(createPublicationManifestRoute({ routePath, artifact, output }))
-      return { artifact, body: renderedBody(template, output, behaviorPreloads, base) }
+      return {
+        artifact,
+        body: renderedBody(template, output, behaviorAssets, emittedAssets, base),
+      }
     })
     await waitForAll(batch.map(async ({ artifact, body }) => {
       const primaryFile = path.join(clientDirectory, artifact)
@@ -432,7 +488,7 @@ async function buildStagedSite(root: string, output: string): Promise<void> {
   const serverDirectory = path.join(output, 'server')
   const stylePath = path.join(root, 'src/style.css')
   const hasStyles = await fs.access(stylePath).then(() => true, () => false)
-  const hasIslands = (await glob('src/islands/**/*.tsx', {
+  const hasBehaviors = (await glob(BEHAVIOR_MODULE_GLOB.slice(1), {
     cwd: root,
     onlyFiles: true,
   })).length > 0
@@ -444,22 +500,35 @@ async function buildStagedSite(root: string, output: string): Promise<void> {
     clientEntries,
     config: clientConfig,
   } = await siteViteConfig(root, 'build', 'client')
+  const clientInputs = {
+    ...(hasBehaviors ? { behaviors: NIB_BEHAVIOR_ENTRY } : {}),
+    ...(clientEntries.length > 0 ? { 'client-bootstrap': NIB_CLIENT_BOOTSTRAP_ENTRY } : {}),
+    ...(hasStyles ? { styles: stylePath } : {}),
+  }
+  // Even a fully static project runs the client-target Vite graph so project
+  // plugins retain build hooks and emitted assets. The inert entry is never
+  // linked from generated documents.
+  const rollupInputs = Object.keys(clientInputs).length === 0
+    ? { 'nib-empty-client': NIB_EMPTY_CLIENT_ENTRY }
+    : clientInputs
   await viteBuild({
     ...clientConfig,
     build: {
       emptyOutDir: true,
       manifest: true,
       outDir: clientDirectory,
-      rollupOptions: {
-        input: {
-          ...(hasIslands ? { islands: NIB_CLIENT_ENTRY } : {}),
-          behaviors: NIB_BEHAVIOR_ENTRY,
-          ...(clientEntries.length > 0 ? { 'client-bootstrap': NIB_CLIENT_BOOTSTRAP_ENTRY } : {}),
-          ...(hasStyles ? { styles: stylePath } : {}),
-        },
-      },
+      rollupOptions: { input: rollupInputs },
     },
   })
+  const buildTemplate = await readBuildTemplate(
+    clientDirectory,
+    base,
+    hasBehaviors,
+    clientEntries.length > 0,
+  )
+  if (Object.keys(clientInputs).length === 0) {
+    await removePrivateInertClientEntry(clientDirectory)
+  }
   const { base: serverBase, config: serverConfig } = await siteViteConfig(root, 'build', 'server')
   if (serverBase !== base) {
     throw new Error(`Nib base changed between client and server builds: ${base} !== ${serverBase}`)
@@ -480,12 +549,6 @@ async function buildStagedSite(root: string, output: string): Promise<void> {
     },
   })
 
-  const buildTemplate = await readBuildTemplate(
-    clientDirectory,
-    base,
-    hasIslands,
-    clientEntries.length > 0,
-  )
   const serverEntry = path.join(serverDirectory, 'entry-server.js')
   const server = await import(`${pathToFileURL(serverEntry).href}?t=${Date.now()}`) as {
     paths: readonly string[]
@@ -503,7 +566,8 @@ async function buildStagedSite(root: string, output: string): Promise<void> {
     plan,
     clientDirectory,
     buildTemplate.template,
-    buildTemplate.behaviorPreloads,
+    buildTemplate.behaviorAssets,
+    buildTemplate.emittedAssets,
     base,
   )
   const publicationManifest = createPublicationManifestFromRoutes(
@@ -581,10 +645,6 @@ export async function startDevSite(options: DevSiteOptions): Promise<ViteDevServ
   })
   const hasStyles = await fs.access(path.join(root, 'src/style.css')).then(() => true, () => false)
   const template = htmlTemplate({
-    island: {
-      source: `/@id/${NIB_CLIENT_ENTRY}`,
-      preloads: [],
-    },
     behavior: {
       source: `/@id/${NIB_BEHAVIOR_ENTRY}`,
       preloads: [],

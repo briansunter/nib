@@ -7,8 +7,7 @@ layout: docs
 # Image optimization
 
 `@briansunter/nib-images` is an optional build-time package. It creates static
-responsive image markup and files; it does not add a client runtime or turn an
-image into a React island.
+responsive image markup and files; it does not add a client runtime.
 
 Install it:
 
@@ -78,8 +77,8 @@ the last valid source.
 
 The root component entry is processor-free. Import `images()` from the
 `/plugin` entry as shown above. `Image` is a static rendering primitive and
-cannot be imported into a React island; build and development report that
-mistake instead of shipping build paths or failing during hydration.
+cannot be imported into a client behavior; build and development report that
+mistake instead of shipping build-only image processing code to the browser.
 
 For imported content or Markdown that already uses stable public image URLs,
 configure an opt-in source root. Nib copies the originals to that public prefix

@@ -18,7 +18,6 @@ export {
 } from './framework/content'
 // Compatibility exports. Prefer @briansunter/nib/server for filesystem loaders.
 export { file, glob } from './framework/content-compat'
-export { island } from './framework/islands'
 export { Behavior } from './framework/behaviors'
 export { markdownMedia } from './integrations/markdown-media'
 export { buildInfo } from './integrations/build-info'
@@ -37,15 +36,7 @@ export type {
   GlobLoaderFile,
   GlobLoaderOptions,
 } from './framework/content-compat'
-export type {
-  BehaviorProps,
-  BehaviorDeferStrategy,
-} from './framework/behaviors'
-export type {
-  HydrationStrategy,
-  IslandControlProps,
-  IslandDefinition,
-} from './framework/islands'
+export type { ClientBehavior } from './runtime/behaviors'
 export type {
   NibBuildOutput,
   StagedDirectory,

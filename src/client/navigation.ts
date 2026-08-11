@@ -16,3 +16,5 @@ export type {
   NavigationPrefetchPolicy,
   NavigationType,
 } from '../navigation/types'
+export { writeNavigationHistory } from '../navigation/history'
+export type { NavigationHistoryWriteOptions } from '../navigation/history'

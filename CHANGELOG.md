@@ -5,13 +5,14 @@
 
 ### BREAKING CHANGES
 
-* simplify behaviors to wrapper-free, root-scoped enhancements with optional `defer`
+* replace browser React islands and public client helpers with one route-scoped Behavior API
+* move behavior modules to `src/behaviors/<name>/index.client.ts|js` and use positional root and signal arguments
 
 ### Features
 
-* allow independent behavior composition while preserving island overlap protection
-* expose signal-bound lifecycle helpers under `@briansunter/nib/client/lifecycle`
-* preload immediate route behaviors without preloading deferred behavior modules
+* emit behavior CSS only for owning routes and preload immediate behavior modules
+* keep client-target Vite hooks active through a private inert entry for static-only sites
+* preserve optional client navigation and plugin-owned client entries without a public browser runtime
 
 ## [0.19.0](https://github.com/briansunter/nib/compare/v0.18.0...v0.19.0) (2026-07-29)
 

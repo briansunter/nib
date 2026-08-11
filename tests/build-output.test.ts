@@ -56,7 +56,7 @@ describe('createBuildOutput', () => {
         artifact: 'posts/hello.html',
         output: {
           kind: 'page',
-          page: { status: 200, head: '', html: '<p>Hi</p>', islands: [], behaviors: [] },
+          page: { status: 200, head: '', html: '<p>Hi</p>', behaviors: [] },
         },
       },
     ])
@@ -140,7 +140,6 @@ describe('finalize context', () => {
       root: process.cwd(),
       base: '/',
       pages: {},
-      islandModules: {},
     })
 
     await renderer.finalize({

@@ -10,10 +10,10 @@
 
 Nib is a static-site framework for React. It handles routing, Vite, development
 SSR, HTML documents, and prerendering; a site supplies pages, layouts, data,
-styles, and optional React islands.
+styles, and optional client behaviors.
 
-Every known route is emitted as complete HTML. Static pages ship HTML and CSS.
-Pages with islands load React and only the island modules they use.
+Every known route is emitted as complete HTML. Browser interaction is explicit,
+DOM-first, and route-scoped; Nib never hydrates React in production.
 
 ## Quick start
 
@@ -28,13 +28,13 @@ npm run dev
 For a compact feature-complete example, see the
 [Commonplace blog template](examples/blog/README.md). It uses fictional sample
 content while demonstrating Markdown, collections, typed data pages,
-responsive images, islands, client behaviors, optional navigation, feeds,
+responsive images, client behaviors, optional navigation, feeds,
 search data, redirects, and hosting output.
 
 ## Features
 
 - File-based routes from `src/pages`, including a static `404.html`.
-- React pages rendered to HTML without whole-page hydration.
+- React pages rendered to HTML with no browser React runtime.
 - GitHub-Flavored Markdown with validated frontmatter.
 - Folder layouts for route trees and named layouts for Markdown.
 - Typed data pages that can turn YAML, CSV, or another format into one or many
@@ -44,7 +44,7 @@ search data, redirects, and hosting output.
 - Required page titles and optional renderer-plugin document-head contributions.
 - Configurable Unified remark and rehype Markdown extensions.
 - Build-time collections for indexes, navigation, and related content.
-- React islands with `load`, `idle`, and `visible` hydration.
+- Client behaviors with immediate, `idle`, and `visible` startup.
 - Optional static document navigation with native-link fallback.
 - Optional Vite styling adapters; the starter opts into Tailwind without making
   it a framework dependency.
@@ -67,10 +67,9 @@ src/
 │   └── layout.tsx               -> wraps the route tree
 ├── layouts/
 │   └── docs.tsx                 -> named Markdown layout
-├── islands/
-│   └── counter.tsx              -> opt-in browser interaction
 ├── behaviors/
-│   └── reveal.client.ts         -> static DOM enhancement
+│   └── reveal/
+│       └── index.client.ts      -> scoped DOM enhancement
 ├── content/                     -> optional collection inputs
 ├── site-shell.tsx               -> optional page chrome
 └── style.css
@@ -143,23 +142,23 @@ Keep execution targets explicit:
 ```ts
 import { defineCollection } from '@briansunter/nib'
 import { glob } from '@briansunter/nib/server'
-import type { IslandHydrationEnvironment } from '@briansunter/nib/client'
+import type { ClientBehavior } from '@briansunter/nib'
 ```
 
-The root package is universal authoring API, `/server` owns filesystem-backed
-loaders, and `/client` owns browser lifecycle contracts. Nib also rejects a
+The root package is the universal authoring API, `/server` owns filesystem-backed
+loaders, and `/client/navigation` owns the opt-in navigation controller. Nib also rejects a
 `.server.ts(x)` module imported by the production client graph or a
 `.client.ts(x)` module imported by the production server graph.
 
-Application-wide CSS belongs in `src/style.css`. CSS can also be owned by an
-island, a `.client` behavior, or a plugin's client entry. A stylesheet imported
+Application-wide CSS belongs in `src/style.css`. CSS can also be owned by a
+client behavior or a plugin's client entry. A stylesheet imported
 only by a page, layout, or server-rendered component cannot reach the deployed
 client graph, so Nib reports it as a build/development error instead of
 publishing an unstyled page.
 
-For progressive enhancement without React hydration, attach one behavior to an
+For progressive enhancement, attach one behavior to an
 existing element with `<Behavior name="reveal">` and put one matching implementation at
-`src/behaviors/reveal.client.ts`:
+`src/behaviors/reveal/index.client.ts`:
 
 ```tsx
 import { Behavior } from '@briansunter/nib'
@@ -177,9 +176,9 @@ export function Reveal() {
 ```
 
 ```ts
-import type { ClientBehavior } from '@briansunter/nib/client'
+import type { ClientBehavior } from '@briansunter/nib'
 
-export default (({ root, signal }) => {
+export default ((root, signal) => {
   const button = root.querySelector('button')
   const details = root.querySelector<HTMLElement>('[data-details]')
   button?.addEventListener('click', () => {
@@ -189,17 +188,10 @@ export default (({ root, signal }) => {
 ```
 
 The implementation receives its scoped root and an `AbortSignal`. Plain
-JavaScript can default-export the mount function directly. Behavior-only
-routes keep their complete static HTML and do not ship React DOM. When the
-project has no files under `src/islands`, the production client build omits the
-island entry and React hydration stack entirely.
-
-Behaviors and islands may be siblings on the same page. Behaviors may nest when
-each owns a different existing element; Nib still rejects behavior-in-island
-and island-in-behavior overlap. React islands may compose other island
-definitions because they remain inside one React root. If an
-enhancement later needs React state, replace only that feature's `Behavior`
-boundary with an island; the rest of the page does not change.
+JavaScript can default-export the mount function directly. Routes without
+behavior markers omit the behavior script, and projects without behavior
+modules do not build that runtime. Behaviors may nest when each owns a different
+element; cleanup aborts the deepest root first.
 
 ### Site identity and document head
 
@@ -348,7 +340,7 @@ frozen manifest as `context.publication`, so output integrations can open exact
 artifacts without recursively crawling `dist/client` or reconstructing routes.
 
 Run `nib check` after a build to validate publication artifacts, titles, image
-alt text, island-runtime ownership, and local `href`, `src`, `srcset`, and
+alt text, and local `href`, `src`, `srcset`, and
 `poster` references. Checks use one route/file index and one standards-parsed
 document per page, then report every issue with a stable code. `nib inspect`
 prints the read-only inspection summary without treating it as a verification
@@ -411,29 +403,17 @@ Configured Unified plugins receive a VFile whose `history` contains the
 Markdown source path. This makes source-relative diagnostics and asset
 resolution possible without changing the generated page API.
 
-## React islands
+## Behavior loading
 
-Ordinary React components remain static. Put browser state and event handlers
-under `src/islands` and mark the boundary with `island`:
+Behavior JavaScript is lazy by module. Immediate roots may preload their own
+chunk; `idle` and `visible` roots wait for their strategy. Visible startup
+observes the marked root itself. CSS imported by a behavior is linked on every
+route that renders that behavior, including deferred roots, and is deduplicated
+against global and plugin-owned styles.
 
-```tsx
-import { island } from '@briansunter/nib'
-import { useState } from 'react'
-
-function Counter({ initialCount }: { initialCount: number }) {
-  const [count, setCount] = useState(initialCount)
-  return (
-    <button onClick={() => setCount((value) => value + 1)}>
-      Count: {count}
-    </button>
-  )
-}
-
-export default island(Counter)
-```
-
-Nib derives the island ID from its path below `src/islands`, and props must be
-JSON-serializable. A route without islands does not include the island runtime.
+`Behavior` owns `data-nib-behavior` and `data-nib-defer`; do not set either
+attribute on its child. The child must be one intrinsic DOM element so the
+framework adds no layout wrapper.
 
 ## Optional client navigation
 
@@ -460,11 +440,23 @@ dynamic import or React DOM dependency is added by navigation. Links remain
 complete native fallbacks when JavaScript is disabled, a destination is
 ineligible, or an enhanced navigation cannot complete safely.
 
+After a document swap, Nib preserves focus inside a persisted element or moves
+it to an explicit hash target. Otherwise it focuses the new route's `main`,
+`#main-content`, or first `h1` without changing the intended scroll position.
+
 Use `data-nib-prefetch="hover|tap|load|viewport|false"` to control prefetching,
 `data-nib-navigation-reload` to force native navigation, and
 `data-nib-navigation-persist="key"` to preserve a stable element across swaps.
 The browser controller and typed `nib:navigation-*` events are exported from
 `@briansunter/nib/client/navigation`.
+
+Feature controllers that write query or hash state while client navigation is
+active must use `writeNavigationHistory()` from that same browser entry instead
+of calling `history.pushState()` or `history.replaceState()` directly. The
+helper keeps feature entries on the loaded document's navigation index, so
+Back and Forward update the feature in place without fetching or remounting the
+document. It accepts only same-origin, same-path URLs; ordinary page changes
+still belong to links, forms, or the navigation controller.
 
 Generated Markdown uses the neutral `nib-markdown` class. Sites own typography,
 colors, widths, and other prose presentation through their layouts or global
@@ -481,7 +473,7 @@ or a source of required content.
 ## Documentation
 
 The [documentation site](https://briansunter.github.io/nib/docs/) covers setup,
-pages, Markdown, layouts, data sources, collections, islands, and GitHub Pages.
+pages, Markdown, layouts, data sources, collections, behaviors, and GitHub Pages.
 
 Repository maintainers can run `bun run verify` for the ordered framework,
 package-consumer, documentation, and blog-template gate. The example is a root
@@ -498,7 +490,7 @@ npm install @briansunter/nib-images
 
 Configure it as a normal typed Nib plugin, then import local raster files with
 the explicit `?nib-image` query. `Image` emits static responsive `<picture>`
-markup with intrinsic dimensions, lazy loading by default, and no island runtime.
+markup with intrinsic dimensions, lazy loading by default, and no client runtime.
 Set `maxWidth` to put a hard ceiling on emitted transforms when a full or
 constrained image will never be displayed at its source width.
 
@@ -527,10 +519,8 @@ for layouts, cache behavior, and the current SVG/animated-image limits.
 For implementation details and design rationale:
 
 - [Architecture](docs/reference/architecture.md)
-- [React islands](docs/decisions/interactive-react-islands.md)
+- [Client behaviors](docs/decisions/client-behaviors.md)
 - [Optional client navigation ADR](docs/decisions/optional-client-navigation.md)
-- [HTML pages proposal](docs/design/html-pages-layouts-and-islands.md) — proposed, not
-  part of the current API
 - [Type-safe plugins and image optimization](docs/reference/type-safe-plugins-and-image-optimization.md)
 - [Licensing](docs/reference/licensing.md)
   — implemented design, APIs, and validation matrix

@@ -1,19 +1,30 @@
+import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import { Behavior } from '../src/framework/behaviors'
 import { behaviorFileToId } from '../src/framework/behavior-paths'
-import { island } from '../src/framework/islands'
+import { Behavior } from '../src/framework/behaviors'
 import { renderReactPage } from '../src/framework/render-page'
 import {
   createBehaviorRuntime,
   type ClientBehavior,
 } from '../src/runtime/behaviors'
-import { registeredIsland } from './helpers/islands'
+
+type TestElement = HTMLElement & {
+  nested: Set<HTMLElement>
+}
 
 function behaviorElement(
   dataset: Record<string, string>,
-): HTMLElement {
-  return { dataset, children: [], parentElement: null } as unknown as HTMLElement
+  nested: readonly HTMLElement[] = [],
+): TestElement {
+  const contained = new Set(nested)
+  return {
+    dataset,
+    nested: contained,
+    contains(node: Node) {
+      return contained.has(node as HTMLElement)
+    },
+  } as unknown as TestElement
 }
 
 function rootWith(elements: HTMLElement[]): ParentNode {
@@ -25,6 +36,15 @@ function rootWith(elements: HTMLElement[]): ParentNode {
     ),
     contains: (element: Node) => elements.includes(element as HTMLElement),
   } as unknown as ParentNode
+}
+
+function behaviorModules(
+  entries: Record<string, ClientBehavior>,
+): Record<string, () => Promise<{ default: ClientBehavior }>> {
+  return Object.fromEntries(Object.entries(entries).map(([name, behavior]) => [
+    `/src/behaviors/${name}/index.client.ts`,
+    async () => ({ default: behavior }),
+  ]))
 }
 
 describe('client behaviors', () => {
@@ -50,16 +70,13 @@ describe('client behaviors', () => {
     )).toThrow('Invalid defer strategy')
   })
 
-  it('requires a single existing DOM element as its root', () => {
+  it('requires exactly one existing DOM element as its root', () => {
     function Feature() {
       return <button>Feature</button>
     }
     expect(() => renderReactPage(
       <Behavior name="feature"><Feature /></Behavior>,
-    )).toThrow('requires one existing DOM element child')
-  })
-
-  it('rejects absent, multiple, and same-element behavior roots', () => {
+    )).toThrow('requires one existing HTML element child')
     expect(() => renderReactPage(
       <Behavior name="feature" children={null as never} />,
     )).toThrow()
@@ -69,77 +86,81 @@ describe('client behaviors', () => {
         children={[<div key="one" />, <div key="two" />] as never}
       />,
     )).toThrow()
-    expect(() => renderReactPage(
-      <Behavior name="feature"><div data-nib-behavior="existing" /></Behavior>,
-    )).toThrow('cannot share an element with another behavior')
   })
 
-  it('allows sibling behaviors and islands but rejects overlapping ownership', () => {
-    const Counter = registeredIsland(
-      'counter',
-      island(() => <button>Count</button>),
-    )
-    const siblings = renderReactPage(
-      <main>
-        <Behavior name="reveal"><p>Details</p></Behavior>
-        <Counter />
-      </main>,
-    )
-    expect(siblings.behaviors).toEqual(['reveal'])
-    expect(siblings.islands).toEqual(['counter'])
-
+  it('rejects non-HTML namespace roots', () => {
     expect(() => renderReactPage(
-      <Behavior name="reveal"><Counter /></Behavior>,
-    )).toThrow(
-      'island "counter" cannot be nested inside behavior "reveal"',
+      <Behavior name="feature"><svg /></Behavior>,
+    )).toThrow('requires one existing HTML element child')
+    expect(() => renderReactPage(
+      <Behavior name="feature">{createElement('math')}</Behavior>,
+    )).toThrow('requires one existing HTML element child')
+    expect(() => renderReactPage(
+      <svg>
+        <Behavior name="feature">{createElement('circle')}</Behavior>
+      </svg>,
+    )).toThrow('Behavior roots must be HTML elements')
+    expect(() => renderReactPage(
+      createElement('math', null,
+        <Behavior name="feature">{createElement('mrow')}</Behavior>,
+      ),
+    )).toThrow('Behavior roots must be HTML elements')
+
+    const foreignObject = renderReactPage(
+      <svg>
+        <foreignObject>
+          <Behavior name="feature"><div /></Behavior>
+        </foreignObject>
+      </svg>,
     )
-    const nested = renderReactPage(
+    expect(foreignObject.behaviors).toEqual(['feature'])
+  })
+
+  it('rejects framework-owned attributes on a behavior root', () => {
+    expect(() => renderReactPage(
+      <Behavior name="feature"><div data-nib-behavior="existing" /></Behavior>,
+    )).toThrow('owns data-nib-behavior and data-nib-defer on its root')
+    expect(() => renderReactPage(
+      <Behavior name="feature"><div data-nib-defer="idle" /></Behavior>,
+    )).toThrow('owns data-nib-behavior and data-nib-defer on its root')
+  })
+
+  it('allows nested behaviors on different elements', () => {
+    const rendered = renderReactPage(
       <Behavior name="outer">
         <article>
           <Behavior name="inner"><button>Inner</button></Behavior>
         </article>
       </Behavior>,
     )
-    expect(nested.behaviors).toEqual(['outer', 'inner'])
-    expect(nested.html).toContain('data-nib-behavior="outer"')
-    expect(nested.html).toContain('data-nib-behavior="inner"')
 
-    const Conflicted = registeredIsland(
-      'conflicted',
-      island(() => (
-        <Behavior name="reveal"><p>Details</p></Behavior>
-      )),
-    )
-    expect(() => renderReactPage(<Conflicted />)).toThrow(
-      'behavior "reveal" cannot be nested inside island "conflicted"',
-    )
+    expect(rendered.behaviors).toEqual(['outer', 'inner'])
+    expect(rendered.html).toContain('data-nib-behavior="outer"')
+    expect(rendered.html).toContain('data-nib-behavior="inner"')
   })
 
-  it('mounts behaviors immediately by default (no activation timing)', () => {
-    const rendered = renderReactPage(<Behavior name="reveal"><div>Details</div></Behavior>)
+  it('mounts immediately by default and emits no scheduling metadata', () => {
+    const rendered = renderReactPage(
+      <Behavior name="reveal"><div>Details</div></Behavior>,
+    )
 
     expect(rendered.behaviors).toEqual(['reveal'])
     expect(rendered.html).not.toContain('data-nib-defer')
+    expect(rendered.html).not.toContain('data-scheduled')
     expect(rendered.html).not.toContain('data-props')
   })
 
-  it('Behavior defers mounting until the strategy fires', () => {
-    const rendered = renderReactPage(
-      <Behavior name="travel-map" defer="visible">
-        <div>Map</div>
-      </Behavior>,
-    )
-
-    expect(rendered.behaviors).toEqual(['travel-map'])
-    expect(rendered.html).toContain('data-nib-behavior="travel-map"')
-    expect(rendered.html).toContain('data-nib-defer="visible"')
-  })
-
-  it('derives readable ids only for src/behaviors modules', () => {
-    expect(behaviorFileToId('/src/behaviors/search.client.ts')).toBe('search')
-    expect(behaviorFileToId('/src/behaviors/filters/search.client.ts')).toBe('filters/search')
-    expect(() => behaviorFileToId('/src/components/CopyButton.client.ts'))
-      .toThrow('must be under src/behaviors')
+  it('derives ids only from behavior directory index modules', () => {
+    expect(behaviorFileToId('/src/behaviors/search/index.client.ts')).toBe('search')
+    expect(behaviorFileToId('/src/behaviors/filters/search/index.client.js'))
+      .toBe('filters/search')
+    expect(behaviorFileToId(
+      'C:\\site\\src\\behaviors\\filter-panel\\index.client.ts?import',
+    )).toBe('filter-panel')
+    expect(() => behaviorFileToId('/src/behaviors/search.client.ts'))
+      .toThrow('must be named src/behaviors/<name>/index.client.ts or .js')
+    expect(() => behaviorFileToId('/src/behaviors/search/index.client.tsx'))
+      .toThrow('must be named src/behaviors/<name>/index.client.ts or .js')
   })
 
   it('does not mistake marker text inside a script for a behavior', () => {
@@ -150,6 +171,24 @@ describe('client behaviors', () => {
     )
 
     expect(rendered.behaviors).toEqual([])
+  })
+
+  it('rejects manually authored framework markers anywhere in rendered HTML', () => {
+    expect(() => renderReactPage(<div data-nib-behavior="reveal" />))
+      .toThrow('declare client enhancements with <Behavior>')
+    expect(() => renderReactPage(<div data-nib-defer="idle" />))
+      .toThrow('declare client enhancements with <Behavior>')
+    expect(() => renderReactPage(
+      <>
+        <Behavior name="reveal"><div /></Behavior>
+        <div data-nib-behavior="reveal" />
+      </>,
+    )).toThrow('declare client enhancements with <Behavior>')
+    expect(() => renderReactPage(
+      <div dangerouslySetInnerHTML={{
+        __html: '<button data-nib-behavior="reveal">Reveal</button>',
+      }} />,
+    )).toThrow('declare client enhancements with <Behavior>')
   })
 
   it('renders server content without a props payload', () => {
@@ -164,96 +203,154 @@ describe('client behaviors', () => {
     expect(html).toContain('>Details</button>')
   })
 
-  it('mounts a behavior with no strategy immediately', async () => {
-    const mount = vi.fn()
+  it('passes the marked root and signal as positional behavior arguments', async () => {
+    const mount = vi.fn<ClientBehavior>()
     const element = behaviorElement({ nibBehavior: 'reveal' })
     const root = rootWith([element])
-    const runtime = createBehaviorRuntime({
-      '/src/behaviors/reveal.client.ts': async () => ({ default: mount }),
-    }, {
-      environment: { setTimeout: vi.fn(() => 1) },
-    })
+    const runtime = createBehaviorRuntime(behaviorModules({ reveal: mount }))
 
     runtime.mount(root)
     await vi.waitFor(() => expect(mount).toHaveBeenCalledOnce())
+    expect(mount.mock.calls[0]?.[0]).toBe(element)
+    const signal = mount.mock.calls[0]?.[1]
+    expect(signal).toBeInstanceOf(AbortSignal)
+    expect(signal?.aborted).toBe(false)
+    expect(element.dataset.scheduled).toBeUndefined()
+
     runtime.unmount(root)
-    expect(mount.mock.calls[0]![0].signal.aborted).toBe(true)
+    expect(signal?.aborted).toBe(true)
   })
 
   it('loads a module once and cleans each mounted root exactly once', async () => {
     const cleanup = vi.fn()
-    const mount = vi.fn((context: { signal: AbortSignal }) => {
-      context.signal.addEventListener('abort', cleanup, { once: true })
+    const mount = vi.fn<ClientBehavior>((_root, signal) => {
+      signal.addEventListener('abort', cleanup, { once: true })
     })
-    const load = vi.fn(async () => ({
-      default: mount,
-    }))
-    const first = behaviorElement({
-      nibBehavior: 'reveal',
-    })
-    const second = behaviorElement({
-      nibBehavior: 'reveal',
-    })
+    const load = vi.fn(async () => ({ default: mount }))
+    const first = behaviorElement({ nibBehavior: 'reveal' })
+    const second = behaviorElement({ nibBehavior: 'reveal' })
     const root = rootWith([first, second])
     const runtime = createBehaviorRuntime({
-      '/src/behaviors/reveal.client.ts': load,
-    }, {
-      environment: { setTimeout: vi.fn(() => 1) },
+      '/src/behaviors/reveal/index.client.ts': load,
     })
+
     runtime.mount(root)
     await vi.waitFor(() => expect(mount).toHaveBeenCalledTimes(2))
     expect(load).toHaveBeenCalledOnce()
     runtime.unmount(root)
     runtime.unmount(root)
     expect(cleanup).toHaveBeenCalledTimes(2)
-    expect(mount.mock.calls[0]![0].signal.aborted).toBe(true)
   })
 
-  it('gives nested canonical behaviors independent abort lifetimes', async () => {
-    const mounts = vi.fn()
-    const teardowns = [vi.fn(), vi.fn()]
-    let index = 0
-    const mount = vi.fn((context: { signal: AbortSignal }) => {
-      const teardown = teardowns[index++]!
-      context.signal.addEventListener('abort', teardown, { once: true })
-      mounts(context)
+  it('observes only the behavior root for visible deferral', async () => {
+    let intersectionCallback: IntersectionObserverCallback | undefined
+    const observe = vi.fn()
+    const disconnect = vi.fn()
+    const observer = { observe, disconnect }
+    class TestIntersectionObserver {
+      constructor(callback: IntersectionObserverCallback) {
+        intersectionCallback = callback
+      }
+
+      observe = observe
+      disconnect = disconnect
+    }
+    const IntersectionObserver = TestIntersectionObserver as unknown as typeof window.IntersectionObserver
+    const child = behaviorElement({})
+    const element = behaviorElement({
+      nibBehavior: 'reveal',
+      nibDefer: 'visible',
+    }, [child])
+    const mount = vi.fn<ClientBehavior>()
+    const runtime = createBehaviorRuntime(behaviorModules({ reveal: mount }), {
+      environment: {
+        IntersectionObserver,
+        setTimeout: vi.fn(() => 1),
+      },
     })
-    const outer = behaviorElement({ nibBehavior: 'outer' })
-    const inner = behaviorElement({ nibBehavior: 'inner' })
-    const root = rootWith([outer, inner])
-    const runtime = createBehaviorRuntime({
-      '/src/behaviors/outer.client.ts': async () => ({ default: mount }),
-      '/src/behaviors/inner.client.ts': async () => ({ default: mount }),
+
+    runtime.mount(rootWith([element]))
+    expect(observe).toHaveBeenCalledOnce()
+    expect(observe).toHaveBeenCalledWith(element)
+    expect(observe).not.toHaveBeenCalledWith(child)
+    expect(mount).not.toHaveBeenCalled()
+
+    intersectionCallback?.([
+      { isIntersecting: true } as IntersectionObserverEntry,
+    ], observer as unknown as IntersectionObserver)
+    await vi.waitFor(() => expect(mount).toHaveBeenCalledOnce())
+    expect(mount.mock.calls[0]?.[0]).toBe(element)
+    expect(disconnect).toHaveBeenCalledOnce()
+  })
+
+  it('cancels pending idle work before a root is detached', () => {
+    let idle: (() => void) | undefined
+    const cancelIdleCallback = vi.fn()
+    const mount = vi.fn<ClientBehavior>()
+    const element = behaviorElement({
+      nibBehavior: 'reveal',
+      nibDefer: 'idle',
+    })
+    const root = rootWith([element])
+    const runtime = createBehaviorRuntime(behaviorModules({ reveal: mount }), {
+      environment: {
+        requestIdleCallback(callback) {
+          idle = callback
+          return 7
+        },
+        cancelIdleCallback,
+        setTimeout: vi.fn(() => 1),
+      },
     })
 
     runtime.mount(root)
-    await vi.waitFor(() => expect(mounts).toHaveBeenCalledTimes(2))
-    expect(mounts.mock.calls[0]![0].signal).not.toBe(mounts.mock.calls[1]![0].signal)
+    expect(element.dataset.scheduled).toBeUndefined()
     runtime.unmount(root)
-    runtime.unmount(root)
-    expect(teardowns[0]).toHaveBeenCalledOnce()
-    expect(teardowns[1]).toHaveBeenCalledOnce()
+    idle?.()
+    expect(cancelIdleCallback).toHaveBeenCalledWith(7)
+    expect(mount).not.toHaveBeenCalled()
   })
 
-  it('accepts plain default-exported mount functions', async () => {
-    const plainMount = vi.fn()
-    const typedMount = vi.fn()
-    const plain = behaviorElement({
-      nibBehavior: 'plain',
+  it('cleans nested behavior signals deepest first even across separate mounts', async () => {
+    const cleanupOrder: string[] = []
+    const outerMount = vi.fn<ClientBehavior>((_root, signal) => {
+      signal.addEventListener('abort', () => cleanupOrder.push('outer'), { once: true })
     })
-    const typed = behaviorElement({
-      nibBehavior: 'typed',
+    const innerMount = vi.fn<ClientBehavior>((_root, signal) => {
+      signal.addEventListener('abort', () => cleanupOrder.push('inner'), { once: true })
     })
-    const root = rootWith([plain, typed])
+    const inner = behaviorElement({ nibBehavior: 'inner' })
+    const outer = behaviorElement({ nibBehavior: 'outer' }, [inner])
+    const unrelated = behaviorElement({ nibBehavior: 'unrelated' })
+    const elements = [outer, unrelated]
+    const root = rootWith(elements)
+    const runtime = createBehaviorRuntime(behaviorModules({
+      outer: outerMount,
+      inner: innerMount,
+      unrelated: () => {},
+    }))
+
+    runtime.mount(root)
+    elements.push(inner)
+    runtime.mount(root)
+    await vi.waitFor(() => expect(innerMount).toHaveBeenCalledOnce())
+    expect(outerMount.mock.calls[0]?.[1]).not.toBe(innerMount.mock.calls[0]?.[1])
+
+    runtime.unmount(root)
+    runtime.unmount(root)
+    expect(cleanupOrder).toEqual(['inner', 'outer'])
+  })
+
+  it('accepts plain JavaScript and typed TypeScript default exports', async () => {
+    const plainMount = vi.fn<ClientBehavior>()
+    const typedMount = vi.fn<ClientBehavior>()
+    const root = rootWith([
+      behaviorElement({ nibBehavior: 'plain' }),
+      behaviorElement({ nibBehavior: 'typed' }),
+    ])
     const runtime = createBehaviorRuntime({
-      '/src/behaviors/plain.client.js': async () => ({
-        default: plainMount,
-      }),
-      '/src/behaviors/typed.client.ts': async () => ({
-        default: typedMount,
-      }),
-    }, {
-      environment: { setTimeout: vi.fn(() => 1) },
+      '/src/behaviors/plain/index.client.js': async () => ({ default: plainMount }),
+      '/src/behaviors/typed/index.client.ts': async () => ({ default: typedMount }),
     })
 
     runtime.mount(root)
@@ -261,61 +358,23 @@ describe('client behaviors', () => {
     await vi.waitFor(() => expect(typedMount).toHaveBeenCalledOnce())
   })
 
-  it('cancels pending idle work before a root is detached', () => {
-    let idle: (() => void) | undefined
-    const cancelIdleCallback = vi.fn()
-    const mount = vi.fn()
-    const element = behaviorElement({
-      nibBehavior: 'reveal',
-      nibDefer: 'idle',
-    })
-    const root = rootWith([element])
-    const runtime = createBehaviorRuntime({
-      '/src/behaviors/reveal.client.ts': async () => ({
-        default: mount,
-      }),
-    }, {
-      environment: {
-        requestIdleCallback(callback) {
-          idle = callback
-          return 7
-        },
-        cancelIdleCallback,
-        setTimeout: vi.fn(),
-      },
-    })
-    runtime.mount(root)
-    runtime.unmount(root)
-    idle?.()
-    expect(cancelIdleCallback).toHaveBeenCalledWith(7)
-    expect(mount).not.toHaveBeenCalled()
-  })
-
   it('cleans a marker detached during module loading and permits remount', async () => {
-    let resolveModule!: (module: {
-      default: ClientBehavior
-    }) => void
-    const mount = vi.fn()
-    const load = vi.fn(() => new Promise<{
-      default: ClientBehavior
-    }>((resolve) => {
+    let resolveModule!: (module: { default: ClientBehavior }) => void
+    const mount = vi.fn<ClientBehavior>()
+    const load = vi.fn(() => new Promise<{ default: ClientBehavior }>((resolve) => {
       resolveModule = resolve
     }))
-    const element = behaviorElement({
-      nibBehavior: 'reveal',
-    })
+    const element = behaviorElement({ nibBehavior: 'reveal' })
     const elements = [element]
     const root = rootWith(elements)
     const runtime = createBehaviorRuntime({
-      '/src/behaviors/reveal.client.ts': load,
-    }, {
-      environment: { setTimeout: vi.fn(() => 1) },
+      '/src/behaviors/reveal/index.client.ts': load,
     })
 
     runtime.mount(root)
+    await vi.waitFor(() => expect(load).toHaveBeenCalledOnce())
     elements.pop()
     resolveModule({ default: mount })
-    await vi.waitFor(() => expect(element.dataset.scheduled).toBeUndefined())
     expect(mount).not.toHaveBeenCalled()
 
     elements.push(element)
@@ -328,36 +387,27 @@ describe('client behaviors', () => {
     let resolveMount!: () => void
     const firstCleanup = vi.fn()
     const secondCleanup = vi.fn()
-    const mount = vi.fn()
-      .mockImplementationOnce((context: { signal: AbortSignal }) => {
-        context.signal.addEventListener('abort', firstCleanup, { once: true })
+    const mount = vi.fn<ClientBehavior>()
+      .mockImplementationOnce((_root, signal) => {
+        signal.addEventListener('abort', firstCleanup, { once: true })
         return new Promise<void>((resolve) => {
           resolveMount = resolve
         })
       })
-      .mockImplementationOnce((context: { signal: AbortSignal }) => {
-        context.signal.addEventListener('abort', secondCleanup, { once: true })
+      .mockImplementationOnce((_root, signal) => {
+        signal.addEventListener('abort', secondCleanup, { once: true })
       })
-    const element = behaviorElement({
-      nibBehavior: 'reveal',
-    })
+    const element = behaviorElement({ nibBehavior: 'reveal' })
     const elements = [element]
     const root = rootWith(elements)
-    const runtime = createBehaviorRuntime({
-      '/src/behaviors/reveal.client.ts': async () => ({
-        default: mount,
-      }),
-    }, {
-      environment: { setTimeout: vi.fn(() => 1) },
-    })
+    const runtime = createBehaviorRuntime(behaviorModules({ reveal: mount }))
 
     runtime.mount(root)
     await vi.waitFor(() => expect(mount).toHaveBeenCalledOnce())
     elements.pop()
     resolveMount()
     await vi.waitFor(() => expect(firstCleanup).toHaveBeenCalledOnce())
-    expect(element.dataset.scheduled).toBeUndefined()
-    expect(mount.mock.calls[0]![0].signal.aborted).toBe(true)
+    expect(mount.mock.calls[0]?.[1].aborted).toBe(true)
 
     elements.push(element)
     runtime.mount(root)
@@ -366,81 +416,62 @@ describe('client behaviors', () => {
     expect(secondCleanup).toHaveBeenCalledOnce()
   })
 
-  it('clears bookkeeping on unmount and permits remount', async () => {
-    const teardown = vi.fn()
-    const mount = vi.fn().mockImplementation((context: { signal: AbortSignal }) => (
-      context.signal.addEventListener('abort', teardown, { once: true })
-    ))
-    const element = behaviorElement({
-      nibBehavior: 'reveal',
-    })
-    const root = rootWith([element])
-    const runtime = createBehaviorRuntime({
-      '/src/behaviors/reveal.client.ts': async () => ({
-        default: mount,
-      }),
-    }, {
-      environment: { setTimeout: vi.fn(() => 1) },
-    })
-    runtime.mount(root)
-    await vi.waitFor(() => expect(mount).toHaveBeenCalledOnce())
-
-    runtime.unmount(root)
-    expect(element.dataset.scheduled).toBeUndefined()
-    expect(teardown).toHaveBeenCalledOnce()
-    runtime.mount(root)
-    await vi.waitFor(() => expect(mount).toHaveBeenCalledTimes(2))
-    runtime.unmount(root)
-    expect(teardown).toHaveBeenCalledTimes(2)
-  })
-
   it('aborts every behavior signal on destroy', async () => {
-    const teardowns = [vi.fn(), vi.fn()]
-    let index = 0
-    const mount = vi.fn().mockImplementation((context: { signal: AbortSignal }) => (
-      context.signal.addEventListener('abort', teardowns[index++]!, { once: true })
-    ))
+    const cleanup = vi.fn()
+    const mount = vi.fn<ClientBehavior>((_root, signal) => {
+      signal.addEventListener('abort', cleanup, { once: true })
+    })
     const root = rootWith([
       behaviorElement({ nibBehavior: 'reveal' }),
       behaviorElement({ nibBehavior: 'reveal' }),
     ])
-    const runtime = createBehaviorRuntime({
-      '/src/behaviors/reveal.client.ts': async () => ({
-        default: mount,
-      }),
-    }, {
-      environment: { setTimeout: vi.fn(() => 1) },
-    })
+    const runtime = createBehaviorRuntime(behaviorModules({ reveal: mount }))
     runtime.mount(root)
     await vi.waitFor(() => expect(mount).toHaveBeenCalledTimes(2))
 
-    // Each behavior owns its own abort signal, so destroy tears them all down.
     runtime.destroy()
-    expect(teardowns[0]).toHaveBeenCalledOnce()
-    expect(teardowns[1]).toHaveBeenCalledOnce()
+    expect(cleanup).toHaveBeenCalledTimes(2)
     expect(() => runtime.destroy()).not.toThrow()
+    expect(() => runtime.mount(root)).toThrow('destroyed Nib behavior runtime')
+  })
+
+  it('reports invalid metadata, missing modules, and invalid exports', async () => {
+    const reportError = vi.fn()
+    const invalidDefer = behaviorElement({
+      nibBehavior: 'reveal',
+      nibDefer: 'later',
+    })
+    const missing = behaviorElement({ nibBehavior: 'missing' })
+    const invalidExport = behaviorElement({ nibBehavior: 'invalid-export' })
+    const root = rootWith([invalidDefer, missing, invalidExport])
+    const runtime = createBehaviorRuntime({
+      '/src/behaviors/reveal/index.client.ts': async () => ({ default: vi.fn() }),
+      '/src/behaviors/invalid-export/index.client.ts': async () => ({ default: null }),
+    }, { reportError })
+
+    runtime.mount(root)
+    await vi.waitFor(() => expect(reportError).toHaveBeenCalledTimes(3))
+    expect(reportError.mock.calls.map(([id]) => id)).toEqual([
+      'reveal',
+      'missing',
+      'invalid-export',
+    ])
   })
 
   it('clears failed loads so a later mount can retry', async () => {
-    const mount = vi.fn()
+    const mount = vi.fn<ClientBehavior>()
     const reportError = vi.fn()
     const load = vi.fn()
       .mockRejectedValueOnce(new Error('temporary chunk failure'))
       .mockResolvedValue({ default: mount })
-    const element = behaviorElement({
-      nibBehavior: 'reveal',
-    })
+    const element = behaviorElement({ nibBehavior: 'reveal' })
     const root = rootWith([element])
     const runtime = createBehaviorRuntime({
-      '/src/behaviors/reveal.client.ts': load,
-    }, {
-      reportError,
-      environment: { setTimeout: vi.fn(() => 1) },
-    })
+      '/src/behaviors/reveal/index.client.ts': load,
+    }, { reportError })
 
     runtime.mount(root)
     await vi.waitFor(() => expect(reportError).toHaveBeenCalledOnce())
-    expect(element.dataset.scheduled).toBeUndefined()
     runtime.mount(root)
     await vi.waitFor(() => expect(mount).toHaveBeenCalledOnce())
     expect(load).toHaveBeenCalledTimes(2)
@@ -448,8 +479,8 @@ describe('client behaviors', () => {
 
   it('rejects duplicate filename-derived IDs', () => {
     expect(() => createBehaviorRuntime({
-      '/src/behaviors/reveal.client.ts': async () => ({ default: null }),
-      './src/behaviors/reveal.client.ts': async () => ({ default: null }),
+      '/src/behaviors/reveal/index.client.ts': async () => ({ default: null }),
+      './src/behaviors/reveal/index.client.ts': async () => ({ default: null }),
     })).toThrow('Duplicate behavior ID')
   })
 })

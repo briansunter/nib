@@ -16,7 +16,7 @@ Nib turns React, Markdown, and typed data into complete static pages. Start with
 4. [Data pages and collections](./data-pages-and-collections/) — validate data, generate routes, and build indexes.
 5. [Image optimization](./image-optimization/) — generate responsive local images at build time.
 6. [Plugin content and routing](./plugin-content-and-routing/) — add formats, feeds, redirects, and virtual routes.
-7. [React islands](./react-islands/) — hydrate one interactive subtree instead of the page.
+7. [Client behaviors](./client-behaviors/) — enhance one existing element instead of the page.
 8. [Client navigation](./client-navigation/) — enhance native links with prefetching and document swaps.
 9. [GitHub Pages](./github-pages/) — deploy the static output with the correct base path.
 
@@ -27,18 +27,18 @@ Nib turns React, Markdown, and typed data into complete static pages. Start with
 | TSX page | Typed, custom static markup | None by default |
 | Markdown page | Articles, guides, and documentation | None by default |
 | Data page | YAML, CSV, or another configured format | None by default |
-| React island | State, effects, refs, and event handlers | Only inside the island |
+| Client behavior | Scoped state, events, and DOM enhancement | Only on marked routes |
 
 ## Build loop
 
 1. Configure framework behavior in `nib.config.ts`.
 2. Add `src/pages/<route>/page.tsx`, `page.md`, or a configured data source.
-3. Add `src/islands/<id>.tsx` only when a subtree needs browser behavior.
+3. Add `src/behaviors/<id>/index.client.ts` only when an element needs browser behavior.
 4. Run the project’s typecheck and `nib build`.
 5. Preview or deploy `dist/client`.
 
 ## Know the boundary
 
-Nib does not provide runtime routes, runtime data loaders, server actions, nested island roots, or inline JSX in Markdown. Optional client navigation enhances the same static documents; content and links still work without it.
+Nib does not provide runtime routes, runtime data loaders, server actions, whole-page hydration, or inline JSX in Markdown. Optional client navigation enhances the same static documents; content and links still work without it.
 
-Maintaining Nib? Read [Releases](./releases/), the [architecture reference](https://github.com/briansunter/nib/blob/master/docs/reference/architecture.md), or the [island design record](https://github.com/briansunter/nib/blob/master/docs/decisions/interactive-react-islands.md).
+Maintaining Nib? Read [Releases](./releases/), the [architecture reference](https://github.com/briansunter/nib/blob/master/docs/reference/architecture.md), or the [client behavior design record](https://github.com/briansunter/nib/blob/master/docs/decisions/client-behaviors.md).

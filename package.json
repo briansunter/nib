@@ -2,7 +2,7 @@
   "name": "@briansunter/nib",
   "version": "0.20.0",
   "packageManager": "bun@1.3.3",
-  "description": "A static-site framework for React, Markdown, data pages, and opt-in islands.",
+  "description": "A static-site framework for React, Markdown, data pages, and opt-in DOM behaviors.",
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
@@ -40,22 +40,6 @@
       "types": "./dist/framework/hosting.d.ts",
       "import": "./dist/framework/hosting.js"
     },
-    "./client": {
-      "types": "./dist/framework/client.d.ts",
-      "import": "./dist/framework/client.js"
-    },
-    "./client/islands": {
-      "types": "./dist/framework/client/islands.d.ts",
-      "import": "./dist/framework/client/islands.js"
-    },
-    "./client/behaviors": {
-      "types": "./dist/framework/client/behaviors.d.ts",
-      "import": "./dist/framework/client/behaviors.js"
-    },
-    "./client/lifecycle": {
-      "types": "./dist/framework/client/lifecycle.d.ts",
-      "import": "./dist/framework/client/lifecycle.js"
-    },
     "./client/navigation": {
       "types": "./dist/framework/client/navigation.d.ts",
       "import": "./dist/framework/client/navigation.js"
@@ -72,6 +56,10 @@
       "types": "./dist/framework/internal/server.d.ts",
       "import": "./dist/framework/internal/server.js"
     },
+    "./internal/client": {
+      "types": "./dist/framework/internal/client.d.ts",
+      "import": "./dist/framework/internal/client.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -87,7 +75,7 @@
     "static-site",
     "vite",
     "react",
-    "islands",
+    "progressive-enhancement",
     "markdown",
     "tailwind",
     "ssr"

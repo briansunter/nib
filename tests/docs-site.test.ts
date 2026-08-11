@@ -44,7 +44,7 @@ describe('Nib documentation site', () => {
     expect(home).toContain('nib.config.ts')
     expect(home).toContain('posts/page.csv')
     expect(home).toContain('content/posts/')
-    expect(home).toContain('islands/counter.tsx')
+    expect(home).toContain('behaviors/counter/index.client.ts')
     expect(home).toContain('about/page.md → /about/')
     expect(home).toContain('src/pages/notes/page.md')
     expect(home).toContain('/notes/index.html')
@@ -53,10 +53,9 @@ describe('Nib documentation site', () => {
     expect(home).toContain('React pages')
     expect(home).toContain('Markdown')
     expect(home).toContain('Data pages')
-    expect(home).toContain('React islands')
+    expect(home).toContain('Client behaviors')
     expect(home).toContain('No server required.')
     expect(home).toContain('Deploy a Nib site')
-    expect(home).not.toContain('data-nib-islands')
     expect(overview).toContain('<aside class="docs-sidebar">')
     expect(overview).toContain('<details class="docs-menu">')
     expect(overview).toContain('START HERE')
@@ -70,7 +69,7 @@ describe('Nib documentation site', () => {
       '/docs/data-pages-and-collections/',
       '/docs/image-optimization/',
       '/docs/plugin-content-and-routing/',
-      '/docs/react-islands/',
+      '/docs/client-behaviors/',
       '/docs/client-navigation/',
       '/docs/github-pages/',
       '/docs/releases/',
@@ -81,7 +80,6 @@ describe('Nib documentation site', () => {
     expect(overview).toContain('Static by default. Interactive by choice.')
     expect(overview).toContain('React, Markdown, and data pages, static by default.')
     expect(overview).toContain('Read the docs')
-    expect(overview).not.toContain('data-nib-islands')
     expect(gettingStarted).toContain('<aside class="docs-sidebar">')
     expect(gettingStarted).toContain('aria-label="Guide pagination"')
     expect(gettingStarted).toContain('Pages and routes')

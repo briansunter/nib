@@ -27,7 +27,7 @@ afterEach(async () => {
 function pageOutput(html = '<title>Page</title>') {
   return {
     kind: 'page' as const,
-    page: { status: 200, head: '', html, islands: [], behaviors: [] },
+    page: { status: 200, head: '', html, behaviors: [] },
   }
 }
 
@@ -322,7 +322,7 @@ describe('publication integrations', () => {
     expect(withoutFullscreen.html).not.toContain('allowfullscreen')
   })
 
-  it('checks publication artifacts, links, titles, and island ownership', async () => {
+  it('checks publication artifacts, links, titles, and image metadata', async () => {
     const output = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-check-'))
     temporaryDirectories.push(output)
     const manifest = createPublicationManifest('/', 'never', [
@@ -339,27 +339,25 @@ describe('publication integrations', () => {
     ])
     await fs.mkdir(path.join(output, '.nib'), { recursive: true })
     await fs.writeFile(path.join(output, '.nib/publication.json'), JSON.stringify(manifest))
-    await fs.writeFile(path.join(output, 'index.html'), '<title>Home</title><a href="/about?x=1">About</a><a href="/feed.xml">Feed</a><a href="/assets/a">Image</a><img src="/assets/a" srcset="data:image/svg+xml,%3Csvg%3E 1x, /assets/a 2x"><script data-nib-islands src="/assets/islands.js"></script><nib-island></nib-island>')
+    await fs.writeFile(path.join(output, 'index.html'), '<title>Home</title><a href="/about?x=1">About</a><a href="/feed.xml">Feed</a><a href="/assets/a">Image</a><img src="/assets/a" srcset="data:image/svg+xml,%3Csvg%3E 1x, /assets/a 2x">')
     await fs.writeFile(path.join(output, 'about'), '<title>About</title>')
     await fs.writeFile(path.join(output, 'feed.xml'), '<feed />')
     await fs.writeFile(path.join(output, 'old'), '<title>Redirect</title>')
     await fs.mkdir(path.join(output, 'assets'))
     await fs.writeFile(path.join(output, 'assets/a'), 'image')
-    await fs.writeFile(path.join(output, 'assets/islands.js'), 'runtime')
     const result = await verifySite({ root: output, output })
     expect(result.routeCount).toBe(4)
-    expect(result.checkedLinks).toBe(6)
+    expect(result.checkedLinks).toBe(5)
     expect(result.warnings).toEqual(['/: 1 image(s) missing alt text'])
 
     await fs.writeFile(
       path.join(output, 'index.html'),
-      '<div id="first" id="second"><a href="/missing">Missing</a><img src="/also-missing"><script data-nib-islands src="/assets/islands.js"></script></div>',
+      '<div id="first" id="second"><a href="/missing">Missing</a><img src="/also-missing"></div>',
     )
     const inspection = await inspectSite({ root: output, output })
     expect(inspection.issues.map((issue) => issue.code)).toEqual([
       'HTML_PARSE_ERROR',
       'IMAGE_ALT_MISSING',
-      'ISLAND_RUNTIME_UNUSED',
       'LOCAL_REFERENCE_MISSING',
       'LOCAL_REFERENCE_MISSING',
       'TITLE_COUNT',
@@ -369,7 +367,7 @@ describe('publication integrations', () => {
 
     const failure = await verifySite({ root: output, output }).catch((error: unknown) => error)
     expect(failure).toBeInstanceOf(SiteVerificationError)
-    expect((failure as SiteVerificationError).result.issues).toHaveLength(6)
+    expect((failure as SiteVerificationError).result.issues).toHaveLength(5)
   })
 
   it('rejects malformed manifests and references outside a configured base', async () => {

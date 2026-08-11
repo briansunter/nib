@@ -1,7 +1,7 @@
-import type { ClientBehavior } from '@briansunter/nib/client'
+import type { ClientBehavior } from '@briansunter/nib'
 import './reveal.css'
 
-export default (({ root, signal }) => {
+export default ((root, signal) => {
   const button = root.querySelector('button')
   const panel = root.querySelector<HTMLElement>('[data-panel]')
   if (!button || !panel) return

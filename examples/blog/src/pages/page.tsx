@@ -1,8 +1,7 @@
-import { definePage, siteHref } from '@briansunter/nib'
+import { Behavior, definePage, siteHref } from '@briansunter/nib'
 import { Image } from '@briansunter/nib-images'
 import type config from '../../nib.config'
 import fieldNotes from '../assets/images/field-notes.jpg?nib-image'
-import ReadingGoal from '../islands/reading-goal'
 
 export const meta = {
   title: 'Field notes for curious people',
@@ -89,7 +88,12 @@ export default definePage<typeof config>(function HomePage({ collections }) {
         </div>
       </section>
 
-      <ReadingGoal initial={2} />
+      <Behavior name="reading-goal">
+        <div className="reading-goal" data-saved="2">
+          <p><strong data-saved-count="">2</strong> sample notes saved for later.</p>
+          <button type="button">Save another</button>
+        </div>
+      </Behavior>
     </>
   )
 })

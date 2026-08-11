@@ -42,10 +42,9 @@ describe('project renderer', () => {
           meta: { title: 'Invalid' },
         },
       },
-      islandModules: {},
       behaviorClientFiles: [
-        '/src/behaviors/outer.client.ts',
-        '/src/behaviors/inner.client.ts',
+        '/src/behaviors/outer/index.client.ts',
+        '/src/behaviors/inner/index.client.ts',
       ],
     })
 
@@ -105,7 +104,6 @@ describe('project renderer', () => {
           ],
         },
       },
-      islandModules: {},
     })
 
     expect(renderer.render('/titles.json')).toMatchObject({
@@ -137,7 +135,6 @@ describe('project renderer', () => {
       root: process.cwd(),
       base: '/',
       pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
-      islandModules: {},
     })
     const output = renderer.render('/rss.xml')
     expect(output.kind).toBe('resource')
@@ -168,7 +165,6 @@ describe('project renderer', () => {
       root: process.cwd(),
       base: '/',
       pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
-      islandModules: {},
     })).rejects.toThrow('not registered by this site')
   })
 
@@ -183,7 +179,6 @@ describe('project renderer', () => {
           meta: { title: 'Site', description: 'Description' },
         },
       },
-      islandModules: {},
     })
 
     expect(renderer.paths).toEqual(['/'])
@@ -193,7 +188,6 @@ describe('project renderer', () => {
         status: 200,
         head: '<title>Site</title>\n    <meta name="description" content="Description" />',
         html: '<main><h1>Home</h1></main>',
-        islands: [],
         behaviors: [],
       },
     })
@@ -226,7 +220,6 @@ describe('project renderer', () => {
       root: process.cwd(),
       base: '/',
       pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
-      islandModules: {},
     })
 
     expect(renderer.paths).toEqual(['/', '/missing.json', '/gone/'])
@@ -277,7 +270,6 @@ describe('project renderer', () => {
       namedLayouts: {
         '/src/layouts/article.tsx': { default: ArticleLayout },
       },
-      islandModules: {},
     })
     const output = renderer.render('/')
     if (output.kind !== 'page') throw new Error('Expected page')
@@ -387,7 +379,6 @@ describe('project renderer', () => {
       folderLayouts: {
         '/src/pages/layout.tsx': { default: SnapshotLayout },
       },
-      islandModules: {},
     })
 
     meta.title = 'Changed input'
@@ -421,7 +412,6 @@ describe('project renderer', () => {
       root: process.cwd(),
       base: '/base/',
       pages: { '/src/pages/about/page.tsx': { default: Page, meta: { title: 'About' } } },
-      islandModules: {},
       command: 'serve',
     })
 
@@ -461,7 +451,6 @@ describe('project renderer', () => {
       root: process.cwd(),
       base: '/',
       pages: {},
-      islandModules: {},
       derivedPages: { definitions: [derived], components: [ThingPage] },
     })
 
@@ -498,7 +487,6 @@ describe('project renderer', () => {
       root: process.cwd(),
       base: '/',
       pages: {},
-      islandModules: {},
       derivedPages: { definitions: [derived], components: [ThingPage] },
     })).rejects.toThrow('Derived pages[0] produced duplicate route /things/same')
   })
@@ -534,7 +522,6 @@ describe('project renderer', () => {
           content: body,
         },
       },
-      islandModules: {},
       derivedPages: { definitions: [derived], components: [ThingPage] },
     })
 

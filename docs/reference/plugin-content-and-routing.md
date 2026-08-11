@@ -43,7 +43,7 @@ later one.
 ## Route kinds
 
 Page routes participate in React rendering, layouts, the shell, metadata, and
-island collection.
+behavior collection.
 
 Resource routes provide a static body and MIME content type. A dotted route such
 as `/rss.xml` is emitted as that exact file rather than

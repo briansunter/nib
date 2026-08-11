@@ -45,7 +45,7 @@ entering the route map or generated output. Applications that want a site title,
 title template, fallback description, or shared head elements can opt into
 `siteMetadata()` from `@briansunter/nib`.
 
-TSX pages, layouts, and ordinary components produce static HTML. Put state and event handlers in a [React island](../react-islands/) so only that boundary loads browser JavaScript.
+TSX pages, layouts, and ordinary components produce static HTML. Attach a [client behavior](../client-behaviors/) to an existing element when that route needs browser state or event handlers.
 
 ## Navigation and links
 

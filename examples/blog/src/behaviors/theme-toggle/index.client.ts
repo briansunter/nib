@@ -1,4 +1,4 @@
-import type { ClientBehavior } from '@briansunter/nib/client'
+import type { ClientBehavior } from '@briansunter/nib'
 import './theme-toggle.css'
 
 const storageKey = 'commonplace-theme'
@@ -14,8 +14,10 @@ function applyTheme(theme: 'light' | 'dark', button: HTMLButtonElement): void {
   if (icon) icon.textContent = theme === 'dark' ? '☀' : '◐'
 }
 
-export default (({ root, signal }) => {
-  const button = root.querySelector<HTMLButtonElement>('[data-theme-toggle]')
+export default ((root, signal) => {
+  const button = root.matches('[data-theme-toggle]')
+    ? root as HTMLButtonElement
+    : root.querySelector<HTMLButtonElement>('[data-theme-toggle]')
   if (!button) return
 
   const stored = localStorage.getItem(storageKey)

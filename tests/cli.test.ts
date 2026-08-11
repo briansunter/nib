@@ -57,7 +57,7 @@ describe('nib command', () => {
       artifact: 'index.html',
       output: {
         kind: 'page',
-        page: { status: 200, head: '', html: '', islands: [], behaviors: [] },
+        page: { status: 200, head: '', html: '', behaviors: [] },
       },
     }])
     await fs.writeFile(

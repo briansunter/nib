@@ -1,4 +1,4 @@
-import { validateClientId } from './client-paths'
+const BEHAVIOR_ID_SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 /**
  * Only explicit behavior entry modules under `src/behaviors/` are discoverable.
@@ -6,7 +6,7 @@ import { validateClientId } from './client-paths'
  * entries accidentally.
  */
 export const BEHAVIOR_MODULE_GLOB =
-  '/src/behaviors/**/*.client.{js,jsx,mjs,cjs,ts,tsx,mts,cts}'
+  '/src/behaviors/**/index.client.{js,ts}'
 
 /**
  * Canonicalize any path form (absolute build id or glob key) to the slice from
@@ -19,26 +19,28 @@ function canonicalBehaviorPath(file: string): string {
   return srcIndex >= 0 ? clean.slice(srcIndex) : `/${clean.replace(/^\.?\//, '')}`
 }
 
-/** Validate a behavior name without reporting an island-specific error. */
+/** Normalize and validate a slash-separated behavior name. */
 export function validateBehaviorId(id: string): string {
-  return validateClientId(id, 'behavior')
+  if (typeof id !== 'string') {
+    throw new Error(`Invalid behavior ID: ${String(id)}`)
+  }
+  const normalized = id.replaceAll('\\', '/').replace(/^\/+|\/+$/g, '')
+  if (
+    !normalized
+    || normalized.split('/').some((segment) => !BEHAVIOR_ID_SEGMENT.test(segment))
+  ) {
+    throw new Error(`Invalid behavior ID: ${id}`)
+  }
+  return normalized
 }
 
 export function behaviorFileToId(file: string): string {
   const canonical = canonicalBehaviorPath(file)
-  const withoutExtension = canonical.replace(
-    /\.client\.(?:[cm]?[jt]s|[jt]sx)$/,
-    '',
-  )
-  if (withoutExtension === canonical) {
+  const match = canonical.match(/\/behaviors\/(.+)\/index\.client\.(?:js|ts)$/)
+  if (match === null) {
     throw new Error(
-      `Behavior module must use a .client JavaScript or TypeScript filename: ${file}`,
+      `Behavior module must be named src/behaviors/<name>/index.client.ts or .js: ${file}`,
     )
   }
-  const marker = '/behaviors/'
-  const markerIndex = withoutExtension.lastIndexOf(marker)
-  if (markerIndex < 0) {
-    throw new Error(`Behavior module must be under src/behaviors: ${file}`)
-  }
-  return validateBehaviorId(withoutExtension.slice(markerIndex + marker.length))
+  return validateBehaviorId(match[1]!)
 }

@@ -136,7 +136,6 @@ describe('Nib plugins', () => {
       root: process.cwd(),
       base: '/',
       pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
-      islandModules: {},
     })
 
     const output = renderer.render('/')
@@ -198,7 +197,6 @@ describe('Nib plugins', () => {
           },
         },
       },
-      islandModules: {},
     })
     const output = renderer.render('/')
     if (output.kind !== 'page') throw new Error('Expected a page output')
@@ -238,7 +236,6 @@ describe('Nib plugins', () => {
       root: process.cwd(),
       base: '/',
       pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
-      islandModules: {},
     })
 
     expect(renderer.paths).toEqual(['/', '/first.xml', '/virtual'])
@@ -268,7 +265,6 @@ describe('Nib plugins', () => {
       root: process.cwd(),
       base: '/',
       pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
-      islandModules: {},
     })).rejects.toThrow('Duplicate route /same.xml: one routes()[0] and two routes()[0]')
   })
 
@@ -283,7 +279,6 @@ describe('Nib plugins', () => {
       root: process.cwd(),
       base: '/',
       pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Home' } } },
-      islandModules: {},
     })
     expect(() => renderer.render('/')).toThrow('Nib plugin broken failed in wrapPage() for route /')
   })

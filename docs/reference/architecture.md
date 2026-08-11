@@ -2,87 +2,49 @@
 
 Status: current
 
-Last reviewed: 2026-07-28
+Last reviewed: 2026-08-11
 
-Nib is a static-first framework with a deliberately small authoring interface.
-Consumers install `@briansunter/nib`; they do not copy its routing, Vite, SSR,
-document, prerender, or hydration implementation.
-
-This document describes the current implementation. `page.html` is not a
-current route format; the forward-looking
-[HTML pages, layouts, and islands proposal](../design/html-pages-layouts-and-islands.md)
-remains explicitly proposed.
-The [type-safe plugins and image optimization design](type-safe-plugins-and-image-optimization.md)
-documents the implemented plugin lifecycle and optional image package.
+Nib is a static-first React authoring framework. React and TSX run during
+development and prerendering; production documents are HTML with optional,
+route-scoped DOM behaviors. Nib does not hydrate React in the browser.
 
 ## Package and project seam
 
-The package owns:
-
-- the `nib init`, `dev`, `build`, and `preview` commands;
-- configuration loading and validation;
-- Vite integration, with optional styling adapters contributed by the project;
-- virtual route and island entry modules;
-- Markdown compilation and layout resolution;
-- generic data-page discovery, validation, and collection loading;
-- development SSR and production prerendering;
-- document outlets, metadata, base paths, and 404 output;
-- structured document-head contributions and publication manifests;
-- island collection, serialization, client loading, hydration, and cleanup;
-- non-React client behaviors with a separate runtime-free-by-default entry;
-- an optional, site-wide client-navigation entry contributed only by its plugin.
-
-A consumer project owns:
+Nib owns routing, Vite configuration, development SSR, prerendering, HTML
+documents, publication artifacts, behavior discovery, and optional client
+navigation. A consumer owns:
 
 ```text
 nib.config.ts
+public/                                      optional
 src/pages/**/page.tsx or page.md
 src/pages/**/page.<configured extension>
 src/pages/**/layout.tsx
 src/layouts/*.tsx
-src/content/              optional collection inputs
-src/islands/**/*.tsx
-src/behaviors/**/*.client.ts  optional non-React enhancement
-src/site-shell.tsx       optional
-src/style.css            optional
-public/                  optional
+src/content/                                 optional
+src/behaviors/**/index.client.ts             optional
+src/site-shell.tsx                           optional
+src/style.css                                optional
 ```
 
-`nib.config.ts` is the configuration seam. `defineConfig` types the site
-metadata, optional base path, optional app-owned Vite plugin contribution, and
-optional app-owned shell. Pages and islands import authoring interfaces from
-`@briansunter/nib`; package-internal exports are reserved for generated virtual
-modules.
+Universal authoring values and `ClientBehavior` come from
+`@briansunter/nib`. Filesystem-backed collection helpers come from
+`@briansunter/nib/server`. The generated virtual client entry uses the private
+`@briansunter/nib/internal/client` subpath. Client navigation remains an
+explicit public integration at `@briansunter/nib/client/navigation`.
 
-`definePage`, `defineDataPage`, and `defineLayout` are identity helpers for
-components that consume Nib props. They preserve ordinary React components but
-make the route, collection, frontmatter, and layout-data contract explicit at
-the page module seam. Runtime route/module types remain behind the internal
-server entry; public page code sees immutable route snapshots instead.
+Production target guards reject `.client.ts(x)` imports from the server graph
+and `.server.ts(x)` imports from the client graph with an import-chain
+diagnostic.
 
-Public imports are split by execution target. Universal definitions and types
-come from `@briansunter/nib`; filesystem-backed loaders come from
-`@briansunter/nib/server`; browser lifecycle contracts come from
-`@briansunter/nib/client`. The root `file` and `glob` exports are deprecated
-lazy compatibility wrappers. Application modules may use `.client.ts(x)` and
-`.server.ts(x)` suffixes; production graphs reject cross-target imports with an
-import-chain diagnostic.
-
-The repository’s `templates/default` directory is an initializer input, not
-framework source in a generated project. `examples/docs` is a consumer of the
-same published interface and doubles as the GitHub Pages site.
-
-## Command pipeline
+## Build pipeline
 
 ```text
 nib.config.ts + src/
           |
-          v
-  Nib project adapter
+          +-- dev ----> Vite multi-environment server + SSR middleware
           |
-          +-- dev ----> Vite server + framework SSR middleware
-          |
-          +-- build --> client assets + server entry
+          +-- build --> client graph + server entry
                               |
                               v
                          prerender routes
@@ -91,409 +53,119 @@ nib.config.ts + src/
                          dist/client
 ```
 
-`src/framework/build/site.ts` is the deep module behind the command interface;
-`src/framework/site.ts` is its compatibility re-export. The build module
-creates the Vite configuration, builds client and server environments,
-constructs the HTML template from the client manifest, executes the server
-entry, and writes route output. Consumer projects do not contain a Vite config,
-HTML entry, SSR entry, route registry, server, or prerender script.
+The production client graph is always run so project and plugin Vite build
+hooks can emit assets. When no stylesheet, behavior, or configured client entry
+exists, Nib builds a private inert entry and does not link it from generated
+HTML. `dist/server` is only a prerendering intermediate.
 
-Development uses the same generated server entry as production. Vite’s
-runnable SSR environment evaluates it on requests, while production builds it
-to `dist/server/entry-server.js`. Client pre-transform is disabled for the
-custom SSR document path so unused speculative dependency requests do not
-prevent clean server shutdown.
+The build writes into a staging directory, preplans route artifacts, renders in
+bounded deterministic batches, runs finalizers, writes
+`.nib/publication.json`, then atomically promotes the completed output. A
+failed build leaves the previous `dist` intact.
 
-`dist/server` is a build intermediate. Only `dist/client` is deployed.
+## Routes and rendering
 
-## Plugins and optional image optimization
+Each folder below `src/pages` owns exactly one static route source. Nib supports
+TSX, Markdown, configured data-page formats, resources, redirects, layouts,
+typed collections, and a static `404.html`. Dynamic parameters and runtime
+route discovery are intentionally absent.
 
-`plugins` in `nib.config.ts` accepts an ordered readonly list of `NibPlugin`
-objects. `@briansunter/nib/plugin` exposes the typed `vite`, `renderer`,
-per-page, and finalization contexts. Nib validates names and hook shapes before
-Vite starts, applies Vite contributions before its generated project adapters,
-and attributes hook errors to the plugin and route. Production creates fresh
-plugin contributions for the client and server graphs and identifies the
-target in `NibVitePluginContext`; development identifies its combined
-multi-environment graph separately. This prevents plugin-local Vite state from
-leaking between builds.
+React components compose the page, layouts, shell, and renderer-plugin wrappers
+during SSR. One render pass produces the HTML and the set of behavior IDs used
+by that route. Renderer plugins may wrap ordinary static output and contribute
+structured head elements, but framework marker ownership stays with Nib.
 
-Renderer extensions are instantiated once per server renderer. Their structured
-head contributions and wrappers run in configuration order, while finalizers
-run once after every production route (including the generated 404) has
-rendered. Production preplans artifact ownership, then renders and writes routes
-in small deterministic batches so page bodies do not accumulate in memory.
-Finalizers receive the completed client directory in a sibling staging tree,
-plus the exact frozen route-to-artifact publication manifest, so output-aware
-extensions can inspect or enrich rendered documents without recursive output
-crawls or route reconstruction. Nib emits that same data as
-`.nib/publication.json`, writes configured hosting companions, and only then
-swaps the completed tree into `dist`; a failed build leaves the prior `dist`
-unchanged. Development does not run finalizers.
+## Client behaviors
 
-The plugin host owns contribution resolution, renderer-extension construction,
-ordering, hook error attribution, and finalization. Renderer plugins receive a
-stable route snapshot rather than page modules, layouts, or page data. They may
-contribute structured head metadata or wrap the React tree, while Nib keeps
-status, serialized HTML, and client marker metadata under framework ownership.
+`<Behavior name="feature">` accepts exactly one intrinsic DOM child and clones
+it with `data-nib-behavior="feature"`. Optional `defer="idle"` or
+`defer="visible"` adds `data-nib-defer`. Application code must not author either
+framework attribute itself.
 
-Plugins may also contribute typed page-source adapters and virtual page,
-resource, or redirect routes before rendering. The host validates and merges
-these registrations in configuration order, giving each later provider the
-latest immutable route snapshot. See
-[Plugin content and routing](./plugin-content-and-routing.md) for ordering,
-collision, output, head, and trailing-slash rules. Site and page metadata use
-the same structured head contract as renderer plugins.
-
-Plugins may also declare browser initializers through `clientEntries` module and
-export names. Each initializer has the shape `(signal: AbortSignal) => void`.
-Nib validates ownership and combines them into one generated client-bootstrap
-entry for the client/development graph. The declaration contains strings
-rather than imported browser functions, so `nib.config.ts` and the server graph
-remain server-safe. Sites without a contribution do not build or emit this
-entry.
-
-The production client graph includes the island entry only when
-`src/islands/**/*.tsx` contains a module. A behavior-only application therefore
-does not emit React DOM, hydration, or island-serialization chunks. Client
-runtime controllers tear down in reverse registration order so behavior
-cleanup runs before an enclosing React root is destroyed.
-
-Application behaviors use `<Behavior name="feature">` on one existing element
-and a matching `src/behaviors/feature.client.ts` or `.client.js`
-default-exported `{ root, signal }` function. The generated behavior entry discovers
-modules lazily, so a route loads only the features named by its rendered
-boundaries. React islands use
-`island(Component)` under `src/islands`; their stable IDs come from module
-paths, removing an otherwise duplicated identifier without adding a source
-transform.
-
-Tailwind is optional rather than a framework dependency. The initializer adds
-`@tailwindcss/vite` and opts in through the narrow app-owned `vite` field in
-`nib.config.ts` (`vite: () => tailwindcss()`). Sites that use plain CSS or
-another styling adapter omit it. This field can contribute only Vite plugins;
-Nib continues to own entries, SSR, base-path, and output configuration.
-
-`src/style.css` is the application-owned deployable stylesheet entry. CSS
-imported by an island or `.client` behavior is also represented in a client
-entry, and a plugin may own its own client CSS. An import reachable only from a
-page, layout, data-page renderer, or other server-rendered application module
-fails in development and production with the importer and remediation. Nib
-does not currently infer route-scoped CSS chunks.
-
-`@briansunter/nib-images` is a separate workspace/package and the only package
-that depends on Sharp. Its `images()` plugin handles explicit local
-`?nib-image` imports and its static `Image` component registers transforms while
-rendering. Finalization writes content-addressed AVIF/WebP and JPEG/PNG fallback
-assets under `dist/client/assets/nib`, reusing checksum-validated entries in
-`.nib/cache/images` across builds. Cache reads and output links run in parallel
-while a separate global queue bounds active Sharp transforms. Image-only routes
-remain static and have no island runtime. The component entry does not import
-Sharp or Node APIs; build integration is exported from
-`@briansunter/nib-images/plugin`. Development serves validated, revalidatable
-requests under `/@nib-images/`. Imported sources are watched explicitly; HMR
-re-inspects changed content, byte-identical rewrites retain their cache key and
-ETag, and editor overwrite races are retried. Internal absolute paths are
-non-enumerable on source metadata. In addition to explicit `?nib-image`
-imports, a project may declare content image roots in `images({ content: [...] })`;
-the finalizer then rewrites only matching image references in the exact
-published page artifacts, preserving the source catalog and avoiding an
-all-assets scan. Public image URLs include the configured base while originals
-are written directly below `dist/client`, so non-root deployments do not
-duplicate the base in physical output.
-Remote URLs, SVG rasterization, and animated-image conversion are intentionally
-outside this release.
-
-Markdown media is an opt-in adapter (`markdownMedia`) rather than a parser
-special case. It can turn local video references and explicitly allow-listed
-iframe embeds into static elements; raw HTML remains disabled unless the site
-also opts into `markdown.allowDangerousHtml`.
-
-The framework also provides small publication seams for common site concerns:
-`metadata()` contributes canonical/Open Graph/Twitter/JSON-LD head elements;
-route-level `image`, `type`, and `twitterCard` metadata override its defaults
-independently,
-`search()` emits a deterministic JSON resource route, `hosting` emits adapter
-configuration from the publication manifest. `nib inspect` builds one
-immutable route/file/page index with standards-parsed HTML and structured issue
-codes; `nib check` applies verification semantics to that same model and
-reports all failures together.
-
-Within the image package, a shared request module owns cache keys and the
-development URL grammar; a transform executor owns cache misses and bounded
-Sharp work; and a source catalog owns authorization, metadata inspection, and
-HMR refresh. The development Vite adapter and production registry are thin
-adapters over those modules, so they cannot silently diverge on request identity
-or cache behavior.
-
-The image package is separately versioned from the Bun workspace root. Release
-Please tracks the root package and `@briansunter/nib-images` independently; the
-release workflow publishes only the package(s) whose release output is true.
-It deliberately does not use Release Please's `node-workspace` plugin: that
-plugin follows development dependencies and would patch-release the root when
-only the optional image package changed. The entire `packages/` subtree and
-the root's shared `bun.lock` are excluded from root release detection, so an
-image-only dependency update does not turn into a framework release. CI,
-examples, tests, and release metadata are likewise excluded; root source and
-published documentation changes still release Nib. The image package declares the
-supported pre-1.0 Nib range explicitly. If a future Nib change makes that
-contract incompatible, update the image peer range in the same change so both
-packages receive their own intentional releases.
-Publishing uses npm Trusted Publishing (GitHub Actions OIDC), so each public
-npm package must have its own trusted-publisher entry for `.github/workflows/release.yml`
-before automated releases. npm requires a package to exist before its trusted
-publisher can be configured; bootstrap a brand-new package once with an
-interactive 2FA publish, then configure OIDC and remove any CI token.
-
-## Virtual modules
-
-`src/framework/project-vite-plugin.ts` generates three baseline modules and one
-conditional module:
-
-- `virtual:nib/server-entry` discovers pages, layouts, and islands with literal
-  Vite globs, then delegates route setup and document rendering to the deep
-  `createProjectRenderer` module.
-- `virtual:nib/client-entry` discovers island modules lazily and starts the
-  island runtime.
-- `virtual:nib/behavior-entry` discovers `.client.ts(x)` behavior modules
-  lazily and starts the non-React behavior runtime.
-- `virtual:nib/client-bootstrap-entry` statically imports configured site-wide
-  browser initializers. It exists only when a plugin contributes one. Each
-  initializer receives the shared `AbortSignal`; the generated entry aborts
-  that signal on startup failure or HMR replacement.
-
-All use project-root `/src/...` globs. This keeps route and client-module discovery in
-the framework while ensuring Vite still sees literal glob patterns and can
-split island chunks.
-
-The server and client virtual modules use separate public execution-target
-subpaths. That avoids loading browser hydration code during SSR and keeps React
-DOM out of behavior-only pages.
-
-## File routing
-
-Each folder below `src/pages` may contain exactly one route module:
+The name maps to a folder entry:
 
 ```text
-src/pages/page.tsx             -> /
-src/pages/about/page.tsx       -> /about/
-src/pages/guides/start/page.md -> /guides/start/
-src/pages/catalog/page.csv     -> one or many configured routes
-src/pages/404/page.tsx         -> /404.html
+<Behavior name="search">           -> src/behaviors/search/index.client.ts
+<Behavior name="gallery/filters">  -> src/behaviors/gallery/filters/index.client.ts
 ```
 
-`createRoutes` normalizes file paths, expands generated data pages, filters
-drafts, rejects duplicates across every page type, resolves metadata and
-folder/named layouts, and creates a static route map. Unknown development
-requests use the custom `/404` route when present and otherwise a generated
-fallback.
+The module default export satisfies this contract:
 
-Dynamic parameters and runtime routes are intentionally absent. Native document
-navigation is the default; an optional first-party plugin can swap only pages
-from this same static route set.
+```ts
+type ClientBehavior = (
+  root: HTMLElement,
+  signal: AbortSignal,
+) => void | Promise<void>
+```
 
-## Optional client navigation
+The runtime discovers modules lazily. Immediate roots start on mount, idle
+roots use `requestIdleCallback` with a timer fallback, and visible roots observe
+the marked root itself with an `IntersectionObserver`. A failed module load may
+be retried. Cleanup aborts nested behavior signals deepest first before DOM
+detachment.
 
-`clientNavigation()` from `@briansunter/nib/navigation` contributes an
-`initializeClientNavigation` initializer from `@briansunter/nib/client/navigation`
-to the conditional client bootstrap entry. The server-safe plugin never
-imports the browser controller.
+Pages without behavior markers omit the behavior script. Projects without
+behavior modules do not build the behavior runtime. Essential content must
+therefore remain in the prerendered HTML.
 
-The controller intercepts only eligible same-origin links and GET forms.
-It fetches and validates complete HTML documents, preloads new styles, asks the
-public runtime coordinator to unmount the old `#root`, synchronizes document
-state, commits history once, restores scroll/focus, and remounts islands and
-behaviors. Abort signals prevent superseded work from touching detached DOM.
-Any unsafe failure uses the destination as a hard navigation, preserving the
-server-rendered fallback.
+CSS imported by a behavior module is resolved through that module's transitive
+Vite manifest graph and linked only on routes that render the behavior. This
+applies to deferred behavior roots too, preventing a flash of unstyled static
+markup. Immediate behavior chunks may be module-preloaded; deferred chunks are
+not. Styles and preloads are deduplicated against global and configured client
+entries.
 
-The browser API owns `data-nib-*` attributes and typed
-`nib:navigation-before-swap`, `nib:navigation-after-swap`, and
-`nib:navigation-load` custom events. It does not emulate another framework's
-lifecycle names or install a private `window` controller.
+## Optional client entries and navigation
 
-## Page types
+Plugins may contribute site-wide browser initializers by module and export name.
+Nib combines them into one client-bootstrap entry. Each initializer receives an
+`AbortSignal`; startup failure and hot replacement abort it.
 
-### TSX pages
+`clientNavigation()` contributes the browser controller explicitly. It
+intercepts eligible same-origin links and GET forms, fetches complete static
+documents, preloads new styles, unmounts registered runtimes, swaps `#root` and
+head state, then remounts behaviors. Unsafe failures fall back to a hard native
+navigation. Native links and forms remain the baseline. Persisted or hash focus
+is preserved; ordinary swaps focus the new route content before applying the
+requested top or traversal scroll position.
 
-A TSX page default-exports a React component and may export `meta`. It can use
-ordinary React components for static composition. Browser lifecycle behavior
-belongs in a React island.
+Route-local controllers use `writeNavigationHistory()` from
+`@briansunter/nib/client/navigation` for same-document query/hash state. That
+keeps feature entries on the loaded document's history index and prevents Back
+or Forward from causing an unnecessary document fetch and behavior remount.
 
-### Markdown pages
+## Plugins and images
 
-The Markdown Vite adapter:
+`NibPlugin` contributions are target-aware and ordered. Plugins may add Vite
+adapters, page sources, derived routes, renderer wrappers/head elements,
+client initializers, and finalizers. Nib retains route collision, path, output,
+marker, and publication ownership.
 
-1. extracts frontmatter with `gray-matter`;
-2. validates frontmatter with the configured schema or Nib's Zod default;
-3. parses Markdown and GitHub-Flavored Markdown;
-4. applies configured Unified `remarkPlugins`;
-5. converts the Markdown tree and applies configured `rehypePlugins`;
-6. serializes HTML through Rehype;
-7. generates a React page module;
-8. exposes the validated frontmatter, opaque compiled content value, and
-   optional named layout to the route.
+`@briansunter/nib-images` is a separate optional package. It performs local
+image inspection and transformation at build time and renders static
+`<picture>` output; it adds no browser runtime.
 
-`markdownBody(source, { file, profile })` uses that same synchronous renderer
-for generated pages. The returned value carries source identity and
-framework-branded compiled HTML; application code cannot pass an arbitrary
-HTML-shaped object to `Content`. The `Content` component owns
-`dangerouslySetInnerHTML` and accepts a constrained semantic root plus ordinary
-static React attributes.
+## Base paths and publication
 
-For file Markdown, Nib binds that content value as
-`PageLayoutProps.Content`. A layout may render the bound component to choose
-the root element, class, and attributes without `cloneElement`. Every server
-render pass tracks the branded value and fails if a plugin or nested layout
-drops it or renders it more than once. Folder layouts can continue wrapping
-`children`; the named content layout remains the innermost layout owner.
+The base path comes from configuration, `SITE_BASE_PATH`, the GitHub repository
+name in Actions, or `/`. It must start and end with `/`. The same value drives
+Vite assets, lazy behavior chunks, `siteHref`, development route matching, and
+publication artifacts.
 
-Unified plugins receive a VFile with the source path in `history`, allowing
-source-relative diagnostics and asset resolution while Nib retains ownership
-of module generation and route publication.
+Only `dist/client` is deployed. It contains static route documents, assets,
+hosting companions, and the immutable publication manifest.
 
-Keeping parsing in `src/framework/markdown.ts` gives syntax and validation
-locality independent of Vite code generation. Inline JSX is not supported.
+## Deliberate constraints
 
-### Generic data pages
-
-`definePageSource` registers one or more file extensions, an optional file
-matcher, a parser/loader function, a schema or validator, and a static React
-component. The Vite adapter turns matching `page.<extension>` files into page
-modules. A loader returns one page descriptor for the containing folder route,
-or an array of descriptors with explicit paths to fan one input file out into
-many routes.
-
-Nib re-exports Zod 4 as the default validation library but depends only on a
-`parse(value)` shape at the interface. A custom `validate(value, context)`
-function is the lower-level alternative; a definition must choose one. Parsed
-and transformed values are passed directly to the page as `data`.
-
-### Collections
-
-`defineCollection` pairs an async build-time loader with the same validation
-seam. Loaders return `{ id, data }` entries or an ID-keyed record. The built-in
-`glob()` and `file()` from `@briansunter/nib/server` cover recursive file
-collections and aggregate data files; arbitrary loader functions can use
-project-root `read()`.
-
-`fromPages()` and `fromMarkdownPages()` derive collections after page modules,
-data pages, and frontmatter have been validated. Their pure `match`, `id`,
-`select`, and optional `sort` callbacks receive immutable descriptors containing
-only route path, source identity, resolved metadata, validated frontmatter, and
-validated data. They receive no collection resolver, so collection dependency
-cycles are structurally impossible. Duplicate IDs fail before rendering.
-
-All collections are deeply frozen and are passed to TSX pages, generated page
-components, layouts, and the site shell. `PageProps<typeof config>` maps the
-config's collection definitions to inferred `{ id, data }` lists without a
-generated type file or global registry.
-
-Resource providers do not receive the complete collection registry.
-`fromCollection(collection, mapper)` creates an explicit capability accepted by
-the RSS and search helpers. The renderer resolves it only when the exact
-collection definition is registered by the site, then deeply freezes the mapped
-result. This keeps feed and search access narrow without exposing internal page
-objects to every plugin.
-
-## Layout composition
-
-`src/pages/layout.tsx` wraps every page and nested folder layouts wrap their
-subtree from root to leaf. An optional flat named layout from `src/layouts`
-wraps the page inside that folder stack. Layouts receive children, the immutable
-route snapshot, collections, data-page `data`, Markdown `frontmatter`, and an
-optional bound Markdown `Content` renderer. Deployment metadata remains in
-configuration and head plugins rather than being copied into every render prop.
-`PageLayoutProps` keeps its one-argument backwards-compatible form and accepts
-a third type argument when a layout needs different types for those two
-payloads.
-
-## Page shell and documents
-
-The configured shell receives `children`, the resolved route, and typed
-collections. When omitted, Nib renders a small semantic header and main region.
-This gives consumers full visual control without making them own the framework
-renderer.
-
-Nib generates the HTML document template. `renderDocument` requires exactly
-one head outlet and one SSR outlet. It retains the marked island entry only on
-routes that contain islands and rejects missing or duplicate island entries.
-Static routes therefore contain HTML and CSS without the island runtime.
-
-## React islands
-
-A React island is an explicit hydration seam created with `island(Component)`. It
-has a stable path-matching ID, JSON-serializable props, and a `load`, `idle`, or
-`visible` strategy.
-
-During server rendering, each island becomes a `<nib-island>` element with:
-
-- server-rendered child markup;
-- stable island and instance IDs;
-- hydration strategy and serialized props;
-- an `identifierPrefix` for stable React `useId` output.
-
-The client runtime validates metadata and the loaded module before calling
-`hydrateRoot`. Visible hydration observes all element children and falls back
-to the parent for text-only roots. Each element is marked before scheduling, so
-repeated bootstraps cannot hydrate it twice.
-
-Each top-level island owns an independent React root and context tree. An island
-rendered inside another island is composed as an ordinary child component in
-the same root, so the outer hydration strategy controls the subtree. Island
-props must survive an exact JSON round trip; only top-level props are serialized
-into boundary metadata. See the
-[interactive island design](../decisions/interactive-react-islands.md) for rationale and
-trade-offs.
-
-## Base paths
-
-The base path is selected in this order:
-
-1. `base` in `nib.config.ts`;
-2. `SITE_BASE_PATH`;
-3. `/<repository>/` in GitHub Actions;
-4. `/`.
-
-Base values must start and end with `/`. Vite rewrites asset and lazy island
-chunk URLs. `siteHref` uses the same build-time constant for application links,
-and the SSR renderer strips the base before route matching.
-
-## Scaffolding
-
-`nib init` copies `templates/default` only into a missing or empty directory,
-replaces the framework version placeholder with the running package version,
-and installs with the invoking npm-compatible package manager unless
-`--no-install` is present. It refuses to merge into a non-empty directory.
-
-The generated project contains no `src/framework`, Vite config, HTML template,
-server entry, or prerender script. That absence is covered by scaffold and
-packed-package consumer tests.
-
-## Constraints
-
-Nib deliberately omits runtime dynamic route parameters, runtime route
-discovery, default client navigation, server actions, runtime data loaders,
-React Server Components, independently
-hydrated nested island roots, nested named Markdown layouts, and inline JSX in
-Markdown.
-
-These omissions keep the static route map deterministic and the package
-interface smaller than its implementation.
+Nib omits whole-page hydration, browser React roots, runtime data loaders,
+server actions, runtime dynamic routes, React Server Components, nested named
+Markdown layouts, and inline JSX in Markdown. Browser interaction is DOM-first
+and must be attached through explicit behavior roots or a configured client
+integration.
 
 ## Validation
 
-Framework changes run:
-
-```bash
-bun run typecheck
-bun run test
-bun run build
-SITE_BASE_PATH=/nib/ bun run build
-bun run check:version-policy
-```
-
-The complete gate includes unit and type tests, scaffold overwrite protection,
-production builds, base-path development requests, packed npm installation,
-generated-project typechecking/building, preview requests, island hydration in
-a browser, package-content inspection, and the documentation example build.
+Framework changes run type checking, unit tests, scaffold and packed-package
+consumer tests, production/base-path builds, preview requests, output
+inspection, and documentation/blog example builds. Browser-facing changes also
+verify client navigation and real behavior mount/cleanup semantics.

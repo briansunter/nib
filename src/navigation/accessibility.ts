@@ -12,13 +12,33 @@ export function scrollToHash(url: URL): boolean {
   target.scrollIntoView()
   if (
     target.matches(
-      'a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])',
+      'a[href], button, input, select, textarea, summary, [tabindex]',
     )
   ) {
     target.focus({ preventScroll: true })
   }
   return true
 }
+
+/** Focuses the newly rendered route without changing its scroll position. */
+export function focusRouteContent(): boolean {
+  const active = document.activeElement
+  if (
+    active instanceof HTMLElement
+    && active !== document.body
+    && active !== document.documentElement
+  ) {
+    return false
+  }
+  const target = document.querySelector<HTMLElement>('main, #main-content, h1')
+  if (!target) return false
+  if (!target.matches('a[href], button, input, select, textarea, summary, [tabindex]')) {
+    target.setAttribute('tabindex', '-1')
+  }
+  target.focus({ preventScroll: true })
+  return document.activeElement === target
+}
+
 export function announceRoute(timers: Set<number>): void {
   document.querySelector('.nib-route-announcer')?.remove()
   const announcer = document.createElement('div')
