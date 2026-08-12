@@ -13,9 +13,12 @@ the import chain that crossed the boundary.
 Public package imports follow the same rule:
 
 - `@briansunter/nib` contains universal authoring definitions and types;
-- `@briansunter/nib` contains the universal `ClientBehavior` type;
-- `@briansunter/nib/client/navigation` contains the opt-in navigation browser API;
-- `@briansunter/nib/internal/client` is reserved for generated framework entries;
+- `@briansunter/nib` contains the universal `ClientEnhancement` and
+  `ClientInitializer` types;
+- `@briansunter/nib/react` contains the browser-safe React island authoring API;
+- `@briansunter/nib/internal/enhancements` and
+  `@briansunter/nib/internal/islands` are reserved for generated framework
+  entries;
 - `@briansunter/nib/server` contains filesystem-backed loaders.
 
 The historical `file` and `glob` root exports remain as lazy compatibility

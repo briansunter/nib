@@ -1,5 +1,9 @@
 # Nib Framework Cleanup Plan
 
+> Historical implementation record. Names and constraints below describe the
+> framework at that stage; use the current README and architecture reference
+> for the `enhance()` API, React islands, and native navigation model.
+
 Status: implemented and verified
 
 Baseline: `08ef502d84d1f85669f82489aed0c45989719bd9`
@@ -25,7 +29,7 @@ application.
 The completed result should:
 
 - preserve complete static HTML and normal browser navigation;
-- keep client navigation, image processing, and browser behaviors optional;
+- keep image processing and browser behaviors optional;
 - enforce server/client, stylesheet, island, and behavior ownership reliably;
 - support non-root deployment bases without mismatching URLs and artifacts;
 - make client teardown safe even when application cleanup throws;
@@ -58,16 +62,14 @@ Focused probes nevertheless confirmed:
    runtime controller prevents later controllers from being cleaned up;
 4. stylesheet text in comments can trigger the page-style ownership error;
 5. development always links `src/style.css` even though that file is optional;
-6. navigation does not restore the previous `history.scrollRestoration`;
-7. finalizers repeatedly crawl output that the framework has already indexed.
+6. finalizers repeatedly crawl output that the framework has already indexed.
 
 ## Required invariants
 
 Every batch must preserve:
 
 1. Static routes contain complete, crawlable HTML.
-2. Routes without islands, behaviors, or navigation ship no corresponding
-   client runtime.
+2. Routes without islands or behaviors ship no corresponding client runtime.
 3. Island and behavior IDs, hydration strategies, props, and owned markup fail
    closed when invalid.
 4. Application cleanup cannot leave framework bookkeeping in a mounted state.
@@ -76,10 +78,9 @@ Every batch must preserve:
 6. Project-root traversal and output containment remain fail-closed.
 7. Page-only server CSS either has a supported client owner or produces a
    deterministic source-oriented error.
-8. Optional navigation always retains a hard-navigation fallback.
-9. Generated framework markup contains no personal-site typography, color, or
+8. Generated framework markup contains no personal-site typography, color, or
    image-sizing policy.
-10. Existing root-base, trailing-slash, static-output, and package-consumer
+9. Existing root-base, trailing-slash, static-output, and package-consumer
     behavior remains compatible unless explicitly called out.
 
 ## Non-goals
@@ -91,7 +92,6 @@ Every batch must preserve:
 - Do not combine islands and behaviors into a generic lifecycle engine.
 - Do not add a generic JSON-page or integration framework.
 - Do not pass parsed DOM trees through public finalizer APIs.
-- Do not make client navigation mandatory.
 - Do not introduce dynamic imports where static client-only entries suffice.
 - Do not extract Pagefind into a package before a second real consumer exists.
 
@@ -103,11 +103,10 @@ Every batch must preserve:
 4. Batch 4: resolved stylesheet ownership and one HTML template.
 5. Batch 5: neutral generated Markdown and image metadata.
 6. Batch 6: publication artifacts for finalizers.
-7. Batch 7: reference-aligned navigation prefetch and ordered verification.
+7. Batch 7: ordered verification workflow.
 
 Batches 1 through 4 are correctness work and should land before the modularity
-cleanup in Batches 5 and 6. Batch 7 is small and can land with Batch 3 if doing
-so keeps the navigation change cohesive.
+cleanup in Batches 5 and 6. Batch 7 is small and independent.
 
 Root and reference-site verification had to run sequentially while they shared
 framework output. The in-repository blog is now a root workspace and uses the
@@ -356,53 +355,35 @@ Do not expose parsed page DOM or mutable framework state.
 
 `feat(plugin): expose publication artifacts to finalizers`
 
-## Batch 7: Navigation parity and verification workflow
+## Batch 7: Ordered verification workflow
 
 ### Purpose
 
-Match the reference site's bandwidth-conscious prefetch behavior and prevent
-shared build output from creating misleading validation failures.
+Prevent shared build output from creating misleading validation failures.
 
 ### Changes
 
-1. Add the smallest practical navigation prefetch policy:
-   `explicit` or `hover`.
-2. Keep the current behavior as the compatibility default unless a breaking
-   change is explicitly approved.
-3. Configure the personal-site replica for `explicit`, matching the reference
-   site's `prefetchAll: false`.
-4. Verify `tap`, `load`, `viewport`, and disabled link annotations.
-5. Add one ordered root command for framework plus replica verification, or
+1. Add one ordered root command for framework plus replica verification, or
    isolate their framework build directories.
-6. Keep the full replica verification cached, scheduled, or manually
+2. Keep the full replica verification cached, scheduled, or manually
    invokable if its 5,880 generated image assets are too expensive for every
    pull request.
-7. Add the focused regression fixtures from Batches 1 through 4 to normal CI.
-8. Enable or separately run unused-import checking and remove the currently
+3. Add the focused regression fixtures from Batches 1 through 4 to normal CI.
+4. Enable or separately run unused-import checking and remove the currently
    reported unused type imports.
 
 ### Tests
 
-- Explicit mode performs no request for an unannotated link.
-- Annotated hover, tap, load, and viewport modes prefetch as requested.
-- Slow-connection suppression remains intact.
-- Navigation failure still performs a hard navigation.
 - The ordered verification command succeeds from a clean checkout.
 - Root and replica verification cannot overwrite each other's framework output.
 
 ### Acceptance
 
-- The replica does not prefetch unannotated content routes.
-- Navigation remains opt-in and progressively enhanced.
 - One documented command produces trustworthy complete validation.
 - CI covers the newly fixed invariants without requiring the full replica image
   corpus on every change.
 
 ### Commit
-
-`fix(navigation): support explicit prefetch policy`
-
-Follow with a separate tooling commit if needed:
 
 `test: add ordered framework and replica verification`
 
@@ -455,15 +436,12 @@ standalone reference site:
 - content-image public URLs and physical artifacts are base-safe, including
   linked originals and failed-transform fallbacks;
 - renderer-owned island and behavior markup is validated through parse5;
-- behavior, island, coordinator, navigation, and HMR teardown is
-  exception-safe;
+- behavior, island, coordinator, and HMR teardown is exception-safe;
 - stylesheet ownership follows Vite-resolved module edges, and development and
   production share one HTML template;
 - generated Markdown and image markup exposes neutral, documented hooks;
 - finalizers consume the immutable publication manifest instead of crawling
   output;
-- client navigation supports explicit prefetch while retaining hover as the
-  compatibility default;
 - `bun run verify` runs the complete root, documentation, and blog-template
   gate in the required order.
 
@@ -479,5 +457,5 @@ Final verification:
 - performance, broken-route, image, code-block, tweet, and Markdown assertions
   pass;
 - targeted desktop and mobile browser checks confirm centered, bounded article
-  media and code blocks, explicit client navigation, and no console errors;
+  media and code blocks and no console errors;
 - `git diff --check` and unused-import checks pass.

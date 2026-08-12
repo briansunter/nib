@@ -22,7 +22,7 @@ async function outputFixture(): Promise<string> {
     artifact: 'index.html',
     output: {
       kind: 'page',
-      page: { status: 200, head: '', html: '', behaviors: [] },
+      page: { status: 200, head: '', html: '', enhancements: [], islands: [] },
     },
   }])
   await fs.writeFile(

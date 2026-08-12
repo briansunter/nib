@@ -9,6 +9,11 @@ import type {
 import type { ContentRenderer, MarkdownContent } from './markdown-content'
 import type { PublicationManifestRoute } from './publication'
 
+/** Optional application-wide browser setup discovered at `src/client.ts`. */
+export type ClientInitializer = (
+  signal: AbortSignal,
+) => void | Promise<void>
+
 export type MetadataImage =
   | string
   | {
@@ -431,7 +436,20 @@ export interface RenderedPage {
   status: number
   head: string
   html: string
-  behaviors: string[]
+  /** Enhancement roots discovered from the final rendered HTML. */
+  enhancements: RenderedEnhancement[]
+  /** Path-derived React island modules used by this route. */
+  islands: RenderedIsland[]
+}
+
+export interface RenderedEnhancement {
+  readonly id: string
+  readonly when: 'load' | 'visible'
+}
+
+export interface RenderedIsland {
+  readonly id: string
+  readonly when: 'load' | 'visible'
 }
 
 export type RenderedOutput =

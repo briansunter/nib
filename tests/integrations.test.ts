@@ -27,7 +27,7 @@ afterEach(async () => {
 function pageOutput(html = '<title>Page</title>') {
   return {
     kind: 'page' as const,
-    page: { status: 200, head: '', html, behaviors: [] },
+    page: { status: 200, head: '', html, enhancements: [], islands: [] },
   }
 }
 

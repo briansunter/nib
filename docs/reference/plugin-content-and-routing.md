@@ -22,9 +22,9 @@ The target examples are:
 For each Vite graph, Nib loads and validates the app configuration, combines
 app `pageSources`, declarative plugin `pageSources`, and source definitions
 referenced by `fromPageSource()` collections, deduplicates them by identity,
-and then constructs its Vite adapters. A plugin declares browser
-`clientEntries` alongside its page sources, so discovery has no phase-sensitive
-setup hook.
+and then constructs its Vite adapters. Plugins do not register application
+browser entries; a site-wide initializer belongs in the auto-discovered
+`src/client.ts` application seam.
 
 Inside the server renderer, Nib:
 
@@ -43,7 +43,7 @@ later one.
 ## Route kinds
 
 Page routes participate in React rendering, layouts, the shell, metadata, and
-behavior collection.
+enhancement and island collection.
 
 Resource routes provide a static body and MIME content type. A dotted route such
 as `/rss.xml` is emitted as that exact file rather than
@@ -100,9 +100,8 @@ deployment hosts, which remain responsible for enforcing request URL policy.
 ## Ownership and errors
 
 Every contributed route retains its plugin owner for errors. Nib validates
-declarative page sources and client entries, hook shapes, returned route shapes,
-MIME types, redirect destinations, status codes, and duplicate routes before
-rendering.
+declarative page sources, hook shapes, returned route shapes, MIME types,
+redirect destinations, status codes, and duplicate routes before rendering.
 
 Route providers likewise do not receive a general collection registry. An
 application must hand a provider a `fromCollection()` capability explicitly,

@@ -56,7 +56,7 @@ describe('createBuildOutput', () => {
         artifact: 'posts/hello.html',
         output: {
           kind: 'page',
-          page: { status: 200, head: '', html: '<p>Hi</p>', behaviors: [] },
+          page: { status: 200, head: '', html: '<p>Hi</p>', enhancements: [], islands: [] },
         },
       },
     ])

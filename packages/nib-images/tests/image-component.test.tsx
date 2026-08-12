@@ -125,7 +125,7 @@ describe('static Image component', () => {
     expect(() => resolveId.call(
       { environment: { name: 'client' } } as any,
       '@briansunter/nib-images',
-      '/src/behaviors/gallery/index.client.ts',
+      '/src/enhancements/gallery/index.client.ts',
       { isEntry: false },
     )).toThrow('cannot be included in browser-target modules')
     const load = plugin.load as (...args: any[]) => unknown
@@ -220,7 +220,7 @@ describe('static Image component', () => {
     expect(html).toContain('--nib-image-source-aspect:2')
     expect(html).not.toContain('--nib-image-comfort-width')
     expect(html).toContain('sizes="100vw"')
-    expect(html).not.toContain('data-nib-behaviors')
+    expect(html).not.toContain('data-nib-enhancements')
   })
 
   it('useImage resolves optimized sources for manual rendering and serialization', async () => {

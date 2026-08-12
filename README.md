@@ -10,10 +10,12 @@
 
 Nib is a static-site framework for React. It handles routing, Vite, development
 SSR, HTML documents, and prerendering; a site supplies pages, layouts, data,
-styles, and optional client behaviors.
+styles, and optional client enhancements or React islands.
 
 Every known route is emitted as complete HTML. Browser interaction is explicit,
-DOM-first, and route-scoped; Nib never hydrates React in production.
+route-scoped, and absent by default. DOM enhancements add no browser React;
+React runs in the browser only for islands a route explicitly renders. Links
+and forms use native document navigation; Nib has no client router.
 
 ## Quick start
 
@@ -28,13 +30,13 @@ npm run dev
 For a compact feature-complete example, see the
 [Commonplace blog template](examples/blog/README.md). It uses fictional sample
 content while demonstrating Markdown, collections, typed data pages,
-responsive images, client behaviors, optional navigation, feeds,
+responsive images, client enhancements, feeds,
 search data, redirects, and hosting output.
 
 ## Features
 
 - File-based routes from `src/pages`, including a static `404.html`.
-- React pages rendered to HTML with no browser React runtime.
+- React pages rendered to HTML with no browser runtime by default.
 - GitHub-Flavored Markdown with validated frontmatter.
 - Folder layouts for route trees and named layouts for Markdown.
 - Typed data pages that can turn YAML, CSV, or another format into one or many
@@ -44,12 +46,16 @@ search data, redirects, and hosting output.
 - Required page titles and optional renderer-plugin document-head contributions.
 - Configurable Unified remark and rehype Markdown extensions.
 - Build-time collections for indexes, navigation, and related content.
-- Client behaviors with immediate, `idle`, and `visible` startup.
-- Optional static document navigation with native-link fallback.
+- Wrapper-free client enhancements with immediate or `visible` startup.
+- Optional React islands with `load` or `visible` hydration and serialized props.
+- An optional application-wide `src/client.ts` initializer for browser setup
+  that is not scoped to one enhanced element.
+- Native document navigation for links and forms; no client router or document
+  swapping runtime.
 - Optional Vite styling adapters; the starter opts into Tailwind without making
   it a framework dependency.
 - Base-path support for GitHub Pages and other subpath deployments.
-- A small `nib.config.ts` configuration point for framework behavior, content
+- A small `nib.config.ts` configuration point for framework options, content
   sources, collections, optional integrations, and an optional shell.
 
 ## Authoring model
@@ -67,10 +73,13 @@ src/
 │   └── layout.tsx               -> wraps the route tree
 ├── layouts/
 │   └── docs.tsx                 -> named Markdown layout
-├── behaviors/
+├── enhancements/
 │   └── reveal/
 │       └── index.client.ts      -> scoped DOM enhancement
+├── islands/
+│   └── counter.tsx              -> optional React island
 ├── content/                     -> optional collection inputs
+├── client.ts                    -> optional application-wide browser setup
 ├── site-shell.tsx               -> optional page chrome
 └── style.css
 ```
@@ -140,43 +149,47 @@ the server render if that route body is omitted or rendered more than once.
 Keep execution targets explicit:
 
 ```ts
-import { defineCollection } from '@briansunter/nib'
+import {
+  defineCollection,
+  enhance,
+  type ClientEnhancement,
+  type ClientInitializer,
+} from '@briansunter/nib'
+import { island } from '@briansunter/nib/react'
 import { glob } from '@briansunter/nib/server'
-import type { ClientBehavior } from '@briansunter/nib'
 ```
 
-The root package is the universal authoring API, `/server` owns filesystem-backed
-loaders, and `/client/navigation` owns the opt-in navigation controller. Nib also rejects a
-`.server.ts(x)` module imported by the production client graph or a
-`.client.ts(x)` module imported by the production server graph.
+The root package owns universal authoring and imperative enhancement contracts,
+`/react` owns opt-in React island definitions, and `/server` owns
+filesystem-backed loaders. Nib rejects a `.server.ts(x)` module imported by
+the production client graph or a `.client.ts(x)` module imported by the
+production server graph.
 
 Application-wide CSS belongs in `src/style.css`. CSS can also be owned by a
-client behavior or a plugin's client entry. A stylesheet imported
+client enhancement, React island, or `src/client.ts`. A stylesheet imported
 only by a page, layout, or server-rendered component cannot reach the deployed
 client graph, so Nib reports it as a build/development error instead of
 publishing an unstyled page.
 
-For progressive enhancement, attach one behavior to an
-existing element with `<Behavior name="reveal">` and put one matching implementation at
-`src/behaviors/reveal/index.client.ts`:
+For progressive enhancement, spread `enhance()` onto an existing HTML element
+and put one matching implementation at
+`src/enhancements/reveal/index.client.ts`:
 
 ```tsx
-import { Behavior } from '@briansunter/nib'
+import { enhance } from '@briansunter/nib'
 
 export function Reveal() {
   return (
-    <Behavior name="reveal">
-      <section>
-        <button type="button">Show details</button>
-        <p data-details hidden>Complete static content.</p>
-      </section>
-    </Behavior>
+    <section {...enhance('reveal')}>
+      <button type="button">Show details</button>
+      <p data-details hidden>Complete static content.</p>
+    </section>
   )
 }
 ```
 
 ```ts
-import type { ClientBehavior } from '@briansunter/nib'
+import type { ClientEnhancement } from '@briansunter/nib'
 
 export default ((root, signal) => {
   const button = root.querySelector('button')
@@ -184,14 +197,38 @@ export default ((root, signal) => {
   button?.addEventListener('click', () => {
     if (details) details.hidden = !details.hidden
   }, { signal })
-}) satisfies ClientBehavior
+}) satisfies ClientEnhancement
 ```
 
-The implementation receives its scoped root and an `AbortSignal`. Plain
-JavaScript can default-export the mount function directly. Routes without
-behavior markers omit the behavior script, and projects without behavior
-modules do not build that runtime. Behaviors may nest when each owns a different
-element; cleanup aborts the deepest root first.
+The implementation receives its scoped `root` and `signal` as positional
+arguments. Plain JavaScript can default-export the mount function directly.
+Routes without enhancement markers omit the enhancement script, and projects
+without enhancement modules do not build that runtime. Enhancements may nest
+when each owns a different element; cleanup aborts the deepest root first.
+
+Use a React island only when a feature needs React state or hooks in the
+browser. Island IDs come from their file paths below `src/islands`, and each
+module default-exports `island(Component)` or
+`island(Component, { when: 'visible' })` from `@briansunter/nib/react`. `load`
+is the default, and there is no `idle` strategy:
+
+```tsx
+// src/islands/counter.tsx
+import { useState } from 'react'
+import { island } from '@briansunter/nib/react'
+
+function Counter({ initialCount }: { initialCount: number }) {
+  const [count, setCount] = useState(initialCount)
+  return <button onClick={() => setCount(count + 1)}>Count: {count}</button>
+}
+
+export default island(Counter, { when: 'visible' })
+```
+
+Import and render the default export like an ordinary component. Nib renders
+its initial HTML on the server, serializes JSON-safe props, and hydrates that
+island on load or as it approaches the viewport. Routes without islands omit
+the island runtime, and an island-free project ships no client React.
 
 ### Site identity and document head
 
@@ -403,60 +440,67 @@ Configured Unified plugins receive a VFile whose `history` contains the
 Markdown source path. This makes source-relative diagnostics and asset
 resolution possible without changing the generated page API.
 
-## Behavior loading
+## Client enhancement loading
 
-Behavior JavaScript is lazy by module. Immediate roots may preload their own
-chunk; `idle` and `visible` roots wait for their strategy. Visible startup
-observes the marked root itself. CSS imported by a behavior is linked on every
-route that renders that behavior, including deferred roots, and is deduplicated
-against global and plugin-owned styles.
+Enhancement JavaScript is lazy by module. Immediate roots may preload their own
+chunk; roots configured with `{ when: 'visible' }` wait until the marked
+element approaches the viewport. CSS imported by an enhancement is linked on
+every route that renders that enhancement, including visible roots, and is
+deduplicated against global and application-client styles.
 
-`Behavior` owns `data-nib-behavior` and `data-nib-defer`; do not set either
-attribute on its child. The child must be one intrinsic DOM element so the
-framework adds no layout wrapper.
+`enhance()` returns the canonical `data-nib-enhancement` and optional
+`data-nib-when` attributes. Spread the result onto the intrinsic HTML element
+that the client module should receive. Nib treats final rendered HTML as the
+source of truth and validates the same marker contract in raw HTML.
 
-## Optional client navigation
+## React island loading
 
-Nib uses ordinary document navigation by default. A site can explicitly add
-same-origin document swapping, history, scroll/focus restoration, bounded
-prefetching, and View Transitions:
+An island module lives at `src/islands/<id>.tsx` and must default-export
+`island(Component)`. Nested paths produce nested IDs. The optional `when` value
+is `load` (the default) or `visible`; it is fixed for every instance of that
+island. Props must be JSON-serializable because Nib embeds them in the static
+document for hydration. Island CSS is route-scoped like enhancement CSS.
+
+Nib server-renders each island as complete initial HTML. Only routes that
+render an island link the island runtime and React client code. Routes made
+from ordinary TSX, Markdown, data pages, and DOM enhancements remain free of
+client React.
+
+Render an island where a custom HTML element is valid flow content. Do not put
+an island directly inside restricted parser contexts such as `table`, `tbody`,
+`tr`, or `select`; make the containing table or control subtree the island
+instead. Nib parses the emitted document and fails the build if the browser
+would restructure an island boundary before hydration.
+
+## Native navigation and optional application client
+
+Nib does not intercept links or forms. Navigation loads each destination's
+prerendered document through the browser's native behavior; there is no client
+router, document swap, prefetch controller, or navigation history API.
+
+Use enhancements for browser code owned by one rendered element. When an
+application needs one site-wide browser initializer instead, add the exact
+optional entry `src/client.ts`:
 
 ```ts
-// nib.config.ts
-import { defineConfig } from '@briansunter/nib'
-import { clientNavigation } from '@briansunter/nib/navigation'
+import type { ClientInitializer } from '@briansunter/nib'
 
-export default defineConfig({
-  plugins: [clientNavigation()],
-})
+export default ((signal) => {
+  const reportOnline = () => {
+    document.documentElement.toggleAttribute('data-online', navigator.onLine)
+  }
+  reportOnline()
+  window.addEventListener('online', reportOnline, { signal })
+  window.addEventListener('offline', reportOnline, { signal })
+}) satisfies ClientInitializer
 ```
 
-Hover intent remains the compatibility default. Sites that want only annotated
-prefetches can use `clientNavigation({ prefetch: 'explicit' })`; navigation
-itself still enhances every eligible link.
-
-The plugin contributes one static browser entry only when configured; no
-dynamic import or React DOM dependency is added by navigation. Links remain
-complete native fallbacks when JavaScript is disabled, a destination is
-ineligible, or an enhanced navigation cannot complete safely.
-
-After a document swap, Nib preserves focus inside a persisted element or moves
-it to an explicit hash target. Otherwise it focuses the new route's `main`,
-`#main-content`, or first `h1` without changing the intended scroll position.
-
-Use `data-nib-prefetch="hover|tap|load|viewport|false"` to control prefetching,
-`data-nib-navigation-reload` to force native navigation, and
-`data-nib-navigation-persist="key"` to preserve a stable element across swaps.
-The browser controller and typed `nib:navigation-*` events are exported from
-`@briansunter/nib/client/navigation`.
-
-Feature controllers that write query or hash state while client navigation is
-active must use `writeNavigationHistory()` from that same browser entry instead
-of calling `history.pushState()` or `history.replaceState()` directly. The
-helper keeps feature entries on the loaded document's navigation index, so
-Back and Forward update the feature in place without fetching or remounting the
-document. It accepts only same-origin, same-path URLs; ordinary page changes
-still belong to links, forms, or the navigation controller.
+Nib discovers this file without configuration and invokes its default export
+with an `AbortSignal`. It may finish synchronously or return a promise. Use the
+signal for listener cleanup; Nib aborts it when replacing the client module in
+development. CSS imported from `src/client.ts` is application-wide. Projects
+without this file do not build or link an application entry. Links and forms use
+native browser navigation.
 
 Generated Markdown uses the neutral `nib-markdown` class. Sites own typography,
 colors, widths, and other prose presentation through their layouts or global
@@ -466,14 +510,14 @@ stylesheet.
 
 Nib is for sites whose routes and data can be resolved at build time. It does
 not add dynamic route parameters, runtime routes, server actions, runtime data
-loaders, React Server Components, or JSX inside Markdown. Client navigation is
-an optional enhancement over the same prerendered route map, never the default
-or a source of required content.
+loaders, React Server Components, whole-page hydration, a client router, or JSX
+inside Markdown. React hydration is limited to explicitly declared islands.
 
 ## Documentation
 
 The [documentation site](https://briansunter.github.io/nib/docs/) covers setup,
-pages, Markdown, layouts, data sources, collections, behaviors, and GitHub Pages.
+pages, Markdown, layouts, data sources, collections, client enhancements,
+React islands, and GitHub Pages.
 
 Repository maintainers can run `bun run verify` for the ordered framework,
 package-consumer, documentation, and blog-template gate. The example is a root
@@ -519,8 +563,7 @@ for layouts, cache behavior, and the current SVG/animated-image limits.
 For implementation details and design rationale:
 
 - [Architecture](docs/reference/architecture.md)
-- [Client behaviors](docs/decisions/client-behaviors.md)
-- [Optional client navigation ADR](docs/decisions/optional-client-navigation.md)
+- [Client enhancements](docs/decisions/client-enhancements.md)
 - [Type-safe plugins and image optimization](docs/reference/type-safe-plugins-and-image-optimization.md)
 - [Licensing](docs/reference/licensing.md)
   — implemented design, APIs, and validation matrix

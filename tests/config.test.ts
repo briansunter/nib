@@ -5,7 +5,7 @@ import {
   fromMarkdownPages,
   fromPageSource,
 } from '../src/index'
-import { configuredPageSources } from '../src/framework/plugin-contributions'
+import { configuredPageSources } from '../src/framework/content/page-sources'
 import { resolveBasePath, validateNibConfig } from '../src/framework/project-config'
 
 describe('Nib configuration', () => {

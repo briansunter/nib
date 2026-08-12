@@ -81,14 +81,16 @@ describe('published package consumer', () => {
     expect(packedFiles).not.toContain('dist/framework/client.js')
     expect(packedFiles).not.toContain('dist/framework/client.d.ts')
     expect(packedFiles).not.toContain('dist/framework/client/lifecycle.js')
-    expect(packedFiles).toContain('dist/framework/client/navigation.js')
-    expect(packedFiles).toContain('dist/framework/client/navigation.d.ts')
-    expect(packedFiles).toContain('dist/framework/navigation.js')
-    expect(packedFiles).toContain('dist/framework/navigation.d.ts')
+    expect(packedFiles).not.toContain('dist/framework/client/navigation.js')
+    expect(packedFiles).not.toContain('dist/framework/navigation.js')
+    expect(packedFiles).toContain('dist/framework/react.js')
+    expect(packedFiles).toContain('dist/framework/react.d.ts')
     expect(packedFiles).toContain('dist/framework/server.js')
     expect(packedFiles).toContain('dist/framework/server.d.ts')
-    expect(packedFiles).toContain('dist/framework/internal/client.js')
-    expect(packedFiles).toContain('dist/framework/internal/client.d.ts')
+    expect(packedFiles).toContain('dist/framework/internal/enhancements.js')
+    expect(packedFiles).toContain('dist/framework/internal/enhancements.d.ts')
+    expect(packedFiles).toContain('dist/framework/internal/islands.js')
+    expect(packedFiles).toContain('dist/framework/internal/islands.d.ts')
     expect(packedFiles).toContain('templates/default/nib.config.ts')
     expect(packedFiles).toContain('templates/default/gitignore')
     expect(packedFiles.some((file) => file.startsWith('tests/'))).toBe(false)
@@ -97,10 +99,11 @@ describe('published package consumer', () => {
     const browserEntry = await fs.readFile('dist/framework/index.js', 'utf8')
     expect(browserEntry).not.toMatch(/from ["']node:(?:fs|path)/)
     expect(browserEntry).not.toContain('tinyglobby')
-    const internalClientEntry = await fs.readFile('dist/framework/internal/client.js', 'utf8')
-    expect(internalClientEntry).not.toMatch(/(?:node:|tinyglobby|react-dom)/)
-    const navigationEntry = await fs.readFile('dist/framework/client/navigation.js', 'utf8')
-    expect(navigationEntry).not.toMatch(/(?:node:|tinyglobby|react-dom)/)
+    const enhancementEntry = await fs.readFile(
+      'dist/framework/internal/enhancements.js',
+      'utf8',
+    )
+    expect(enhancementEntry).not.toMatch(/(?:node:|tinyglobby|react-dom)/)
     const serverEntry = await fs.readFile('dist/framework/server.js', 'utf8')
     const serverModules = [
       serverEntry,
@@ -137,20 +140,46 @@ describe('published package consumer', () => {
       ['init', site, '--no-install'],
       { cwd: launcher },
     )
-    const generatedConfigPath = path.join(site, 'nib.config.ts')
-    const generatedConfig = await fs.readFile(generatedConfigPath, 'utf8')
     await fs.writeFile(
-      generatedConfigPath,
-      generatedConfig
-        .replace(
-          "import { defineConfig, siteMetadata } from '@briansunter/nib'",
-          "import { defineConfig, siteMetadata } from '@briansunter/nib'\n"
-          + "import { clientNavigation } from '@briansunter/nib/navigation'",
-        )
-        .replace(
-          '  plugins: [',
-          '  plugins: [\n    clientNavigation(),',
-        ),
+      path.join(site, 'src/client.ts'),
+      [
+        "import type { ClientInitializer } from '@briansunter/nib'",
+        '',
+        'export default ((signal) => {',
+        "  const markReady = () => document.documentElement.setAttribute('data-packed-client', 'ready')",
+        '  markReady()',
+        "  window.addEventListener('pageshow', markReady, { signal })",
+        '}) satisfies ClientInitializer',
+        '',
+      ].join('\n'),
+    )
+    await fs.mkdir(path.join(site, 'src/islands'), { recursive: true })
+    await fs.writeFile(
+      path.join(site, 'src/islands/packed-counter.tsx'),
+      [
+        "import { island } from '@briansunter/nib/react'",
+        '',
+        'function PackedCounter({ initial }: { initial: number }) {',
+        '  return <button type="button">Packed count: {initial}</button>',
+        '}',
+        '',
+        "export default island(PackedCounter, { when: 'load' })",
+        '',
+      ].join('\n'),
+    )
+    await fs.mkdir(path.join(site, 'src/pages/island'), { recursive: true })
+    await fs.writeFile(
+      path.join(site, 'src/pages/island/page.tsx'),
+      [
+        "import PackedCounter from '../../islands/packed-counter'",
+        '',
+        "export const meta = { title: 'Packed island' }",
+        '',
+        'export default function Page() {',
+        '  return <main><PackedCounter initial={4} /></main>',
+        '}',
+        '',
+      ].join('\n'),
     )
     await execute(
       'npm',
@@ -176,6 +205,7 @@ describe('published package consumer', () => {
 
     const home = await fs.readFile(path.join(site, 'dist/client/index.html'), 'utf8')
     const about = await fs.readFile(path.join(site, 'dist/client/about/index.html'), 'utf8')
+    const island = await fs.readFile(path.join(site, 'dist/client/island/index.html'), 'utf8')
     const publication = JSON.parse(await fs.readFile(
       path.join(site, 'dist/client/.nib/publication.json'),
       'utf8',
@@ -187,15 +217,24 @@ describe('published package consumer', () => {
         .map((file) => fs.readFile(path.join(assetDirectory, file), 'utf8')),
     )).join('\n')
     expect(home).toContain('Make a site.')
-    expect(home).toContain('data-nib-behavior="counter"')
-    expect(home).toContain('data-nib-behaviors')
+    expect(home).toContain('data-nib-enhancement="counter"')
+    expect(home).toContain('data-nib-enhancements')
+    expect(home).not.toContain('data-nib-islands')
     expect(about).toContain('About this site')
-    expect(about).toContain('data-nib-client-bootstrap')
+    expect(home).toContain('data-nib-client')
+    expect(about).toContain('data-nib-client')
+    expect(island).toContain('data-nib-client')
+    expect(island).toContain('data-nib-island="packed-counter"')
+    expect(island).toContain('data-nib-props="{&quot;initial&quot;:4}"')
+    expect(island).toContain('data-nib-islands')
+    expect(island).not.toContain('data-nib-enhancements')
+    expect(clientJavaScript).toContain('data-packed-client')
     expect(publication).toMatchObject({ version: 1 })
     expect(publication.routes).toEqual(expect.arrayContaining([
       expect.objectContaining({ path: '/about', artifact: 'about/index.html' }),
     ]))
-    expect(about).not.toContain('data-nib-behaviors')
+    expect(about).not.toContain('data-nib-enhancements')
+    expect(about).not.toContain('data-nib-islands')
     expect(clientJavaScript).not.toContain('__zod_globalConfig')
     await expect(fs.stat(path.join(site, 'src/framework'))).rejects.toMatchObject({
       code: 'ENOENT',
@@ -349,7 +388,8 @@ export default function Page() {
     await execute('npm', ['run', 'build'], { cwd: consumer })
     const packedHtml = await fs.readFile(path.join(consumer, 'dist/client/index.html'), 'utf8')
     expect(packedHtml).toContain('<picture>')
-    expect(packedHtml).not.toContain('data-nib-behaviors')
+    expect(packedHtml).not.toContain('data-nib-enhancements')
+    expect(packedHtml).not.toContain('data-nib-islands')
     await expect(fs.access(path.join(consumer, 'dist/client/.vite/manifest.json')))
       .rejects.toMatchObject({ code: 'ENOENT' })
     expect(await fs.readFile(path.join(consumer, 'dist/client/sitemap.xml'), 'utf8'))

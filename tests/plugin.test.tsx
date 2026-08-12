@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { definePlugin } from '../src/plugin'
 import { flattenVitePlugins } from '../src/framework/plugin'
-import { clientNavigation } from '../src/navigation'
-import { configuredClientEntries } from '../src/framework/plugin-contributions'
 import { validateNibConfig } from '../src/framework/project-config'
 import { createProjectRenderer } from '../src/framework/project-renderer'
 import { createPublicationManifest } from '../src/framework/publication'
@@ -10,44 +8,6 @@ import { createPublicationManifest } from '../src/framework/publication'
 const Page = () => <h1>Home</h1>
 
 describe('Nib plugins', () => {
-  it('keeps client entries declarative, immutable, and validated once with their owners', () => {
-    const client = validateNibConfig({
-      plugins: [clientNavigation()],
-    })
-    expect(configuredClientEntries(client)).toEqual([{
-      module: '@briansunter/nib/client/navigation',
-      initializer: 'initializeClientNavigation',
-    }])
-    expect(Object.isFrozen(configuredClientEntries(client))).toBe(true)
-
-    const explicitClient = validateNibConfig({
-      plugins: [clientNavigation({ prefetch: 'explicit' })],
-    })
-    expect(configuredClientEntries(explicitClient)).toEqual([{
-      module: '@briansunter/nib/client/navigation',
-      initializer: 'initializeExplicitClientNavigation',
-    }])
-
-    expect(() => validateNibConfig({
-      plugins: [{
-        name: 'invalid-client-entry',
-        clientEntries: [{ module: 'browser', initializer: 'not-valid()' }],
-      }],
-    })).toThrow('JavaScript initializer name')
-    expect(() => validateNibConfig({
-      plugins: [
-        {
-          name: 'first-owner',
-          clientEntries: [{ module: 'browser', initializer: 'start' }],
-        },
-        {
-          name: 'second-owner',
-          clientEntries: [{ module: 'browser', initializer: 'start' }],
-        },
-      ],
-    })).toThrow('duplicated by first-owner and second-owner')
-  })
-
   it('resolves recursive Vite plugin promises without changing order', async () => {
     const owner = definePlugin({ name: 'vite-owner' })
     const plugins = await flattenVitePlugins([
@@ -72,9 +32,6 @@ describe('Nib plugins', () => {
     expect(() => validateNibConfig({
       plugins: [{ name: 'invalid', pageSources: {} }],
     })).toThrow('pageSources must be an array')
-    expect(() => validateNibConfig({
-      plugins: [{ name: 'invalid', clientEntries: {} }],
-    })).toThrow('clientEntries must be an array')
     expect(() => validateNibConfig({
       plugins: [{ name: ' padded ' }],
     })).toThrow('non-empty name')

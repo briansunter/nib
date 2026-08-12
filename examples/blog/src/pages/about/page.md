@@ -10,6 +10,6 @@ type: website
 
 # A small site with real framework features
 
-Commonplace is fictional sample content. It demonstrates Markdown posts, typed collections and data pages, responsive images, scoped client behaviors, client navigation, feeds, search data, redirects, and hosting output.
+Commonplace is fictional sample content. It demonstrates Markdown posts, typed collections and data pages, responsive images, scoped client enhancements, feeds, search data, redirects, and hosting output.
 
 The pages remain useful without browser JavaScript. Nib prerenders the whole site and ships client code only for the explicitly interactive pieces.

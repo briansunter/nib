@@ -4,7 +4,7 @@ This fixture is the frozen cross-feature baseline for Nib framework changes.
 It contains:
 
 - a static Markdown route with a layout;
-- a behavior-enhanced route and static routes without a client runtime;
+- an enhanced route and static routes without a client runtime;
 - schema-validated data pages and collections;
 - plugin-owned resources and a configured redirect;
 - a base path, trailing-slash policy, custom shell, and custom 404;

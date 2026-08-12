@@ -9,9 +9,16 @@ import { deepFreeze } from './freeze'
 import { createContentRenderer } from './markdown-content'
 import { renderReactPage, type RenderedReactPage } from './render-page'
 import {
-  BEHAVIOR_MODULE_GLOB,
-  behaviorFileToId,
-} from './behavior-paths'
+  ENHANCEMENT_MODULE_GLOB,
+  enhancementFileToId,
+} from './enhancement-paths'
+import {
+  ISLAND_MODULE_GLOB,
+} from './island-paths'
+import {
+  validateIslandModules,
+  type IslandModule,
+} from './islands'
 import { resolvedRouteSnapshot } from './snapshots'
 import {
   addConfiguredRedirects,
@@ -58,7 +65,8 @@ export interface ProjectRendererOptions {
   pages: Record<string, PageModule>
   folderLayouts?: RouteLayouts['folders']
   namedLayouts?: RouteLayouts['named']
-  behaviorClientFiles?: readonly string[]
+  enhancementClientFiles?: readonly string[]
+  islandModules?: Record<string, IslandModule>
   derivedPages?: {
     definitions: readonly DerivedPagesDefinition<any>[]
     components: readonly (ComponentType<any> | undefined)[]
@@ -92,17 +100,17 @@ async function resolveDerivedComponent(
   return load
 }
 
-function behaviorClientIds(files: readonly string[]): ReadonlySet<string> {
+function enhancementClientIds(files: readonly string[]): ReadonlySet<string> {
   const ids = new Set<string>()
   for (const file of files) {
-    const id = behaviorFileToId(file)
-    if (ids.has(id)) throw new Error(`Duplicate behavior ID: ${id}`)
+    const id = enhancementFileToId(file)
+    if (ids.has(id)) throw new Error(`Duplicate enhancement ID: ${id}`)
     ids.add(id)
   }
   return ids
 }
 
-function assertClientModules(
+function assertEnhancementModules(
   route: ResolvedPageRoute,
   emittedIds: readonly string[],
   discoveredIds: { has(id: string): boolean },
@@ -110,10 +118,25 @@ function assertClientModules(
   const missing = emittedIds.filter((id) => !discoveredIds.has(id))
   if (missing.length === 0) return
   const marker = missing.length === 1
-    ? `behavior "${missing[0]}"`
-    : `behaviors ${missing.map((id) => `"${id}"`).join(', ')}`
+    ? `enhancement "${missing[0]}"`
+    : `enhancements ${missing.map((id) => `"${id}"`).join(', ')}`
   throw new Error(
-    `Route ${route.path} emitted ${marker} without a matching client module in ${BEHAVIOR_MODULE_GLOB.slice(1)}`,
+    `Route ${route.path} emitted ${marker} without a matching client module in ${ENHANCEMENT_MODULE_GLOB.slice(1)}`,
+  )
+}
+
+function assertIslandModules(
+  route: ResolvedPageRoute,
+  emittedIds: readonly string[],
+  discoveredIds: { has(id: string): boolean },
+): void {
+  const missing = emittedIds.filter((id) => !discoveredIds.has(id))
+  if (missing.length === 0) return
+  const marker = missing.length === 1
+    ? `island "${missing[0]}"`
+    : `islands ${missing.map((id) => `"${id}"`).join(', ')}`
+  throw new Error(
+    `Route ${route.path} emitted ${marker} without a matching module in ${ISLAND_MODULE_GLOB[0].slice(1)}`,
   )
 }
 
@@ -200,7 +223,8 @@ function publicRedirectDestination(base: string, destination: string): string {
 export async function createProjectRenderer(
   options: ProjectRendererOptions,
 ): Promise<ProjectRenderer> {
-  const behaviorIds = behaviorClientIds(options.behaviorClientFiles ?? [])
+  const enhancementIds = enhancementClientIds(options.enhancementClientFiles ?? [])
+  const islandDefinitions = validateIslandModules(options.islandModules ?? {})
   const layoutModules: RouteLayouts = {
     ...(options.folderLayouts === undefined ? {} : { folders: options.folderLayouts }),
     ...(options.namedLayouts === undefined ? {} : { named: options.namedLayouts }),
@@ -377,14 +401,24 @@ export async function createProjectRenderer(
         content,
         route.content === undefined ? [] : [route.content],
       )
-      assertClientModules(route, reactPage.behaviors, behaviorIds)
+      assertEnhancementModules(
+        route,
+        reactPage.enhancements.map(({ id }) => id),
+        enhancementIds,
+      )
+      assertIslandModules(
+        route,
+        reactPage.islands.map(({ id }) => id),
+        islandDefinitions,
+      )
       return {
         kind: 'page',
         page: {
           status: route.status,
           head: renderHead(publicRoute.meta, head),
           html: reactPage.html,
-          behaviors: reactPage.behaviors,
+          enhancements: reactPage.enhancements,
+          islands: reactPage.islands,
         },
       }
     },

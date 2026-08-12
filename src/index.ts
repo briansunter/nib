@@ -18,7 +18,7 @@ export {
 } from './framework/content'
 // Compatibility exports. Prefer @briansunter/nib/server for filesystem loaders.
 export { file, glob } from './framework/content-compat'
-export { Behavior } from './framework/behaviors'
+export { enhance } from './framework/enhancements'
 export { markdownMedia } from './integrations/markdown-media'
 export { buildInfo } from './integrations/build-info'
 export {
@@ -36,8 +36,9 @@ export type {
   GlobLoaderFile,
   GlobLoaderOptions,
 } from './framework/content-compat'
-export type { ClientBehavior } from './runtime/behaviors'
+export type { ClientEnhancement } from './runtime/enhancements'
 export type {
+  ClientInitializer,
   NibBuildOutput,
   StagedDirectory,
 } from './framework/types'

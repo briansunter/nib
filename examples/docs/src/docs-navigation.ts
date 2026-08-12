@@ -20,8 +20,7 @@ export const documentation = [
       { label: 'Data and collections', href: '/docs/data-pages-and-collections/', description: 'Generate typed pages and lists' },
       { label: 'Image optimization', href: '/docs/image-optimization/', description: 'Build responsive local images' },
       { label: 'Plugin content and routing', href: '/docs/plugin-content-and-routing/', description: 'Extend formats and static routes' },
-      { label: 'Client behaviors', href: '/docs/client-behaviors/', description: 'Add interaction selectively' },
-      { label: 'Client navigation', href: '/docs/client-navigation/', description: 'Enhance static links optionally' },
+      { label: 'Client enhancements', href: '/docs/client-enhancements/', description: 'Add interaction selectively' },
     ],
   },
   {

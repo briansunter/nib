@@ -118,7 +118,7 @@ export default defineConfig({
 - Optimizing untrusted remote URLs in the first release.
 - Rewriting every ordinary HTML `img` element automatically.
 - Rasterizing SVG or transforming animated images by default.
-- Adding a browser React runtime.
+- Adding a browser React runtime for image rendering or plugin infrastructure.
 - Making the first plugin API cover every possible bundler or deployment
   adapter.
 
@@ -132,8 +132,8 @@ Before this implementation, Nib:
 - renders pages synchronously through `ProjectRenderer.render`;
 - writes routes one at a time immediately after rendering;
 - owns the HTML document instead of using a normal Vite `index.html` entry;
-- includes only configured behavior, plugin client, and stylesheet entries in
-  the client build graph;
+- includes only discovered enhancement, island, application-client, and
+  stylesheet entries in the client build graph;
 - treats `dist/server` as an intermediate and deploys only `dist/client`.
 
 These constraints rule out three tempting implementations:
@@ -163,10 +163,10 @@ Add an advanced plugin-author entry point:
 ```
 
 The root entry exposes site-authoring APIs only. The `/plugin` entry is the
-plugin-author seam: it exposes plugin contracts and `definePlugin`. Generated
-server modules use the internal server entry; optional document navigation is
-public under `/client/navigation`. The behavior runtime is private framework
-infrastructure.
+plugin-author seam: it exposes plugin contracts and `definePlugin`.
+`@briansunter/nib/react` is the public React-island authoring entry. Generated
+server, enhancement, and island runtimes use private internal subpaths. Links
+and forms use native browser navigation.
 
 ### `@briansunter/nib-images`
 
@@ -280,7 +280,6 @@ export interface NibPlugin {
   readonly name: string
 
   readonly pageSources?: readonly PageSourceDefinition[]
-  readonly clientEntries?: readonly NibClientEntry[]
 
   vite?(
     context: NibVitePluginContext,
@@ -377,7 +376,8 @@ that also need Nib renderer or build lifecycle hooks, such as image processing.
   renderer.
 - `head` runs in config order before page composition. It can override the
   document title or description and add structured `meta`, `link`, `script`, or
-  `style` elements, but cannot replace the document template or client entries.
+  `style` elements, but cannot replace the document template or application
+  client entry.
 - Later title or description overrides win; structured elements retain
   site-page-plugin order.
 - `wrapPage` is synchronous. The first configured plugin is the outermost
@@ -396,7 +396,7 @@ that also need Nib renderer or build lifecycle hooks, such as image processing.
 ### Why render hooks stay synchronous
 
 React's current static renderer is synchronous, and pages, layouts, the shell,
-and behavior collection already depend on deterministic repeated renders.
+and enhancement and island collection already depend on deterministic repeated renders.
 Changing `render(url)` to return a promise would spread through the development
 middleware, server-entry contract, tests, and consumers without helping the
 image pipeline.
@@ -417,7 +417,7 @@ images are handled by Vite middleware.
 4. invoke the app-owned `vite` factory, when configured;
 5. await each configured package plugin's `vite` hook;
 6. flatten valid Vite `PluginOption` values;
-7. insert them before the generated project and behavior-entry adapters;
+7. insert them before React and the generated-project/client-entry adapters;
 8. preserve app or plugin attribution if contribution creation fails.
 
 The initial array order should be:
@@ -428,12 +428,12 @@ App Vite contribution (for example Tailwind)
 Package plugin contributions
 React
 Nib generated-project adapter
-Nib behavior-entry adapter
+Nib client-entry reload adapter
 ```
 
 Vite still applies `enforce: "pre"` and `enforce: "post"` across that array.
 The fixed default order gives plugins a predictable seam without allowing them
-to replace the generated route or behavior entries.
+to replace the generated route or client entries.
 
 The image metadata import plugin uses normal Vite `resolveId`, `load`,
 `configureServer`, and `hotUpdate` hooks. It must not mutate Nib's
@@ -443,7 +443,7 @@ internal plugin array or import Nib internals.
 
 `createProjectRenderer` should:
 
-1. validate behavior modules and load collections as it does now;
+1. validate enhancement and island modules and load collections as it does now;
 2. create a frozen `NibRendererPluginContext`;
 3. await each configured plugin's `renderer` hook once;
 4. retain the resulting extensions in config order;
@@ -1112,8 +1112,8 @@ Benchmark cold and warm builds before fixing defaults.
 - duplicate or blank plugin names fail config validation.
 - app and package Vite contributions appear in dev and both production builds
   with fresh instances per graph.
-- declarative plugin page sources and client entries are validated once and
-  preserve configuration order.
+- declarative plugin page sources are validated once and preserve configuration
+  order.
 - `fromPageSource()` collections make their source discoverable without a
   duplicate top-level registration.
 - config order and wrap order are deterministic.
@@ -1145,7 +1145,7 @@ Benchmark cold and warm builds before fixing defaults.
 - opaque and alpha inputs choose valid fallbacks.
 - lazy images use lazy loading and async decoding.
 - priority images use eager loading and high fetch priority.
-- output contains no behavior marker or image client script.
+- output contains no enhancement or island marker and no image client script.
 - root and repository base paths prefix every variant.
 
 ### Processing and cache
@@ -1181,7 +1181,7 @@ Create a packed-package fixture site containing:
 - a fixed avatar;
 - the same source reused on two routes;
 - an alpha image;
-- a static route with no client behavior.
+- a static route with no client enhancement or React island.
 
 Run:
 
@@ -1199,7 +1199,7 @@ Then verify:
 - all HTML references exist under `dist/client`;
 - image dimensions and MIME types match the markup;
 - no unintended source originals or absolute filesystem paths ship;
-- no route gains the behavior runtime because it uses `Image`;
+- no route gains the enhancement or island runtime because it uses `Image`;
 - preview serves the assets under both root and subpath bases;
 - a real browser chooses a smaller candidate at a mobile viewport;
 - the hero is discoverable early and lower images remain lazy;
@@ -1299,7 +1299,7 @@ The feature is complete only when:
 Release the generic plugin contract from Nib first as a minor `0.x` release.
 Build the image package against that published contract rather than an
 unreleased internal import. Keep the first plugin API additive; do not rename
-existing page, layout, behavior, or collection concepts.
+existing page, layout, enhancement, island, or collection concepts.
 
 The image package can then release independently. Nib's core documentation may
 recommend it without making it a default install. This preserves the deletion

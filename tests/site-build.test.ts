@@ -26,7 +26,7 @@ interface BuildManifestEntry {
 
 function runtimePreloads(
   html: string,
-  owner: 'behaviors' | 'client-bootstrap',
+  owner: 'enhancements' | 'islands' | 'client',
 ): string[] {
   const tags = html.match(
     new RegExp(`<link\\b[^>]*data-nib-runtime-preload="${owner}"[^>]*>`, 'g'),
@@ -82,6 +82,7 @@ describe('framework-owned site builds', () => {
     const home = await fs.readFile(path.join(output, 'client/index.html'), 'utf8')
     const about = await fs.readFile(path.join(output, 'client/about/index.html'), 'utf8')
     const enhanced = await fs.readFile(path.join(output, 'client/enhanced/index.html'), 'utf8')
+    const island = await fs.readFile(path.join(output, 'client/island/index.html'), 'utf8')
     const team = await fs.readFile(path.join(output, 'client/team/index.html'), 'utf8')
     const pencil = await fs.readFile(
       path.join(output, 'client/products/pencil/index.html'),
@@ -134,20 +135,29 @@ describe('framework-owned site builds', () => {
     expect(home).toMatch(/<link rel="stylesheet" href="\/journal\/assets\/[^"]+\.css" \/>/)
     expect(home).toContain('data-site="Journal"')
     expect(home).toContain('>Count: 2</button>')
-    expect(home).not.toContain('data-nib-behaviors')
+    expect(home).not.toContain('data-nib-enhancements')
+    expect(home).not.toContain('data-nib-islands')
     expect(home).toContain('First typed post')
     expect(home).toContain('2026-07-18T00:00:00.000Z')
     expect(home).toContain('/journal/assets/')
     expect(about).toContain('<h1>About the journal</h1>')
     expect(about).toContain('<section data-eyebrow="Company">')
-    expect(about).not.toContain('data-nib-behaviors')
-    expect(about).not.toContain('data-nib-client-bootstrap')
-    expect(enhanced).toContain('data-nib-behavior="reveal"')
-    expect(enhanced).toContain('data-nib-behavior="plain"')
-    expect(enhanced).toContain('data-nib-defer="visible"')
-    expect(enhanced).toContain('data-nib-behaviors')
+    expect(about).not.toContain('data-nib-enhancements')
+    expect(about).not.toContain('data-nib-islands')
+    expect(enhanced).toContain('data-nib-enhancement="reveal"')
+    expect(enhanced).toContain('data-nib-enhancement="plain"')
+    expect(enhanced).toContain('data-nib-when="visible"')
+    expect(enhanced).toContain('data-nib-enhancements')
+    expect(enhanced).not.toContain('data-nib-islands')
+    expect(island).toContain('<h1>React island</h1>')
+    expect(island).toContain('data-nib-island="counter"')
+    expect(island).toContain('data-nib-when="load"')
+    expect(island).toContain('data-nib-props="{&quot;initialCount&quot;:3}"')
+    expect(island).toMatch(/>Count: (?:<!-- -->)?3<\/button>/)
+    expect(island).toContain('data-nib-islands')
+    expect(island).not.toContain('data-nib-enhancements')
     const revealEntry = Object.values(viteManifest)
-      .find((entry) => entry.src?.endsWith('/behaviors/reveal/index.client.ts'))
+      .find((entry) => entry.src?.endsWith('/enhancements/reveal/index.client.ts'))
     expect(revealEntry?.isDynamicEntry).toBe(true)
     expect(revealEntry?.css).toHaveLength(1)
     for (const stylesheet of revealEntry?.css ?? []) {
@@ -156,31 +166,53 @@ describe('framework-owned site builds', () => {
       expect(enhanced).toContain(stylesheet)
     }
     const plainJavaScriptEntry = Object.values(viteManifest)
-      .find((entry) => entry.src?.endsWith('/behaviors/plain/index.client.js'))
+      .find((entry) => entry.src?.endsWith('/enhancements/plain/index.client.js'))
     expect(plainJavaScriptEntry?.isDynamicEntry).toBe(true)
-    const behaviorEntry = Object.values(viteManifest)
-      .find((entry) => entry.name === 'behaviors')
-    expect(behaviorEntry).toBeDefined()
-    const behaviorPreloads = manifestModulePreloads(viteManifest, behaviorEntry!)
+    const enhancementEntry = Object.values(viteManifest)
+      .find((entry) => entry.name === 'enhancements')
+    expect(enhancementEntry).toBeDefined()
+    const enhancementPreloads = manifestModulePreloads(viteManifest, enhancementEntry!)
       .map((file) => `/journal/${file}`)
-    expect(runtimePreloads(home, 'behaviors')).toEqual([])
-    expect(runtimePreloads(enhanced, 'behaviors'))
-      .toEqual(expect.arrayContaining(behaviorPreloads))
-    expect(runtimePreloads(enhanced, 'behaviors')).toEqual(expect.arrayContaining([
+    expect(runtimePreloads(home, 'enhancements')).toEqual([])
+    expect(runtimePreloads(enhanced, 'enhancements'))
+      .toEqual(expect.arrayContaining(enhancementPreloads))
+    expect(runtimePreloads(enhanced, 'enhancements')).toEqual(expect.arrayContaining([
       `/journal/${revealEntry!.file}`,
     ]))
-    expect(runtimePreloads(enhanced, 'behaviors')).not.toContain(
+    expect(runtimePreloads(enhanced, 'enhancements')).not.toContain(
       `/journal/${plainJavaScriptEntry!.file}`,
     )
-    expect(runtimePreloads(about, 'behaviors')).toEqual([])
-    const behaviorFiles = [
-      behaviorEntry!.file,
-      ...(behaviorEntry!.imports ?? []).map((id) => viteManifest[id]!.file),
+    expect(runtimePreloads(about, 'enhancements')).toEqual([])
+    const counterEntry = Object.values(viteManifest)
+      .find((entry) => entry.src?.endsWith('/islands/counter.tsx'))
+    expect(counterEntry?.isDynamicEntry).toBe(true)
+    expect(counterEntry?.css).toHaveLength(1)
+    for (const stylesheet of counterEntry?.css ?? []) {
+      expect(home).not.toContain(stylesheet)
+      expect(about).not.toContain(stylesheet)
+      expect(enhanced).not.toContain(stylesheet)
+      expect(island).toContain(stylesheet)
+    }
+    const islandEntry = Object.values(viteManifest)
+      .find((entry) => entry.name === 'islands')
+    expect(islandEntry).toBeDefined()
+    const islandPreloads = manifestModulePreloads(viteManifest, islandEntry!)
+      .map((file) => `/journal/${file}`)
+    expect(runtimePreloads(home, 'islands')).toEqual([])
+    expect(runtimePreloads(about, 'islands')).toEqual([])
+    expect(runtimePreloads(enhanced, 'islands')).toEqual([])
+    expect(runtimePreloads(island, 'islands')).toEqual(expect.arrayContaining([
+      ...islandPreloads,
+      `/journal/${counterEntry!.file}`,
+    ]))
+    const enhancementFiles = [
+      enhancementEntry!.file,
+      ...(enhancementEntry!.imports ?? []).map((id) => viteManifest[id]!.file),
     ]
-    const behaviorJavaScript = (await Promise.all(
-      behaviorFiles.map((file) => fs.readFile(path.join(output, 'client', file), 'utf8')),
+    const enhancementJavaScript = (await Promise.all(
+      enhancementFiles.map((file) => fs.readFile(path.join(output, 'client', file), 'utf8')),
     )).join('\n')
-    expect(behaviorJavaScript).not.toMatch(/react-dom|hydrateRoot|createRoot/)
+    expect(enhancementJavaScript).not.toMatch(/react-dom|hydrateRoot|createRoot/)
     expect(team).toContain('<h1>Ada, Engineer</h1>')
     expect(pencil).toContain('<h1>Pencil</h1>')
     expect(pencil).toContain('<p>$2</p>')
@@ -203,6 +235,7 @@ describe('framework-owned site builds', () => {
         contentType: 'text/html; charset=utf-8',
       }),
       expect.objectContaining({ path: '/enhanced/', artifact: 'enhanced/index.html' }),
+      expect.objectContaining({ path: '/island/', artifact: 'island/index.html' }),
       expect.objectContaining({
         path: '/rss.xml',
         artifact: 'rss.xml',
@@ -230,7 +263,8 @@ describe('framework-owned site builds', () => {
       expect(html).toContain('<h1>No client build required</h1>')
       expect(html).not.toContain('<script')
       expect(html).not.toContain('rel="stylesheet"')
-      expect(html).not.toContain('data-nib-behaviors')
+      expect(html).not.toContain('data-nib-enhancements')
+      expect(html).not.toContain('data-nib-islands')
       await expect(fs.access(path.join(staticOutput, '.vite/manifest.json')))
         .rejects.toMatchObject({ code: 'ENOENT' })
       await expect(fs.access(path.join(staticOutput, 'assets')))

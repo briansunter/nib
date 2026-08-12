@@ -1,28 +1,28 @@
 import { createElement } from 'react'
 import { describe, expect, it } from 'vitest'
-import { Behavior } from '../src/framework/behaviors'
+import { enhance } from '../src/framework/enhancements'
 import { createProjectRenderer } from '../src/framework/project-renderer'
 
 const config = {}
 
-describe('project behavior marker validation', () => {
-  it('rejects a declared behavior without its matching client module', async () => {
+describe('project enhancement marker validation', () => {
+  it('rejects a declared enhancement without its matching client module', async () => {
     const renderer = await createProjectRenderer({
       config,
       root: process.cwd(),
       base: '/',
       pages: {
         '/src/pages/page.tsx': {
-          default: () => <Behavior name="missing"><div /></Behavior>,
-          meta: { title: 'Behavior' },
+          default: () => <div {...enhance('missing')} />,
+          meta: { title: 'Enhancement' },
         },
       },
-      behaviorClientFiles: [],
+      enhancementClientFiles: [],
     })
 
     expect(() => renderer.render('/')).toThrow(
-      'Route / emitted behavior "missing" without a matching client module in '
-      + 'src/behaviors/**/index.client.{js,ts}',
+      'Route / emitted enhancement "missing" without a matching client module in '
+      + 'src/enhancements/**/index.client.{js,ts}',
     )
   })
 
@@ -30,7 +30,7 @@ describe('project behavior marker validation', () => {
     function Page() {
       return (
         <>
-          <Behavior name="filters/search"><div>Search</div></Behavior>
+          <div {...enhance('filters/search')}>Search</div>
           {createElement('div', { 'data-raw-marker': 'true' }, 'Raw marker')}
         </>
       )
@@ -40,14 +40,16 @@ describe('project behavior marker validation', () => {
       root: process.cwd(),
       base: '/',
       pages: { '/src/pages/page.tsx': { default: Page, meta: { title: 'Markers' } } },
-      behaviorClientFiles: [
-        '/src/behaviors/filters/search/index.client.ts',
+      enhancementClientFiles: [
+        '/src/enhancements/filters/search/index.client.ts',
       ],
     })
 
     const output = renderer.render('/')
     if (output.kind !== 'page') throw new Error('Expected page output')
-    expect(output.page.behaviors).toEqual(['filters/search'])
+    expect(output.page.enhancements).toEqual([
+      { id: 'filters/search', when: 'load' },
+    ])
     expect(output.page.html).toContain('data-raw-marker="true"')
   })
 
@@ -57,10 +59,10 @@ describe('project behavior marker validation', () => {
       root: process.cwd(),
       base: '/',
       pages: {},
-      behaviorClientFiles: [
-        '/src/behaviors/search/index.client.ts',
-        './src/behaviors/search/index.client.ts',
+      enhancementClientFiles: [
+        '/src/enhancements/search/index.client.ts',
+        './src/enhancements/search/index.client.ts',
       ],
-    })).rejects.toThrow('Duplicate behavior ID: search')
+    })).rejects.toThrow('Duplicate enhancement ID: search')
   })
 })

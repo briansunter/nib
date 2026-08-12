@@ -196,7 +196,7 @@ describe('optional image plugin', () => {
     expect(html).toContain('type="image/webp"')
     expect(html).toContain('.jpeg')
     expect(html).toContain('fetchPriority="high"')
-    expect(html).not.toContain('data-nib-behaviors')
+    expect(html).not.toContain('data-nib-enhancements')
     expect(html).not.toContain(root)
     const assets = await fs.readdir(path.join(root, 'dist/client/assets/nib'))
     expect(assets.some((asset) => asset.endsWith('.webp'))).toBe(true)

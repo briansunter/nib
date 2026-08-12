@@ -1,4 +1,4 @@
-import { Behavior, definePage, siteHref } from '@briansunter/nib'
+import { definePage, enhance, siteHref } from '@briansunter/nib'
 import { Image } from '@briansunter/nib-images'
 import type config from '../../nib.config'
 import fieldNotes from '../assets/images/field-notes.jpg?nib-image'
@@ -60,7 +60,7 @@ export default definePage<typeof config>(function HomePage({ collections }) {
             <article className="post-card" key={id}>
               <time dateTime={data.date}>{data.date}</time>
               <h3>
-                <a data-nib-prefetch="hover" href={siteHref(data.path)}>
+                <a href={siteHref(data.path)}>
                   {data.title}
                 </a>
               </h3>
@@ -88,12 +88,10 @@ export default definePage<typeof config>(function HomePage({ collections }) {
         </div>
       </section>
 
-      <Behavior name="reading-goal">
-        <div className="reading-goal" data-saved="2">
-          <p><strong data-saved-count="">2</strong> sample notes saved for later.</p>
-          <button type="button">Save another</button>
-        </div>
-      </Behavior>
+      <div {...enhance('reading-goal')} className="reading-goal" data-saved="2">
+        <p><strong data-saved-count="">2</strong> sample notes saved for later.</p>
+        <button type="button">Save another</button>
+      </div>
     </>
   )
 })

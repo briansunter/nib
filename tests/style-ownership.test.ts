@@ -44,9 +44,13 @@ describe('page stylesheet ownership', () => {
   it('allows styles owned by deployable client graphs', async () => {
     await expect(resolveEdge('client', './page.css', '/site/src/pages/page.tsx'))
       .resolves.toBeNull()
-    await expect(resolveEdge('server', './map.css', '/site/src/behaviors/map/index.client.ts'))
+    await expect(resolveEdge('server', './map.css', '/site/src/enhancements/map/index.client.ts'))
       .resolves.toBeNull()
-    await expect(resolveEdge('server', './legacy.css', '/site/src/behaviors/legacy/index.client.js'))
+    await expect(resolveEdge('server', './legacy.css', '/site/src/enhancements/legacy/index.client.js'))
+      .resolves.toBeNull()
+    await expect(resolveEdge('server', './island.css', '/site/src/islands/counter.tsx'))
+      .resolves.toBeNull()
+    await expect(resolveEdge('server', './client.css', '/site/src/client.ts'))
       .resolves.toBeNull()
     await expect(resolveEdge('server', './tokens.css', '/site/src/style.css'))
       .resolves.toBeNull()
@@ -54,39 +58,39 @@ describe('page stylesheet ownership', () => {
       .resolves.toBeNull()
   })
 
-  it('does not mistake ordinary behavior helpers for client entries', async () => {
+  it('does not mistake ordinary enhancement helpers for client entries', async () => {
     await expect(resolveEdge(
       'server',
       './helper.css',
-      '/site/src/behaviors/helper.ts',
+      '/site/src/enhancements/helper.ts',
     )).rejects.toThrow('cannot deploy stylesheet')
     await expect(resolveEdge(
       'server',
       './nested-helper.css',
-      '/site/src/behaviors/map/helper.ts',
+      '/site/src/enhancements/map/helper.ts',
     )).rejects.toThrow('cannot deploy stylesheet')
   })
 
-  it('tracks plugin-owned client-entry imports through their resolved graph', async () => {
+  it('tracks application-client imports through their resolved graph', async () => {
     const plugin = pageStyleOwnershipGuard('/site', 'development')
     if (typeof plugin.resolveId !== 'function') throw new Error('Style guard has no resolveId hook')
     const context = {
       resolve: vi.fn(async (source: string) => ({
         id: source === './client-entry'
-          ? '/site/src/utils/client-entry.ts'
-          : '/site/src/styles/plugin.css',
+          ? '/site/src/client.ts'
+          : '/site/src/styles/client.css',
       })),
     } as never
     await expect(plugin.resolveId.call(
       context,
       './client-entry',
-      '\0virtual:nib/client-bootstrap-entry',
+      '\0virtual:nib/app-client-entry',
       {} as never,
     )).resolves.toBeNull()
     await expect(plugin.resolveId.call(
       context,
-      '../styles/plugin.css',
-      '/site/src/utils/client-entry.ts',
+      './styles/client.css',
+      '/site/src/client.ts',
       {} as never,
     )).resolves.toBeNull()
   })
@@ -138,5 +142,70 @@ describe('page stylesheet ownership', () => {
     await fs.writeFile(path.join(sourceRoot, 'real.css'), 'body {}')
     await fs.writeFile(entry, `void import('./real.css')`)
     await expect(build(config)).rejects.toThrow('real.css')
+  })
+
+  it.each(['island-first', 'page-first'] as const)(
+    'rejects a shared style helper with dual ownership in %s resolution order',
+    async (order) => {
+      const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-style-dual-'))
+      temporaryRoots.push(root)
+      await fs.mkdir(path.join(root, 'src/islands'), { recursive: true })
+      await fs.mkdir(path.join(root, 'src/pages'), { recursive: true })
+      await fs.writeFile(
+        path.join(root, 'src/islands/counter.tsx'),
+        `import '../shared'; export default null`,
+      )
+      await fs.writeFile(
+        path.join(root, 'src/pages/page.ts'),
+        `import '../shared'; export default null`,
+      )
+      await fs.writeFile(
+        path.join(root, 'src/shared.ts'),
+        `import './shared.css'; export const shared = true`,
+      )
+      await fs.writeFile(path.join(root, 'src/shared.css'), '.shared { color: red }')
+      const imports = order === 'island-first'
+        ? [`./src/islands/counter.tsx`, `./src/pages/page.ts`]
+        : [`./src/pages/page.ts`, `./src/islands/counter.tsx`]
+      const entry = path.join(root, 'entry.ts')
+      await fs.writeFile(entry, imports.map((source) => `import '${source}'`).join('\n'))
+
+      await expect(build({
+        configFile: false,
+        logLevel: 'silent',
+        root,
+        plugins: [pageStyleOwnershipGuard(root, 'server')],
+        build: {
+          write: false,
+          rollupOptions: { input: entry },
+        },
+      })).rejects.toThrow(/cannot deploy stylesheet.*shared\.css/)
+    },
+  )
+
+  it('allows a style helper reached only from an island', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-style-island-'))
+    temporaryRoots.push(root)
+    await fs.mkdir(path.join(root, 'src/islands'), { recursive: true })
+    await fs.writeFile(
+      path.join(root, 'src/islands/counter.tsx'),
+      `import '../shared'; export default null`,
+    )
+    await fs.writeFile(
+      path.join(root, 'src/shared.ts'),
+      `import './shared.css'; export const shared = true`,
+    )
+    await fs.writeFile(path.join(root, 'src/shared.css'), '.shared { color: red }')
+
+    await expect(build({
+      configFile: false,
+      logLevel: 'silent',
+      root,
+      plugins: [pageStyleOwnershipGuard(root, 'server')],
+      build: {
+        write: false,
+        rollupOptions: { input: path.join(root, 'src/islands/counter.tsx') },
+      },
+    })).resolves.toBeDefined()
   })
 })

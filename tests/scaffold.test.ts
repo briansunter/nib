@@ -46,7 +46,7 @@ describe('site scaffolding', () => {
     await expect(fs.readFile(path.join(target, 'src/pages/page.tsx'), 'utf8')).resolves
       .toContain("from '@briansunter/nib'")
     await expect(fs.readFile(
-      path.join(target, 'src/behaviors/counter/index.client.ts'),
+      path.join(target, 'src/enhancements/counter/index.client.ts'),
       'utf8',
     )).resolves.toContain('(root, signal)')
 

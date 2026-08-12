@@ -62,15 +62,16 @@ interface HtmlTemplateEntry {
 }
 
 export interface HtmlTemplateEntries {
-  readonly behavior?: HtmlTemplateEntry
-  readonly clientBootstrap?: HtmlTemplateEntry
+  readonly island?: HtmlTemplateEntry
+  readonly enhancement?: HtmlTemplateEntry
+  readonly client?: HtmlTemplateEntry
   readonly stylesheets: readonly string[]
 }
 
-export const BEHAVIOR_ROUTE_PRELOAD_MARKER = '<!--nib-behavior-route-preloads-->'
+export const ROUTE_CLIENT_ASSET_MARKER = '<!--nib-route-client-assets-->'
 
 function modulePreloadLinks(
-  owner: 'behaviors' | 'client-bootstrap',
+  owner: 'islands' | 'enhancements' | 'client',
   preloads: readonly string[],
 ): string {
   return preloads
@@ -84,23 +85,26 @@ export function htmlTemplate(entries: HtmlTemplateEntries): string {
   const styles = entries.stylesheets
     .map((href) => `<link rel="stylesheet" href="${href}" />`)
     .join('\n    ')
-  const clientBootstrapPreloadSet = new Set(
-    entries.clientBootstrap?.preloads ?? [],
-  )
-  const behaviorPreloads = entries.behavior === undefined
+  const clientPreloadSet = new Set(entries.client?.preloads ?? [])
+  const islandPreloads = entries.island === undefined
     ? ''
     : modulePreloadLinks(
-        'behaviors',
-        [...new Set(entries.behavior.preloads)].filter((href) => (
-          !clientBootstrapPreloadSet.has(href)
+        'islands',
+        [...new Set(entries.island.preloads)].filter((href) => (
+          !clientPreloadSet.has(href)
         )),
       )
-  const clientBootstrapPreloads = entries.clientBootstrap === undefined
+  const enhancementPreloads = entries.enhancement === undefined
     ? ''
     : modulePreloadLinks(
-        'client-bootstrap',
-        [...clientBootstrapPreloadSet],
+        'enhancements',
+        [...new Set(entries.enhancement.preloads)].filter((href) => (
+          !clientPreloadSet.has(href)
+        )),
       )
+  const clientPreloads = entries.client === undefined
+    ? ''
+    : modulePreloadLinks('client', [...clientPreloadSet])
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -108,15 +112,19 @@ export function htmlTemplate(entries: HtmlTemplateEntries): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--head-outlet-->
     ${styles}
-    ${behaviorPreloads}
-    ${entries.behavior === undefined
+    ${clientPreloads}
+    ${entries.client === undefined
       ? ''
-      : `${BEHAVIOR_ROUTE_PRELOAD_MARKER}
-    <!--nib-behaviors-entry--><script data-nib-behaviors type="module" src="${entries.behavior.source}"></script>`}
-    ${entries.clientBootstrap === undefined
+      : `<script data-nib-client type="module" src="${entries.client.source}"></script>`}
+    ${ROUTE_CLIENT_ASSET_MARKER}
+    ${islandPreloads}
+    ${entries.island === undefined
       ? ''
-      : `${clientBootstrapPreloads}
-    <script data-nib-client-bootstrap type="module" src="${entries.clientBootstrap.source}"></script>`}
+      : `<!--nib-islands-entry--><script data-nib-islands type="module" src="${entries.island.source}"></script>`}
+    ${enhancementPreloads}
+    ${entries.enhancement === undefined
+      ? ''
+      : `<!--nib-enhancements-entry--><script data-nib-enhancements type="module" src="${entries.enhancement.source}"></script>`}
   </head>
   <body>
     <div id="root"><!--ssr-outlet--></div>

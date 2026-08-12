@@ -44,7 +44,7 @@ describe('Nib documentation site', () => {
     expect(home).toContain('nib.config.ts')
     expect(home).toContain('posts/page.csv')
     expect(home).toContain('content/posts/')
-    expect(home).toContain('behaviors/counter/index.client.ts')
+    expect(home).toContain('enhancements/counter/index.client.ts')
     expect(home).toContain('about/page.md → /about/')
     expect(home).toContain('src/pages/notes/page.md')
     expect(home).toContain('/notes/index.html')
@@ -53,7 +53,7 @@ describe('Nib documentation site', () => {
     expect(home).toContain('React pages')
     expect(home).toContain('Markdown')
     expect(home).toContain('Data pages')
-    expect(home).toContain('Client behaviors')
+    expect(home).toContain('Client enhancements')
     expect(home).toContain('No server required.')
     expect(home).toContain('Deploy a Nib site')
     expect(overview).toContain('<aside class="docs-sidebar">')
@@ -69,8 +69,7 @@ describe('Nib documentation site', () => {
       '/docs/data-pages-and-collections/',
       '/docs/image-optimization/',
       '/docs/plugin-content-and-routing/',
-      '/docs/client-behaviors/',
-      '/docs/client-navigation/',
+      '/docs/client-enhancements/',
       '/docs/github-pages/',
       '/docs/releases/',
     ]) {
@@ -89,5 +88,28 @@ describe('Nib documentation site', () => {
       'utf8',
     )
     expect(dataPages).toContain('<h1>Data pages and collections</h1>')
+    const clientEnhancements = await fs.readFile(
+      path.join(output, 'client/docs/client-enhancements/index.html'),
+      'utf8',
+    )
+    expect(clientEnhancements).toContain('<h1>Client enhancements</h1>')
+    expect(clientEnhancements).toContain('src/enhancements/counter/index.client.ts')
+    expect(clientEnhancements).toContain('@briansunter/nib/react')
+    expect(clientEnhancements).toContain('src/islands/counter.tsx')
+    for (const legacyRoute of [
+      'client-behaviors',
+      'client-navigation',
+      'react-islands',
+    ]) {
+      const redirect = await fs.readFile(
+        path.join(output, `client/docs/${legacyRoute}/index.html`),
+        'utf8',
+      )
+      expect(redirect).toContain('http-equiv="refresh"')
+      expect(redirect).toContain('url=/docs/client-enhancements')
+    }
+    const legacyGuide = /href="[^"]*\/docs\/(?:client-behaviors|client-navigation|react-islands)\//
+    expect(home).not.toMatch(legacyGuide)
+    expect(overview).not.toMatch(legacyGuide)
   }, 30_000)
 })

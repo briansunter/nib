@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { Behavior } from '../src/framework/behaviors'
+import { enhance } from '../src/framework/enhancements'
 import { createProjectRenderer } from '../src/framework/project-renderer'
 import {
   defineCollection,
@@ -22,14 +22,12 @@ import { rss } from '../src/rss'
 const Page = () => <h1>Home</h1>
 
 describe('project renderer', () => {
-  it('allows nested independent behavior ownership', async () => {
+  it('collects nested enhancement roots independently', async () => {
     function NestedPage() {
         return (
-          <Behavior name="outer">
-            <article>
-              <Behavior name="inner"><p>Details</p></Behavior>
-            </article>
-          </Behavior>
+          <article {...enhance('outer')}>
+            <p {...enhance('inner')}>Details</p>
+          </article>
         )
     }
     const renderer = await createProjectRenderer({
@@ -42,16 +40,19 @@ describe('project renderer', () => {
           meta: { title: 'Invalid' },
         },
       },
-      behaviorClientFiles: [
-        '/src/behaviors/outer/index.client.ts',
-        '/src/behaviors/inner/index.client.ts',
+      enhancementClientFiles: [
+        '/src/enhancements/outer/index.client.ts',
+        '/src/enhancements/inner/index.client.ts',
       ],
     })
 
     const output = renderer.render('/')
     if (output.kind !== 'page') throw new Error('Expected page output')
-    expect(output.page.behaviors).toEqual(['outer', 'inner'])
-    expect(output.page.html).toContain('data-nib-behavior="inner"')
+    expect(output.page.enhancements).toEqual([
+      { id: 'outer', when: 'load' },
+      { id: 'inner', when: 'load' },
+    ])
+    expect(output.page.html).toContain('data-nib-enhancement="inner"')
   })
 
   it('keeps draft data pages out of page-source collections', async () => {
@@ -188,7 +189,7 @@ describe('project renderer', () => {
         status: 200,
         head: '<title>Site</title>\n    <meta name="description" content="Description" />',
         html: '<main><h1>Home</h1></main>',
-        behaviors: [],
+        enhancements: [],
       },
     })
   })

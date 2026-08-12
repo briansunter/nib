@@ -1,16 +1,17 @@
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  NIB_BEHAVIOR_ENTRY,
-  NIB_CLIENT_BOOTSTRAP_ENTRY,
+  NIB_APP_CLIENT_ENTRY,
+  NIB_ENHANCEMENT_ENTRY,
+  NIB_ISLAND_ENTRY,
   NIB_SERVER_ENTRY,
   nibProject,
 } from '../src/framework/project-vite-plugin'
 
-function runVirtualRuntimeEntry(source: string): {
-  events: string[]
-  dispose(): void
-} {
+function runVirtualRuntimeEntry(
+  source: string,
+  factoryName: 'createEnhancementRuntime' | 'createIslandRuntime',
+): { events: string[]; dispose(): void } {
   const events: string[] = []
   const modules = {}
   const root = {}
@@ -28,11 +29,6 @@ function runVirtualRuntimeEntry(source: string): {
     events.push('create')
     return runtime
   }
-  const registerClientRuntime = (received: unknown) => {
-    expect(received).toBe(runtime)
-    events.push('register')
-    return () => events.push('unregister')
-  }
   let disposeCallback: (() => void) | undefined
   const hot = {
     dispose(callback: () => void) {
@@ -44,31 +40,26 @@ function runVirtualRuntimeEntry(source: string): {
     .replace(/import\.meta\.glob\([^\n]*\)/g, 'discoverModules()')
     .replaceAll('import.meta.hot', 'hot')
   const execute = new Function(
-    'createBehaviorRuntime',
-    'registerClientRuntime',
+    factoryName,
     'discoverModules',
     'document',
     'hot',
     executable,
   )
-  execute(
-    createRuntime,
-    registerClientRuntime,
-    () => modules,
-    root,
-    hot,
-  )
+  execute(createRuntime, () => modules, root, hot)
   return {
     events,
     dispose() {
-      if (!disposeCallback) throw new Error('Virtual entry did not register an HMR disposer')
+      if (disposeCallback === undefined) {
+        throw new Error('Virtual entry did not register an HMR disposer')
+      }
       disposeCallback()
     },
   }
 }
 
 describe('consumer project Vite adapter', () => {
-  it('provides framework-owned virtual entries for routes and behaviors', () => {
+  it('provides framework-owned server, enhancement, and island entries', () => {
     const plugin = nibProject(
       '/site/nib.config.ts',
       '/site',
@@ -81,163 +72,148 @@ describe('consumer project Vite adapter', () => {
     }
     const resolve = plugin.resolveId as (id: string) => string | null
     const load = plugin.load as (id: string) => string | null
-    const behaviorId = resolve(NIB_BEHAVIOR_ENTRY)
+    const enhancementId = resolve(NIB_ENHANCEMENT_ENTRY)
+    const islandId = resolve(NIB_ISLAND_ENTRY)
     const serverId = resolve(NIB_SERVER_ENTRY)
-    if (!behaviorId || !serverId) throw new Error('Nib virtual entries did not resolve')
+    if (!enhancementId || !islandId || !serverId) {
+      throw new Error('Nib virtual entries did not resolve')
+    }
 
-    const behavior = load(behaviorId)
+    const enhancement = load(enhancementId)
+    const island = load(islandId)
     const server = load(serverId)
-    expect(behavior).toContain(
-      'import.meta.glob("/src/behaviors/**/index.client.{js,ts}")',
+    expect(enhancement).toContain(
+      'import.meta.glob("/src/enhancements/**/index.client.{js,ts}")',
     )
-    expect(behavior).toContain('createBehaviorRuntime')
-    expect(behavior).toContain('@briansunter/nib/internal/client')
+    expect(enhancement).toContain('createEnhancementRuntime')
+    expect(enhancement).toContain('@briansunter/nib/internal/enhancements')
+    expect(island).toContain('createIslandRuntime')
+    expect(island).toContain('@briansunter/nib/internal/islands')
+    expect(island).toContain('/src/islands/**/*.tsx')
     expect(server).toContain(path.resolve('/site/nib.config.ts'))
-    expect(server).toContain('"/src/pages/**/page.tsx"')
     expect(server).toContain('"/src/pages/**/page.yaml"')
     expect(server).toContain('"/src/content/projects.json"')
     expect(server).toContain("query: '?nib-page-source'")
-    expect(server).toContain("import.meta.glob('/src/pages/**/layout.tsx'")
-    expect(server).toContain(
-      'Object.keys(import.meta.glob("/src/behaviors/**/index.client.{js,ts}"))',
-    )
-    expect(server).toContain('createProjectRenderer')
-    expect(server).toContain('root: "/site"')
+    expect(server).toContain('enhancementClientFiles,')
+    expect(server).toContain('islandModules,')
     expect(server).toContain('command: "serve"')
-    expect(server).toContain('behaviorClientFiles,')
     expect(server).toContain('export const finalize = renderer.finalize')
     expect(server).toContain('@briansunter/nib/internal/server')
+    expect(resolve(NIB_APP_CLIENT_ENTRY)).toBeNull()
     expect(resolve('other')).toBeNull()
-    expect(resolve(NIB_CLIENT_BOOTSTRAP_ENTRY)).toBeNull()
     expect(load('other')).toBeNull()
   })
 
-  it('unregisters and destroys the behavior runtime during HMR disposal', () => {
+  it.each([
+    [NIB_ENHANCEMENT_ENTRY, 'createEnhancementRuntime' as const],
+    [NIB_ISLAND_ENTRY, 'createIslandRuntime' as const],
+  ])('destroys the %s runtime during HMR disposal', (entry, factoryName) => {
     const plugin = nibProject('/site/nib.config.ts')
     if (typeof plugin.resolveId !== 'function' || typeof plugin.load !== 'function') {
       throw new Error('Nib project plugin is missing virtual module hooks')
     }
-    const resolve = plugin.resolveId as (id: string) => string | null
-    const load = plugin.load as (id: string) => string | null
-
-    const resolved = resolve(NIB_BEHAVIOR_ENTRY)
-    if (!resolved) throw new Error('Nib behavior entry did not resolve')
-    const source = load(resolved)
-    if (!source) throw new Error('Nib behavior entry did not load')
-    const execution = runVirtualRuntimeEntry(source)
-    expect(execution.events).toEqual(['create', 'register', 'mount'])
+    const resolved = (plugin.resolveId as (id: string) => string | null)(entry)
+    if (resolved === null) throw new Error('Nib runtime entry did not resolve')
+    const source = (plugin.load as (id: string) => string | null)(resolved)
+    if (source === null) throw new Error('Nib runtime entry did not load')
+    const execution = runVirtualRuntimeEntry(source, factoryName)
+    expect(execution.events).toEqual(['create', 'mount'])
     execution.dispose()
-    expect(execution.events).toEqual([
-      'create',
-      'register',
-      'mount',
-      'unregister',
-      'destroy',
-    ])
+    expect(execution.events).toEqual(['create', 'mount', 'destroy'])
   })
 
-  it('statically imports configured browser initializers into one optional entry', () => {
+  it('auto-imports the optional app client default initializer', () => {
     const plugin = nibProject(
       '/site/nib.config.ts',
       '/site',
       [],
       'build',
       [],
-      [{
-        module: '@briansunter/nib/client/navigation',
-        initializer: 'initializeClientNavigation',
-      }],
+      true,
     )
     if (typeof plugin.resolveId !== 'function' || typeof plugin.load !== 'function') {
       throw new Error('Nib project plugin is missing virtual module hooks')
     }
     const resolve = plugin.resolveId as (id: string) => string | null
     const load = plugin.load as (id: string) => string | null
-    const entryId = resolve(NIB_CLIENT_BOOTSTRAP_ENTRY)
-    if (!entryId) throw new Error('Nib client bootstrap entry did not resolve')
-    expect(load(entryId)).toBe([
-      'import { initializeClientNavigation as __nibClientInitializer0 } from "@briansunter/nib/client/navigation"',
-      'const __nibClientBootstrapController = new AbortController()',
-      'const __nibClientBootstrapSignal = __nibClientBootstrapController.signal',
-      'try {',
-      '  __nibClientInitializer0(__nibClientBootstrapSignal)',
-      '} catch (error) {',
-      '  __nibClientBootstrapController.abort(error)',
-      '  throw error',
-      '}',
-      'if (import.meta.hot) import.meta.hot.dispose(() => {',
-      '  __nibClientBootstrapController.abort()',
-      '})',
-    ].join('\n'))
-  })
-
-  it('aborts the shared bootstrap signal when startup fails', () => {
-    const plugin = nibProject(
-      '/site/nib.config.ts',
-      '/site',
-      [],
-      'build',
-      [],
-      [
-        { module: 'first', initializer: 'initializeFirst' },
-        { module: 'second', initializer: 'initializeSecond' },
-        { module: 'third', initializer: 'initializeThird' },
-      ],
-    )
-    if (typeof plugin.resolveId !== 'function' || typeof plugin.load !== 'function') {
-      throw new Error('Nib project plugin is missing virtual module hooks')
-    }
-    const resolve = plugin.resolveId as (id: string) => string | null
-    const load = plugin.load as (id: string) => string | null
-    const entryId = resolve(NIB_CLIENT_BOOTSTRAP_ENTRY)
-    if (!entryId) throw new Error('Nib client bootstrap entry did not resolve')
+    const entryId = resolve(NIB_APP_CLIENT_ENTRY)
+    if (entryId === null) throw new Error('Nib app client entry did not resolve')
     const source = load(entryId)
-    if (!source) throw new Error('Nib client bootstrap entry did not load')
+    expect(source).toContain("import initialize from '/src/client.ts'")
+    expect(source).toContain('initialize(controller.signal)')
+    expect(source).toContain('controller.abort()')
+  })
 
-    const events: string[] = []
-    const signals: AbortSignal[] = []
-    const startupError = new Error('third initializer failed')
-    let disposeCallback: (() => void) | undefined
+  it('aborts the app client signal when synchronous startup fails', () => {
+    const plugin = nibProject('/site/nib.config.ts', '/site', [], 'build', [], true)
+    if (typeof plugin.resolveId !== 'function' || typeof plugin.load !== 'function') {
+      throw new Error('Nib project plugin is missing virtual module hooks')
+    }
+    const entryId = (plugin.resolveId as (id: string) => string | null)(NIB_APP_CLIENT_ENTRY)
+    if (entryId === null) throw new Error('Nib app client entry did not resolve')
+    const source = (plugin.load as (id: string) => string | null)(entryId)
+    if (source === null) throw new Error('Nib app client entry did not load')
+
+    let received: AbortSignal | undefined
+    const startupError = new Error('client failed')
     const execute = new Function(
-      '__nibClientInitializer0',
-      '__nibClientInitializer1',
-      '__nibClientInitializer2',
+      'initialize',
       'hot',
+      'setTimeout',
       source
-        .replace(/^import[^\n]*\n/gm, '')
+        .replace(/^import[^\n]*\n/, '')
         .replaceAll('import.meta.hot', 'hot'),
     )
+    expect(() => execute(
+      (signal: AbortSignal) => {
+        received = signal
+        throw startupError
+      },
+      undefined,
+      setTimeout,
+    )).toThrow(startupError)
+    expect(received?.aborted).toBe(true)
+  })
 
-    let thrown: unknown
-    try {
-      execute(
-        (signal: AbortSignal) => {
-          events.push('start:first')
-          signals.push(signal)
-        },
-        (signal: AbortSignal) => {
-          events.push('start:second')
-          signals.push(signal)
-        },
-        (signal: AbortSignal) => {
-          events.push('start:third')
-          signals.push(signal)
-          throw startupError
-        },
-        {
-          dispose(callback: () => void) {
-            disposeCallback = callback
-          },
-        },
-      )
-    } catch (error) {
-      thrown = error
+  it('does not report an async cancellation caused by HMR disposal', async () => {
+    const plugin = nibProject('/site/nib.config.ts', '/site', [], 'build', [], true)
+    if (typeof plugin.resolveId !== 'function' || typeof plugin.load !== 'function') {
+      throw new Error('Nib project plugin is missing virtual module hooks')
     }
+    const entryId = (plugin.resolveId as (id: string) => string | null)(NIB_APP_CLIENT_ENTRY)
+    if (entryId === null) throw new Error('Nib app client entry did not resolve')
+    const source = (plugin.load as (id: string) => string | null)(entryId)
+    if (source === null) throw new Error('Nib app client entry did not load')
 
-    expect(thrown).toBe(startupError)
-    expect(events).toEqual(['start:first', 'start:second', 'start:third'])
-    expect(signals).toHaveLength(3)
-    expect(signals.every((signal) => signal.aborted)).toBe(true)
-    expect(disposeCallback).toBeUndefined()
+    let dispose: (() => void) | undefined
+    let reject: ((error: unknown) => void) | undefined
+    const reported: Array<() => void> = []
+    const execute = new Function(
+      'initialize',
+      'hot',
+      'setTimeout',
+      source
+        .replace(/^import[^\n]*\n/, '')
+        .replaceAll('import.meta.hot', 'hot'),
+    )
+    execute(
+      () => new Promise<void>((_resolve, rejectPromise) => {
+        reject = rejectPromise
+      }),
+      {
+        dispose(callback: () => void) {
+          dispose = callback
+        },
+      },
+      (callback: () => void) => {
+        reported.push(callback)
+      },
+    )
+
+    dispose?.()
+    reject?.(new DOMException('The operation was aborted', 'AbortError'))
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(reported).toEqual([])
   })
 })

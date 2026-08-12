@@ -1,13 +1,13 @@
 # Nib domain context
 
 Nib is a static-by-default React site framework. File pages, Markdown pages,
-and typed data pages become page routes. Explicit client behaviors add scoped
+and typed data pages become page routes. Explicit client enhancements add scoped
 browser interaction without browser React.
 
 ## Routing terms
 
 - **Page route** — a route rendered through React, layouts, the site shell, and
-  behavior collection.
+  enhancement and island collection.
 - **Resource route** — a virtual static route whose adapter supplies a body and
   content type, such as `rss.xml` or `sitemap.xml`.
 - **Redirect route** — a route that points to an internal path or an absolute
@@ -39,7 +39,7 @@ browser interaction without browser React.
   resolution.
 - Plugins may inspect resolved routes but cannot mutate them.
 - Renderer plugins may alter ordinary static page output but cannot author or
-  alter framework behavior metadata.
+  alter framework enhancement or island metadata.
 - Site and page metadata, plus renderer plugins' `head` hook, may contribute
   typed document-head elements. Nib owns ordering, escaping, and validation.
 - Nib owns route collisions, path normalization, output filenames, base paths,

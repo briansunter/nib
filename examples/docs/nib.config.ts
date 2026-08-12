@@ -7,7 +7,9 @@ export default defineConfig({
   vite: () => tailwindcss(),
   shell: SiteShell,
   redirects: {
-    '/docs/react-islands/': '/docs/client-behaviors/',
+    '/docs/client-behaviors/': '/docs/client-enhancements/',
+    '/docs/client-navigation/': '/docs/client-enhancements/',
+    '/docs/react-islands/': '/docs/client-enhancements/',
   },
   plugins: [
     siteMetadata({

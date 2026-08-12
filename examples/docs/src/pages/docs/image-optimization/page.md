@@ -77,7 +77,8 @@ the last valid source.
 
 The root component entry is processor-free. Import `images()` from the
 `/plugin` entry as shown above. `Image` is a static rendering primitive and
-cannot be imported into a client behavior; build and development report that
+cannot be imported into a client enhancement or React island; build and
+development report that
 mistake instead of shipping build-only image processing code to the browser.
 
 For imported content or Markdown that already uses stable public image URLs,

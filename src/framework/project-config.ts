@@ -2,7 +2,7 @@ import path from 'node:path'
 import { loadConfigFromFile, type ConfigEnv } from 'vite'
 import { pageSourceExtensions, validateDataDefinition } from './content'
 import { deployedOrigin } from './deployed-url'
-import { configuredPageSources } from './plugin-contributions'
+import { configuredPageSources } from './content/page-sources'
 import type { NibConfig } from './types'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -12,7 +12,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const pluginFields = new Set([
   'name',
   'pageSources',
-  'clientEntries',
   'vite',
   'routes',
   'renderer',
@@ -132,7 +131,6 @@ export function validateNibConfig(value: unknown): NibConfig {
   if (value.plugins !== undefined) {
     if (!Array.isArray(value.plugins)) throw new Error('Nib plugins must be an array')
     const names = new Set<string>()
-    const clientEntryOwners = new Map<string, string>()
     for (const plugin of value.plugins) {
       if (
         !isRecord(plugin)
@@ -155,32 +153,6 @@ export function validateNibConfig(value: unknown): NibConfig {
       }
       if (plugin.pageSources !== undefined && !Array.isArray(plugin.pageSources)) {
         throw new Error(`Nib plugin ${plugin.name} pageSources must be an array`)
-      }
-      if (plugin.clientEntries !== undefined && !Array.isArray(plugin.clientEntries)) {
-        throw new Error(`Nib plugin ${plugin.name} clientEntries must be an array`)
-      }
-      for (const entry of plugin.clientEntries ?? []) {
-        if (
-          !isRecord(entry)
-          || typeof entry.module !== 'string'
-          || entry.module.trim() === ''
-          || entry.module !== entry.module.trim()
-          || typeof entry.initializer !== 'string'
-          || !/^[$A-Z_a-z][$\w]*$/.test(entry.initializer)
-        ) {
-          throw new Error(
-            `Nib plugin ${plugin.name} clientEntries must contain a non-empty module `
-            + 'and JavaScript initializer name',
-          )
-        }
-        const identity = `${entry.module}#${entry.initializer}`
-        const existingOwner = clientEntryOwners.get(identity)
-        if (existingOwner !== undefined) {
-          throw new Error(
-            `Nib client entry ${identity} is duplicated by ${existingOwner} and ${plugin.name}`,
-          )
-        }
-        clientEntryOwners.set(identity, plugin.name)
       }
     }
   }
