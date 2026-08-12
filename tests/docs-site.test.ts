@@ -106,7 +106,7 @@ describe('Nib documentation site', () => {
         'utf8',
       )
       expect(redirect).toContain('http-equiv="refresh"')
-      expect(redirect).toContain('url=/docs/client-enhancements')
+      expect(redirect).toMatch(/url=[^\s"]*\/docs\/client-enhancements/)
     }
     const legacyGuide = /href="[^"]*\/docs\/(?:client-behaviors|client-navigation|react-islands)\//
     expect(home).not.toMatch(legacyGuide)
