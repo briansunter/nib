@@ -332,8 +332,6 @@ interface DocumentFacts {
   readonly titleCount: number
   readonly imageCount: number
   readonly missingAltCount: number
-  readonly hasIslandRuntime: boolean
-  readonly islandCount: number
   readonly leakedImageHints: readonly string[]
 }
 
@@ -343,21 +341,13 @@ function documentFacts(document: ParsedInspectionDocument): DocumentFacts {
   let titleCount = 0
   let imageCount = 0
   let missingAltCount = 0
-  let hasIslandRuntime = false
-  let islandCount = 0
   for (const element of document.elements) {
     if (element.tagName === 'title') titleCount += 1
-    if (element.tagName === 'nib-island') islandCount += 1
     const image = element.tagName === 'img'
     if (image) imageCount += 1
     let hasAlt = false
-    let scriptSource = ''
     for (const attribute of element.attrs) {
       if (attribute.name === 'alt') hasAlt = true
-      if (element.tagName === 'script' && attribute.name === 'src') {
-        scriptSource = attribute.value
-      }
-      if (attribute.name === 'data-nib-islands') hasIslandRuntime = true
       if (attribute.name === 'data-nib-width' || attribute.name === 'data-nib-widths') {
         leakedImageHints.push(attribute.name)
       }
@@ -378,15 +368,12 @@ function documentFacts(document: ParsedInspectionDocument): DocumentFacts {
       }
     }
     if (image && !hasAlt) missingAltCount += 1
-    if (scriptSource.includes('assets/islands-')) hasIslandRuntime = true
   }
   return Object.freeze({
     references: Object.freeze(pageReferences),
     titleCount,
     imageCount,
     missingAltCount,
-    hasIslandRuntime,
-    islandCount,
     leakedImageHints: Object.freeze(leakedImageHints),
   })
 }
@@ -552,8 +539,6 @@ async function inspectPages(
       titleCount: facts.titleCount,
       imageCount: facts.imageCount,
       missingAltCount: facts.missingAltCount,
-      hasIslandRuntime: facts.hasIslandRuntime,
-      islandCount: facts.islandCount,
     })
     inspection.pages.push(page)
     for (const leaked of facts.leakedImageHints) {
@@ -589,15 +574,6 @@ async function inspectPages(
         code: 'IMAGE_ALT_MISSING',
         severity: 'warning',
         message: `${route.path}: ${facts.missingAltCount} image(s) missing alt text`,
-        route: route.path,
-        artifact,
-      }))
-    }
-    if (facts.hasIslandRuntime && facts.islandCount === 0) {
-      inspection.issues.push(issue({
-        code: 'ISLAND_RUNTIME_UNUSED',
-        severity: 'error',
-        message: `Static page ${route.path} ships island runtime without an island`,
         route: route.path,
         artifact,
       }))

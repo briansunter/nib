@@ -20,6 +20,7 @@ npm run dev -- --host 0.0.0.0 --allowed-host your-machine.example.ts.net
 Production builds also write `dist/client/.nib/publication.json`, which maps
 canonical routes to their static artifacts.
 
-Edit `nib.config.ts`, replace the pages under `src/pages`, add configured data
-page sources or collections when needed, and put interactive components under
-`src/islands`. The deployable static output is `dist/client`.
+Edit `nib.config.ts`, replace the pages under `src/pages`, and add configured
+data page sources or collections when needed. Use `src/enhancements` for scoped
+DOM modules and `src/islands` for optional stateful React components. The
+deployable static output is `dist/client`.

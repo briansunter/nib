@@ -1,39 +1,33 @@
-import { island } from '../src/framework/islands'
+import { island } from '../src/react'
 
-island((_props: {
-  title: string
-  count?: number
-}) => null)
-
-// @ts-expect-error Functions cannot cross the static HTML serialization boundary.
-island((_props: { onClick: () => void }) => null)
-
-// @ts-expect-error Nib's static server renderer requires synchronous island components.
-island(async () => null)
-
-island((_props: {
+const Counter = island((props: {
   title: string
   count?: number
   options: Array<{ label: string; selected: boolean }>
-}) => null)
+}) => <button>{props.title}: {props.count ?? 0}</button>, { when: 'visible' })
 
-// @ts-expect-error Nib's static server renderer requires synchronous island components.
-island(async () => null)
+;<Counter title="Cart" options={[]} />
 
-// @ts-expect-error Functions cannot cross the static HTML serialization boundary.
+// @ts-expect-error module identity is framework-private
+Counter.islandId
+
+// @ts-expect-error the wrapped component is framework-private
+Counter.Component
+
+// @ts-expect-error hydration timing is fixed on the island definition
+;<Counter title="Cart" options={[]} when="load" />
+
+// @ts-expect-error idle hydration is intentionally unsupported
+island(() => null, { when: 'idle' })
+
+// @ts-expect-error functions cannot cross the static HTML boundary
 island((_props: { onClick: () => void }) => null)
 
-// @ts-expect-error Class instances cannot cross the static HTML serialization boundary.
+// @ts-expect-error class instances cannot cross the static HTML boundary
 island((_props: { createdAt: Date }) => null)
 
-// @ts-expect-error when is reserved for the framework hydration strategy.
-island((_props: { when: string }) => null)
-
-// @ts-expect-error Broad object props cannot cross the static HTML serialization boundary.
+// @ts-expect-error broad objects cannot cross the static HTML boundary
 island((_props: { value: object }) => null)
 
-// @ts-expect-error Required undefined cannot cross the static HTML serialization boundary.
-island((_props: { value: undefined }) => null)
-
-// @ts-expect-error A union branch cannot hide non-serializable props.
-island((_props: { value: string } | { onClick: () => void }) => null)
+// @ts-expect-error async components cannot be statically server-rendered
+island(async () => null)

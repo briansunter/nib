@@ -6,7 +6,6 @@ import {
   siteMetadata,
 } from '@briansunter/nib'
 import { images } from '@briansunter/nib-images/plugin'
-import { clientNavigation } from '@briansunter/nib/navigation'
 import { rss } from '@briansunter/nib/rss'
 import { sitemap } from '@briansunter/nib/sitemap'
 import {
@@ -84,7 +83,6 @@ export default defineConfig({
       }],
     }),
     metadata({ siteName: site.name }),
-    clientNavigation({ prefetch: 'explicit' }),
     sitemap(),
     rss({
       title: site.name,

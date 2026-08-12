@@ -8,5 +8,5 @@
     "rootDir": "src"
   },
   "include": ["src"],
-  "exclude": ["src/App.tsx", "src/entry-islands.tsx", "src/entry-server.tsx", "src/routes.ts", "src/site.config.ts"]
+  "exclude": ["src/App.tsx", "src/entry-server.tsx", "src/routes.ts", "src/site.config.ts"]
 }

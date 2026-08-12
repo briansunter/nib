@@ -18,7 +18,7 @@ cd my-site
 npm run dev
 ```
 
-The command creates only your framework configuration and source files, installs dependencies, and leaves Nib as a versioned dependency. Framework routing, Vite integration, development SSR, prerendering, document generation, and island hydration stay inside `@briansunter/nib`.
+The command creates only your framework configuration and source files, installs dependencies, and leaves Nib as a versioned dependency. Framework routing, Vite integration, development SSR, prerendering, document generation, and client loading stay inside `@briansunter/nib`.
 
 ## 2. Set the site identity
 
@@ -116,22 +116,28 @@ Visit <http://localhost:5173/notes/>. Use Markdown for content-heavy pages and a
 
 ## 6. Add interaction when needed
 
-Nib includes a counter island at `src/islands/counter.tsx`. Import it into the TSX page:
+The starter includes a counter enhancement. Attach it to the existing button in
+the TSX page:
 
 ```tsx
-import Counter from '../../islands/counter'
+import { enhance } from '@briansunter/nib'
 
 export default function HelloPage() {
   return (
     <>
       <h1>Hello from Nib</h1>
-      <Counter initialCount={0} when="load" />
+      <button {...enhance('counter')} data-count="0" type="button">
+        Count: 0
+      </button>
     </>
   )
 }
 ```
 
-The rest of the page stays static HTML. Follow the [React islands guide](../react-islands/) to define your own typed island and choose when it hydrates.
+The matching `src/enhancements/counter/index.client.ts` module receives that
+button and an `AbortSignal` as positional arguments. The rest of the page stays
+static HTML. Follow the [client enhancements guide](../client-enhancements/)
+for the complete DOM contract and optional React islands.
 
 ## 7. Check a production build
 
@@ -147,5 +153,5 @@ The build writes the deployable site to `dist/client`. `dist/server` is only an 
 
 - Read [Pages and routes](../pages-and-routes/) for metadata, drafts, and fallback behavior.
 - Read [Markdown and layouts](../markdown-and-layouts/) to customize documentation pages.
-- Read [React islands](../react-islands/) to add state and event handlers.
+- Read [Client enhancements](../client-enhancements/) to add scoped DOM behavior or a React island.
 - Read [GitHub Pages](../github-pages/) before deploying below a repository base path.

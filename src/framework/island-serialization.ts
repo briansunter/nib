@@ -1,4 +1,5 @@
-export const MAX_SERIALIZED_PROPS_LENGTH = 64 * 1024
+/** Bounds malformed or externally-mutated island metadata. */
+export const MAX_SERIALIZED_PROPS_LENGTH = 512 * 1024
 
 export type JsonValue =
   | null
@@ -15,21 +16,26 @@ type IsBroadObject<Value> = [Value] extends [object]
 type IsOptionalKey<Value extends object, Key extends keyof Value> = {} extends Pick<Value, Key>
   ? true
   : false
+type IsJsonValueMember<Value> = Value extends null | string | number | boolean
+  ? true
+  : Value extends (...args: never[]) => unknown
+    ? false
+    : Value extends readonly (infer Item)[]
+      ? IsJsonValue<Item>
+      : Value extends object
+        ? JsonSerializableObject<Value>
+        : false
 type IsJsonValue<Value> = IsAny<Value> extends true
   ? false
   : [Value] extends [never | undefined]
     ? false
-    : [Value] extends [null | string | number | boolean]
-      ? true
-      : Value extends (...args: never[]) => unknown
-        ? false
-        : Value extends readonly (infer Item)[]
-          ? IsJsonValue<Item>
-          : Value extends object
-            ? JsonSerializableObject<Value>
-            : false
+    : false extends (
+        Value extends unknown ? IsJsonValueMember<Value> : never
+      )
+      ? false
+      : true
 
-/** Compile-time counterpart to the runtime serializer's plain JSON contract. */
+/** Compile-time counterpart to the runtime plain-JSON contract. */
 export type JsonSerializableObject<Value extends object> = Value extends unknown
   ? IsBroadObject<Value> extends true
     ? false
@@ -66,7 +72,9 @@ function validateValue(value: unknown, path: string, ancestors: Set<object>): vo
   ancestors.add(value)
   if (Array.isArray(value)) {
     for (let index = 0; index < value.length; index += 1) {
-      if (!(index in value)) throw new Error(`Island prop ${path} cannot contain sparse arrays`)
+      if (!(index in value)) {
+        throw new Error(`Island prop ${path} cannot contain sparse arrays`)
+      }
       validateValue(value[index], `${path}[${index}]`, ancestors)
     }
   } else {
@@ -84,7 +92,12 @@ function validateValue(value: unknown, path: string, ancestors: Set<object>): vo
 }
 
 function validatePropsObject(value: unknown): asserts value is Record<string, unknown> {
-  if (value === null || typeof value !== 'object' || Array.isArray(value) || !isPlainObject(value)) {
+  if (
+    value === null
+    || typeof value !== 'object'
+    || Array.isArray(value)
+    || !isPlainObject(value)
+  ) {
     throw new Error('Island props must be a plain object')
   }
   validateValue(value, 'props', new Set())
@@ -112,9 +125,3 @@ export function parseIslandProps(serialized: string): Record<string, unknown> {
   validatePropsObject(parsed)
   return parsed
 }
-
-/**
- * Neutral serialization aliases shared by behaviors and islands. Behaviors
- * route through these so they no longer import island-named primitives.
- */
-export { serializeIslandProps as serializeClientProps, parseIslandProps as parseClientProps }

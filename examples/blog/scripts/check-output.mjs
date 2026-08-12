@@ -33,10 +33,9 @@ const [
 assert.match(home, /<picture>/, 'home should contain an optimized picture')
 assert.match(home, /srcSet=/, 'home should contain responsive image candidates')
 assert.match(post, /<picture>/, 'Markdown content images should be optimized')
-assert.match(home, /data-island="reading-goal"/, 'home should include the React island')
-assert.match(home, /data-nib-behavior="theme-toggle"/, 'shell should include the client behavior')
-assert.match(home, /data-nib-client-bootstrap/, 'client navigation should contribute its entry')
-assert.doesNotMatch(post, /data-island="reading-goal"/, 'post should not include the home island')
+assert.match(home, /data-nib-enhancement="reading-goal"/, 'home should include the reading-goal enhancement')
+assert.match(home, /data-nib-enhancement="theme-toggle"/, 'shell should include the client enhancement')
+assert.doesNotMatch(post, /data-nib-enhancement="reading-goal"/, 'post should not include the home enhancement')
 
 const searchIndex = JSON.parse(search)
 assert.equal(searchIndex.version, 1)

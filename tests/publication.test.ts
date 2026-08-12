@@ -12,7 +12,7 @@ import {
 
 const page = {
   kind: 'page' as const,
-  page: { status: 200, head: '', html: '', islands: [], behaviors: [] },
+  page: { status: 200, head: '', html: '', enhancements: [], islands: [] },
 }
 
 describe('route publication', () => {
@@ -48,7 +48,7 @@ describe('route publication', () => {
         artifact: 'about',
         output: {
           kind: 'page',
-          page: { status: 200, head: '', html: '', islands: [], behaviors: [] },
+          page: { status: 200, head: '', html: '', enhancements: [], islands: [] },
         },
       },
       {

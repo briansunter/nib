@@ -1,7 +1,14 @@
-import { island } from '@briansunter/nib'
+import { useState } from 'react'
+import { island } from '@briansunter/nib/react'
+import './counter.css'
 
 function Counter({ initialCount }: { initialCount: number }) {
-  return <button type="button">Count: {initialCount}</button>
+  const [count, setCount] = useState(initialCount)
+  return (
+    <button type="button" onClick={() => setCount((value) => value + 1)}>
+      Count: {count}
+    </button>
+  )
 }
 
-export default island(Counter)
+export default island(Counter, { when: 'load' })

@@ -19,7 +19,8 @@
     "types": ["vite/client", "node"],
     "baseUrl": ".",
     "paths": {
-      "@briansunter/nib": ["./src/index.ts"]
+      "@briansunter/nib": ["./src/index.ts"],
+      "@briansunter/nib/react": ["./src/react.ts"]
     }
   },
   "include": ["src", "scripts", "examples/docs", "vite.framework.config.ts", "vitest.config.ts", "tests"]

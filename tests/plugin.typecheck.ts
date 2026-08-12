@@ -8,7 +8,6 @@ nibAuthoring.definePlugin
 const plugin = definePlugin({
   name: 'typed-plugin',
   pageSources: [],
-  clientEntries: [{ module: 'browser-module', initializer: 'startBrowser' }],
   vite(context) {
     context.base
     const target: 'client' | 'server' | 'development' = context.target
@@ -86,8 +85,6 @@ defineConfig({
 definePlugin({ name: 'bad-renderer', renderer: true })
 // @ts-expect-error declarative page sources must be an array.
 definePlugin({ name: 'bad-page-sources', pageSources: true })
-// @ts-expect-error declarative client entries must have valid fields.
-definePlugin({ name: 'bad-client-entry', clientEntries: [{ module: 1, initializer: 'start' }] })
 // @ts-expect-error a Vite contribution must be a Vite PluginOption.
 definePlugin({ name: 'bad-vite', vite: () => 42 })
 // @ts-expect-error route registrations use a closed discriminated union.

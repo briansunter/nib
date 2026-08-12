@@ -58,12 +58,6 @@ export interface NibFinalizeContext extends NibRendererPluginContext {
   readonly cache: NibBuildCache
 }
 
-export interface NibClientEntry {
-  readonly module: string
-  /** Exported initializer with the signature `(signal: AbortSignal) => void`. */
-  readonly initializer: string
-}
-
 export type NibResolvedPageRoute = PageRoute
 export type NibResolvedResourceRoute = Extract<RouteSnapshot, { kind: 'resource' }>
 export type NibResolvedRedirectRoute = Extract<RouteSnapshot, { kind: 'redirect' }>
@@ -111,7 +105,6 @@ export interface NibRendererExtension {
 export interface NibPlugin {
   readonly name: string
   readonly pageSources?: readonly PageSourceDefinition<DataValidator<any>>[]
-  readonly clientEntries?: readonly NibClientEntry[]
   vite?(context: NibVitePluginContext): Awaitable<PluginOption>
   routes?(
     context: NibRoutesPluginContext,

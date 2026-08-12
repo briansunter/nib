@@ -1,16 +1,19 @@
 import path from 'node:path'
 import type { Plugin } from 'vite'
-import { BEHAVIOR_MODULE_GLOB } from './behavior-paths'
-import type { NibClientEntry, NibCommand } from './plugin'
+import { ENHANCEMENT_MODULE_GLOB } from './enhancement-paths'
+import { ISLAND_MODULE_GLOB } from './island-paths'
+import type { NibCommand } from './plugin'
 
-export const NIB_CLIENT_ENTRY = 'virtual:nib/client-entry'
-export const NIB_BEHAVIOR_ENTRY = 'virtual:nib/behavior-entry'
-export const NIB_CLIENT_BOOTSTRAP_ENTRY = 'virtual:nib/client-bootstrap-entry'
+export const NIB_ENHANCEMENT_ENTRY = 'virtual:nib/enhancement-entry'
+export const NIB_ISLAND_ENTRY = 'virtual:nib/island-entry'
+export const NIB_APP_CLIENT_ENTRY = 'virtual:nib/app-client-entry'
+export const NIB_EMPTY_CLIENT_ENTRY = 'virtual:nib/empty-client-entry'
 export const NIB_SERVER_ENTRY = 'virtual:nib/server-entry'
 
-const RESOLVED_CLIENT_ENTRY = `\0${NIB_CLIENT_ENTRY}`
-const RESOLVED_BEHAVIOR_ENTRY = `\0${NIB_BEHAVIOR_ENTRY}`
-const RESOLVED_CLIENT_BOOTSTRAP_ENTRY = `\0${NIB_CLIENT_BOOTSTRAP_ENTRY}`
+const RESOLVED_ENHANCEMENT_ENTRY = `\0${NIB_ENHANCEMENT_ENTRY}`
+const RESOLVED_ISLAND_ENTRY = `\0${NIB_ISLAND_ENTRY}`
+const RESOLVED_APP_CLIENT_ENTRY = `\0${NIB_APP_CLIENT_ENTRY}`
+const RESOLVED_EMPTY_CLIENT_ENTRY = `\0${NIB_EMPTY_CLIENT_ENTRY}`
 const RESOLVED_SERVER_ENTRY = `\0${NIB_SERVER_ENTRY}`
 
 export function nibProject(
@@ -19,7 +22,7 @@ export function nibProject(
   pageExtensions: readonly string[] = [],
   command: NibCommand = 'build',
   pageSourcePatterns: readonly string[] = [],
-  clientEntries: readonly NibClientEntry[] = [],
+  hasAppClient = false,
 ): Plugin {
   const configImport = JSON.stringify(path.resolve(configPath))
   const projectRoot = JSON.stringify(path.resolve(root))
@@ -33,11 +36,10 @@ export function nibProject(
   return {
     name: 'nib-project',
     resolveId(id) {
-      if (id === NIB_CLIENT_ENTRY) return RESOLVED_CLIENT_ENTRY
-      if (id === NIB_BEHAVIOR_ENTRY) return RESOLVED_BEHAVIOR_ENTRY
-      if (id === NIB_CLIENT_BOOTSTRAP_ENTRY && clientEntries.length > 0) {
-        return RESOLVED_CLIENT_BOOTSTRAP_ENTRY
-      }
+      if (id === NIB_ENHANCEMENT_ENTRY) return RESOLVED_ENHANCEMENT_ENTRY
+      if (id === NIB_ISLAND_ENTRY) return RESOLVED_ISLAND_ENTRY
+      if (id === NIB_APP_CLIENT_ENTRY && hasAppClient) return RESOLVED_APP_CLIENT_ENTRY
+      if (id === NIB_EMPTY_CLIENT_ENTRY) return RESOLVED_EMPTY_CLIENT_ENTRY
       if (id === NIB_SERVER_ENTRY) return RESOLVED_SERVER_ENTRY
       return null
     },
@@ -48,67 +50,61 @@ export function nibProject(
       return [...new Set([...context.modules, serverEntry])]
     },
     load(id) {
-      if (id === RESOLVED_CLIENT_ENTRY) {
+      if (id === RESOLVED_ENHANCEMENT_ENTRY) {
         return [
-          `import { createIslandRuntime, registerClientRuntime } from '@briansunter/nib/client/islands'`,
-          `const modules = import.meta.glob('/src/islands/**/*.tsx')`,
+          `import { createEnhancementRuntime } from '@briansunter/nib/internal/enhancements'`,
+          `const modules = import.meta.glob(${JSON.stringify(ENHANCEMENT_MODULE_GLOB)})`,
+          `const runtime = createEnhancementRuntime(modules)`,
+          `runtime.mount(document)`,
+          `if (import.meta.hot) import.meta.hot.dispose(() => runtime.destroy())`,
+        ].join('\n')
+      }
+      if (id === RESOLVED_ISLAND_ENTRY) {
+        return [
+          `import { createIslandRuntime } from '@briansunter/nib/internal/islands'`,
+          `const modules = import.meta.glob(${JSON.stringify(ISLAND_MODULE_GLOB)})`,
           `const runtime = createIslandRuntime(modules)`,
-          `const unregisterRuntime = registerClientRuntime(runtime)`,
           `runtime.mount(document)`,
-          `if (import.meta.hot) import.meta.hot.dispose(() => {`,
-          `  unregisterRuntime()`,
-          `  runtime.destroy()`,
-          `})`,
+          `if (import.meta.hot) import.meta.hot.dispose(() => runtime.destroy())`,
         ].join('\n')
       }
-      if (id === RESOLVED_BEHAVIOR_ENTRY) {
+      if (id === RESOLVED_APP_CLIENT_ENTRY) {
         return [
-          `import { createBehaviorRuntime, registerClientRuntime } from '@briansunter/nib/client/behaviors'`,
-          `const modules = import.meta.glob(${JSON.stringify(BEHAVIOR_MODULE_GLOB)})`,
-          `const runtime = createBehaviorRuntime(modules)`,
-          `const unregisterRuntime = registerClientRuntime(runtime)`,
-          `runtime.mount(document)`,
-          `if (import.meta.hot) import.meta.hot.dispose(() => {`,
-          `  unregisterRuntime()`,
-          `  runtime.destroy()`,
-          `})`,
-        ].join('\n')
-      }
-      if (id === RESOLVED_CLIENT_BOOTSTRAP_ENTRY) {
-        return [
-          ...clientEntries.map((entry, index) => (
-            `import { ${entry.initializer} as __nibClientInitializer${index} } from ${JSON.stringify(entry.module)}`
-          )),
-          `const __nibClientBootstrapController = new AbortController()`,
-          `const __nibClientBootstrapSignal = __nibClientBootstrapController.signal`,
+          `import initialize from '/src/client.ts'`,
+          `if (typeof initialize !== 'function') {`,
+          `  throw new Error('src/client.ts must default-export a client initializer function')`,
+          `}`,
+          `const controller = new AbortController()`,
           `try {`,
-          ...clientEntries.map((_, index) => (
-            `  __nibClientInitializer${index}(__nibClientBootstrapSignal)`
-          )),
+          `  const initialized = initialize(controller.signal)`,
+          `  if (initialized && typeof initialized.then === 'function') {`,
+          `    void initialized.catch((error) => {`,
+          `      if (controller.signal.aborted) return`,
+          `      controller.abort(error)`,
+          `      setTimeout(() => { throw error })`,
+          `    })`,
+          `  }`,
           `} catch (error) {`,
-          `  __nibClientBootstrapController.abort(error)`,
+          `  controller.abort(error)`,
           `  throw error`,
           `}`,
-          `if (import.meta.hot) import.meta.hot.dispose(() => {`,
-          `  __nibClientBootstrapController.abort()`,
-          `})`,
+          `if (import.meta.hot) import.meta.hot.dispose(() => controller.abort())`,
         ].join('\n')
       }
+      if (id === RESOLVED_EMPTY_CLIENT_ENTRY) return 'export {}'
       if (id !== RESOLVED_SERVER_ENTRY) return null
 
       return [
         `import config from ${configImport}`,
-        `import {`,
-        `  createProjectRenderer,`,
-        `} from '@briansunter/nib/internal/server'`,
+        `import { createProjectRenderer } from '@briansunter/nib/internal/server'`,
         `import { definitions as __nibDerivedDefinitions, components as __nibDerivedComponents } from 'virtual:nib/derived-pages'`,
         // Keep source modules behind a private query so Vite's built-in JSON
         // loader does not parse a page-source adapter's generated JS as JSON.
         `const pages = import.meta.glob(${JSON.stringify(pagePatterns)}, { eager: true, query: '?nib-page-source' })`,
         `const folderLayouts = import.meta.glob('/src/pages/**/layout.tsx', { eager: true })`,
         `const namedLayouts = import.meta.glob('/src/layouts/*.tsx', { eager: true })`,
-        `const islandModules = import.meta.glob('/src/islands/**/*.tsx', { eager: true })`,
-        `const behaviorClientFiles = Object.keys(import.meta.glob(${JSON.stringify(BEHAVIOR_MODULE_GLOB)}))`,
+        `const islandModules = import.meta.glob(${JSON.stringify(ISLAND_MODULE_GLOB)}, { eager: true })`,
+        `const enhancementClientFiles = Object.keys(import.meta.glob(${JSON.stringify(ENHANCEMENT_MODULE_GLOB)}))`,
         `const renderer = await createProjectRenderer({`,
         `  config,`,
         `  root: ${projectRoot},`,
@@ -118,7 +114,7 @@ export function nibProject(
         `  folderLayouts,`,
         `  namedLayouts,`,
         `  islandModules,`,
-        `  behaviorClientFiles,`,
+        `  enhancementClientFiles,`,
         `  derivedPages: { definitions: __nibDerivedDefinitions, components: __nibDerivedComponents },`,
         `})`,
         `export const paths = renderer.paths`,

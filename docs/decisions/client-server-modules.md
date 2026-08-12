@@ -2,7 +2,7 @@
 
 Status: accepted
 
-Last reviewed: 2026-07-28
+Last reviewed: 2026-08-11
 
 Nib applications may suffix JavaScript or TypeScript modules with `.client` or
 `.server` before the file extension to state which build graph owns them (for
@@ -13,7 +13,12 @@ the import chain that crossed the boundary.
 Public package imports follow the same rule:
 
 - `@briansunter/nib` contains universal authoring definitions and types;
-- `@briansunter/nib/client` contains browser runtime contracts;
+- `@briansunter/nib` contains the universal `ClientEnhancement` and
+  `ClientInitializer` types;
+- `@briansunter/nib/react` contains the browser-safe React island authoring API;
+- `@briansunter/nib/internal/enhancements` and
+  `@briansunter/nib/internal/islands` are reserved for generated framework
+  entries;
 - `@briansunter/nib/server` contains filesystem-backed loaders.
 
 The historical `file` and `glob` root exports remain as lazy compatibility

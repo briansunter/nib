@@ -18,7 +18,7 @@ export default definePage<typeof config>(function PostsPage({ collections }) {
             <time dateTime={data.date}>{data.date}</time>
             <div>
               <h2>
-                <a data-nib-prefetch="hover" href={siteHref(data.path)}>
+                <a href={siteHref(data.path)}>
                   {data.title}
                 </a>
               </h2>

@@ -258,6 +258,51 @@ describe('writeHostingArtifacts s3 html aliases', () => {
     await writeHostingArtifacts(clientDirectory, htmlManifest, { adapters: [{ name: 's3' }] })
     await expect(fs.access(path.join(clientDirectory, 'about.html'))).rejects.toThrow()
   })
+
+  it('never overwrites a primary publication artifact with an alias companion', async () => {
+    const clientDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-hosting-alias-collision-'))
+    temporaryDirectories.push(clientDirectory)
+
+    const archiveBytes = '<title>Archive</title>'
+    const redirectBytes = '<title>Redirecting</title>'
+    await fs.mkdir(path.join(clientDirectory, 'pages'), { recursive: true })
+    await fs.writeFile(path.join(clientDirectory, 'pages/index.html'), archiveBytes)
+    await fs.writeFile(path.join(clientDirectory, 'pages/index'), redirectBytes)
+
+    const htmlManifest: PublicationManifest = {
+      version: 1,
+      base: '/',
+      trailingSlash: 'never',
+      routes: [
+        {
+          kind: 'page',
+          path: '/pages',
+          artifact: 'pages/index.html',
+          status: 200,
+          contentType: 'text/html; charset=utf-8',
+        },
+        {
+          kind: 'redirect',
+          path: '/pages/index',
+          artifact: 'pages/index',
+          status: 301,
+          contentType: 'text/html; charset=utf-8',
+          destination: '/pages',
+        },
+      ],
+    }
+
+    await writeHostingArtifacts(clientDirectory, htmlManifest, {
+      adapters: [{ name: 's3', htmlAliases: true }],
+    })
+
+    expect(await fs.readFile(path.join(clientDirectory, 'pages.html'), 'utf8'))
+      .toBe(archiveBytes)
+    expect(await fs.readFile(path.join(clientDirectory, 'pages/index.html'), 'utf8'))
+      .toBe(archiveBytes)
+    expect(await fs.readFile(path.join(clientDirectory, 'pages/index'), 'utf8'))
+      .toBe(redirectBytes)
+  })
 })
 
 describe('buildInfo plugin', () => {

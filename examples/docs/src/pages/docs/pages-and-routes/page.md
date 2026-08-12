@@ -18,9 +18,8 @@ Nib discovers page files under `src/pages` at build time. The final folder conta
 
 Each route folder may contain `page.tsx`, `page.md`, or one configured
 `page.<extension>` source, but not multiple page types. Route names are static;
-Nib does not interpret `[id]` folders or create runtime routes. Native links are
-the default; the [client-navigation plugin](../client-navigation/) can
-optionally enhance navigation between these same static documents.
+Nib does not interpret `[id]` folders or create runtime routes. Links use native
+document navigation between these static pages.
 
 ## TSX pages and metadata
 
@@ -45,7 +44,9 @@ entering the route map or generated output. Applications that want a site title,
 title template, fallback description, or shared head elements can opt into
 `siteMetadata()` from `@briansunter/nib`.
 
-TSX pages, layouts, and ordinary components produce static HTML. Put state and event handlers in a [React island](../react-islands/) so only that boundary loads browser JavaScript.
+TSX pages, layouts, and ordinary components produce static HTML. Attach a
+[client enhancement](../client-enhancements/) to existing DOM, or render a
+React island when a local interface needs React state or hooks.
 
 ## Navigation and links
 

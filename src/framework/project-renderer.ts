@@ -8,12 +8,17 @@ import { renderHead, resolveMeta } from './meta'
 import { deepFreeze } from './freeze'
 import { createContentRenderer } from './markdown-content'
 import { renderReactPage, type RenderedReactPage } from './render-page'
-import { validateIslandModules, type IslandModule } from './islands'
 import {
-  BEHAVIOR_MODULE_GLOB,
-  behaviorFileToId,
-} from './behavior-paths'
-import { ClientOwnershipError } from './client-ownership'
+  ENHANCEMENT_MODULE_GLOB,
+  enhancementFileToId,
+} from './enhancement-paths'
+import {
+  ISLAND_MODULE_GLOB,
+} from './island-paths'
+import {
+  validateIslandModules,
+  type IslandModule,
+} from './islands'
 import { resolvedRouteSnapshot } from './snapshots'
 import {
   addConfiguredRedirects,
@@ -60,8 +65,8 @@ export interface ProjectRendererOptions {
   pages: Record<string, PageModule>
   folderLayouts?: RouteLayouts['folders']
   namedLayouts?: RouteLayouts['named']
-  islandModules: Record<string, IslandModule>
-  behaviorClientFiles?: readonly string[]
+  enhancementClientFiles?: readonly string[]
+  islandModules?: Record<string, IslandModule>
   derivedPages?: {
     definitions: readonly DerivedPagesDefinition<any>[]
     components: readonly (ComponentType<any> | undefined)[]
@@ -95,32 +100,43 @@ async function resolveDerivedComponent(
   return load
 }
 
-function behaviorClientIds(files: readonly string[]): ReadonlySet<string> {
+function enhancementClientIds(files: readonly string[]): ReadonlySet<string> {
   const ids = new Set<string>()
   for (const file of files) {
-    const id = behaviorFileToId(file)
-    if (ids.has(id)) throw new Error(`Duplicate behavior ID: ${id}`)
+    const id = enhancementFileToId(file)
+    if (ids.has(id)) throw new Error(`Duplicate enhancement ID: ${id}`)
     ids.add(id)
   }
   return ids
 }
 
-function assertClientModules(
+function assertEnhancementModules(
   route: ResolvedPageRoute,
-  kind: 'island' | 'behavior',
   emittedIds: readonly string[],
   discoveredIds: { has(id: string): boolean },
 ): void {
   const missing = emittedIds.filter((id) => !discoveredIds.has(id))
   if (missing.length === 0) return
   const marker = missing.length === 1
-    ? `${kind} "${missing[0]}"`
-    : `${kind}s ${missing.map((id) => `"${id}"`).join(', ')}`
-  const pattern = kind === 'island'
-    ? 'src/islands/**/*.tsx'
-    : BEHAVIOR_MODULE_GLOB.slice(1)
+    ? `enhancement "${missing[0]}"`
+    : `enhancements ${missing.map((id) => `"${id}"`).join(', ')}`
   throw new Error(
-    `Route ${route.path} emitted ${marker} without a matching client module in ${pattern}`,
+    `Route ${route.path} emitted ${marker} without a matching client module in ${ENHANCEMENT_MODULE_GLOB.slice(1)}`,
+  )
+}
+
+function assertIslandModules(
+  route: ResolvedPageRoute,
+  emittedIds: readonly string[],
+  discoveredIds: { has(id: string): boolean },
+): void {
+  const missing = emittedIds.filter((id) => !discoveredIds.has(id))
+  if (missing.length === 0) return
+  const marker = missing.length === 1
+    ? `island "${missing[0]}"`
+    : `islands ${missing.map((id) => `"${id}"`).join(', ')}`
+  throw new Error(
+    `Route ${route.path} emitted ${marker} without a matching module in ${ISLAND_MODULE_GLOB[0].slice(1)}`,
   )
 }
 
@@ -207,8 +223,8 @@ function publicRedirectDestination(base: string, destination: string): string {
 export async function createProjectRenderer(
   options: ProjectRendererOptions,
 ): Promise<ProjectRenderer> {
-  const islandDefinitions = validateIslandModules(options.islandModules)
-  const behaviorIds = behaviorClientIds(options.behaviorClientFiles ?? [])
+  const enhancementIds = enhancementClientIds(options.enhancementClientFiles ?? [])
+  const islandDefinitions = validateIslandModules(options.islandModules ?? {})
   const layoutModules: RouteLayouts = {
     ...(options.folderLayouts === undefined ? {} : { folders: options.folderLayouts }),
     ...(options.namedLayouts === undefined ? {} : { named: options.namedLayouts }),
@@ -381,32 +397,28 @@ export async function createProjectRenderer(
         options.config.shell,
         collections,
       ), pageContext)
-      let reactPage: RenderedReactPage
-      try {
-        reactPage = renderReactPage(
-          content,
-          route.content === undefined ? [] : [route.content],
-        )
-      } catch (error) {
-        if (error instanceof ClientOwnershipError) {
-          throw new Error(
-            `Route ${route.path} from ${route.source} has overlapping client ownership. `
-            + error.message,
-            { cause: error },
-          )
-        }
-        throw error
-      }
-      assertClientModules(route, 'island', reactPage.islands, islandDefinitions)
-      assertClientModules(route, 'behavior', reactPage.behaviors, behaviorIds)
+      const reactPage: RenderedReactPage = renderReactPage(
+        content,
+        route.content === undefined ? [] : [route.content],
+      )
+      assertEnhancementModules(
+        route,
+        reactPage.enhancements.map(({ id }) => id),
+        enhancementIds,
+      )
+      assertIslandModules(
+        route,
+        reactPage.islands.map(({ id }) => id),
+        islandDefinitions,
+      )
       return {
         kind: 'page',
         page: {
           status: route.status,
           head: renderHead(publicRoute.meta, head),
           html: reactPage.html,
+          enhancements: reactPage.enhancements,
           islands: reactPage.islands,
-          behaviors: reactPage.behaviors,
         },
       }
     },

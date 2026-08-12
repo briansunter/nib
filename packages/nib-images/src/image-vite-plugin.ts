@@ -92,7 +92,7 @@ async function findAuthoredContentImage(
 
 function staticOnlyError(): Error {
   return new Error(
-    '@briansunter/nib-images: Image and ?nib-image imports are static-only and cannot be included in a React island',
+    '@briansunter/nib-images: Image and ?nib-image imports are static-only and cannot be included in browser-target modules',
   )
 }
 

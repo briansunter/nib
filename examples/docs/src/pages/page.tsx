@@ -2,7 +2,7 @@ import { siteHref, type PageMeta } from '@briansunter/nib'
 
 export const meta: PageMeta = {
   title: 'Home',
-  description: 'A static-site framework for React, Markdown, data pages, and opt-in islands.'
+  description: 'A static-site framework for React, Markdown, data pages, opt-in enhancements, and React islands.'
 }
 
 const authoringModes = [
@@ -28,11 +28,11 @@ const authoringModes = [
     href: '/docs/data-pages-and-collections/',
   },
   {
-    file: 'islands/*.tsx',
-    title: 'React islands',
-    description: 'Add state and events to one subtree without hydrating the whole page.',
+    file: 'enhancements/ · islands/',
+    title: 'Client enhancements',
+    description: 'Enhance existing DOM or hydrate a local React island.',
     output: 'opt-in JS',
-    href: '/docs/react-islands/',
+    href: '/docs/client-enhancements/',
   },
 ] as const
 
@@ -98,7 +98,7 @@ export default function HomePage() {
           <h2 id="home-structure-title">The source is the map.</h2>
           <p>
             Initialize a site, then let folders describe its routes. Keep content,
-            typed data, and browser behavior in the places they belong.
+            typed data, browser enhancements, and React islands in the places they belong.
           </p>
         </div>
         <div className="home-page__tree-card">
@@ -106,10 +106,10 @@ export default function HomePage() {
             <span>my-site / src</span>
             <span>project map</span>
           </div>
-          <pre aria-label="Example Nib project structure"><code>{'my-site/\n├── nib.config.ts\n└── src/\n    ├── pages/\n    │   ├── page.tsx\n    │   ├── about/page.md\n    │   ├── posts/page.csv\n    │   └── layout.tsx\n    ├── content/posts/\n    └── islands/counter.tsx'}</code></pre>
+          <pre aria-label="Example Nib project structure"><code>{'my-site/\n├── nib.config.ts\n└── src/\n    ├── pages/\n    │   ├── page.tsx\n    │   ├── about/page.md\n    │   ├── posts/page.csv\n    │   └── layout.tsx\n    ├── content/posts/\n    ├── enhancements/counter/index.client.ts\n    └── islands/counter.tsx'}</code></pre>
           <div className="home-page__tree-routes">
             <code>about/page.md → /about/</code>
-            <code>counter.tsx → browser JS</code>
+            <code>counter/index.client.ts → browser JS</code>
           </div>
         </div>
       </section>
@@ -120,7 +120,7 @@ export default function HomePage() {
           <h2 id="home-modes-title">Use the lightest tool for each page.</h2>
           <p>
             Routes follow the file tree. Pick TSX, Markdown, or data at build time,
-            then add an island when a small part needs to run in the browser.
+            then add an enhancement or island when one element needs to run in the browser.
           </p>
         </div>
         <div className="home-page__mode-list">

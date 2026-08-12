@@ -32,6 +32,30 @@ export function manifestModulePreloads(
   return [...files]
 }
 
+/** @internal Exported for framework contract tests, not from the package API. */
+export function manifestStylesheets(
+  manifest: ViteManifest,
+  entry: ManifestEntry,
+): string[] {
+  const visited = new Set<ManifestEntry>()
+  const files = new Set<string>()
+  const visit = (current: ManifestEntry) => {
+    if (visited.has(current)) return
+    visited.add(current)
+    for (const file of current.css ?? []) files.add(file)
+    if (current.file.endsWith('.css')) files.add(current.file)
+    for (const imported of current.imports ?? []) {
+      const dependency = manifest[imported]
+      if (dependency === undefined) {
+        throw new Error(`Nib client manifest references missing module ${imported}`)
+      }
+      visit(dependency)
+    }
+  }
+  visit(entry)
+  return [...files]
+}
+
 interface HtmlTemplateEntry {
   readonly source: string
   readonly preloads: readonly string[]
@@ -39,15 +63,15 @@ interface HtmlTemplateEntry {
 
 export interface HtmlTemplateEntries {
   readonly island?: HtmlTemplateEntry
-  readonly behavior: HtmlTemplateEntry
-  readonly clientBootstrap?: HtmlTemplateEntry
+  readonly enhancement?: HtmlTemplateEntry
+  readonly client?: HtmlTemplateEntry
   readonly stylesheets: readonly string[]
 }
 
-export const BEHAVIOR_ROUTE_PRELOAD_MARKER = '<!--nib-behavior-route-preloads-->'
+export const ROUTE_CLIENT_ASSET_MARKER = '<!--nib-route-client-assets-->'
 
 function modulePreloadLinks(
-  owner: 'islands' | 'behaviors' | 'client-bootstrap',
+  owner: 'islands' | 'enhancements' | 'client',
   preloads: readonly string[],
 ): string {
   return preloads
@@ -61,10 +85,26 @@ export function htmlTemplate(entries: HtmlTemplateEntries): string {
   const styles = entries.stylesheets
     .map((href) => `<link rel="stylesheet" href="${href}" />`)
     .join('\n    ')
+  const clientPreloadSet = new Set(entries.client?.preloads ?? [])
   const islandPreloads = entries.island === undefined
     ? ''
-    : modulePreloadLinks('islands', entries.island.preloads)
-  const behaviorPreloads = modulePreloadLinks('behaviors', entries.behavior.preloads)
+    : modulePreloadLinks(
+        'islands',
+        [...new Set(entries.island.preloads)].filter((href) => (
+          !clientPreloadSet.has(href)
+        )),
+      )
+  const enhancementPreloads = entries.enhancement === undefined
+    ? ''
+    : modulePreloadLinks(
+        'enhancements',
+        [...new Set(entries.enhancement.preloads)].filter((href) => (
+          !clientPreloadSet.has(href)
+        )),
+      )
+  const clientPreloads = entries.client === undefined
+    ? ''
+    : modulePreloadLinks('client', [...clientPreloadSet])
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -72,17 +112,19 @@ export function htmlTemplate(entries: HtmlTemplateEntries): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--head-outlet-->
     ${styles}
+    ${clientPreloads}
+    ${entries.client === undefined
+      ? ''
+      : `<script data-nib-client type="module" src="${entries.client.source}"></script>`}
+    ${ROUTE_CLIENT_ASSET_MARKER}
     ${islandPreloads}
     ${entries.island === undefined
       ? ''
       : `<!--nib-islands-entry--><script data-nib-islands type="module" src="${entries.island.source}"></script>`}
-    ${behaviorPreloads}
-    ${BEHAVIOR_ROUTE_PRELOAD_MARKER}
-    <!--nib-behaviors-entry--><script data-nib-behaviors type="module" src="${entries.behavior.source}"></script>
-    ${entries.clientBootstrap === undefined
+    ${enhancementPreloads}
+    ${entries.enhancement === undefined
       ? ''
-      : `${modulePreloadLinks('client-bootstrap', entries.clientBootstrap.preloads)}
-    <script data-nib-client-bootstrap type="module" src="${entries.clientBootstrap.source}"></script>`}
+      : `<!--nib-enhancements-entry--><script data-nib-enhancements type="module" src="${entries.enhancement.source}"></script>`}
   </head>
   <body>
     <div id="root"><!--ssr-outlet--></div>

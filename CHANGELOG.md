@@ -5,13 +5,18 @@
 
 ### BREAKING CHANGES
 
-* simplify behaviors to wrapper-free, root-scoped enhancements with optional `defer`
+* replace the wrapper-based Behavior API with `enhance()` attributes and restore optional React islands
+* move enhancement modules to `src/enhancements/<name>/index.client.ts|js` and use positional root and signal arguments
+* remove the client router, navigation lifecycle, prefetch APIs, and the `./navigation` and `./client/navigation` exports in favor of native document navigation
+* replace plugin-contributed `clientEntries` with the convention-owned optional `src/client.ts` initializer
+* remove the former `./client`, `./client/islands`, `./client/behaviors`, and `./client/lifecycle` exports; island authoring now lives at `./react`
+* replace the former `./internal/client` runtime export with separate private enhancement and island runtimes
 
 ### Features
 
-* allow independent behavior composition while preserving island overlap protection
-* expose signal-bound lifecycle helpers under `@briansunter/nib/client/lifecycle`
-* preload immediate route behaviors without preloading deferred behavior modules
+* emit enhancement and island CSS only for owning routes and preload immediate modules
+* keep client-target Vite hooks active through a private inert entry for static-only sites
+* discover one optional application-owned `src/client.ts` initializer without a public browser runtime
 
 ## [0.19.0](https://github.com/briansunter/nib/compare/v0.18.0...v0.19.0) (2026-07-29)
 

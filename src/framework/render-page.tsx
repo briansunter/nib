@@ -1,26 +1,34 @@
 import { StrictMode, createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup, renderToString } from 'react-dom/server'
-import { BehaviorRenderContext } from './behaviors'
-import { ClientOwnershipContext } from './client-ownership'
-import { serializeIslandProps } from './island-serialization'
+import { parseFragment, serialize } from 'parse5'
+import { validateEnhancementId } from './enhancement-paths'
+import {
+  htmlAttribute,
+  parseHtmlDocument,
+  type ParsedHtmlDocument,
+} from './html-document'
+import { parseIslandProps, serializeIslandProps } from './island-serialization'
+import {
+  IslandRenderContext,
+  composedIslandRenderer,
+  islandDefinitionComponent,
+  islandDefinitionId,
+  type IslandDefinition,
+  type IslandHydrationStrategy,
+  type IslandRenderRequest,
+  type IslandRenderer,
+} from './islands'
 import {
   MarkdownContentRenderContext,
   type MarkdownContent,
 } from './markdown-content'
-import {
-  IslandRenderContext,
-  composedIslandRenderer,
-  type HydrationStrategy,
-  type IslandDefinition,
-  type IslandRenderRequest,
-  type IslandRenderer,
-} from './islands'
+import type { RenderedEnhancement, RenderedIsland } from './types'
 
 interface CollectedIsland {
   definition: IslandDefinition<any>
   props: Record<string, unknown>
   serializedProps: string
-  when: HydrationStrategy
+  when: IslandHydrationStrategy
   instanceId: string
   identifierPrefix: string
   html: string
@@ -28,14 +36,13 @@ interface CollectedIsland {
 
 export interface RenderedReactPage {
   html: string
-  islands: string[]
-  behaviors: string[]
+  enhancements: RenderedEnhancement[]
+  islands: RenderedIsland[]
 }
 
 function contentRenderTree(
   page: ReactNode,
   islandRenderer: IslandRenderer,
-  behaviors: Set<string>,
 ): { tree: ReactNode; rendered: Set<MarkdownContent> } {
   const rendered = new Set<MarkdownContent>()
   return {
@@ -43,11 +50,7 @@ function contentRenderTree(
     tree: createElement(
       MarkdownContentRenderContext.Provider,
       { value: { rendered } },
-      createElement(
-        IslandRenderContext.Provider,
-        { value: islandRenderer },
-        createElement(BehaviorRenderContext.Provider, { value: behaviors }, page),
-      ),
+      createElement(IslandRenderContext.Provider, { value: islandRenderer }, page),
     ),
   }
 }
@@ -63,25 +66,109 @@ function assertRequiredContent(
   }
 }
 
-function islandTree(island: CollectedIsland, behaviors: Set<string>): ReactNode {
-  return contentRenderTree(
+/**
+ * Final HTML is the enhancement declaration source of truth. This validates
+ * helper-authored and raw HTML from every React boundary through one parser.
+ */
+function inspectEnhancements(document: ParsedHtmlDocument): RenderedEnhancement[] {
+  const enhancements: RenderedEnhancement[] = []
+  for (const element of document.elements) {
+    const rawId = htmlAttribute(element, 'data-nib-enhancement')
+    const rawWhen = htmlAttribute(element, 'data-nib-when')
+    if (rawId === undefined) {
+      if (
+        rawWhen !== undefined
+        && htmlAttribute(element, 'data-nib-island') === undefined
+      ) {
+        throw new Error('data-nib-when requires data-nib-enhancement on the same HTML element')
+      }
+      continue
+    }
+    if (element.namespaceURI !== 'http://www.w3.org/1999/xhtml') {
+      throw new Error(`Enhancement ${JSON.stringify(rawId)} must be attached to an HTML element`)
+    }
+    const id = validateEnhancementId(rawId)
+    if (rawWhen !== undefined && rawWhen !== 'visible') {
+      throw new Error(
+        `Invalid enhancement timing for ${id}: ${JSON.stringify(rawWhen)}`,
+      )
+    }
+    enhancements.push(Object.freeze({
+      id,
+      when: rawWhen === 'visible' ? 'visible' : 'load',
+    }))
+  }
+  return enhancements
+}
+
+function inspectIslands(
+  document: ParsedHtmlDocument,
+  collected: readonly CollectedIsland[],
+): RenderedIsland[] {
+  const rendered = document.elements.filter((element) => (
+    element.tagName === 'nib-island'
+    || htmlAttribute(element, 'data-nib-island') !== undefined
+    || htmlAttribute(element, 'data-nib-instance') !== undefined
+    || htmlAttribute(element, 'data-nib-prefix') !== undefined
+    || htmlAttribute(element, 'data-nib-props') !== undefined
+  ))
+  if (rendered.length !== collected.length) {
+    throw new Error(
+      'React island boundaries must be authored with island() and rendered by Nib',
+    )
+  }
+
+  const islands = new Map<string, RenderedIsland>()
+  for (let index = 0; index < collected.length; index += 1) {
+    const expected = collected[index]!
+    const element = rendered[index]!
+    const metadataMatches = (
+      element.tagName === 'nib-island'
+      && element.namespaceURI === 'http://www.w3.org/1999/xhtml'
+      && htmlAttribute(element, 'data-nib-island') === islandDefinitionId(expected.definition)
+      && htmlAttribute(element, 'data-nib-instance') === expected.instanceId
+      && htmlAttribute(element, 'data-nib-prefix') === expected.identifierPrefix
+      && htmlAttribute(element, 'data-nib-when') === expected.when
+      && htmlAttribute(element, 'data-nib-props') === expected.serializedProps
+    )
+    const normalizedExpectedHtml = serialize(parseFragment(expected.html))
+    if (!metadataMatches || serialize(element) !== normalizedExpectedHtml) {
+      throw new Error(
+        `Island ${islandDefinitionId(expected.definition)} cannot be rendered in this HTML context. `
+        + 'Place the island in normal flow content, or make the containing table, '
+        + 'select, or other restricted structure the island root.',
+      )
+    }
+    const id = islandDefinitionId(expected.definition)
+    islands.set(id, Object.freeze({
+      id,
+      when: expected.when,
+    }))
+  }
+  return [...islands.values()]
+}
+
+function inspectRenderedHtml(
+  html: string,
+  collected: readonly CollectedIsland[],
+): Pick<RenderedReactPage, 'enhancements' | 'islands'> {
+  const document = parseHtmlDocument(html)
+  return {
+    enhancements: inspectEnhancements(document),
+    islands: inspectIslands(document, collected),
+  }
+}
+
+function islandTree(island: CollectedIsland): ReactNode {
+  return createElement(
+    IslandRenderContext.Provider,
+    { value: composedIslandRenderer() },
     createElement(
-      ClientOwnershipContext.Provider,
-      {
-        value: {
-          kind: 'island',
-          name: island.definition.islandId,
-        },
-      },
-      createElement(
-        StrictMode,
-        null,
-        createElement(island.definition.Component, island.props),
-      ),
+      StrictMode,
+      null,
+      createElement(islandDefinitionComponent(island.definition), island.props),
     ),
-    composedIslandRenderer(),
-    behaviors,
-  ).tree
+  )
 }
 
 export function renderReactPage(
@@ -89,15 +176,21 @@ export function renderReactPage(
   requiredContent: readonly MarkdownContent[] = [],
 ): RenderedReactPage {
   const collected: CollectedIsland[] = []
-  const behaviors = new Set<string>()
   const collector: IslandRenderer = {
     render(request: IslandRenderRequest) {
+      if (islandDefinitionId(request.definition) === '') {
+        throw new Error(
+          'island(Component) must be the default export of a module under src/islands',
+        )
+      }
       const index = collected.length
       const instanceId = `nib-${index}`
+      const serializedProps = serializeIslandProps(request.props)
       collected.push({
         definition: request.definition,
-        props: request.props,
-        serializedProps: serializeIslandProps(request.props),
+        // Match the browser's JSON parse semantics during server rendering.
+        props: parseIslandProps(serializedProps),
+        serializedProps,
         when: request.when,
         instanceId,
         identifierPrefix: `${instanceId}-`,
@@ -107,15 +200,19 @@ export function renderReactPage(
     },
   }
 
-  const collectedTree = contentRenderTree(page, collector, behaviors)
+  const collectedTree = contentRenderTree(page, collector)
   const collectedShell = renderToStaticMarkup(collectedTree.tree)
   assertRequiredContent(collectedTree.rendered, requiredContent)
   if (collected.length === 0) {
-    return { html: collectedShell, islands: [], behaviors: [...behaviors] }
+    const inspected = inspectRenderedHtml(collectedShell, collected)
+    return {
+      html: collectedShell,
+      ...inspected,
+    }
   }
 
   for (const island of collected) {
-    island.html = renderToString(islandTree(island, behaviors), {
+    island.html = renderToString(islandTree(island), {
       identifierPrefix: island.identifierPrefix,
     })
   }
@@ -123,41 +220,43 @@ export function renderReactPage(
   let cursor = 0
   const emitter: IslandRenderer = {
     render(request: IslandRenderRequest) {
-      const island = collected[cursor]
+      const current = collected[cursor]
       cursor += 1
-      if (!island) throw new Error('Island render was not deterministic between passes')
+      if (current === undefined) {
+        throw new Error('Island render count changed between render passes')
+      }
 
       const serializedProps = serializeIslandProps(request.props)
       if (
-        island.definition !== request.definition
-        || island.when !== request.when
-        || island.serializedProps !== serializedProps
+        current.definition !== request.definition
+        || current.when !== request.when
+        || current.serializedProps !== serializedProps
       ) {
-        throw new Error(`Island ${request.definition.islandId} changed between render passes`)
+        throw new Error(`Island ${islandDefinitionId(request.definition)} changed between render passes`)
       }
 
       return createElement('nib-island', {
-        'data-island': island.definition.islandId,
-        'data-instance': island.instanceId,
-        'data-prefix': island.identifierPrefix,
-        'data-hydrate': island.when,
-        'data-props': island.serializedProps,
+        'data-nib-island': islandDefinitionId(current.definition),
+        'data-nib-instance': current.instanceId,
+        'data-nib-prefix': current.identifierPrefix,
+        'data-nib-when': current.when,
+        'data-nib-props': current.serializedProps,
         style: { display: 'contents' },
-        dangerouslySetInnerHTML: { __html: island.html },
+        dangerouslySetInnerHTML: { __html: current.html },
       })
     },
   }
 
-  const emittedTree = contentRenderTree(page, emitter, behaviors)
+  const emittedTree = contentRenderTree(page, emitter)
   const html = renderToStaticMarkup(emittedTree.tree)
   assertRequiredContent(emittedTree.rendered, requiredContent)
   if (cursor !== collected.length) {
     throw new Error('Island render count changed between render passes')
   }
 
+  const inspected = inspectRenderedHtml(html, collected)
   return {
     html,
-    islands: [...new Set(collected.map((island) => island.definition.islandId))],
-    behaviors: [...behaviors],
+    ...inspected,
   }
 }

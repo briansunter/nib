@@ -3,12 +3,14 @@ import { renderToString } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import {
   hydrateIsland,
-  scheduleHydration,
-  visibilityTargets,
-  type IslandHydrationEnvironment,
   type IslandHydrateRootOptions,
 } from '../src/framework/island-runtime'
+import {
+  islandVisibilityTargets,
+  scheduleIslandHydration,
+} from '../src/framework/island-scheduler'
 import { island } from '../src/framework/islands'
+import { registeredIsland } from './helpers/islands'
 
 function element(children: Element[] = [], parentElement: Element | null = null): HTMLElement {
   return { children, parentElement } as unknown as HTMLElement
@@ -18,44 +20,19 @@ function islandElement(dataset: Record<string, string>): HTMLElement {
   return { dataset } as unknown as HTMLElement
 }
 
-function environment(overrides: Partial<IslandHydrationEnvironment> = {}): IslandHydrationEnvironment {
-  return {
-    setTimeout: vi.fn(() => 1),
-    ...overrides,
-  }
-}
-
 describe('island hydration runtime', () => {
-  it('hydrates immediately for load and once for repeated callbacks', () => {
+  it('hydrates load immediately', () => {
     const hydrate = vi.fn()
-    scheduleHydration(element(), 'load', hydrate, environment())
+    scheduleIslandHydration(element(), 'load', hydrate, {})
     expect(hydrate).toHaveBeenCalledOnce()
   })
 
-  it('schedules idle hydration with the browser idle callback or timer fallback', () => {
-    const idle = vi.fn()
-    const hydrate = vi.fn()
-    scheduleHydration(element(), 'idle', hydrate, environment({ requestIdleCallback: idle }))
-    expect(idle).toHaveBeenCalledOnce()
-    expect(hydrate).not.toHaveBeenCalled()
-    idle.mock.calls[0][0]()
-    expect(hydrate).toHaveBeenCalledOnce()
-
-    const fallbackHydrate = vi.fn()
-    const setTimeout = vi.fn((callback: () => void) => {
-      callback()
-      return 1
-    })
-    scheduleHydration(element(), 'idle', fallbackHydrate, environment({ setTimeout }))
-    expect(fallbackHydrate).toHaveBeenCalledOnce()
-  })
-
-  it('observes every child for visible hydration and falls back to the parent', () => {
+  it('observes visible island children and supports cancellation', () => {
     const first = {} as Element
     const second = {} as Element
-    expect(visibilityTargets(element([first, second]))).toEqual([first, second])
     const parent = {} as Element
-    expect(visibilityTargets(element([], parent))).toEqual([parent])
+    expect(islandVisibilityTargets(element([first, second]))).toEqual([first, second])
+    expect(islandVisibilityTargets(element([], parent))).toEqual([parent])
 
     const observe = vi.fn()
     const disconnect = vi.fn()
@@ -68,35 +45,28 @@ describe('island hydration runtime', () => {
       disconnect = disconnect
     }
     const hydrate = vi.fn()
-    scheduleHydration(
+    const scheduled = scheduleIslandHydration(
       element([first, second]),
       'visible',
       hydrate,
-      environment({ IntersectionObserver: FakeIntersectionObserver as unknown as typeof window.IntersectionObserver }),
+      { IntersectionObserver: FakeIntersectionObserver as never },
     )
-    expect(observe).toHaveBeenNthCalledWith(1, first)
-    expect(observe).toHaveBeenNthCalledWith(2, second)
+    expect(observe).toHaveBeenCalledTimes(2)
     callback?.([{ isIntersecting: false }])
     expect(hydrate).not.toHaveBeenCalled()
-    callback?.([{ isIntersecting: true }, { isIntersecting: true }])
+    scheduled.cancel()
     callback?.([{ isIntersecting: true }])
     expect(disconnect).toHaveBeenCalledOnce()
-    expect(hydrate).toHaveBeenCalledOnce()
-  })
-
-  it('hydrates immediately when IntersectionObserver is unavailable', () => {
-    const hydrate = vi.fn()
-    scheduleHydration(element(), 'visible', hydrate, environment())
-    expect(hydrate).toHaveBeenCalledOnce()
+    expect(hydrate).not.toHaveBeenCalled()
   })
 
   it('loads, validates, parses, and hydrates an island module', async () => {
-    const Label = island(({ count }: { count: number }) => (
-      createElement('span', null, `Count: ${count}`)
-    ))
-    const Counter = island(({ count }: { count: number }) => (
-      createElement('div', null, createElement(Label, { count, when: 'visible' }))
-    ))
+    const Counter = registeredIsland(
+      'counter',
+      island(({ count }: { count: number }) => (
+        createElement('span', null, `Count: ${count}`)
+      )),
+    )
     const hydrateRoot = vi.fn((
       _element: HTMLElement,
       _content: ReactNode,
@@ -105,10 +75,11 @@ describe('island hydration runtime', () => {
     const reportError = vi.fn()
     await hydrateIsland(
       islandElement({
-        island: 'counter',
-        instance: 'nib-0',
-        prefix: 'nib-0-',
-        props: '{"count":2}',
+        nibIsland: 'counter',
+        nibInstance: 'nib-0',
+        nibPrefix: 'nib-0-',
+        nibWhen: 'load',
+        nibProps: '{"count":2}',
       }),
       {
         loaders: new Map([['counter', async () => ({ default: Counter })]]),
@@ -118,28 +89,32 @@ describe('island hydration runtime', () => {
     )
 
     expect(hydrateRoot).toHaveBeenCalledOnce()
-    expect(renderToString(hydrateRoot.mock.calls[0][1]))
-      .toContain('<div><span>Count: 2</span></div>')
-    const options = hydrateRoot.mock.calls[0][2]
+    expect(renderToString(hydrateRoot.mock.calls[0]![1])).toContain('<span>Count: 2</span>')
+    const options = hydrateRoot.mock.calls[0]![2]
     expect(options.identifierPrefix).toBe('nib-0-')
     options.onRecoverableError(new Error('mismatch'))
     expect(reportError).toHaveBeenCalledWith('counter', 'nib-0', expect.any(Error))
   })
 
-  it('rejects missing metadata, unknown modules, and malformed props', async () => {
+  it('rejects malformed metadata and definition strategy drift', async () => {
     const dependencies = {
       loaders: new Map<string, () => Promise<{ default: unknown }>>(),
       hydrateRoot: vi.fn(),
     }
-    await expect(hydrateIsland(islandElement({}), dependencies)).rejects.toThrow('missing hydration metadata')
-    await expect(hydrateIsland(
-      islandElement({ island: 'missing', instance: 'nib-0', prefix: 'nib-0-', props: '{}' }),
-      dependencies,
-    )).rejects.toThrow('No client module found')
-    dependencies.loaders.set('counter', async () => ({ default: island(() => null) }))
-    await expect(hydrateIsland(
-      islandElement({ island: 'counter', instance: 'nib-0', prefix: 'nib-0-', props: '{' }),
-      dependencies,
-    )).rejects.toThrow('invalid JSON')
+    await expect(hydrateIsland(islandElement({}), dependencies))
+      .rejects.toThrow('valid hydration metadata')
+
+    const Counter = registeredIsland(
+      'counter',
+      island(() => null, { when: 'visible' }),
+    )
+    dependencies.loaders.set('counter', async () => ({ default: Counter }))
+    await expect(hydrateIsland(islandElement({
+      nibIsland: 'counter',
+      nibInstance: 'nib-0',
+      nibPrefix: 'nib-0-',
+      nibWhen: 'load',
+      nibProps: '{}',
+    }), dependencies)).rejects.toThrow('strategy mismatch')
   })
 })

@@ -23,7 +23,7 @@ export default function AboutPage() {
         <section>
           <span className="about-page__number">02</span>
           <h2>JavaScript earns its place</h2>
-          <p>Most of a site stays static. When a control needs state, define one React island and hydrate that boundary.</p>
+          <p>Most of a site stays static. Add a scoped DOM enhancement or React island only where interaction needs it.</p>
         </section>
       </div>
       <a className="button button--primary" href={siteHref('/docs/getting-started/')}>

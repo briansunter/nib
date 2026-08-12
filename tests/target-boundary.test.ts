@@ -77,30 +77,30 @@ describe('client and server module boundaries', () => {
   })
 
   it('rejects client modules from the server graph', () => {
-    expect(() => resolve('server', '../behaviors/map.client.ts'))
+    expect(() => resolve('server', '../enhancements/map/index.client.ts'))
       .toThrow(/server graph cannot import client-only module/)
   })
 
   it('allows matching targets and the combined development graph', () => {
-    expect(resolve('client', '../behaviors/map.client.ts')).toBeNull()
+    expect(resolve('client', '../enhancements/map/index.client.ts')).toBeNull()
     expect(resolve('server', '../data/posts.server.ts')).toBeNull()
-    expect(resolve('development', '../behaviors/map.client.ts')).toBeNull()
+    expect(resolve('development', '../enhancements/map/index.client.ts')).toBeNull()
     expect(resolve('development', '../data/posts.server.ts')).toBeNull()
   })
 
   it('uses the active Vite environment for development graphs', () => {
     expect(() => resolve('development', '../data/posts.server.ts', undefined, 'client'))
       .toThrow(/client graph cannot import server-only module/)
-    expect(() => resolve('development', '../behaviors/map.client.ts', undefined, 'server'))
+    expect(() => resolve('development', '../enhancements/map/index.client.ts', undefined, 'server'))
       .toThrow(/server graph cannot import client-only module/)
-    expect(resolve('development', '../behaviors/map.client.ts', undefined, 'client')).toBeNull()
+    expect(resolve('development', '../enhancements/map/index.client.ts', undefined, 'client')).toBeNull()
     expect(resolve('development', '../data/posts.server.ts', undefined, 'server')).toBeNull()
   })
 
   it('checks final resolved module ids after aliases', () => {
     expect(() => transform('client', '/site/src/data/posts.server.ts'))
       .toThrow(/client graph cannot import server-only module/)
-    expect(() => transform('server', '/site/src/behaviors/map.client.ts'))
+    expect(() => transform('server', '/site/src/enhancements/map/index.client.ts'))
       .toThrow(/server graph cannot import client-only module/)
   })
 

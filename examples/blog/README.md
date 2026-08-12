@@ -7,8 +7,7 @@ Nib's main composition model without copying a real personal site:
 - a collection derived from Markdown routes
 - JSON-backed typed data pages reused as a collection
 - static responsive component and Markdown images
-- one React island and one progressive client behavior
-- optional client navigation with explicit prefetch hints
+- two progressive client enhancements, including route-owned CSS
 - canonical metadata, RSS, sitemap, and static search data
 - redirects plus Netlify and S3 hosting companions
 
@@ -31,5 +30,5 @@ bun run verify:blog
 ```
 
 The build writes the deployable site to `dist/client`. Pages work as ordinary
-HTML without JavaScript; Nib ships browser code only for the theme behavior,
-reading-goal island, and explicitly configured client navigation.
+HTML without JavaScript; Nib ships browser code only for the theme and
+reading-goal enhancements.

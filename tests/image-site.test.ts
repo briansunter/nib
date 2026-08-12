@@ -189,14 +189,14 @@ describe('optional image plugin', () => {
     }
   }, 30_000)
 
-  it('creates responsive static output and optimized assets without an island runtime', async () => {
+  it('creates responsive static output and optimized assets without client behavior code', async () => {
     await buildSite({ root })
     const html = await fs.readFile(path.join(root, 'dist/client/index.html'), 'utf8')
     expect(html).toContain('<picture>')
     expect(html).toContain('type="image/webp"')
     expect(html).toContain('.jpeg')
     expect(html).toContain('fetchPriority="high"')
-    expect(html).not.toContain('data-nib-islands')
+    expect(html).not.toContain('data-nib-enhancements')
     expect(html).not.toContain(root)
     const assets = await fs.readdir(path.join(root, 'dist/client/assets/nib'))
     expect(assets.some((asset) => asset.endsWith('.webp'))).toBe(true)

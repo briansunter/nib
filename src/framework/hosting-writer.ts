@@ -53,11 +53,18 @@ export async function writeHostingArtifacts(
   if (failure !== undefined) throw failure.reason
 
   // S3 hosts that serve /foo as /foo.html need explicit companion objects.
+  // A companion may coincide with another route's primary artifact. This is
+  // common for a canonical parent route such as /pages (pages/index.html) and
+  // a legacy /pages/index redirect (whose companion is also pages/index.html).
+  // Primary publication artifacts are the source of truth and must never be
+  // overwritten by a hosting convenience copy.
+  const primaryArtifacts = new Set(manifest.routes.map((route) => route.artifact))
   for (const adapter of adapters) {
     if (adapter.name !== 's3' || !adapter.htmlAliases) continue
     for (const route of manifest.routes) {
       const alias = s3HtmlAlias(route)
       if (alias === undefined) continue
+      if (alias !== route.artifact && primaryArtifacts.has(alias)) continue
       const source = path.resolve(clientDirectory, route.artifact)
       const destination = path.resolve(clientDirectory, alias)
       assertWithinClientDirectory(source, clientDirectory, route.artifact)
