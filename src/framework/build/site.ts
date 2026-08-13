@@ -41,6 +41,10 @@ import {
 } from '../plugin'
 import { writeHostingArtifacts } from '../hosting-writer'
 import type { RenderedOutput, TrailingSlash } from '../types'
+import type {
+  ClientProvenanceReport,
+  ClientProvenanceRoute,
+} from '../client-provenance'
 import { nibDataPages, nibDerivedPages, nibMarkdown } from '../vite-plugin'
 import { targetBoundaryGuard } from '../target-boundary'
 import { pageStyleOwnershipGuard } from '../style-ownership'
@@ -66,14 +70,28 @@ export interface SiteOperationOptions {
 
 interface BuildTemplate {
   template: string
+  manifest: ViteManifest
+  runtimeEntries: Readonly<{
+    readonly client?: ManifestEntry
+    readonly enhancements?: ManifestEntry
+    readonly islands?: ManifestEntry
+  }>
   enhancementAssets: ReadonlyMap<string, RouteClientAssets>
   islandAssets: ReadonlyMap<string, RouteClientAssets>
   emittedAssets: ReadonlySet<string>
+  runtimePreloads: RuntimeEntryPreloads
 }
 
-interface RouteClientAssets {
-  readonly module: string
+/** @internal Exported for framework contract tests, not from the package API. */
+export interface RouteClientAssets {
+  readonly preloads: readonly string[]
   readonly stylesheets: readonly string[]
+}
+
+/** @internal Exported for framework contract tests, not from the package API. */
+export interface RuntimeEntryPreloads {
+  readonly enhancements: readonly string[]
+  readonly islands: readonly string[]
 }
 
 function publicationBatchSize(): number {
@@ -228,7 +246,7 @@ async function readBuildTemplate(
         const entry = manifest[module]
         if (entry !== undefined) {
           assets.set(id, {
-            module: entry.file,
+            preloads: [entry.file, ...manifestModulePreloads(manifest, entry)],
             stylesheets: manifestStylesheets(manifest, entry),
           })
         }
@@ -246,13 +264,16 @@ async function readBuildTemplate(
     islands?.dynamicImports ?? [],
     islandFileToId,
   )
+  const enhancementPreloads = enhancements === undefined ? [] : preloads(enhancements)
+  const islandPreloads = islands === undefined ? [] : preloads(islands)
+  const clientPreloads = client === undefined ? [] : preloads(client)
   const template = htmlTemplate({
     ...(enhancements === undefined
       ? {}
       : {
           enhancement: {
             source: baseHref(base, enhancements.file),
-            preloads: preloads(enhancements),
+            preloads: enhancementPreloads,
           },
         }),
     ...(islands === undefined
@@ -260,7 +281,7 @@ async function readBuildTemplate(
       : {
           island: {
             source: baseHref(base, islands.file),
-            preloads: preloads(islands),
+            preloads: islandPreloads,
           },
         }),
     ...(client === undefined
@@ -268,20 +289,30 @@ async function readBuildTemplate(
       : {
           client: {
             source: baseHref(base, client.file),
-            preloads: preloads(client),
+            preloads: clientPreloads,
           },
         }),
     stylesheets: styles.map((file) => baseHref(base, file)),
   })
   const emittedAssets = new Set([
     ...styles.map((file) => baseHref(base, file)),
-    ...(client === undefined ? [] : preloads(client)),
+    ...clientPreloads,
   ])
   return {
     template,
+    manifest,
+    runtimeEntries: {
+      ...(client === undefined ? {} : { client }),
+      ...(enhancements === undefined ? {} : { enhancements }),
+      ...(islands === undefined ? {} : { islands }),
+    },
     enhancementAssets,
     islandAssets,
     emittedAssets,
+    runtimePreloads: {
+      enhancements: enhancementPreloads,
+      islands: islandPreloads,
+    },
   }
 }
 
@@ -381,14 +412,23 @@ async function assertPublicationArtifactsAvailable(
   }
 }
 
-function routeClientAssets(
+/** @internal Exported for framework contract tests, not from the package API. */
+export function routeClientAssets(
   page: Extract<RenderedOutput, { kind: 'page' }>['page'],
   enhancementAssets: ReadonlyMap<string, RouteClientAssets>,
   islandAssets: ReadonlyMap<string, RouteClientAssets>,
   emittedAssets: ReadonlySet<string>,
   base: string,
+  runtimePreloads: RuntimeEntryPreloads = {
+    enhancements: [],
+    islands: [],
+  },
 ): string {
-  const emitted = new Set(emittedAssets)
+  const emitted = new Set([
+    ...emittedAssets,
+    ...(page.enhancements.length === 0 ? [] : runtimePreloads.enhancements),
+    ...(page.islands.length === 0 ? [] : runtimePreloads.islands),
+  ])
   const links: string[] = []
   const addRouteAssets = (
     owner: 'enhancements' | 'islands',
@@ -408,19 +448,65 @@ function routeClientAssets(
     for (const id of new Set(
       modules.filter(({ when }) => when === 'load').map(({ id }) => id),
     )) {
-      const file = assets.get(id)?.module
-      if (file === undefined) continue
-      const href = baseHref(base, file)
-      if (emitted.has(href)) continue
-      emitted.add(href)
-      links.push(
-        `<link data-nib-runtime-preload="${owner}" rel="modulepreload" href="${href}" />`,
-      )
+      for (const file of assets.get(id)?.preloads ?? []) {
+        const href = baseHref(base, file)
+        if (emitted.has(href)) continue
+        emitted.add(href)
+        links.push(
+          `<link data-nib-runtime-preload="${owner}" rel="modulepreload" href="${href}" />`,
+        )
+      }
     }
   }
   addRouteAssets('islands', page.islands, islandAssets)
   addRouteAssets('enhancements', page.enhancements, enhancementAssets)
   return links.join('\n    ')
+}
+
+/** The same route ownership calculation used by HTML emission, exposed for the
+ * build's typed client provenance report. */
+export function routeClientProvenance(
+  page: Extract<RenderedOutput, { kind: 'page' }>['page'],
+  enhancementAssets: ReadonlyMap<string, RouteClientAssets>,
+  islandAssets: ReadonlyMap<string, RouteClientAssets>,
+  emittedAssets: ReadonlySet<string>,
+  base: string,
+  runtimePreloads: RuntimeEntryPreloads = { enhancements: [], islands: [] },
+): Pick<ClientProvenanceRoute, 'javascript' | 'stylesheets' | 'preloads'> {
+  const emitted = new Set([
+    ...emittedAssets,
+    ...(page.enhancements.length === 0 ? [] : runtimePreloads.enhancements),
+    ...(page.islands.length === 0 ? [] : runtimePreloads.islands),
+  ])
+  const javascript: string[] = []
+  const stylesheets: string[] = []
+  const preloads: string[] = []
+  const add = (
+    modules: readonly { readonly id: string; readonly when: 'load' | 'visible' }[],
+    assets: ReadonlyMap<string, RouteClientAssets>,
+  ) => {
+    for (const id of new Set(modules.map((module) => module.id))) {
+      const module = assets.get(id)
+      for (const file of module?.stylesheets ?? []) {
+        const href = baseHref(base, file)
+        if (emitted.has(href)) continue
+        emitted.add(href)
+        stylesheets.push(href)
+      }
+      if (modules.some((entry) => entry.id === id && entry.when === 'load')) {
+        for (const file of module?.preloads ?? []) {
+          const href = baseHref(base, file)
+          if (emitted.has(href)) continue
+          emitted.add(href)
+          preloads.push(href)
+          javascript.push(href)
+        }
+      }
+    }
+  }
+  add(page.islands, islandAssets)
+  add(page.enhancements, enhancementAssets)
+  return { javascript, stylesheets, preloads }
 }
 
 function renderedBody(
@@ -430,6 +516,10 @@ function renderedBody(
   islandAssets: ReadonlyMap<string, RouteClientAssets> = new Map(),
   emittedAssets: ReadonlySet<string> = new Set(),
   base = '/',
+  runtimePreloads: RuntimeEntryPreloads = {
+    enhancements: [],
+    islands: [],
+  },
 ): string {
   const routeTemplate = output.kind === 'page'
     ? template.replace(
@@ -440,6 +530,7 @@ function renderedBody(
         islandAssets,
         emittedAssets,
         base,
+        runtimePreloads,
       ),
     )
     : template.replace(ROUTE_CLIENT_ASSET_MARKER, '')
@@ -459,8 +550,13 @@ async function renderAndWritePublication(
   islandAssets: ReadonlyMap<string, RouteClientAssets>,
   emittedAssets: ReadonlySet<string>,
   base: string,
-): Promise<readonly PublicationManifestRoute[]> {
+  runtimePreloads: RuntimeEntryPreloads,
+): Promise<{
+  readonly routes: readonly PublicationManifestRoute[]
+  readonly clientRoutes: readonly ClientProvenanceRoute[]
+}> {
   const manifestRoutes: PublicationManifestRoute[] = []
+  const clientRoutes: ClientProvenanceRoute[] = []
   const batchSize = publicationBatchSize()
   for (let start = 0; start < plan.length; start += batchSize) {
     // Render in canonical route order before starting this batch's writes.
@@ -469,6 +565,23 @@ async function renderAndWritePublication(
     const batch = plan.slice(start, start + batchSize).map(({ routePath, artifact }) => {
       const output = server.render(routePath)
       manifestRoutes.push(createPublicationManifestRoute({ routePath, artifact, output }))
+      if (output.kind === 'page') {
+        const assets = routeClientProvenance(
+          output.page,
+          enhancementAssets,
+          islandAssets,
+          emittedAssets,
+          base,
+          runtimePreloads,
+        )
+        clientRoutes.push({
+          path: routePath,
+          artifact,
+          enhancements: output.page.enhancements,
+          islands: output.page.islands,
+          ...assets,
+        })
+      }
       return {
         artifact,
         body: renderedBody(
@@ -478,6 +591,7 @@ async function renderAndWritePublication(
           islandAssets,
           emittedAssets,
           base,
+          runtimePreloads,
         ),
       }
     })
@@ -487,7 +601,7 @@ async function renderAndWritePublication(
       await fs.writeFile(primaryFile, body)
     }))
   }
-  return manifestRoutes
+  return { routes: manifestRoutes, clientRoutes }
 }
 
 async function promoteStagedOutput(
@@ -613,7 +727,7 @@ async function buildStagedSite(root: string, output: string): Promise<void> {
   const routePaths = [...server.paths, '/404']
   const plan = createPublicationArtifactPlan(routePaths, trailingSlash)
   await assertPublicationArtifactsAvailable(clientDirectory, plan)
-  const manifestRoutes = await renderAndWritePublication(
+  const rendered = await renderAndWritePublication(
     server,
     plan,
     clientDirectory,
@@ -622,11 +736,12 @@ async function buildStagedSite(root: string, output: string): Promise<void> {
     buildTemplate.islandAssets,
     buildTemplate.emittedAssets,
     base,
+    buildTemplate.runtimePreloads,
   )
   const publicationManifest = createPublicationManifestFromRoutes(
     base,
     trailingSlash,
-    manifestRoutes,
+    rendered.routes,
   )
   // Finalizers can inspect and enrich the already-published HTML while still
   // sharing the same output directory as framework-owned artifacts.
@@ -639,6 +754,62 @@ async function buildStagedSite(root: string, output: string): Promise<void> {
   await fs.writeFile(
     path.join(publicationDirectory, 'publication.json'),
     `${JSON.stringify(publicationManifest, null, 2)}\n`,
+  )
+  const runtime = (
+    entry: ManifestEntry | undefined,
+    preloads: readonly string[],
+  ) => entry === undefined ? undefined : {
+    file: baseHref(base, entry.file),
+    preloads,
+  }
+  const moduleRecord = (
+    assets: ReadonlyMap<string, RouteClientAssets>,
+  ) => Object.fromEntries([...assets.entries()].map(([id, value]) => [id, {
+    id,
+    file: baseHref(base, value.preloads[0] ?? ''),
+    stylesheets: value.stylesheets.map((file) => baseHref(base, file)),
+    preloads: value.preloads.map((file) => baseHref(base, file)),
+  }]))
+  const clientRuntime = buildTemplate.runtimeEntries.client === undefined
+    ? undefined
+    : runtime(
+      buildTemplate.runtimeEntries.client,
+      manifestModulePreloads(
+        buildTemplate.manifest,
+        buildTemplate.runtimeEntries.client,
+      ).map((file) => baseHref(base, file)),
+    )
+  const enhancementRuntime = buildTemplate.runtimeEntries.enhancements === undefined
+    ? undefined
+    : runtime(
+      buildTemplate.runtimeEntries.enhancements,
+      buildTemplate.runtimePreloads.enhancements,
+    )
+  const islandRuntime = buildTemplate.runtimeEntries.islands === undefined
+    ? undefined
+    : runtime(
+      buildTemplate.runtimeEntries.islands,
+      buildTemplate.runtimePreloads.islands,
+    )
+  // Runtime entries and route ownership are emitted from the same Vite graph
+  // and renderer facts that produced the HTML. Consumers can enforce generic
+  // enhancement/island/preload invariants without reparsing markup.
+  const clientReport: ClientProvenanceReport = {
+    version: 1,
+    runtimes: {
+      ...(clientRuntime === undefined ? {} : { client: clientRuntime }),
+      ...(enhancementRuntime === undefined ? {} : { enhancements: enhancementRuntime }),
+      ...(islandRuntime === undefined ? {} : { islands: islandRuntime }),
+    },
+    modules: {
+      enhancements: moduleRecord(buildTemplate.enhancementAssets),
+      islands: moduleRecord(buildTemplate.islandAssets),
+    },
+    routes: rendered.clientRoutes,
+  }
+  await fs.writeFile(
+    path.join(publicationDirectory, 'client.json'),
+    `${JSON.stringify(clientReport, null, 2)}\n`,
   )
   await writeHostingArtifacts(clientDirectory, publicationManifest, hosting)
 }

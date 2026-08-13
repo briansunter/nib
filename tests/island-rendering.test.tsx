@@ -1,5 +1,6 @@
 import { createElement, useId } from 'react'
 import { describe, expect, it } from 'vitest'
+import { enhance } from '../src/framework/enhancements'
 import { island } from '../src/framework/islands'
 import { renderReactPage } from '../src/framework/render-page'
 import { registeredIsland } from './helpers/islands'
@@ -75,6 +76,49 @@ describe('React island SSR', () => {
         'data-nib-island': 'manual',
       })}</main>,
     )).toThrow('must be authored with island() and rendered by Nib')
+  })
+
+  it('rejects enhancement and island roots that contain one another', () => {
+    const StaticCounter = registeredIsland(
+      'static-counter',
+      island(() => <button>Count</button>),
+    )
+    const EnhancedCounter = registeredIsland(
+      'enhanced-counter',
+      island(() => <button {...enhance('counter')}>Count</button>),
+    )
+
+    expect(() => renderReactPage(
+      <section {...enhance('counter')}><StaticCounter /></section>,
+    )).toThrow('Enhancement and island roots cannot contain one another')
+    expect(() => renderReactPage(<EnhancedCounter />))
+      .toThrow('Enhancement and island roots cannot contain one another')
+  })
+
+  it('keeps sibling enhancement and island roots independent', () => {
+    const Counter = registeredIsland(
+      'sibling-counter',
+      island(() => <button>Count</button>),
+    )
+
+    const rendered = renderReactPage(
+      <main>
+        <section {...enhance('details')}>Details</section>
+        <Counter />
+      </main>,
+    )
+
+    expect(rendered.enhancements).toEqual([{ id: 'details', when: 'load' }])
+    expect(rendered.islands).toEqual([{ id: 'sibling-counter', when: 'load' }])
+  })
+
+  it.each([
+    '<button data-nib-enhancement="details">Details</button>',
+    '<nib-island data-nib-island="counter"></nib-island>',
+  ])('rejects client markers in inert template content', (content) => {
+    expect(() => renderReactPage(
+      <template dangerouslySetInnerHTML={{ __html: content }} />,
+    )).toThrow('Nib client markers cannot be placed inside inert <template> content')
   })
 
   it('renders with the same JSON identity semantics used during hydration', () => {

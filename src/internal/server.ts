@@ -9,12 +9,14 @@ export {
   glob,
   jsonFile,
   jsonGlob,
+  jsonValue,
   loadCollections,
   type FileLoaderOptions,
   type GlobLoaderFile,
   type GlobLoaderOptions,
   type JsonFileLoaderOptions,
   type JsonGlobLoaderOptions,
+  type JsonValueLoaderOptions,
 } from '../framework/content-server'
 export { markdownToCompiledPage } from '../framework/markdown'
 export { renderHead } from '../framework/meta'

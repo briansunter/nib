@@ -1,6 +1,6 @@
 # Static-first browser architecture redesign
 
-Status: implemented on `refactor/behavior-redesign`
+Status: implemented on `master` in Nib 0.20.0
 
 ## Contract
 
@@ -35,9 +35,10 @@ Status: implemented on `refactor/behavior-redesign`
 - navigation runtime coordination and route remount lifecycle;
 - the prior broad React-island lifecycle and navigation coupling.
 
-## Acceptance
+## Acceptance evidence
 
-Typecheck, unused-code checks, focused runtimes, fixture builds, scaffold,
-packed-package consumption, docs, and blog builds must pass. Production output
-must prove route-scoped enhancement/island assets, independent island SSR roots,
-the optional app initializer, and zero client JavaScript for a static-only site.
+The 0.20.0 release passed type checking, unused-code checks, focused runtime
+tests, fixture builds, scaffold and packed-package consumption, docs and example
+builds, and production-output checks for route-scoped enhancement/island assets,
+independent island SSR roots, the optional app initializer, and zero client
+JavaScript for a static-only site.

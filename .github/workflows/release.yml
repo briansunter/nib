@@ -6,20 +6,17 @@ on:
       - master
   workflow_dispatch:
     inputs:
-      release_ref:
-        description: Published tag or release commit to publish
+      release_package:
+        description: Missing package to publish from an existing release tag
+        required: true
+        type: choice
+        options:
+          - nib
+          - nib-images
+      release_tag:
+        description: Exact package tag (vX.Y.Z or nib-images-vX.Y.Z)
         required: true
         type: string
-      publish_root:
-        description: Publish @briansunter/nib from release_ref
-        required: true
-        default: false
-        type: boolean
-      publish_images:
-        description: Publish @briansunter/nib-images from release_ref
-        required: true
-        default: false
-        type: boolean
 
 jobs:
   release-please:
@@ -27,10 +24,6 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # The fallback detector below is authoritative when an old Release Please
-    # state cannot be reconciled, so a stale release PR must not block a
-    # version that is already present in package.json from being published.
-    continue-on-error: true
     permissions:
       contents: write
       issues: write
@@ -45,7 +38,7 @@ jobs:
         ${{ steps.release.outputs['packages/nib-images--tag_name'] }}
       # Image-only changes do not create the root tag. Fall back to the image
       # tag so the publish job always checks out the release commit.
-      release_ref: >-
+      release_tag: >-
         ${{ steps.release.outputs.tag_name ||
         steps.release.outputs['packages/nib-images--tag_name'] }}
     steps:
@@ -57,77 +50,206 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  detect-current-release:
-    name: Detect untagged package release
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    outputs:
-      should_publish: ${{ steps.version.outputs.should_publish }}
-      version: ${{ steps.version.outputs.version }}
-    steps:
-      - name: Check out current release commit
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Compare package version with published tags
-        id: version
-        shell: bash
-        run: |
-          name="$(node -p "require('./package.json').name")"
-          version="$(node -p "require('./package.json').version")"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          if npm view "${name}@${version}" version >/dev/null 2>&1; then
-            echo "should_publish=false" >> "$GITHUB_OUTPUT"
-            echo "${name}@${version} is already on npm; no fallback publish needed."
-          else
-            echo "should_publish=true" >> "$GITHUB_OUTPUT"
-            echo "${name}@${version} is not on npm; the release job will publish this commit."
-          fi
-
   publish:
     name: Publish to npm
-    needs:
-      - release-please
-      - detect-current-release
+    needs: release-please
     if: >-
       always() && (
         (github.event_name == 'push' && needs.release-please.outputs.releases_created == 'true') ||
-        (github.event_name == 'workflow_dispatch' && (inputs.publish_root || inputs.publish_images)) ||
-        (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.detect-current-release.outputs.should_publish == 'true')
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master')
       )
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    concurrency:
+      group: npm-publish
+      cancel-in-progress: false
     permissions:
-      contents: write
+      contents: read
       id-token: write
     steps:
       - name: Check out released version
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.release_ref || needs.release-please.outputs.release_ref || github.sha }}
+          ref: >-
+            ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag ||
+            needs.release-please.outputs.release_tag }}
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+
+      - name: Verify release tag and version
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_PACKAGE: ${{ inputs.release_package }}
+          MANUAL_TAG: ${{ inputs.release_tag }}
+          ROOT_RELEASE_CREATED: ${{ needs.release-please.outputs.release_created }}
+          ROOT_RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
+          IMAGE_RELEASE_CREATED: ${{ needs.release-please.outputs.image_release_created }}
+          IMAGE_RELEASE_TAG: ${{ needs.release-please.outputs.image_tag_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          validate_release() {
+            local package_name="$1"
+            local package_path="$2"
+            local manifest_key="$3"
+            local tag_prefix="$4"
+            local release_tag="$5"
+            local package_version
+            local manifest_version
+            local expected_tag
+            local tag_commit
+            local head_commit
+            local published_result
+            local published_status
+            local latest_version
+
+            if [[ -z "$release_tag" ]]; then
+              echo "Missing Release Please tag for ${package_name}." >&2
+              exit 1
+            fi
+
+            package_version="$(node -e '
+              const { readFileSync } = require("node:fs")
+              const manifest = JSON.parse(readFileSync(process.argv[1], "utf8"))
+              if (typeof manifest.version !== "string" || manifest.version.length === 0) process.exit(1)
+              process.stdout.write(manifest.version)
+            ' "$package_path")"
+            manifest_version="$(node -e '
+              const { readFileSync } = require("node:fs")
+              const manifest = JSON.parse(readFileSync(".release-please-manifest.json", "utf8"))
+              const version = manifest[process.argv[1]]
+              if (typeof version !== "string" || version.length === 0) process.exit(1)
+              process.stdout.write(version)
+            ' "$manifest_key")"
+
+            if [[ "$package_version" != "$manifest_version" ]]; then
+              echo "${package_name} package version ${package_version} does not match Release Please manifest version ${manifest_version}." >&2
+              exit 1
+            fi
+
+            if [[ ! "$package_version" =~ ^0\.[0-9]+\.[0-9]+$ ]]; then
+              echo "${package_name} version ${package_version} is not a stable 0.x.y release." >&2
+              exit 1
+            fi
+
+            expected_tag="${tag_prefix}${package_version}"
+            if [[ "$release_tag" != "$expected_tag" ]]; then
+              echo "Expected exact ${package_name} release tag ${expected_tag}, got ${release_tag}." >&2
+              exit 1
+            fi
+
+            if ! git show-ref --verify --quiet "refs/tags/${release_tag}"; then
+              echo "Release tag ${release_tag} is not present in the checkout." >&2
+              exit 1
+            fi
+
+            tag_commit="$(git rev-parse "refs/tags/${release_tag}^{commit}")"
+            head_commit="$(git rev-parse HEAD)"
+            if [[ "$tag_commit" != "$head_commit" ]]; then
+              echo "Checked-out commit ${head_commit} does not match ${release_tag} (${tag_commit})." >&2
+              exit 1
+            fi
+
+            if ! git merge-base --is-ancestor "$tag_commit" refs/remotes/origin/master; then
+              echo "Release tag ${release_tag} is not reachable from origin/master." >&2
+              exit 1
+            fi
+
+            if ! gh release view "$release_tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --json isDraft,isPrerelease \
+              --jq 'select(.isDraft == false and .isPrerelease == false) | [.isDraft, .isPrerelease] | @tsv' | \
+              grep -qx $'false\tfalse'; then
+              echo "Release tag ${release_tag} must have a published, non-prerelease GitHub Release." >&2
+              exit 1
+            fi
+
+            set +e
+            published_result="$(npm view "${package_name}@${package_version}" version 2>&1)"
+            published_status=$?
+            set -e
+            if [[ $published_status -eq 0 ]]; then
+              echo "${package_name}@${package_version} is already published; refusing to republish it." >&2
+              exit 1
+            fi
+            if [[ "$published_result" != *"E404"* ]]; then
+              echo "Could not prove ${package_name}@${package_version} is absent from npm:" >&2
+              echo "$published_result" >&2
+              exit 1
+            fi
+
+            if ! latest_version="$(npm view "${package_name}@latest" version)"; then
+              echo "Could not resolve the current ${package_name} latest version." >&2
+              exit 1
+            fi
+            if ! node -e '
+              const stable = /^(\d+)\.(\d+)\.(\d+)$/
+              const candidate = stable.exec(process.argv[1])
+              const latest = stable.exec(process.argv[2])
+              if (!candidate || !latest) process.exit(1)
+              const comparison = candidate.slice(1).map(Number).findIndex(
+                (part, index) => part !== Number(latest[index + 1]),
+              )
+              if (comparison < 0 || Number(candidate[comparison + 1]) <= Number(latest[comparison + 1])) {
+                process.exit(1)
+              }
+            ' "$package_version" "$latest_version"; then
+              echo "${package_name}@${package_version} must be newer than current latest ${latest_version}." >&2
+              exit 1
+            fi
+
+            echo "Verified ${package_name}@${package_version} from ${release_tag} (${tag_commit})."
+          }
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            case "$MANUAL_PACKAGE" in
+              nib)
+                validate_release "@briansunter/nib" "package.json" "." "v" "$MANUAL_TAG"
+                ;;
+              nib-images)
+                validate_release "@briansunter/nib-images" \
+                  "packages/nib-images/package.json" \
+                  "packages/nib-images" \
+                  "nib-images-v" \
+                  "$MANUAL_TAG"
+                ;;
+              *)
+                echo "Unsupported release package: ${MANUAL_PACKAGE}." >&2
+                exit 1
+                ;;
+            esac
+          else
+            if [[ "$ROOT_RELEASE_CREATED" == "true" ]]; then
+              validate_release "@briansunter/nib" "package.json" "." "v" "$ROOT_RELEASE_TAG"
+            fi
+            if [[ "$IMAGE_RELEASE_CREATED" == "true" ]]; then
+              validate_release "@briansunter/nib-images" \
+                "packages/nib-images/package.json" \
+                "packages/nib-images" \
+                "nib-images-v" \
+                "$IMAGE_RELEASE_TAG"
+            fi
+          fi
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.3
 
+      - name: Set up Node for verification
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          package-manager-cache: false
+
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
 
-      - name: Enforce pre-major version policy
-        run: bun run check:version-policy
-
-      - name: Typecheck
-        run: bun run typecheck
-
-      - name: Test
-        run: bun run test
-
-      - name: Build
-        run: bun run build
+      - name: Verify packages and sites
+        run: bun run check:version-policy && bun run verify
 
       - name: Set up Node for npm trusted publishing
         uses: actions/setup-node@v6
@@ -137,30 +259,91 @@ jobs:
           package-manager-cache: false
 
       - name: Update npm for trusted publishing
-        run: npm install --global npm@11.5.1
+        run: npm install --global npm@11.5.1 --ignore-scripts
+
+      - name: Recheck @briansunter/nib npm release ordering
+        if: >-
+          (github.event_name == 'push' && needs.release-please.outputs.release_created == 'true') ||
+          (github.event_name == 'workflow_dispatch' && inputs.release_package == 'nib')
+        shell: bash
+        env:
+          PACKAGE_NAME: '@briansunter/nib'
+          PACKAGE_PATH: package.json
+        run: |
+          set -euo pipefail
+          package_version="$(node -p "require('./' + process.env.PACKAGE_PATH).version")"
+          set +e
+          published_result="$(npm view "${PACKAGE_NAME}@${package_version}" version 2>&1)"
+          published_status=$?
+          set -e
+          if [[ $published_status -eq 0 ]]; then
+            echo "${PACKAGE_NAME}@${package_version} is already published." >&2
+            exit 1
+          fi
+          if [[ "$published_result" != *"E404"* ]]; then
+            echo "Could not prove ${PACKAGE_NAME}@${package_version} is absent from npm:" >&2
+            echo "$published_result" >&2
+            exit 1
+          fi
+          latest_version="$(npm view "${PACKAGE_NAME}@latest" version)"
+          node -e '
+            const parts = (value) => {
+              const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(value)
+              if (!match) process.exit(1)
+              return match.slice(1).map(Number)
+            }
+            const candidate = parts(process.argv[1])
+            const latest = parts(process.argv[2])
+            const index = candidate.findIndex((part, position) => part !== latest[position])
+            if (index < 0 || candidate[index] <= latest[index]) process.exit(1)
+          ' "$package_version" "$latest_version"
 
       - name: Publish to npm with provenance
         if: >-
           (github.event_name == 'push' && needs.release-please.outputs.release_created == 'true') ||
-          (github.event_name == 'workflow_dispatch' && inputs.publish_root) ||
-          (github.event_name == 'push' && needs.detect-current-release.outputs.should_publish == 'true')
-        run: npm publish --provenance --access public
+          (github.event_name == 'workflow_dispatch' && inputs.release_package == 'nib')
+        run: npm publish --provenance --access public --ignore-scripts
+
+      - name: Recheck @briansunter/nib-images npm release ordering
+        if: >-
+          (github.event_name == 'push' && needs.release-please.outputs.image_release_created == 'true') ||
+          (github.event_name == 'workflow_dispatch' && inputs.release_package == 'nib-images')
+        shell: bash
+        env:
+          PACKAGE_NAME: '@briansunter/nib-images'
+          PACKAGE_PATH: packages/nib-images/package.json
+        run: |
+          set -euo pipefail
+          package_version="$(node -p "require('./' + process.env.PACKAGE_PATH).version")"
+          set +e
+          published_result="$(npm view "${PACKAGE_NAME}@${package_version}" version 2>&1)"
+          published_status=$?
+          set -e
+          if [[ $published_status -eq 0 ]]; then
+            echo "${PACKAGE_NAME}@${package_version} is already published." >&2
+            exit 1
+          fi
+          if [[ "$published_result" != *"E404"* ]]; then
+            echo "Could not prove ${PACKAGE_NAME}@${package_version} is absent from npm:" >&2
+            echo "$published_result" >&2
+            exit 1
+          fi
+          latest_version="$(npm view "${PACKAGE_NAME}@latest" version)"
+          node -e '
+            const parts = (value) => {
+              const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(value)
+              if (!match) process.exit(1)
+              return match.slice(1).map(Number)
+            }
+            const candidate = parts(process.argv[1])
+            const latest = parts(process.argv[2])
+            const index = candidate.findIndex((part, position) => part !== latest[position])
+            if (index < 0 || candidate[index] <= latest[index]) process.exit(1)
+          ' "$package_version" "$latest_version"
 
       - name: Publish @briansunter/nib-images to npm with provenance
         if: >-
           (github.event_name == 'push' && needs.release-please.outputs.image_release_created == 'true') ||
-          (github.event_name == 'workflow_dispatch' && inputs.publish_images)
+          (github.event_name == 'workflow_dispatch' && inputs.release_package == 'nib-images')
         working-directory: packages/nib-images
-        run: npm publish --provenance --access public
-
-      - name: Create fallback GitHub release
-        if: github.event_name == 'push' && needs.detect-current-release.outputs.should_publish == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_VERSION: ${{ needs.detect-current-release.outputs.version }}
-        run: |
-          if gh release view "v${RELEASE_VERSION}" >/dev/null 2>&1; then
-            echo "v${RELEASE_VERSION} already has a GitHub release."
-          else
-            gh release create "v${RELEASE_VERSION}" --target "$GITHUB_SHA" --title "v${RELEASE_VERSION}" --generate-notes
-          fi
+        run: npm publish --provenance --access public --ignore-scripts

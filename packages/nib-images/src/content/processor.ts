@@ -8,7 +8,11 @@ import type { ImageBuildRegistry } from '../image-registry'
 import type { ContentImageFallback } from '../image-registry'
 import { ImageSourceCatalog } from '../image-source-catalog'
 import type { ImageProps } from '../image-component'
-import type { NormalizedContentImageSource, NormalizedImagesOptions } from '../options'
+import {
+  isAllowedSource,
+  type NormalizedContentImageSource,
+  type NormalizedImagesOptions,
+} from '../options'
 import {
   applyTextReplacements,
   attributesFor,
@@ -82,11 +86,17 @@ async function copyContentSource(
   clientDirectory: string,
   source: NormalizedContentImageSource,
   sourceFile: string,
+  allowedSourceRoots: readonly string[],
 ): Promise<void> {
   const [sourceRoot, resolvedSource] = await Promise.all([
     fs.realpath(source.directory),
     fs.realpath(sourceFile),
   ])
+  if (!isAllowedSource(sourceRoot, allowedSourceRoots)) {
+    throw new Error(
+      `@briansunter/nib-images: content directory resolves outside allowedSourceRoots: ${source.directory}`,
+    )
+  }
   const relative = path.relative(sourceRoot, resolvedSource)
   if (relative.startsWith('..') || path.isAbsolute(relative)) {
     throw new Error(`@briansunter/nib-images: content source escapes its configured directory: ${sourceFile}`)
@@ -101,6 +111,7 @@ async function copyReferencedContentSources(
   base: string,
   options: NormalizedImagesOptions,
   files: readonly string[],
+  allowedSourceRoots: readonly string[],
 ): Promise<void> {
   const references = new Set<string>()
   for (const file of files) {
@@ -127,7 +138,12 @@ async function copyReferencedContentSources(
     const relative = path.relative(match.source.directory, match.file)
     const target = path.join(outputPrefix(clientDirectory, match.source.publicPath), relative)
     if (!copies.has(target)) {
-      copies.set(target, copyContentSource(clientDirectory, match.source, match.file))
+      copies.set(target, copyContentSource(
+        clientDirectory,
+        match.source,
+        match.file,
+        allowedSourceRoots,
+      ))
     }
   }
   await Promise.all(copies.values())
@@ -162,13 +178,23 @@ function relativeSourceFile(
   ])]
   const prefix = prefixes.find((candidate) => pathname.startsWith(candidate))
   if (!prefix) return undefined
+  const encoded = pathname.slice(prefix.length)
+  if (/%(?:2f|5c)/i.test(encoded)) return undefined
   let relative: string
   try {
-    relative = decodeURIComponent(pathname.slice(prefix.length))
+    relative = decodeURIComponent(encoded)
   } catch {
     return undefined
   }
-  if (relative === '' || relative.split('/').includes('..')) return undefined
+  const segments = relative.split('/')
+  if (
+    relative === ''
+    || relative.includes('\\')
+    || relative.includes('%')
+    || relative.includes('\0')
+    || path.isAbsolute(relative)
+    || segments.some((segment) => segment === '' || segment === '.' || segment === '..')
+  ) return undefined
   return path.join(source.directory, relative)
 }
 
@@ -297,6 +323,7 @@ async function rewriteFile(
   registry: ImageBuildRegistry,
   catalog: ImageSourceCatalog,
   sourceCache: Map<string, Awaited<ReturnType<ImageSourceCatalog['load']>>>,
+  allowedSourceRoots: readonly string[],
 ): Promise<number> {
   const html = await fs.readFile(file, 'utf8')
   const normalizedHtml = normalizeContentReferences(html, base, options)
@@ -318,7 +345,12 @@ async function rewriteFile(
     const { source: sourceDefinition, file: sourceFile } = match
     let source = sourceCache.get(sourceFile)
     try {
-      await copyContentSource(clientDirectory, sourceDefinition, sourceFile)
+      await copyContentSource(
+        clientDirectory,
+        sourceDefinition,
+        sourceFile,
+        allowedSourceRoots,
+      )
       if (!source) {
         source = await catalog.load(sourceFile)
         sourceCache.set(sourceFile, source)
@@ -420,10 +452,32 @@ export async function optimizeContentImages(
   const catalog = new ImageSourceCatalog(options)
   const sourceCache = new Map<string, Awaited<ReturnType<ImageSourceCatalog['load']>>>()
   const files = htmlFiles(clientDirectory, routes)
-  await copyReferencedContentSources(clientDirectory, base, options, files)
+  const allowedSourceRoots = await Promise.all(options.allowedSourceRoots.map(async (root) => {
+    try {
+      return await fs.realpath(root)
+    } catch {
+      return root
+    }
+  }))
+  await copyReferencedContentSources(
+    clientDirectory,
+    base,
+    options,
+    files,
+    allowedSourceRoots,
+  )
   let replacements = 0
   for (const file of files) {
-    replacements += await rewriteFile(file, clientDirectory, base, options, registry, catalog, sourceCache)
+    replacements += await rewriteFile(
+      file,
+      clientDirectory,
+      base,
+      options,
+      registry,
+      catalog,
+      sourceCache,
+      allowedSourceRoots,
+    )
   }
   if (replacements > 0) console.info(`nib-images: optimized ${replacements} content image reference(s)`)
   return replacements

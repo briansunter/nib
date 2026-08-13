@@ -2,14 +2,13 @@ import matter from 'gray-matter'
 import { defaultMarkdownSchema, parseData } from './content'
 import { compiledMarkdownContent } from './markdown-content'
 import { renderMarkdown } from './markdown-renderer'
-import { normalizeHeadContribution } from './meta'
+import { resolveMeta } from './meta'
 import type {
   DataSchema,
   DataValidator,
   InferDataValidator,
   MarkdownDefinition,
   MarkdownSourceContext,
-  MetadataImage,
   PageMeta,
 } from './types'
 
@@ -30,17 +29,16 @@ function getMarkdownMeta(
   values: Record<string, unknown>,
 ): { meta: PageMeta; layout: string | undefined } {
   const { title, description, draft, layout, head, image, type, twitterCard } = values
-  const normalizedHead = normalizeHeadContribution(head, 'Markdown page head')
   return {
-    meta: {
+    meta: resolveMeta({
       title: title as string,
       ...(description === undefined ? {} : { description: description as string }),
       ...(draft === undefined ? {} : { draft: draft as boolean }),
-      ...(normalizedHead === undefined ? {} : { head: normalizedHead }),
-      ...(image === undefined ? {} : { image: image as MetadataImage }),
+      ...(head === undefined ? {} : { head }),
+      ...(image === undefined ? {} : { image }),
       ...(type === undefined ? {} : { type: type as 'website' | 'article' }),
       ...(twitterCard === undefined ? {} : { twitterCard: twitterCard as 'summary' | 'summary_large_image' }),
-    },
+    }, 'Markdown page metadata'),
     layout: getMarkdownLayoutName(layout),
   }
 }
@@ -74,12 +72,14 @@ export async function markdownToCompiledPage<
   if (definition?.meta !== undefined) {
     const override = definition.meta({
       frontmatter: frontmatter as never,
+      file: context?.file ?? '',
       path: context?.file ?? '',
       source: parsed.content,
       defaults: meta,
     })
     if (override !== undefined) resolvedMeta = override
   }
+  resolvedMeta = resolveMeta(resolvedMeta, 'Markdown page metadata')
   const html = await renderMarkdown(parsed.content, definition, context)
   return {
     html,

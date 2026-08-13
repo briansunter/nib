@@ -26,3 +26,31 @@ export function createTaskQueue(
     }
   }
 }
+
+/** Runs a bounded set of workers, stops scheduling after the first failure,
+ * and waits for already-started work before rejecting. */
+export async function mapWithConcurrency<Value>(
+  values: readonly Value[],
+  concurrency: number,
+  callback: (value: Value) => Promise<void>,
+): Promise<void> {
+  let next = 0
+  let failed = false
+  let firstFailure: unknown
+  const workers = Array.from({ length: Math.min(values.length, concurrency) }, async () => {
+    while (!failed && next < values.length) {
+      const current = values[next++]
+      if (current === undefined) continue
+      try {
+        await callback(current)
+      } catch (error) {
+        if (!failed) {
+          failed = true
+          firstFailure = error
+        }
+      }
+    }
+  })
+  await Promise.all(workers)
+  if (failed) throw firstFailure
+}

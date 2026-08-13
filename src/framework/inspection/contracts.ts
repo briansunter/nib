@@ -3,6 +3,7 @@ import type {
   PublicationManifest,
   PublicationManifestRoute,
 } from '../publication'
+import type { ClientProvenanceReport } from '../client-provenance'
 
 export type SiteIssueSeverity = 'error' | 'warning'
 
@@ -74,6 +75,7 @@ export interface SiteInspection {
   readonly pages: readonly InspectedPage[]
   readonly pagesByRoute: Readonly<Record<string, InspectedPage>>
   readonly imageProvenance?: ImageProvenanceReport
+  readonly clientProvenance?: ClientProvenanceReport
   readonly metrics: SiteInspectionMetrics
   readonly issues: readonly SiteIssue[]
 }

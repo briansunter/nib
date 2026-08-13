@@ -22,4 +22,11 @@ export const imagePackageEntries = Object.freeze([
     javascript: './dist/plugin.js',
     types: './dist/plugin.d.ts',
   },
+  {
+    name: 'content',
+    exportKey: './content',
+    source: 'src/content.ts',
+    javascript: './dist/content.js',
+    types: './dist/content.d.ts',
+  },
 ] as const satisfies readonly ImagePackageEntry[])

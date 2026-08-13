@@ -95,6 +95,7 @@ describe('published package consumer', () => {
     expect(packedFiles).toContain('templates/default/gitignore')
     expect(packedFiles.some((file) => file.startsWith('tests/'))).toBe(false)
     expect(packedFiles.some((file) => file.startsWith('examples/'))).toBe(false)
+    expect(packedFiles.some((file) => file.startsWith('docs/history/'))).toBe(false)
 
     const browserEntry = await fs.readFile('dist/framework/index.js', 'utf8')
     expect(browserEntry).not.toMatch(/from ["']node:(?:fs|path)/)
@@ -281,6 +282,8 @@ describe('published package consumer', () => {
     expect(files).toContain('dist/index.js')
     expect(files).toContain('dist/index.d.ts')
     expect(files).toContain('dist/plugin.js')
+    expect(files).toContain('dist/content.js')
+    expect(files).toContain('dist/content.d.ts')
     expect(files).toContain('dist/nib-image.d.ts')
     expect(files).not.toContain('dist/internal.js')
     expect(files).not.toContain('dist/internal.d.ts')
@@ -314,9 +317,14 @@ describe('published package consumer', () => {
     const coreResult = JSON.parse(corePacked.stdout) as Array<{ filename: string }>
     const consumer = await temporaryDirectory('nib-images-consumer')
     await fs.mkdir(path.join(consumer, 'src/pages'), { recursive: true })
+    await fs.mkdir(path.join(consumer, 'src/assets/site-assets'), { recursive: true })
     await fs.copyFile(
       'tests/fixtures/image-site/src/hero.png',
       path.join(consumer, 'src/hero.png'),
+    )
+    await fs.copyFile(
+      'tests/fixtures/image-site/src/hero.png',
+      path.join(consumer, 'src/assets/site-assets/content-hero.png'),
     )
     await fs.writeFile(path.join(consumer, 'package.json'), JSON.stringify({
       private: true,
@@ -349,7 +357,11 @@ import { sitemap } from '@briansunter/nib/sitemap'
 export default defineConfig({
   origin: 'https://packed.example',
   plugins: [
-    images({ widths: [32, 64], formats: ['webp'] }),
+    images({
+      widths: [32, 64],
+      formats: ['webp'],
+      content: [{ publicPath: '/site-assets/', directory: 'src/assets/site-assets' }],
+    }),
     sitemap({}),
     rss({
       title: 'Packed feed',
@@ -361,12 +373,20 @@ export default defineConfig({
 `)
     await fs.writeFile(path.join(consumer, 'src/pages/page.tsx'), `
 import { Image } from '@briansunter/nib-images'
+import { resolveContentImage } from '@briansunter/nib-images/content'
 import hero from '../hero.png?nib-image'
 
 export const meta = { title: 'Packed images' }
 
 export default function Page() {
-  return <Image src={hero} alt="Packed fixture" width={32} priority />
+  const contentHero = resolveContentImage('/site-assets/content-hero.png')
+  if (!contentHero) throw new Error('Configured content image was not resolved')
+  return (
+    <main>
+      <Image src={hero} alt="Packed fixture" width={32} priority />
+      <Image src={contentHero} alt="Packed content fixture" width={32} />
+    </main>
+  )
 }
 `)
     const imageTarball = path.join(packageDirectory, result[0].filename)
@@ -388,6 +408,7 @@ export default function Page() {
     await execute('npm', ['run', 'build'], { cwd: consumer })
     const packedHtml = await fs.readFile(path.join(consumer, 'dist/client/index.html'), 'utf8')
     expect(packedHtml).toContain('<picture>')
+    expect(packedHtml).toContain('alt="Packed content fixture"')
     expect(packedHtml).not.toContain('data-nib-enhancements')
     expect(packedHtml).not.toContain('data-nib-islands')
     await expect(fs.access(path.join(consumer, 'dist/client/.vite/manifest.json')))

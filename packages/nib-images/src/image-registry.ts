@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { linkOrCopy, pruneImageCache } from './cache'
+import { mapWithConcurrency } from './concurrency'
 import { ImageTransformExecutor } from './image-executor'
 import {
   createImageTransformRequest,
@@ -43,20 +44,6 @@ interface ImageProvenanceCandidate {
   readonly sourceHeight: number
   readonly sourceFormat: SourceImageFormat
   readonly maxWidth: number
-}
-
-async function mapWithConcurrency<Value>(
-  values: readonly Value[],
-  concurrency: number,
-  callback: (value: Value) => Promise<void>,
-): Promise<void> {
-  let next = 0
-  await Promise.all(Array.from({ length: Math.min(values.length, concurrency) }, async () => {
-    while (next < values.length) {
-      const current = values[next++]
-      if (current !== undefined) await callback(current)
-    }
-  }))
 }
 
 /** Collects output requests during SSR, then materializes them after all routes

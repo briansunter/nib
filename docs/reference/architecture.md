@@ -121,6 +121,11 @@ static markup. Immediate enhancement chunks may be module-preloaded; visible
 chunks are not. Styles and preloads are deduplicated against global,
 application-client, and island entries.
 
+The build writes `.nib/client.json` beside the publication manifest. It is the
+typed ownership record for runtime entries, enhancement/island modules, and
+route-linked styles and preloads, so downstream verification can consume the
+same render decisions without regex parsing generated documents.
+
 ## React islands
 
 An island module lives at `src/islands/<id>.tsx` and must default-export a

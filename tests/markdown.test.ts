@@ -58,6 +58,12 @@ describe('markdown', () => {
       .rejects.toThrow('Markdown frontmatter')
     await expect(markdownToCompiledPage('---\ntwitterCard: hero\n---\n# World'))
       .rejects.toThrow('Markdown frontmatter')
+    await expect(markdownToCompiledPage(
+      '---\ntitle: Image\nimage:\n  src: " "\n---\n# World',
+    )).rejects.toThrow('image.src must be a non-empty string')
+    await expect(markdownToCompiledPage(
+      '---\ntitle: Image\nimage:\n  src: /cover.png\n  width: 1.5\n---\n# World',
+    )).rejects.toThrow('image.width must be a positive safe integer')
   })
 
   it('rejects invalid Markdown layouts while compiling', async () => {
@@ -91,15 +97,34 @@ describe('markdown', () => {
   })
 
   it('lets a Markdown definition override route metadata via the meta callback', async () => {
+    let sourceFile = ''
+    let compatibilityPath = ''
     const compiled = await markdownToCompiledPage(
       '---\ntitle: Hello\n---\n# World',
       defineMarkdown({
         schema: z.object({ title: z.string() }),
-        meta: ({ defaults }) => ({ ...defaults, type: 'article' }),
+        meta: ({ defaults, file, path }) => {
+          sourceFile = file
+          compatibilityPath = path
+          return { ...defaults, type: 'article' }
+        },
       }),
+      { file: 'src/pages/hello/page.md' },
     )
     expect(compiled.meta.type).toBe('article')
     expect(compiled.meta.title).toBe('Hello')
+    expect(sourceFile).toBe('src/pages/hello/page.md')
+    expect(compatibilityPath).toBe(sourceFile)
+  })
+
+  it('validates metadata returned by a Markdown meta callback immediately', async () => {
+    await expect(markdownToCompiledPage(
+      '---\ntitle: Hello\n---\n# World',
+      defineMarkdown({
+        schema: z.object({ title: z.string() }),
+        meta: () => ({ title: 'Hello', draft: 'later' } as never),
+      }),
+    )).rejects.toThrow('Markdown page metadata draft must be a boolean')
   })
 
   it('keeps the default metadata when no meta callback is supplied', async () => {

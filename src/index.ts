@@ -37,6 +37,8 @@ export type {
   GlobLoaderOptions,
 } from './framework/content-compat'
 export type { ClientEnhancement } from './runtime/enhancements'
+export type { EnhanceOptions, EnhancementAttributes } from './framework/enhancements'
+export type { FromPagesOptions } from './framework/content'
 export type {
   ClientInitializer,
   NibBuildOutput,
@@ -103,7 +105,14 @@ export type {
   PublicationManifest,
   PublicationManifestRoute,
 } from './framework/publication'
-export type { MetadataOptions } from './integrations/metadata'
+export type { MetadataOptions, MetadataResolveResult } from './integrations/metadata'
+export type {
+  ClientProvenanceModule,
+  ClientProvenanceReport,
+  ClientProvenanceRoute,
+  ClientProvenanceRuntime,
+} from './framework/client-provenance'
+export type { BuildInfoOptions } from './integrations/build-info'
 export type { SiteMetadataOptions } from './integrations/site-metadata'
 export type { MarkdownMediaOptions } from './integrations/markdown-media'
 export type { SearchItem, SearchItems, SearchOptions } from './integrations/search'

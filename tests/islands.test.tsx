@@ -22,6 +22,8 @@ describe('React island definitions', () => {
       .toBe(Counter)
     expect(islandDefinitionId(Counter)).toBe('cart/counter')
     expect(Counter.when).toBe('load')
+    expect(Object.isFrozen(Counter)).toBe(true)
+    expect(Reflect.set(Counter, 'when', 'visible')).toBe(false)
   })
 
   it('fixes hydration policy on the definition and sends it to the renderer', () => {

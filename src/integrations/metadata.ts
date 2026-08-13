@@ -1,15 +1,77 @@
 import { deployedOrigin, deployedRouteUrl } from '../framework/deployed-url'
 import { metadataImageSrc, normalizeMetadataImage } from '../framework/meta'
 import type { NibPlugin, NibRenderPageContext } from '../framework/plugin'
-import type { HeadAttributeValue, HeadContribution, HeadElement } from '../framework/types'
+import type {
+  HeadAttributeValue,
+  HeadContribution,
+  HeadElement,
+  MetadataImage,
+} from '../framework/types'
 
-export interface MetadataOptions {
+export interface MetadataResolveResult {
   /** A deployed route or absolute URL used for social previews. */
-  readonly image?: string
+  readonly image?: MetadataImage
   readonly type?: 'website' | 'article'
   readonly twitterCard?: 'summary' | 'summary_large_image'
+}
+
+export interface MetadataOptions extends MetadataResolveResult {
   readonly siteName?: string
+  /** Twitter/X account for the site, including the leading `@`. */
+  readonly twitterSite?: string
   readonly structuredData?: boolean
+  /** Computes route-specific social defaults before route metadata is applied. */
+  readonly resolve?: (context: NibRenderPageContext) => MetadataResolveResult | void
+}
+
+interface NormalizedMetadataOptions extends MetadataOptions {
+  readonly type: 'website' | 'article'
+  readonly twitterCard: 'summary' | 'summary_large_image'
+  readonly structuredData: boolean
+}
+
+function metadataType(value: unknown, label: string): 'website' | 'article' | undefined {
+  if (value === undefined) return undefined
+  if (value !== 'website' && value !== 'article') {
+    throw new Error(`${label} must be website or article`)
+  }
+  return value
+}
+
+function metadataTwitterCard(
+  value: unknown,
+  label: string,
+): 'summary' | 'summary_large_image' | undefined {
+  if (value === undefined) return undefined
+  if (value !== 'summary' && value !== 'summary_large_image') {
+    throw new Error(`${label} must be summary or summary_large_image`)
+  }
+  return value
+}
+
+function resolvedMetadata(
+  context: NibRenderPageContext,
+  options: NormalizedMetadataOptions,
+): MetadataResolveResult {
+  const resolved = options.resolve?.(context)
+  if (
+    resolved !== undefined
+    && (resolved === null || typeof resolved !== 'object' || Array.isArray(resolved))
+  ) {
+    throw new Error('Nib metadata resolve() must return an object or undefined')
+  }
+  const values = resolved ?? {}
+  const image = normalizeMetadataImage(values.image, 'Nib metadata resolve() image')
+  const type = metadataType(values.type, 'Nib metadata resolve() type')
+  const twitterCard = metadataTwitterCard(
+    values.twitterCard,
+    'Nib metadata resolve() twitterCard',
+  )
+  return {
+    ...(image === undefined ? {} : { image }),
+    ...(type === undefined ? {} : { type }),
+    ...(twitterCard === undefined ? {} : { twitterCard }),
+  }
 }
 
 function absoluteUrl(value: string, context: NibRenderPageContext): string {
@@ -20,15 +82,16 @@ function absoluteUrl(value: string, context: NibRenderPageContext): string {
 
 function contribution(
   context: NibRenderPageContext,
-  options: Required<Pick<MetadataOptions, 'type' | 'twitterCard' | 'structuredData'>> & MetadataOptions,
+  options: NormalizedMetadataOptions,
 ): HeadContribution {
   const routeMeta = context.route.meta
-  // Each social field falls back independently: a route override wins over the
-  // plugin default without emitting the default value alongside it.
-  const type = routeMeta.type ?? options.type
-  const twitterCard = routeMeta.twitterCard ?? options.twitterCard
+  const resolved = resolvedMetadata(context, options)
+  // Each social field falls back independently: route metadata wins over the
+  // resolver, which wins over the static plugin default.
+  const type = routeMeta.type ?? resolved.type ?? options.type
+  const twitterCard = routeMeta.twitterCard ?? resolved.twitterCard ?? options.twitterCard
   const routeImage = normalizeMetadataImage(routeMeta.image, 'Page metadata image')
-  const image = routeImage ?? options.image
+  const image = routeImage ?? resolved.image ?? options.image
   const elements: HeadElement[] = []
   let url: string | undefined
   if (context.origin !== undefined) {
@@ -50,6 +113,9 @@ function contribution(
   if (url !== undefined) addMeta({ property: 'og:url', content: url }, 'og:url')
   if (options.siteName !== undefined) addMeta({ property: 'og:site_name', content: options.siteName }, 'og:site_name')
   addMeta({ name: 'twitter:card', content: twitterCard }, 'twitter:card')
+  if (options.twitterSite !== undefined) {
+    addMeta({ name: 'twitter:site', content: options.twitterSite }, 'twitter:site')
+  }
   addMeta({ name: 'twitter:title', content: context.route.meta.title }, 'twitter:title')
   if (context.route.meta.description !== undefined) {
     addMeta({ name: 'twitter:description', content: context.route.meta.description }, 'twitter:description')
@@ -95,12 +161,15 @@ function contribution(
 
 /** Adds canonical, Open Graph, Twitter, and optional WebPage metadata. */
 export function metadata(options: MetadataOptions = {}): NibPlugin {
+  const image = normalizeMetadataImage(options.image, 'Nib metadata image')
   const normalized = {
     ...options,
-    type: options.type ?? 'website',
-    twitterCard: options.twitterCard ?? 'summary_large_image',
+    ...(image === undefined ? {} : { image }),
+    type: metadataType(options.type, 'Nib metadata type') ?? 'website',
+    twitterCard: metadataTwitterCard(options.twitterCard, 'Nib metadata twitterCard')
+      ?? 'summary_large_image',
     structuredData: options.structuredData ?? true,
-  } as Required<Pick<MetadataOptions, 'type' | 'twitterCard' | 'structuredData'>> & MetadataOptions
+  } satisfies NormalizedMetadataOptions
   return {
     name: '@briansunter/nib-metadata',
     renderer() {

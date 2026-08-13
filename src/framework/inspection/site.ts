@@ -23,6 +23,7 @@ import type {
   SiteVerifierExtension,
   VerifySiteOptions,
 } from './contracts'
+import type { ClientProvenanceReport } from '../client-provenance'
 
 export * from './contracts'
 
@@ -45,10 +46,12 @@ interface MutableInspection {
   issues: SiteIssue[]
   checkedReferences: number
   imageProvenance?: ImageProvenanceReport
+  clientProvenance?: ClientProvenanceReport
 }
 
 const MANIFEST_PATH = '.nib/publication.json'
 const IMAGE_PROVENANCE_PATH = '.nib/images.json'
+const CLIENT_PROVENANCE_PATH = '.nib/client.json'
 const IMAGE_FORMATS = new Set(['avif', 'webp', 'jpeg', 'png', 'gif', 'svg'])
 
 function record<T extends { readonly path: string }>(
@@ -287,6 +290,116 @@ async function inspectImageProvenance(
       }))
     }
   }
+}
+
+async function inspectClientProvenance(
+  output: string,
+  inspection: MutableInspection,
+): Promise<void> {
+  const filesByPath = record(inspection.files)
+  if (filesByPath[CLIENT_PROVENANCE_PATH] === undefined) return
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(await fs.readFile(path.join(output, CLIENT_PROVENANCE_PATH), 'utf8'))
+  } catch (error) {
+    inspection.issues.push(issue({
+      code: 'CLIENT_PROVENANCE_INVALID',
+      severity: 'error',
+      message: `Could not parse ${CLIENT_PROVENANCE_PATH} (${errorCode(error)})`,
+      artifact: CLIENT_PROVENANCE_PATH,
+    }))
+    return
+  }
+  const report = parsed as Partial<ClientProvenanceReport>
+  if (
+    report.version !== 1
+    || !Array.isArray(report.routes)
+    || report.runtimes === null
+    || typeof report.runtimes !== 'object'
+    || report.modules === null
+    || typeof report.modules !== 'object'
+  ) {
+    inspection.issues.push(issue({
+      code: 'CLIENT_PROVENANCE_INVALID',
+      severity: 'error',
+      message: `${CLIENT_PROVENANCE_PATH} must be a version 1 client provenance report`,
+      artifact: CLIENT_PROVENANCE_PATH,
+    }))
+    return
+  }
+  const routes = report.routes as readonly ClientProvenanceReport['routes'][number][]
+  const routesByPath = new Set<string>()
+  for (const route of routes) {
+    if (!route || typeof route !== 'object') {
+      inspection.issues.push(issue({
+        code: 'CLIENT_PROVENANCE_INVALID',
+        severity: 'error',
+        message: `${CLIENT_PROVENANCE_PATH} contains a malformed route`,
+        artifact: CLIENT_PROVENANCE_PATH,
+      }))
+      continue
+    }
+    if (typeof route.path !== 'string' || typeof route.artifact !== 'string') {
+      inspection.issues.push(issue({
+        code: 'CLIENT_PROVENANCE_INVALID',
+        severity: 'error',
+        message: `${CLIENT_PROVENANCE_PATH} contains a route without path/artifact`,
+        artifact: CLIENT_PROVENANCE_PATH,
+      }))
+      continue
+    }
+    const manifestRoute = inspection.manifest?.routes.find((candidate) => candidate.path === route.path)
+    if (manifestRoute === undefined || manifestRoute.artifact !== route.artifact) {
+      inspection.issues.push(issue({
+        code: 'CLIENT_PROVENANCE_ROUTE_MISMATCH',
+        severity: 'error',
+        message: `${CLIENT_PROVENANCE_PATH} route ${route.path} does not match the publication manifest`,
+        route: route.path,
+        artifact: CLIENT_PROVENANCE_PATH,
+      }))
+    }
+    if (routesByPath.has(route.path)) {
+      inspection.issues.push(issue({
+        code: 'CLIENT_PROVENANCE_DUPLICATE_ROUTE',
+        severity: 'error',
+        message: `${CLIENT_PROVENANCE_PATH} repeats route ${route.path}`,
+        route: route.path,
+        artifact: CLIENT_PROVENANCE_PATH,
+      }))
+    }
+    routesByPath.add(route.path)
+    if (route.enhancements.some((entry) => entry.when !== 'load' && entry.when !== 'visible')) {
+      inspection.issues.push(issue({
+        code: 'CLIENT_PROVENANCE_TIMING_INVALID',
+        severity: 'error',
+        message: `${CLIENT_PROVENANCE_PATH} contains an invalid enhancement timing`,
+        route: route.path,
+        artifact: CLIENT_PROVENANCE_PATH,
+      }))
+    }
+    if (route.islands.some((entry) => entry.when !== 'load' && entry.when !== 'visible')) {
+      inspection.issues.push(issue({
+        code: 'CLIENT_PROVENANCE_TIMING_INVALID',
+        severity: 'error',
+        message: `${CLIENT_PROVENANCE_PATH} contains an invalid island timing`,
+        route: route.path,
+        artifact: CLIENT_PROVENANCE_PATH,
+      }))
+    }
+    for (const field of ['javascript', 'stylesheets', 'preloads'] as const) {
+      const values = route[field]
+      if (!Array.isArray(values) || new Set(values).size !== values.length) {
+        inspection.issues.push(issue({
+          code: 'CLIENT_PROVENANCE_DUPLICATE_ASSET',
+          severity: 'error',
+          message: `${CLIENT_PROVENANCE_PATH} route ${route.path} has duplicate ${field}`,
+          route: route.path,
+          artifact: CLIENT_PROVENANCE_PATH,
+        }))
+      }
+    }
+  }
+  inspection.clientProvenance = Object.freeze(report as ClientProvenanceReport)
 }
 
 async function readManifest(
@@ -688,6 +801,7 @@ export async function inspectSite(options: InspectSiteOptions): Promise<SiteInsp
   inspectRouteIndexes(inspection)
   if (inspection.manifest) await inspectPages(output, inspection)
   await inspectImageProvenance(output, inspection)
+  await inspectClientProvenance(output, inspection)
   inspection.issues.sort(issueOrder)
 
   const pageCount = inspection.routes.filter((route) => route.kind === 'page').length
@@ -717,6 +831,9 @@ export async function inspectSite(options: InspectSiteOptions): Promise<SiteInsp
     ...(inspection.imageProvenance === undefined
       ? {}
       : { imageProvenance: inspection.imageProvenance }),
+    ...(inspection.clientProvenance === undefined
+      ? {}
+      : { clientProvenance: inspection.clientProvenance }),
     metrics,
     issues: Object.freeze(inspection.issues),
   })

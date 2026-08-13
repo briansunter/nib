@@ -62,6 +62,9 @@ export interface MarkdownSourceContext {
 
 export interface MarkdownMetaContext<Frontmatter> {
   readonly frontmatter: Frontmatter
+  /** Source filename supplied to the Markdown compiler. */
+  readonly file: string
+  /** @deprecated Use `file`; retained as a compatibility alias. */
   readonly path: string
   readonly source: string
   readonly defaults: PageMeta

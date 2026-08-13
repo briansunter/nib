@@ -25,3 +25,6 @@ export type {
   SemanticTextNormalizer,
   SemanticTraversalOptions,
 } from './framework/testing'
+export { renderReactPage } from './framework/render-page'
+export type { RenderedReactPage } from './framework/render-page'
+export { createBuildOutput } from './framework/build-output'

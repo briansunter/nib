@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { createRoutes, getRoute } from '../src/framework/router'
-import type { PageModule } from '../src/framework/types'
+import {
+  addConfiguredRedirects,
+  addPluginRoutes,
+  createRoutes,
+  getRoute,
+} from '../src/framework/router'
+import type { PageModule, ResolvedRoute } from '../src/framework/types'
 
 const Page = () => <p>page</p>
 const RootLayout = () => null
@@ -117,9 +122,149 @@ describe('router', () => {
     })).toThrow('protocol-relative')
   })
 
+  it.each([
+    ['relative', 'absolute route path'],
+    ['/products//pencil', 'repeated slashes'],
+    ['/products/pencil?draft=1', 'no query'],
+    ['/products/pencil#details', 'no query, hash'],
+    ['/products\\pencil', 'no query, hash, or backslash'],
+    ['/products/../pencil', 'no dot segments'],
+    ['/products/%2e%2e/pencil', 'no dot segments'],
+    ['/products%2Fpencil', 'no encoded path separators'],
+    ['/old\npath', 'no control characters'],
+    ['/old\0path', 'no control characters'],
+    ['/old%0Apath', 'no encoded control characters'],
+    ['/old%7Fpath', 'no encoded control characters'],
+    ['/pr%6Fducts', 'no encoded unreserved characters'],
+    ['/products/%zz', 'valid URL encoding'],
+  ])('rejects malformed generated route identity %s', (path, message) => {
+    expect(() => createRoutes({
+      '/src/content/projects.json': {
+        pages: [{
+          path,
+          component: Page,
+          data: {},
+          meta: { title: 'Project' },
+        }],
+      },
+    })).toThrow(message)
+  })
+
+  it('keeps encoded spaces as an unambiguous route identity', () => {
+    const routes = createRoutes({
+      '/src/content/projects.json': {
+        pages: [{
+          path: '/hello%20world',
+          component: Page,
+          data: {},
+          meta: { title: 'Hello world' },
+        }],
+      },
+    })
+
+    expect(routes.has('/hello%20world')).toBe(true)
+  })
+
   it('requires every page to define a non-empty title', () => {
     expect(() => createRoutes({
       '../pages/page.tsx': { default: Page },
     })).toThrow('must define a non-empty title')
+  })
+
+  it('validates draft metadata before deciding whether to omit a page', () => {
+    expect(() => createRoutes({
+      '../pages/draft/page.tsx': {
+        default: Page,
+        meta: { title: 'Draft', draft: 'yes' } as never,
+      },
+    })).toThrow('draft must be a boolean')
+  })
+
+  it.each(['/old?preview=1', '/old#details'])(
+    'rejects a configured local redirect whose pathname points to itself: %s',
+    (destination) => {
+      const routes = new Map<string, ResolvedRoute>()
+      expect(() => addConfiguredRedirects(routes, { '/old': destination }))
+        .toThrow('cannot redirect to itself')
+    },
+  )
+
+  it('rejects an encoded-unreserved configured redirect alias', () => {
+    expect(() => addConfiguredRedirects(
+      new Map<string, ResolvedRoute>(),
+      { '/old': '/%6Fld' },
+    )).toThrow('no encoded unreserved characters')
+  })
+
+  it.each(['/other/../new', '/other/%2e%2e/new'])(
+    'rejects dot segments in a configured redirect destination: %s',
+    (destination) => {
+      expect(() => addConfiguredRedirects(
+        new Map<string, ResolvedRoute>(),
+        { '/old': destination },
+      )).toThrow('no dot segments')
+    },
+  )
+
+  it('validates plugin route paths and metadata through the same seams', () => {
+    const plugin = { name: 'invalid-routes' }
+    expect(() => addPluginRoutes(new Map(), [{
+      plugin,
+      route: {
+        kind: 'page',
+        path: '/plugin//page',
+        component: Page,
+        meta: { title: 'Plugin page' },
+      },
+    }])).toThrow('repeated slashes')
+
+    expect(() => addPluginRoutes(new Map(), [{
+      plugin,
+      route: {
+        kind: 'page',
+        path: '/plugin-page',
+        component: Page,
+        meta: { title: 'Plugin page', twitterCard: 'hero' } as never,
+      },
+    }])).toThrow('twitterCard must be summary or summary_large_image')
+  })
+
+  it('omits draft plugin pages after validating their metadata', () => {
+    const routes = new Map<string, ResolvedRoute>()
+    addPluginRoutes(routes, [{
+      plugin: { name: 'draft-page' },
+      route: {
+        kind: 'page',
+        path: '/plugin-draft',
+        component: Page,
+        meta: { title: 'Draft', draft: true },
+      },
+    }])
+    expect(routes.has('/plugin-draft')).toBe(false)
+  })
+
+  it('rejects plugin redirect pathname self-loops with query or hash suffixes', () => {
+    const plugin = { name: 'loop' }
+    for (const destination of ['/same?preview=1', '/same#details']) {
+      expect(() => addPluginRoutes(new Map(), [{
+        plugin,
+        route: {
+          kind: 'redirect',
+          path: '/same',
+          destination,
+        },
+      }])).toThrow('cannot redirect to itself')
+    }
+  })
+
+  it('rejects an encoded-unreserved plugin redirect alias', () => {
+    expect(() => addPluginRoutes(new Map(), [{
+      plugin: { name: 'encoded-loop' },
+      route: {
+        kind: 'redirect',
+        path: '/old',
+        destination: '/%6Fld',
+      },
+    }])).toThrow('no encoded unreserved characters')
   })
 })

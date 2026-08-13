@@ -9,7 +9,7 @@ import type {
 } from './types'
 import type { OwnedRouteRegistration } from './plugin'
 import { resolveMeta } from './meta'
-import { canonicalRoutePath, fileToRoute, normalizePath } from './paths'
+import { fileToRoute, normalizePath, normalizeRoutePath } from './paths'
 
 interface LayoutModule {
   default?: ComponentType<any>
@@ -105,21 +105,22 @@ export function createRoutes(
     }
 
     for (const [index, page] of pages.entries()) {
-      const path = canonicalRoutePath(page.path, trailingSlash)
-      const routeKey = normalizePath(path)
       const source = pages.length === 1 ? file : `${file}#${index}`
+      const path = normalizeRoutePath(page.path, `Page ${source} path`, trailingSlash)
+      const routeKey = normalizePath(path)
       const previous = sources.get(routeKey)
       if (previous) {
         throw new Error(`Duplicate route ${path}: ${previous} and ${source}`)
       }
       sources.set(routeKey, source)
-      if (page.meta?.draft) continue
+      const meta = resolveMeta(page.meta, `Page ${source} metadata`)
+      if (meta.draft === true) continue
 
       routes.set(routeKey, {
         kind: 'page',
         path,
         component: page.component,
-        meta: resolveMeta(page.meta, `Page ${source} metadata`),
+        meta,
         source,
         status: normalizePath(path) === '/404' ? 404 : 200,
         ...(page.data === undefined ? {} : { data: page.data }),
@@ -131,24 +132,6 @@ export function createRoutes(
   }
 
   return routes
-}
-
-function validateRegisteredPath(
-  value: unknown,
-  label: string,
-  trailingSlash: TrailingSlash,
-): string {
-  if (
-    typeof value !== 'string'
-    || !value.startsWith('/')
-    || value.startsWith('//')
-    || value.includes('?')
-    || value.includes('#')
-    || value.includes('\\')
-  ) {
-    throw new Error(`${label} path must start with "/" and contain no query, hash, or backslash`)
-  }
-  return canonicalRoutePath(value, trailingSlash)
 }
 
 function redirectDestination(
@@ -172,8 +155,23 @@ function redirectDestination(
   if (value.startsWith('//')) {
     throw new Error(`${label} destination must be an absolute path or HTTP(S) URL`)
   }
+  if (value.includes('\\')) {
+    throw new Error(`${label} destination must contain no backslash`)
+  }
+  const suffixIndex = value.search(/[?#]/)
+  const authoredPathname = suffixIndex === -1 ? value : value.slice(0, suffixIndex)
+  const pathname = normalizeRoutePath(
+    authoredPathname,
+    `${label} destination`,
+    trailingSlash,
+  )
   const parsed = new URL(value, 'http://nib.local')
-  return `${canonicalRoutePath(parsed.pathname, trailingSlash)}${parsed.search}${parsed.hash}`
+  return `${pathname}${parsed.search}${parsed.hash}`
+}
+
+function redirectsToSameLocalPath(path: string, destination: string): boolean {
+  if (!destination.startsWith('/') || destination.startsWith('//')) return false
+  return normalizePath(new URL(destination, 'http://nib.local').pathname) === normalizePath(path)
 }
 
 function addRoute(
@@ -194,9 +192,9 @@ export function addConfiguredRedirects(
   trailingSlash: TrailingSlash = 'ignore',
 ): void {
   for (const [rawPath, definition] of Object.entries(redirects ?? {})) {
-    const path = validateRegisteredPath(
+    const path = normalizeRoutePath(
       rawPath,
-      `Configured redirect ${rawPath}`,
+      `Configured redirect ${rawPath} path`,
       trailingSlash,
     )
     const destination = redirectDestination(
@@ -204,7 +202,7 @@ export function addConfiguredRedirects(
       trailingSlash,
       `Configured redirect ${rawPath}`,
     )
-    if (destination === path) {
+    if (redirectsToSameLocalPath(path, destination)) {
       throw new Error(`Configured redirect ${rawPath} cannot redirect to itself`)
     }
     addRoute(routes, {
@@ -230,17 +228,19 @@ export function addPluginRoutes(
     if (route === null || typeof route !== 'object' || Array.isArray(route)) {
       throw new Error(`${label} must be a route object`)
     }
-    const path = validateRegisteredPath(route.path, label, trailingSlash)
+    const path = normalizeRoutePath(route.path, `${label} path`, trailingSlash)
     const source = `${plugin.name} routes()[${index}]`
     if (route.kind === 'page') {
       if (typeof route.component !== 'function') {
         throw new Error(`${label} page component must be a React component`)
       }
+      const meta = resolveMeta(route.meta, `${label} metadata`)
+      if (meta.draft === true) continue
       addRoute(routes, {
         kind: 'page',
         path,
         component: route.component,
-        meta: resolveMeta(route.meta, `${label} metadata`),
+        meta,
         source,
         status: normalizePath(path) === '/404' ? 404 : 200,
         ...(route.data === undefined ? {} : { data: route.data }),
@@ -275,7 +275,9 @@ export function addPluginRoutes(
     }
     if (route.kind === 'redirect') {
       const destination = redirectDestination(route.destination, trailingSlash, label)
-      if (destination === path) throw new Error(`${label} cannot redirect to itself`)
+      if (redirectsToSameLocalPath(path, destination)) {
+        throw new Error(`${label} cannot redirect to itself`)
+      }
       addRoute(routes, {
         kind: 'redirect',
         path,

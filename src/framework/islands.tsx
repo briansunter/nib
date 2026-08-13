@@ -174,7 +174,7 @@ export function validateIslandModule(
       `Island ID mismatch for ${file}: expected ${expectedId}, received ${islandDefinitionId(definition)}`,
     )
   }
-  return definition
+  return Object.freeze(definition)
 }
 
 export function validateIslandModules(

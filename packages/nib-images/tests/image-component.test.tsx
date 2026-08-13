@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Image, useImage } from '../src/image-component'
 import type { ImageResult } from '../src/image-builder'
 import { ImageRegistryProvider } from '../src/image-context'
+import { mapWithConcurrency } from '../src/concurrency'
 import { ImageBuildRegistry } from '../src/image-registry'
 import { createImageSource } from '../src/image-source'
 import { intrinsicDimensions } from '../src/image-source-catalog'
@@ -108,11 +109,58 @@ describe('static Image component', () => {
     expect(() => normalizeImagesOptions(root, {
       content: [{ publicPath: '/../site-assets/', directory: 'src/assets/site-assets' }],
     })).toThrow('publicPath must start and end')
+    expect(() => normalizeImagesOptions(root, {
+      content: [
+        { publicPath: '/site-assets/', directory: 'src/assets/one' },
+        { publicPath: '/site-assets/', directory: 'src/assets/two' },
+      ],
+    })).toThrow('publicPath duplicates /site-assets/')
+    expect(() => normalizeImagesOptions(root, {
+      content: [{ publicPath: '/site-assets/%2e%2e/', directory: 'src/assets/site-assets' }],
+    })).toThrow('publicPath must start and end')
+    expect(() => normalizeImagesOptions(root, {
+      content: [{ publicPath: '/site-assets%2Fphotos/', directory: 'src/assets/site-assets' }],
+    })).toThrow('publicPath must start and end')
+    expect(() => normalizeImagesOptions(root, {
+      content: [{ publicPath: '/site-assets/\0/', directory: 'src/assets/site-assets' }],
+    })).toThrow('publicPath must start and end')
     expect(() => images({ widths: [] } as any)).toThrow('widths must contain positive integers')
     expect(() => images({ cache: { maxBytes: 0 } } as any)).toThrow('cache.maxBytes')
     expect(() => images({ cache: { maxEntries: 1.5 } } as any)).toThrow('cache.maxEntries')
     expect(() => images({ cache: { verification: 'mtime' } } as any))
       .toThrow('cache.verification')
+  })
+
+  it('drains active workers before reporting the first concurrent failure', async () => {
+    let releaseSecond!: () => void
+    let markSecondStarted!: () => void
+    const secondStarted = new Promise<void>((resolve) => {
+      markSecondStarted = resolve
+    })
+    const secondBlocked = new Promise<void>((resolve) => {
+      releaseSecond = resolve
+    })
+    const started: number[] = []
+    let settled = false
+    const work = mapWithConcurrency([0, 1, 2], 2, async (value) => {
+      started.push(value)
+      if (value === 0) throw new Error('first worker failed')
+      if (value === 1) {
+        markSecondStarted()
+        await secondBlocked
+      }
+    })
+    void work.then(
+      () => { settled = true },
+      () => { settled = true },
+    )
+
+    await secondStarted
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    releaseSecond()
+    await expect(work).rejects.toThrow('first worker failed')
+    expect(started).toEqual([0, 1])
   })
 
   it('rejects image metadata imports from browser-target graphs', async () => {
@@ -122,12 +170,18 @@ describe('static Image component', () => {
     const plugin = imageVitePlugin(options, 'client')
     const resolveId = plugin.resolveId
     if (typeof resolveId !== 'function') throw new Error('Image Vite plugin has no resolve hook')
-    expect(() => resolveId.call(
-      { environment: { name: 'client' } } as any,
+    for (const id of [
       '@briansunter/nib-images',
-      '/src/enhancements/gallery/index.client.ts',
-      { isEntry: false },
-    )).toThrow('cannot be included in browser-target modules')
+      '@briansunter/nib-images/plugin',
+      '@briansunter/nib-images/content',
+    ]) {
+      expect(() => resolveId.call(
+        { environment: { name: 'client' } } as any,
+        id,
+        '/src/enhancements/gallery/index.client.ts',
+        { isEntry: false },
+      )).toThrow('cannot be included in browser-target modules')
+    }
     const load = plugin.load as (...args: any[]) => unknown
     await expect(load.call(
       { environment: { name: 'client' } },
@@ -477,18 +531,30 @@ describe('static Image component', () => {
     const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-dev-outside-'))
     temporaryDirectories.push(root, outside)
     const publicDirectory = path.join(root, 'src', 'assets', 'site-assets')
-    await fs.mkdir(publicDirectory, { recursive: true })
+    await fs.mkdir(path.join(publicDirectory, 'nested'), { recursive: true })
     const sourceFile = path.join(publicDirectory, 'hero.png')
     const sourceData = await sharp({
       create: { width: 16, height: 8, channels: 3, background: '#336699' },
     }).png().toBuffer()
     await fs.writeFile(sourceFile, sourceData)
+    await fs.writeFile(path.join(publicDirectory, 'nested', 'hero.png'), sourceData)
     await fs.writeFile(path.join(outside, 'secret.png'), sourceData)
     await fs.symlink(path.join(outside, 'secret.png'), path.join(publicDirectory, 'link.png'))
+    await fs.symlink(outside, path.join(root, 'src', 'assets', 'external-assets'))
 
     const plugin = imageVitePlugin(normalizeImagesOptions(root, {
-      content: [{ publicPath: '/site-assets/', directory: 'src/assets/site-assets' }],
+      content: [
+        { publicPath: '/site-assets/', directory: 'src/assets/site-assets' },
+        { publicPath: '/external-assets/', directory: 'src/assets/external-assets' },
+      ],
     }), 'development')
+    const load = plugin.load as (...args: any[]) => Promise<unknown>
+    const sourceModule = await load.call(
+      { environment: { name: 'ssr' }, addWatchFile: vi.fn() },
+      `${sourceFile}?nib-image`,
+    )
+    const sourceId = String(sourceModule).match(/"__nibSourceId":\{"value":"([a-f0-9]{24})"/)?.[1]
+    if (!sourceId) throw new Error('Image metadata module did not contain its source ID')
     let middleware: ((request: any, response: any, next: () => void) => Promise<void>) | undefined
     const configureServer = (plugin as any).configureServer
     configureServer({
@@ -500,7 +566,7 @@ describe('static Image component', () => {
     const request = (
       url: string,
       headers: Record<string, string> = {},
-      method: 'GET' | 'HEAD' = 'GET',
+      method: 'GET' | 'HEAD' | 'POST' = 'GET',
     ) => {
       const response = new PassThrough() as PassThrough & {
         statusCode: number
@@ -542,13 +608,43 @@ describe('static Image component', () => {
     expect(await cached.body).toHaveLength(0)
     expect(cached.response.statusCode).toBe(304)
 
+    const authoredPost = request('/repository/site-assets/hero.png', {}, 'POST')
+    await authoredPost.promise
+    expect(authoredPost.next).toHaveBeenCalledOnce()
+
+    const optimizedUrl = `/repository/@nib-images/${sourceId}/8-75.webp`
+    const optimized = request(optimizedUrl)
+    await optimized.promise
+    const optimizedBody = await optimized.body
+    expect(optimizedBody.length).toBeGreaterThan(0)
+    expect(optimized.response.headers.get('content-type')).toBe('image/webp')
+    expect(optimized.response.headers.get('content-length')).toBe(optimizedBody.length)
+
+    const optimizedHead = request(optimizedUrl, {}, 'HEAD')
+    await optimizedHead.promise
+    expect(await optimizedHead.body).toHaveLength(0)
+    expect(optimizedHead.response.statusCode).toBe(200)
+    expect(optimizedHead.response.headers.get('content-length')).toBe(optimizedBody.length)
+
+    const optimizedPost = request(optimizedUrl, {}, 'POST')
+    await optimizedPost.promise
+    expect(optimizedPost.next).toHaveBeenCalledOnce()
+
     const escaped = request('/repository/site-assets/%2e%2e/secret.png')
     await escaped.promise
     expect(escaped.next).toHaveBeenCalledOnce()
 
+    const encodedSeparator = request('/repository/site-assets/nested%2Fhero.png')
+    await encodedSeparator.promise
+    expect(encodedSeparator.next).toHaveBeenCalledOnce()
+
     const symlink = request('/repository/site-assets/link.png')
     await symlink.promise
     expect(symlink.next).toHaveBeenCalledOnce()
+
+    const escapedRoot = request('/repository/external-assets/secret.png')
+    await escapedRoot.promise
+    expect(escapedRoot.next).toHaveBeenCalledOnce()
   })
 
   it('deduplicates requests and never exceeds transform concurrency', async () => {
@@ -1020,6 +1116,67 @@ describe('static Image component', () => {
     await expect(fs.access(path.join(clientDirectory, 'site-assets/photo.jpg')))
       .resolves.toBeUndefined()
     warning.mockRestore()
+  })
+
+  it('preserves content URLs with encoded path separators', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-content-encoded-separator-'))
+    temporaryDirectories.push(root)
+    const publicDir = path.join(root, 'src/assets/site-assets/nested')
+    await fs.mkdir(publicDir, { recursive: true })
+    await sharp({
+      create: { width: 40, height: 20, channels: 3, background: '#335577' },
+    }).jpeg().toFile(path.join(publicDir, 'photo.jpg'))
+    const options = normalizeImagesOptions(root, {
+      content: [{
+        publicPath: '/site-assets/',
+        directory: 'src/assets/site-assets',
+      }],
+    })
+    const clientDirectory = path.join(root, 'dist/client')
+    const pageFile = path.join(clientDirectory, 'article')
+    const authored = '<a href="/site-assets/nested%2Fphoto.jpg">Encoded separator</a>'
+    await fs.mkdir(clientDirectory, { recursive: true })
+    await fs.writeFile(pageFile, authored)
+
+    await expect(optimizeContentImages(
+      clientDirectory,
+      '/',
+      options,
+      new ImageBuildRegistry(options, '/', 'production'),
+      pageArtifact('article'),
+    )).resolves.toBe(0)
+    await expect(fs.readFile(pageFile, 'utf8')).resolves.toBe(authored)
+    await expect(fs.access(path.join(clientDirectory, 'site-assets/nested/photo.jpg')))
+      .rejects.toThrow()
+  })
+
+  it('rejects configured content roots outside allowedSourceRoots', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-content-root-boundary-'))
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-images-content-root-outside-'))
+    temporaryDirectories.push(root, outside)
+    await fs.mkdir(path.join(root, 'src/assets'), { recursive: true })
+    await fs.writeFile(path.join(outside, 'secret.jpg'), 'secret')
+    await fs.symlink(outside, path.join(root, 'src/assets/site-assets'))
+    const options = normalizeImagesOptions(root, {
+      content: [{
+        publicPath: '/site-assets/',
+        directory: 'src/assets/site-assets',
+      }],
+    })
+    const clientDirectory = path.join(root, 'dist/client')
+    const pageFile = path.join(clientDirectory, 'article')
+    await fs.mkdir(clientDirectory, { recursive: true })
+    await fs.writeFile(pageFile, '<a href="/site-assets/secret.jpg">Secret</a>')
+
+    await expect(optimizeContentImages(
+      clientDirectory,
+      '/',
+      options,
+      new ImageBuildRegistry(options, '/', 'production'),
+      pageArtifact('article'),
+    )).rejects.toThrow('content directory resolves outside allowedSourceRoots')
+    await expect(fs.access(path.join(clientDirectory, 'site-assets/secret.jpg')))
+      .rejects.toThrow()
   })
 
   it('rejects traversal and escaping symlinks for authored content', async () => {

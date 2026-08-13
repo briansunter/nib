@@ -41,6 +41,36 @@ async function publication(): Promise<string> {
 }
 
 describe('site verifier extensions', () => {
+  it('validates the optional typed client provenance report against routes', async () => {
+    const output = await publication()
+    await fs.writeFile(
+      path.join(output, '.nib/client.json'),
+      JSON.stringify({
+        version: 1,
+        runtimes: {},
+        modules: { enhancements: {}, islands: {} },
+        routes: [{
+          path: '/missing',
+          artifact: 'missing.html',
+          enhancements: [],
+          islands: [],
+          javascript: [],
+          stylesheets: [],
+          preloads: [],
+        }],
+      }),
+    )
+    const failure = await verifySite({ root: output, output }).catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(SiteVerificationError)
+    expect((failure as SiteVerificationError).result.issues).toContainEqual({
+      code: 'CLIENT_PROVENANCE_ROUTE_MISMATCH',
+      severity: 'error',
+      message: expect.stringContaining('does not match the publication manifest'),
+      route: '/missing',
+      artifact: '.nib/client.json',
+    })
+  })
+
   it('shares one immutable parsed context and owns extension diagnostics', async () => {
     const output = await publication()
     let received: SiteInspection | undefined

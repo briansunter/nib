@@ -23,6 +23,67 @@ export default function Page() {
 }
 ```
 
+For manual markup or client-enhancement data, call `useImage()` once in a
+server-rendered component and reuse the returned resolver inside loops:
+
+```tsx
+import { useImage } from '@briansunter/nib-images'
+import photo from './photo.jpg?nib-image'
+
+export function PhotoLink() {
+  const getImage = useImage()
+  const image = getImage({ src: photo, widths: [320, 640, 960] })
+  return <a href={image.src} data-srcset={image.srcSet}>View photo</a>
+}
+```
+
+The result contains the fallback `src`, optional `srcSet` and `sizes`, display
+dimensions, modern-format `<source>` data, and a `passthrough` flag. Calling the
+resolver registers exactly the transforms that `Image` would register; encoding
+still happens in the build finalizer. `useImage()` requires the renderer
+provider installed by `images()` and is static-only, not a browser image API.
+
+## Resolve configured content images
+
+JSON collections and Markdown frontmatter often store the public URL already
+used by authored HTML. The server-only `/content` entry resolves those URLs to
+the same `ImageSource` accepted by `Image` and `useImage`, without a
+consumer-owned eager `import.meta.glob` catalog:
+
+```tsx
+import { Image } from '@briansunter/nib-images'
+import { resolveContentImage } from '@briansunter/nib-images/content'
+
+export function ProjectCover({ cover }: { cover: string }) {
+  const source = resolveContentImage(cover)
+  return source
+    ? <Image src={source} alt="" width={640} />
+    : <img src={cover} alt="" />
+}
+```
+
+`resolveContentImage()` is generated from the existing `images({ content })`
+configuration. It accepts the authored public path, such as
+`/site-assets/projects/demo.jpg`, and returns `undefined` for an unknown or
+invalid path. URL-encoded filenames are decoded safely. Missing configured
+directories produce an empty catalog; ambiguous duplicate public paths and
+filenames containing URL separators such as `?`, `#`, or `\` fail the build
+with both source locations. Unreadable or corrupt candidates emit a warning
+and are omitted, preserving the existing unoptimized content fallback.
+
+Encoded path separators (`%2F` and `%5C`), NUL bytes, and double-encoded or
+otherwise residual `%` sequences are rejected instead of being treated as an
+alias for another file.
+
+The entry is synchronous because its static metadata catalog is generated in
+the server Vite graph. Like `Image`, it cannot be imported by an enhancement,
+island, or other browser-target module. Nested symlink entries are not followed
+by the catalog scan, and every configured content directory must resolve under
+`allowedSourceRoots` (the project root by default). The same boundary applies
+to development fallback responses and production copies. In development,
+nested file creation, updates, and deletion invalidate the generated module so
+the server graph rebuilds the catalog.
+
 The component entry is free of Sharp and Node imports. The `/plugin` entry owns
 metadata inspection, development middleware, content-addressed caching, and
 bounded parallel transforms. `Image` is static-only and cannot be imported by

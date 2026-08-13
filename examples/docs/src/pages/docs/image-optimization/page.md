@@ -46,6 +46,59 @@ uses eager loading and a high fetch priority.
 and uses a fixed compression setting, so a misleading PNG quality control is
 not exposed.
 
+Use `useImage()` when a component needs the resolved URLs without delegating
+markup to `Image`, such as a gallery that serializes candidates for a scoped
+client enhancement:
+
+```tsx
+import { useImage } from '@briansunter/nib-images'
+import photo from './photo.jpg?nib-image'
+
+export function GalleryItem() {
+  const getImage = useImage()
+  const image = getImage({
+    src: photo,
+    layout: 'constrained',
+    widths: [320, 640, 960],
+    sizes: '(min-width: 48rem) 50vw, 100vw',
+  })
+  return <a href={image.src} data-sources={JSON.stringify(image.sources)}>Open</a>
+}
+```
+
+Call the hook once during a server-rendered component, then call its stable
+`getImage` function freely inside maps or loops. It registers the same build
+transforms as `Image` and returns `src`, optional `srcSet`/`sizes`, intrinsic
+`width`/`height`, modern-format `sources`, and `passthrough`. It does not encode
+bytes immediately and is not a browser image service; the images plugin must
+wrap the Nib renderer and finalizes every registered candidate into static
+output.
+
+## Resolve paths stored in content
+
+When a JSON collection or Markdown field already stores a configured public
+path, use the server-only content resolver instead of maintaining an eager
+`import.meta.glob` lookup in the application:
+
+```tsx
+import { Image } from '@briansunter/nib-images'
+import { resolveContentImage } from '@briansunter/nib-images/content'
+
+export function GalleryImage({ src, alt }: { src: string; alt: string }) {
+  const source = resolveContentImage(src)
+  if (!source) return <img src={src} alt={alt} />
+  return <Image src={source} alt={alt} layout="constrained" width={640} />
+}
+```
+
+The resolver catalog comes directly from every `images({ content: [...] })`
+`publicPath` and `directory` pair. It returns `undefined` for unknown or unsafe
+paths. Overlapping content roots may coexist, but the build rejects two files
+that claim the same public path rather than silently choosing one. This import
+belongs only in server-rendered pages, layouts, and components; browser-target
+enhancements and islands reject it. Corrupt candidates warn and resolve as
+`undefined`, matching the content optimizer's unoptimized fallback behavior.
+
 ## Layouts and `sizes`
 
 | Layout | Use | Default sizes |

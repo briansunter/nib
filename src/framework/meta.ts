@@ -3,7 +3,6 @@ import type {
   HeadContribution,
   HeadElement,
   MetadataImage,
-  PageMeta,
   ResolvedPageMeta,
 } from './types'
 
@@ -131,19 +130,46 @@ function renderElement(element: HeadElement): string {
 }
 
 export function resolveMeta(
-  meta: PageMeta | undefined,
+  meta: unknown,
   label = 'Page metadata',
 ): ResolvedPageMeta {
-  if (typeof meta?.title !== 'string' || meta.title.trim() === '') {
+  if (meta !== undefined && !isRecord(meta)) {
+    throw new Error(`${label} must be an object`)
+  }
+  const value = isRecord(meta) ? meta : {}
+  if (typeof value.title !== 'string' || value.title.trim() === '') {
     throw new Error(`${label} must define a non-empty title`)
   }
-  if (meta.description !== undefined && typeof meta.description !== 'string') {
+  if (value.description !== undefined && typeof value.description !== 'string') {
     throw new Error(`${label} description must be a string`)
   }
-  const pageHead = normalizeHeadContribution(meta.head, `${label} head`)
+  if (value.draft !== undefined && typeof value.draft !== 'boolean') {
+    throw new Error(`${label} draft must be a boolean`)
+  }
+  if (
+    value.type !== undefined
+    && value.type !== 'website'
+    && value.type !== 'article'
+  ) {
+    throw new Error(`${label} type must be website or article`)
+  }
+  if (
+    value.twitterCard !== undefined
+    && value.twitterCard !== 'summary'
+    && value.twitterCard !== 'summary_large_image'
+  ) {
+    throw new Error(`${label} twitterCard must be summary or summary_large_image`)
+  }
+  const pageHead = normalizeHeadContribution(value.head, `${label} head`)
+  const image = normalizeMetadataImage(value.image, `${label} image`)
   return Object.freeze({
-    ...meta,
+    title: value.title,
+    ...(value.description === undefined ? {} : { description: value.description }),
+    ...(value.draft === undefined ? {} : { draft: value.draft }),
     ...(pageHead === undefined ? {} : { head: pageHead }),
+    ...(image === undefined ? {} : { image }),
+    ...(value.type === undefined ? {} : { type: value.type }),
+    ...(value.twitterCard === undefined ? {} : { twitterCard: value.twitterCard }),
   })
 }
 
@@ -188,10 +214,15 @@ function dedupeKeyedElements(elements: readonly HeadElement[]): HeadElement[] {
 /** Validates a MetadataImage union (string or structured object). */
 export function normalizeMetadataImage(value: unknown, label: string): MetadataImage | undefined {
   if (value === undefined) return undefined
-  if (typeof value === 'string') return value
+  if (typeof value === 'string') {
+    if (value.trim() === '') throw new Error(`${label} must be a non-empty string`)
+    return value
+  }
   if (!isRecord(value)) throw new Error(`${label} must be a string or an object`)
   const { src } = value
-  if (typeof src !== 'string') throw new Error(`${label}.src must be a string`)
+  if (typeof src !== 'string' || src.trim() === '') {
+    throw new Error(`${label}.src must be a non-empty string`)
+  }
   const result: {
     src: string
     alt?: string
@@ -204,14 +235,22 @@ export function normalizeMetadataImage(value: unknown, label: string): MetadataI
     result.alt = value.alt
   }
   if (value.width !== undefined) {
-    if (typeof value.width !== 'number' || !Number.isFinite(value.width)) {
-      throw new Error(`${label}.width must be a finite number`)
+    if (
+      typeof value.width !== 'number'
+      || !Number.isSafeInteger(value.width)
+      || value.width <= 0
+    ) {
+      throw new Error(`${label}.width must be a positive safe integer`)
     }
     result.width = value.width
   }
   if (value.height !== undefined) {
-    if (typeof value.height !== 'number' || !Number.isFinite(value.height)) {
-      throw new Error(`${label}.height must be a finite number`)
+    if (
+      typeof value.height !== 'number'
+      || !Number.isSafeInteger(value.height)
+      || value.height <= 0
+    ) {
+      throw new Error(`${label}.height must be a positive safe integer`)
     }
     result.height = value.height
   }

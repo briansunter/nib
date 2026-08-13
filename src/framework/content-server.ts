@@ -22,6 +22,15 @@ function collectionEntries(result: CollectionLoaderResult): Array<{ id: string; 
     : Object.entries(result).map(([id, data]) => ({ id, data }))
 }
 
+function parseJson(source: string, label: string): unknown {
+  try {
+    return JSON.parse(source)
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error)
+    throw new Error(`${label} contains invalid JSON: ${detail}`, { cause: error })
+  }
+}
+
 async function safeProjectFile(root: string, file: string): Promise<string> {
   const resolvedRoot = path.resolve(root)
   const resolved = path.resolve(resolvedRoot, file)
@@ -187,7 +196,7 @@ export function jsonFile<Data>(
   return {
     schema: options.schema,
     loader: async ({ read }): Promise<CollectionLoaderResult> => {
-      const parsed: unknown = JSON.parse(await read(options.file))
+      const parsed = parseJson(await read(options.file), `jsonFile ${options.file}`)
       if (!Array.isArray(parsed)) {
         throw new Error(`jsonFile ${options.file} must contain a JSON array`)
       }
@@ -196,6 +205,26 @@ export function jsonFile<Data>(
         data: entry,
       }))
     },
+  }
+}
+
+export interface JsonValueLoaderOptions<Data> {
+  file: string
+  schema: DataSchema<Data>
+  /** Collection entry id; defaults to `default`. */
+  id?: string
+}
+
+/** Loads and validates one JSON value as a single collection entry. */
+export function jsonValue<Data>(
+  options: JsonValueLoaderOptions<Data>,
+): CollectionDefinition<DataSchema<Data>> {
+  return {
+    schema: options.schema,
+    loader: async ({ read }): Promise<CollectionLoaderResult> => [{
+      id: options.id ?? 'default',
+      data: parseJson(await read(options.file), `jsonValue ${options.file}`),
+    }],
   }
 }
 
@@ -226,7 +255,9 @@ export function jsonGlob<Data>(
           file,
           source: await fs.readFile(await safeProjectFile(root, file), 'utf8'),
         }
-        const data = options.parse ? await options.parse(globFile) : JSON.parse(globFile.source)
+        const data = options.parse
+          ? await options.parse(globFile)
+          : parseJson(globFile.source, `jsonGlob ${file}`)
         return { id: options.id ? options.id(globFile, data as Data) : globFile.id, data }
       }))
     },

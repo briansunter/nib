@@ -22,8 +22,12 @@ export function validateIslandId(id: unknown): string {
 }
 
 export function islandFileToId(file: string): string {
-  const normalized = file.split('?')[0]!.replaceAll('\\', '/')
-  const match = normalized.match(/(?:^|\/)islands\/(.+)\.tsx$/)
+  const normalized = file.replaceAll('\\', '/').split(/[?#]/, 1)[0]!
+  const srcIndex = normalized.lastIndexOf('/src/')
+  const canonical = srcIndex >= 0
+    ? normalized.slice(srcIndex)
+    : `/${normalized.replace(/^\.?\//, '')}`
+  const match = canonical.match(/\/islands\/(.+)\.tsx$/)
   if (match === null) throw new Error(`Invalid island file: ${file}`)
-  return validateIslandId(match[1])
+  return validateIslandId(match[1]!)
 }

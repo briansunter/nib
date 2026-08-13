@@ -15,7 +15,14 @@ import {
   pageSourceIndex,
   pageSourcePatterns,
 } from '../src/framework/content'
-import { file, glob, jsonFile, loadCollections } from '../src/framework/content-server'
+import {
+  file,
+  glob,
+  jsonFile,
+  jsonGlob,
+  jsonValue,
+  loadCollections,
+} from '../src/framework/content-server'
 import type { DataPageProps } from '../src/framework/types'
 import { nibDataPages } from '../src/framework/vite-plugin'
 
@@ -101,6 +108,69 @@ describe('generic content', () => {
       source: 'hello',
       defaultPath: '/message',
     })).rejects.toThrow('collectionId must be a non-empty string')
+  })
+
+  it.each([
+    ['items/one', 'absolute route path'],
+    ['/items//one', 'repeated slashes'],
+    ['/items/one?draft=1', 'no query'],
+    ['/items/one#details', 'no query, hash'],
+    ['/items\\one', 'no query, hash, or backslash'],
+  ])('rejects malformed page-source route identity %s', async (routePath, message) => {
+    const source = definePageSource({
+      extensions: ['data'],
+      validate: (value) => String(value),
+      load: () => ({
+        path: routePath,
+        data: 'hello',
+        meta: { title: 'Message' },
+      }),
+      component: ({ data }: DataPageProps<string>) => <p>{data}</p>,
+    })
+
+    await expect(compileDataPages(source, {
+      file: 'src/pages/message/page.data',
+      source: 'hello',
+      defaultPath: '/message',
+    })).rejects.toThrow(message)
+  })
+
+  it('normalizes and validates page-source metadata before returning pages', async () => {
+    const source = definePageSource({
+      extensions: ['data'],
+      validate: (value) => String(value),
+      load: () => ({
+        data: 'hello',
+        meta: {
+          title: 'Message',
+          image: { src: '/message.png', width: 1200, height: 630 },
+          head: { elements: [{ tag: 'meta', attributes: { name: 'robots', content: 'index' } }] },
+        },
+      }),
+      component: ({ data }: DataPageProps<string>) => <p>{data}</p>,
+    })
+    const [page] = await compileDataPages(source, {
+      file: 'src/pages/message/page.data',
+      source: 'hello',
+      defaultPath: '/message',
+    })
+    expect(Object.isFrozen(page?.meta)).toBe(true)
+    expect(Object.isFrozen(page?.meta?.image)).toBe(true)
+
+    const invalid = definePageSource({
+      extensions: ['data'],
+      validate: (value) => String(value),
+      load: () => ({
+        data: 'hello',
+        meta: { title: 'Message', type: 'profile' } as never,
+      }),
+      component: ({ data }: DataPageProps<string>) => <p>{data}</p>,
+    })
+    await expect(compileDataPages(invalid, {
+      file: 'src/pages/message/page.data',
+      source: 'hello',
+      defaultPath: '/message',
+    })).rejects.toThrow('metadata type must be website or article')
   })
 
   it('uses a stable collection identity for a generated root page', async () => {
@@ -471,5 +541,49 @@ describe('generic content', () => {
         schema: z.object({ not: z.string() }),
       }),
     }, root)).rejects.toThrow('jsonFile data/single.json must contain a JSON array')
+  })
+
+  it('loads one validated JSON value with a stable collection id', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-jsonvalue-'))
+    temporaryDirectories.push(root)
+    await fs.mkdir(path.join(root, 'data'), { recursive: true })
+    await fs.writeFile(path.join(root, 'data/site.json'), '{"name":"Nib","views":"42"}')
+
+    const collections = await loadCollections({
+      site: jsonValue({
+        file: 'data/site.json',
+        schema: z.object({ name: z.string(), views: z.coerce.number() }),
+        id: 'site-settings',
+      }),
+      defaults: jsonValue({
+        file: 'data/site.json',
+        schema: z.object({ name: z.string(), views: z.coerce.number() }),
+      }),
+    }, root)
+
+    expect(collections.site).toEqual([
+      { id: 'site-settings', data: { name: 'Nib', views: 42 } },
+    ])
+    expect(collections.defaults[0]?.id).toBe('default')
+  })
+
+  it('labels JSON syntax failures consistently across built-in loaders', async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'nib-invalid-json-'))
+    temporaryDirectories.push(root)
+    await fs.mkdir(path.join(root, 'data'), { recursive: true })
+    await fs.writeFile(path.join(root, 'data/broken.json'), '{"broken":')
+    const schema = z.object({ broken: z.boolean() })
+
+    await expect(loadCollections({
+      value: jsonValue({ file: 'data/broken.json', schema }),
+    }, root)).rejects.toThrow('jsonValue data/broken.json contains invalid JSON:')
+
+    await expect(loadCollections({
+      values: jsonFile({ file: 'data/broken.json', schema }),
+    }, root)).rejects.toThrow('jsonFile data/broken.json contains invalid JSON:')
+
+    await expect(loadCollections({
+      values: jsonGlob({ base: 'data', pattern: 'broken.json', schema }),
+    }, root)).rejects.toThrow('jsonGlob data/broken.json contains invalid JSON:')
   })
 })

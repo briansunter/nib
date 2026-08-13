@@ -66,7 +66,60 @@ describe('metadata', () => {
       'banner',
     )).toEqual({ src: '/banner.png', alt: 'Banner', width: 1200, height: 630, type: 'image/png' })
     expect(() => normalizeMetadataImage({ width: 1200 }, 'banner'))
-      .toThrow('banner.src must be a string')
+      .toThrow('banner.src must be a non-empty string')
+  })
+
+  it('rejects empty image sources and non-pixel dimensions', () => {
+    expect(() => normalizeMetadataImage('', 'banner')).toThrow('non-empty string')
+    expect(() => normalizeMetadataImage({ src: '   ' }, 'banner'))
+      .toThrow('banner.src must be a non-empty string')
+    for (const width of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => normalizeMetadataImage({ src: '/banner.png', width }, 'banner'))
+        .toThrow('banner.width must be a positive safe integer')
+    }
+    for (const height of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => normalizeMetadataImage({ src: '/banner.png', height }, 'banner'))
+        .toThrow('banner.height must be a positive safe integer')
+    }
+  })
+
+  it('normalizes and validates every PageMeta field in one place', () => {
+    const meta = resolveMeta({
+      title: 'Article',
+      description: 'Description',
+      draft: false,
+      type: 'article',
+      twitterCard: 'summary',
+      image: { src: '/article.png', width: 1200, height: 630 },
+      head: {
+        elements: [{ tag: 'meta', attributes: { name: 'robots', content: 'index' } }],
+      },
+    })
+    expect(meta).toEqual({
+      title: 'Article',
+      description: 'Description',
+      draft: false,
+      type: 'article',
+      twitterCard: 'summary',
+      image: { src: '/article.png', width: 1200, height: 630 },
+      head: {
+        elements: [{ tag: 'meta', attributes: { name: 'robots', content: 'index' } }],
+      },
+    })
+    expect(Object.isFrozen(meta)).toBe(true)
+    expect(Object.isFrozen(meta.image)).toBe(true)
+    expect(Object.isFrozen(meta.head)).toBe(true)
+
+    expect(() => resolveMeta({ title: 'Bad', draft: 'false' }))
+      .toThrow('draft must be a boolean')
+    expect(() => resolveMeta({ title: 'Bad', type: 'profile' }))
+      .toThrow('type must be website or article')
+    expect(() => resolveMeta({ title: 'Bad', twitterCard: 'hero' }))
+      .toThrow('twitterCard must be summary or summary_large_image')
+    expect(() => resolveMeta({ title: 'Bad', image: '' }))
+      .toThrow('image must be a non-empty string')
+    expect(() => resolveMeta({ title: 'Bad', head: { elements: 'wrong' } }))
+      .toThrow('head.elements must be an array')
   })
 
   it('reads the source URL from either metadata image form', () => {

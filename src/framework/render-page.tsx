@@ -1,10 +1,15 @@
 import { StrictMode, createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup, renderToString } from 'react-dom/server'
-import { parseFragment, serialize } from 'parse5'
+import {
+  parseFragment,
+  serialize,
+  type DefaultTreeAdapterTypes,
+} from 'parse5'
 import { validateEnhancementId } from './enhancement-paths'
 import {
   htmlAttribute,
   parseHtmlDocument,
+  type HtmlElementNode,
   type ParsedHtmlDocument,
 } from './html-document'
 import { parseIslandProps, serializeIslandProps } from './island-serialization'
@@ -62,6 +67,82 @@ function assertRequiredContent(
   for (const body of required) {
     if (!rendered.has(body)) {
       throw new Error(`Markdown content ${body.source} was not rendered by its page or layouts`)
+    }
+  }
+}
+
+function isHtmlElement(
+  node: DefaultTreeAdapterTypes.Node | null | undefined,
+): node is HtmlElementNode {
+  return node !== null && node !== undefined && 'tagName' in node
+}
+
+function inertTemplateElements(
+  document: ParsedHtmlDocument,
+): ReadonlySet<HtmlElementNode> {
+  const inert = new Set<HtmlElementNode>()
+  const visit = (
+    node: DefaultTreeAdapterTypes.Node,
+    insideTemplate: boolean,
+  ): void => {
+    if (isHtmlElement(node) && insideTemplate) inert.add(node)
+    for (const child of 'childNodes' in node ? node.childNodes : []) {
+      visit(child, insideTemplate)
+    }
+    if (isHtmlElement(node) && node.tagName === 'template' && 'content' in node) {
+      for (const child of node.content.childNodes) visit(child, true)
+    }
+  }
+  visit(document.document, false)
+  return inert
+}
+
+function hasEnhancementMarker(element: HtmlElementNode): boolean {
+  return htmlAttribute(element, 'data-nib-enhancement') !== undefined
+}
+
+function hasIslandMarker(element: HtmlElementNode): boolean {
+  return element.tagName === 'nib-island'
+    || htmlAttribute(element, 'data-nib-island') !== undefined
+    || htmlAttribute(element, 'data-nib-instance') !== undefined
+    || htmlAttribute(element, 'data-nib-prefix') !== undefined
+    || htmlAttribute(element, 'data-nib-props') !== undefined
+}
+
+function hasClientMarker(element: HtmlElementNode): boolean {
+  return hasEnhancementMarker(element)
+    || hasIslandMarker(element)
+    || htmlAttribute(element, 'data-nib-when') !== undefined
+}
+
+function parentElement(element: HtmlElementNode): HtmlElementNode | undefined {
+  return isHtmlElement(element.parentNode) ? element.parentNode : undefined
+}
+
+function assertClientMarkerPlacement(document: ParsedHtmlDocument): void {
+  const inert = inertTemplateElements(document)
+  for (const element of document.elements) {
+    if (!hasClientMarker(element)) continue
+    if (inert.has(element)) {
+      throw new Error('Nib client markers cannot be placed inside inert <template> content')
+    }
+
+    const enhancement = hasEnhancementMarker(element)
+    const island = hasIslandMarker(element)
+    if (enhancement && island) {
+      throw new Error('Enhancement and island roots cannot contain one another')
+    }
+    for (
+      let ancestor = parentElement(element);
+      ancestor !== undefined;
+      ancestor = parentElement(ancestor)
+    ) {
+      if (
+        (enhancement && hasIslandMarker(ancestor))
+        || (island && hasEnhancementMarker(ancestor))
+      ) {
+        throw new Error('Enhancement and island roots cannot contain one another')
+      }
     }
   }
 }
@@ -153,6 +234,7 @@ function inspectRenderedHtml(
   collected: readonly CollectedIsland[],
 ): Pick<RenderedReactPage, 'enhancements' | 'islands'> {
   const document = parseHtmlDocument(html)
+  assertClientMarkerPlacement(document)
   return {
     enhancements: inspectEnhancements(document),
     islands: inspectIslands(document, collected),

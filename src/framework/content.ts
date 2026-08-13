@@ -1,6 +1,6 @@
 import { z } from 'zod'
-import { normalizeHeadContribution, normalizeMetadataImage } from './meta'
-import { normalizePath } from './paths'
+import { resolveMeta } from './meta'
+import { normalizeRoutePath } from './paths'
 import type {
   CollectionDefinition,
   PageSourceCollectionDefinition,
@@ -389,19 +389,6 @@ export function pageSourceIndex(
   return matches[0]?.index
 }
 
-function normalizePagePath(value: string, label: string): string {
-  if (
-    !value.startsWith('/')
-    || value.startsWith('//')
-    || value.includes('?')
-    || value.includes('#')
-    || value.includes('\\')
-  ) {
-    throw new Error(`${label} must start with "/" and contain no query, hash, or backslash`)
-  }
-  return normalizePath(value)
-}
-
 function getLayoutName(layout: unknown, label: string): string | undefined {
   if (layout === undefined) return undefined
   if (typeof layout !== 'string' || !/^[A-Za-z0-9_-]+$/.test(layout)) {
@@ -411,19 +398,7 @@ function getLayoutName(layout: unknown, label: string): string | undefined {
 }
 
 function getPageMeta(meta: unknown, label: string): PageMeta {
-  const parsed = pageMetaSchema.safeParse(meta)
-  if (!parsed.success) throw new Error(`${label} metadata: ${parsed.error.message}`)
-  const head = normalizeHeadContribution(parsed.data.head, `${label} head`)
-  const image = normalizeMetadataImage(parsed.data.image, `${label} image`)
-  return {
-    title: parsed.data.title,
-    ...(parsed.data.description === undefined ? {} : { description: parsed.data.description }),
-    ...(parsed.data.draft === undefined ? {} : { draft: parsed.data.draft }),
-    ...(head === undefined ? {} : { head }),
-    ...(image === undefined ? {} : { image }),
-    ...(parsed.data.type === undefined ? {} : { type: parsed.data.type }),
-    ...(parsed.data.twitterCard === undefined ? {} : { twitterCard: parsed.data.twitterCard }),
-  }
+  return resolveMeta(meta, `${label} metadata`)
 }
 
 function getCollectionId(value: unknown, label: string): string {
@@ -463,7 +438,7 @@ export async function compileDataPages<
     })
     const meta = getPageMeta(page.meta, label)
     const layout = getLayoutName(page.layout, label)
-    const path = normalizePagePath(page.path ?? context.defaultPath, `${label} path`)
+    const path = normalizeRoutePath(page.path ?? context.defaultPath, `${label} path`)
     const defaultCollectionId = path.replace(/^\/+|\/+$/g, '') || 'index'
     const collectionId = getCollectionId(
       page.collectionId ?? defaultCollectionId,

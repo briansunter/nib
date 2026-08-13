@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import {
   buildSite,
   manifestModulePreloads,
+  routeClientAssets,
 } from '../src/framework/site'
 import { copyFixture, removeFixture } from './helpers/fixtures'
 
@@ -36,6 +37,14 @@ function runtimePreloads(
     if (href === undefined) throw new Error(`Runtime preload is missing href: ${tag}`)
     return href
   })
+}
+
+function allRuntimePreloads(html: string): string[] {
+  return ['enhancements', 'islands', 'client']
+    .flatMap((owner) => runtimePreloads(
+      html,
+      owner as 'enhancements' | 'islands' | 'client',
+    ))
 }
 
 beforeAll(async () => {
@@ -72,6 +81,77 @@ describe('framework-owned site builds', () => {
       manifest,
       { file: 'broken.js', imports: ['missing'] },
     )).toThrow('references missing module missing')
+  })
+
+  it('preloads transitive imports only for immediately mounted route modules', () => {
+    const links = routeClientAssets({
+      status: 200,
+      head: '',
+      html: '',
+      enhancements: [
+        { id: 'immediate', when: 'load' },
+        { id: 'deferred', when: 'visible' },
+      ],
+      islands: [{ id: 'visible-island', when: 'visible' }],
+    }, new Map([
+      ['immediate', {
+        preloads: [
+          'assets/immediate.js',
+          'assets/shared.js',
+          'assets/immediate-dependency.js',
+        ],
+        stylesheets: ['assets/immediate.css'],
+      }],
+      ['deferred', {
+        preloads: ['assets/deferred.js', 'assets/deferred-dependency.js'],
+        stylesheets: ['assets/deferred.css'],
+      }],
+    ]), new Map([
+      ['visible-island', {
+        preloads: [
+          'assets/visible-island.js',
+          'assets/visible-island-dependency.js',
+        ],
+        stylesheets: ['assets/visible-island.css'],
+      }],
+    ]), new Set(['/journal/assets/shared.js']), '/journal/')
+
+    expect(links).toContain('href="/journal/assets/immediate.css"')
+    expect(links).toContain('href="/journal/assets/deferred.css"')
+    expect(links).toContain('href="/journal/assets/visible-island.css"')
+    expect(links).toContain('href="/journal/assets/immediate.js"')
+    expect(links).toContain('href="/journal/assets/immediate-dependency.js"')
+    expect(links).not.toContain('href="/journal/assets/shared.js"')
+    expect(links).not.toContain('href="/journal/assets/deferred.js"')
+    expect(links).not.toContain('href="/journal/assets/deferred-dependency.js"')
+    expect(links).not.toContain('href="/journal/assets/visible-island.js"')
+    expect(links).not.toContain('href="/journal/assets/visible-island-dependency.js"')
+  })
+
+  it('dedupes against active runtime preloads without suppressing inactive-owner imports', () => {
+    const links = routeClientAssets({
+      status: 200,
+      head: '',
+      html: '',
+      enhancements: [],
+      islands: [{ id: 'counter', when: 'load' }],
+    }, new Map(), new Map([
+      ['counter', {
+        preloads: [
+          'assets/counter.js',
+          'assets/active-island-runtime.js',
+          'assets/inactive-enhancement-runtime.js',
+        ],
+        stylesheets: [],
+      }],
+    ]), new Set(), '/journal/', {
+      enhancements: ['/journal/assets/inactive-enhancement-runtime.js'],
+      islands: ['/journal/assets/active-island-runtime.js'],
+    })
+
+    expect(links).toContain('href="/journal/assets/counter.js"')
+    expect(links).not.toContain('href="/journal/assets/active-island-runtime.js"')
+    expect(links).toContain('href="/journal/assets/inactive-enhancement-runtime.js"')
   })
 
   it('prerenders a consumer project without consumer-owned framework files', async () => {
@@ -126,6 +206,18 @@ describe('framework-owned site builds', () => {
       trailingSlash: string
       routes: Array<{ path: string; artifact: string; contentType: string }>
     }
+    const clientProvenance = JSON.parse(await fs.readFile(
+      path.join(output, 'client/.nib/client.json'),
+      'utf8',
+    )) as {
+      version: number
+      routes: Array<{
+        path: string
+        artifact: string
+        enhancements: Array<{ id: string; when: string }>
+        islands: Array<{ id: string; when: string }>
+      }>
+    }
     const viteManifest = JSON.parse(await fs.readFile(
       path.join(output, 'client/.vite/manifest.json'),
       'utf8',
@@ -178,7 +270,12 @@ describe('framework-owned site builds', () => {
       .toEqual(expect.arrayContaining(enhancementPreloads))
     expect(runtimePreloads(enhanced, 'enhancements')).toEqual(expect.arrayContaining([
       `/journal/${revealEntry!.file}`,
+      ...manifestModulePreloads(viteManifest, revealEntry!)
+        .map((file) => `/journal/${file}`),
     ]))
+    expect(allRuntimePreloads(enhanced)).toEqual([
+      ...new Set(allRuntimePreloads(enhanced)),
+    ])
     expect(runtimePreloads(enhanced, 'enhancements')).not.toContain(
       `/journal/${plainJavaScriptEntry!.file}`,
     )
@@ -204,7 +301,12 @@ describe('framework-owned site builds', () => {
     expect(runtimePreloads(island, 'islands')).toEqual(expect.arrayContaining([
       ...islandPreloads,
       `/journal/${counterEntry!.file}`,
+      ...manifestModulePreloads(viteManifest, counterEntry!)
+        .map((file) => `/journal/${file}`),
     ]))
+    expect(allRuntimePreloads(island)).toEqual([
+      ...new Set(allRuntimePreloads(island)),
+    ])
     const enhancementFiles = [
       enhancementEntry!.file,
       ...(enhancementEntry!.imports ?? []).map((id) => viteManifest[id]!.file),
@@ -228,6 +330,14 @@ describe('framework-owned site builds', () => {
     expect(redirect).toContain('url=/journal/about/')
     expect(notFound).toContain('Journal not found')
     expect(publication).toMatchObject({ version: 1, base: '/journal/', trailingSlash: 'always' })
+    expect(clientProvenance).toMatchObject({ version: 1 })
+    expect(clientProvenance.routes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: '/enhanced/', enhancements: [
+        { id: 'reveal', when: 'load' },
+        { id: 'plain', when: 'visible' },
+      ] }),
+      expect.objectContaining({ path: '/island/', islands: [{ id: 'counter', when: 'load' }] }),
+    ]))
     expect(publication.routes).toEqual(expect.arrayContaining([
       expect.objectContaining({
         path: '/about/',
@@ -267,6 +377,10 @@ describe('framework-owned site builds', () => {
       expect(html).not.toContain('data-nib-islands')
       await expect(fs.access(path.join(staticOutput, '.vite/manifest.json')))
         .rejects.toMatchObject({ code: 'ENOENT' })
+      expect(JSON.parse(await fs.readFile(
+        path.join(staticOutput, '.nib/client.json'),
+        'utf8',
+      ))).toMatchObject({ version: 1, routes: expect.any(Array) })
       await expect(fs.access(path.join(staticOutput, 'assets')))
         .rejects.toMatchObject({ code: 'ENOENT' })
       expect(await fs.readFile(

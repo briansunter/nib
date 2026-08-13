@@ -137,19 +137,48 @@ export function validateImagesOptions(options: ImagesOptions = {}): void {
     if (!Array.isArray(options.content)) {
       throw new Error('@briansunter/nib-images: content must be an array')
     }
+    const publicPaths = new Set<string>()
     for (const [index, source] of options.content.entries()) {
       if (
         source === null
         || typeof source !== 'object'
         || typeof source.publicPath !== 'string'
         || !source.publicPath.startsWith('/')
+        || source.publicPath.startsWith('//')
         || !source.publicPath.endsWith('/')
+        || source.publicPath.slice(1, -1).includes('//')
+        || source.publicPath.includes('\\')
+        || source.publicPath.includes('%')
+        || source.publicPath.includes('\0')
         || source.publicPath.includes('?')
         || source.publicPath.includes('#')
         || source.publicPath.split('/').includes('..')
+        || source.publicPath.split('/').includes('.')
       ) {
         throw new Error(`@briansunter/nib-images: content[${index}].publicPath must start and end with "/"`)
       }
+      let decodedPublicPath: string
+      try {
+        decodedPublicPath = decodeURIComponent(source.publicPath)
+      } catch {
+        throw new Error(`@briansunter/nib-images: content[${index}].publicPath must be a valid URL path`)
+      }
+      if (
+        decodedPublicPath.includes('\\')
+        || decodedPublicPath.includes('\0')
+        || decodedPublicPath.includes('?')
+        || decodedPublicPath.includes('#')
+        || decodedPublicPath.split('/').includes('..')
+        || decodedPublicPath.split('/').includes('.')
+      ) {
+        throw new Error(`@briansunter/nib-images: content[${index}].publicPath must be a safe URL path`)
+      }
+      if (publicPaths.has(source.publicPath)) {
+        throw new Error(
+          `@briansunter/nib-images: content[${index}].publicPath duplicates ${source.publicPath}`,
+        )
+      }
+      publicPaths.add(source.publicPath)
       if (
         typeof source.directory !== 'string'
         || source.directory.trim() === ''

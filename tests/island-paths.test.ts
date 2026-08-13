@@ -7,6 +7,9 @@ describe('island paths', () => {
     expect(islandFileToId('/src/islands/cart/summary.tsx')).toBe('cart/summary')
     expect(islandFileToId('C:\\site\\src\\islands\\quantity-picker.tsx?import'))
       .toBe('quantity-picker')
+    expect(islandFileToId(
+      '/work/src/islands/archive/src/islands/cart/summary.tsx?raw#fragment',
+    )).toBe('cart/summary')
   })
 
   it('normalizes and validates IDs', () => {

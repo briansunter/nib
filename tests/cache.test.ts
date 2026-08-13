@@ -85,6 +85,53 @@ describe('createBuildCache.buffer', () => {
     expect(b.hit).toBe(true)
   })
 
+  it('isolates concurrent in-flight work between cache instances and directories', async () => {
+    const firstDirectory = await makeCacheDirectory()
+    const secondDirectory = await makeCacheDirectory()
+    const firstCache = createBuildCache(firstDirectory)
+    const secondCache = createBuildCache(secondDirectory)
+
+    let releaseFirst!: () => void
+    const firstCanFinish = new Promise<void>((resolve) => { releaseFirst = resolve })
+    let firstStarted!: () => void
+    const firstDidStart = new Promise<void>((resolve) => { firstStarted = resolve })
+    let firstCalls = 0
+    let secondCalls = 0
+
+    const firstWork = firstCache.file({
+      namespace: 'shared',
+      key: VALID_KEY,
+      extension: 'txt',
+      generate: async () => {
+        firstCalls += 1
+        firstStarted()
+        await firstCanFinish
+        return new TextEncoder().encode('first directory')
+      },
+    })
+    await firstDidStart
+    const secondWork = secondCache.file({
+      namespace: 'shared',
+      key: VALID_KEY,
+      extension: 'txt',
+      generate: async () => {
+        secondCalls += 1
+        return new TextEncoder().encode('second directory')
+      },
+    })
+    releaseFirst()
+
+    const [first, second] = await Promise.all([firstWork, secondWork])
+    expect(firstCalls).toBe(1)
+    expect(secondCalls).toBe(1)
+    expect(first.hit).toBe(false)
+    expect(second.hit).toBe(false)
+    expect(first.file.startsWith(firstDirectory)).toBe(true)
+    expect(second.file.startsWith(secondDirectory)).toBe(true)
+    expect(await fs.readFile(first.file, 'utf8')).toBe('first directory')
+    expect(await fs.readFile(second.file, 'utf8')).toBe('second directory')
+  })
+
   it('rejects an invalid namespace, key, and extension', async () => {
     const cacheDirectory = await makeCacheDirectory()
     const cache = createBuildCache(cacheDirectory)

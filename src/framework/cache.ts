@@ -21,8 +21,8 @@ export interface CacheEntryOptions {
 
 export interface NibBuildCache {
   /**
-   * Returns cached bytes, generating them on miss. In-flight deduped per
-   * namespace+key+extension.
+   * Returns cached bytes, generating them on miss. In-flight work is deduped
+   * within this cache instance per namespace+key+extension.
    */
   buffer(
     options: CacheEntryOptions & { generate: () => Promise<Uint8Array> },
@@ -54,7 +54,6 @@ interface CacheMetadata {
   readonly mtimeNs: string
 }
 
-const inFlight = new Map<string, Promise<ResolvedEntry>>()
 const accessRefreshIntervalMs = 24 * 60 * 60 * 1_000
 
 function assertNamespace(namespace: string): void {
@@ -181,13 +180,17 @@ async function readValidCache(
   }
 }
 
-async function resolveEntry(cacheDirectory: string, options: ResolveOptions): Promise<ResolvedEntry> {
+async function resolveEntry(
+  cacheDirectory: string,
+  inFlight: Map<string, Promise<ResolvedEntry>>,
+  options: ResolveOptions,
+): Promise<ResolvedEntry> {
   assertNamespace(options.namespace)
   assertKey(options.key)
   assertExtension(options.extension)
   const verification: CacheVerification = options.verification ?? 'metadata'
   const file = entryFile(cacheDirectory, options.namespace, options.key, options.extension)
-  const inFlightKey = `${options.namespace}:${options.key}:${options.extension}`
+  const inFlightKey = `${options.namespace}:${options.key}:${options.extension}:${verification}`
   const existing = inFlight.get(inFlightKey)
   const work = existing ?? (async (): Promise<ResolvedEntry> => {
     if ((await readValidCache(file, verification)) !== undefined) return { file, hit: true }
@@ -216,16 +219,18 @@ async function resolveEntry(cacheDirectory: string, options: ResolveOptions): Pr
 }
 
 export function createBuildCache(cacheDirectory: string): NibBuildCache {
+  const resolvedCacheDirectory = path.resolve(cacheDirectory)
+  const inFlight = new Map<string, Promise<ResolvedEntry>>()
   return {
     async buffer(options) {
-      const resolved = await resolveEntry(cacheDirectory, options)
+      const resolved = await resolveEntry(resolvedCacheDirectory, inFlight, options)
       return {
         data: await fs.readFile(resolved.file),
         hit: resolved.hit,
       }
     },
     file(options) {
-      return resolveEntry(cacheDirectory, options)
+      return resolveEntry(resolvedCacheDirectory, inFlight, options)
     },
   }
 }

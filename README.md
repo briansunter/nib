@@ -156,7 +156,7 @@ import {
   type ClientInitializer,
 } from '@briansunter/nib'
 import { island } from '@briansunter/nib/react'
-import { glob } from '@briansunter/nib/server'
+import { glob, jsonFile, jsonValue } from '@briansunter/nib/server'
 ```
 
 The root package owns universal authoring and imperative enhancement contracts,
@@ -164,6 +164,25 @@ The root package owns universal authoring and imperative enhancement contracts,
 filesystem-backed loaders. Nib rejects a `.server.ts(x)` module imported by
 the production client graph or a `.client.ts(x)` module imported by the
 production server graph.
+
+The server entry includes three validated JSON collection helpers. `jsonFile()`
+loads an array as one entry per element, `jsonGlob()` loads one entry per
+matched file, and `jsonValue()` loads a whole object or other JSON value as one
+entry (with the id `default` unless `id` is supplied):
+
+```ts
+import { defineCollection, z } from '@briansunter/nib'
+import { jsonValue } from '@briansunter/nib/server'
+
+export const settings = defineCollection(jsonValue({
+  file: 'src/content/settings.json',
+  schema: z.object({ title: z.string(), featured: z.boolean() }),
+}))
+```
+
+All three helpers parse through the same source-labeled error boundary before
+schema validation, so malformed JSON reports the loader and project-relative
+file instead of an unlocated `JSON.parse` failure.
 
 Application-wide CSS belongs in `src/style.css`. CSS can also be owned by a
 client enhancement, React island, or `src/client.ts`. A stylesheet imported
@@ -290,10 +309,40 @@ typed `renderer().head(context)` hook. Nib emits page metadata followed by
 plugin contributions; later `title` and `description` overrides win. Head
 attributes are escaped, event-handler attributes are rejected, and script/style
 text is protected from closing its raw-text element.
-When the `metadata()` plugin is enabled, a page's `image`, `type`, and
-`twitterCard` metadata override the plugin defaults independently, so article
-pages can use their own social preview without duplicating or replacing
-unrelated site-wide defaults.
+Use `metadata()` for canonical, Open Graph, Twitter, and optional generic
+structured data. Its static image accepts either a URL string or the same
+structured `MetadataImage` as page metadata, including alt text and dimensions.
+A resolver can compute social defaults from the route, frontmatter, or data:
+
+```ts
+import { metadata } from '@briansunter/nib'
+
+metadata({
+  siteName: 'Example',
+  twitterSite: '@example',
+  image: {
+    src: '/social/default.png',
+    alt: 'Example',
+    width: 1200,
+    height: 630,
+    type: 'image/png',
+  },
+  resolve: ({ route, data }) => {
+    const project = data as { slug?: string } | undefined
+    return {
+      ...(route.path.startsWith('/projects/') && project?.slug
+        ? { image: `/social/projects/${project.slug}.png` }
+        : {}),
+      type: route.path.startsWith('/writing/') ? 'article' : 'website',
+    }
+  },
+})
+```
+
+Each of `image`, `type`, and `twitterCard` resolves independently. Explicit
+`route.meta` wins first, then `resolve(context)`, then the static plugin value.
+The resolver is synchronous because it runs during the already-data-backed
+page render; perform I/O in a collection or page source instead.
 
 ## Optional Vite adapters
 
@@ -325,6 +374,12 @@ routes and indexes for route parents that contain child pages. Preview redirects
 an alternate spelling to the canonical URL. When deploying `never`, configure a
 host that serves extensionless page files as `text/html` and rewrites a
 parent's extensionless URL to its index artifact.
+
+Authored route identities must be absolute local paths. Nib rejects queries,
+hashes, backslashes, repeated separators, dot segments (including encoded dot
+segments), and encoded path separators before applying the trailing-slash
+policy. Local redirect destinations may add a query or hash, but their path is
+validated by the same rules and cannot point back to the source pathname.
 
 ```ts
 import { defineConfig } from '@briansunter/nib'
@@ -376,6 +431,12 @@ extensionless and directory-index rules. Plugin finalizers receive this same
 frozen manifest as `context.publication`, so output integrations can open exact
 artifacts without recursively crawling `dist/client` or reconstructing routes.
 
+Builds also emit `dist/client/.nib/client.json`. This versioned client-provenance
+report records runtime entries, convention-owned enhancement/island modules, and
+route-owned stylesheets and module preloads discovered while rendering each page.
+Site verifiers can enforce generic ownership and preload invariants from this
+typed report without reparsing HTML or Vite's private manifest.
+
 Run `nib check` after a build to validate publication artifacts, titles, image
 alt text, and local `href`, `src`, `srcset`, and
 `poster` references. Checks use one route/file index and one standards-parsed
@@ -395,7 +456,31 @@ Extensions should express site policy only; route resolution, HTML parsing, and
 artifact ownership remain built-in checks.
 
 `@briansunter/nib/testing` exposes the same standards parser through
-`semanticHtmlSnapshot()` and `compareSemanticHtml()`. The
+`semanticHtmlSnapshot()` and `compareSemanticHtml()`. It also exports
+`renderReactPage()` and `RenderedReactPage` for tests that need Nib's actual
+static React boundary rather than a separate renderer. `createBuildOutput()`
+provides the same manifest-guarded artifact adapter received by plugin
+finalizers, which keeps finalizer tests out of internal package entries:
+
+```tsx
+import { renderReactPage } from '@briansunter/nib/testing'
+
+const rendered = renderReactPage(<main>Article</main>)
+expect(rendered.html).toContain('<main>Article</main>')
+expect(rendered.enhancements).toEqual([])
+```
+
+```ts
+import { createBuildOutput } from '@briansunter/nib/testing'
+
+const output = createBuildOutput(clientDirectory, publication)
+await output.write('search/index.json', '{}')
+```
+
+The render helper returns HTML plus the discovered enhancement and island
+manifests. Its optional second argument lists Markdown bodies the page must
+render exactly once, and it applies the same marker, serialization, and parser
+validation as a real build. The
 `nib-semantic-v1` normalizer compares visible text, repeated headings and dates,
 links, and structural counts; `nib-typography-v1` retains curly quote
 differences. These are content-parity helpers, not visual-equivalence claims.
@@ -556,6 +641,13 @@ export default defineConfig({
   plugins: [images()],
 })
 ```
+
+For public paths stored in collections or frontmatter, configure an image
+`content` root and import `resolveContentImage(path)` from the server-only
+`@briansunter/nib-images/content` entry. The plugin generates that lookup from
+the configured directories, replacing a consumer-owned eager
+`import.meta.glob` map. Unknown paths return `undefined`, duplicate public
+mappings fail the build, and browser-target imports are rejected.
 
 See [image optimization](examples/docs/src/pages/docs/image-optimization/page.md)
 for layouts, cache behavior, and the current SVG/animated-image limits.

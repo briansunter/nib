@@ -492,6 +492,52 @@ describe('project renderer', () => {
     })).rejects.toThrow('Derived pages[0] produced duplicate route /things/same')
   })
 
+  it('rejects malformed route identities produced by derived pages', async () => {
+    const things = defineCollection({
+      loader: async () => [{ id: 'one', data: { name: 'One' } }],
+      validate: (value) => value as { name: string },
+    })
+    const derived = defineDerivedPages({
+      pages: fromCollection(things, (entries) => entries.map((entry) => ({
+        path: `/things//${entry.id}`,
+        data: entry.data,
+        meta: { title: entry.data.name },
+      }))),
+      component: Page,
+    })
+
+    await expect(createProjectRenderer({
+      config: { collections: { things } },
+      root: process.cwd(),
+      base: '/',
+      pages: {},
+      derivedPages: { definitions: [derived], components: [Page] },
+    })).rejects.toThrow('Derived pages[0][0] path must contain no repeated slashes')
+  })
+
+  it('validates derived-page metadata before applying draft omission', async () => {
+    const things = defineCollection({
+      loader: async () => [{ id: 'one', data: { name: 'One' } }],
+      validate: (value) => value as { name: string },
+    })
+    const derived = defineDerivedPages({
+      pages: fromCollection(things, (entries) => entries.map((entry) => ({
+        path: `/things/${entry.id}`,
+        data: entry.data,
+        meta: { title: entry.data.name, draft: 'later' } as never,
+      }))),
+      component: Page,
+    })
+
+    await expect(createProjectRenderer({
+      config: { collections: { things } },
+      root: process.cwd(),
+      base: '/',
+      pages: {},
+      derivedPages: { definitions: [derived], components: [Page] },
+    })).rejects.toThrow('Derived pages[0][0] metadata draft must be a boolean')
+  })
+
   it('lets a markdown route and a derived route coexist without colliding', async () => {
     const body = await markdownBody('# Note', { file: '/src/pages/note/page.md' })
     function NotePage({ Content }: { Content?: ContentRenderer }) {

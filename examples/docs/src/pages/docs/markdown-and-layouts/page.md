@@ -46,12 +46,34 @@ export const articleSchema = z.object({
   layout: z.string().optional(),
   tags: z.array(z.string()),
   published: z.coerce.date(),
+  cover: z.string().optional(),
 })
 
 export const markdown = defineMarkdown({ schema: articleSchema })
 ```
 
 Register `markdown` in `nib.config.ts`. Nib re-exports Zod 4 and infers the transformed output. You may instead provide another parse-compatible schema or a `validate(value)` function; choose one validation adapter per definition.
+
+Use the definition's `meta` callback when typed frontmatter should set standard
+route metadata. Its `file` field is the Markdown source identity used by the
+compiler and diagnostics:
+
+```tsx
+export const markdown = defineMarkdown({
+  schema: articleSchema,
+  meta: ({ frontmatter, file, defaults }) => ({
+    ...defaults,
+    type: 'article',
+    image: frontmatter.cover,
+    head: {
+      elements: [{ tag: 'meta', attributes: { name: 'content-source', content: file } }],
+    },
+  }),
+})
+```
+
+The deprecated `path` field remains an alias of `file` for compatibility; new
+code should use `file` because it names the source file, not the public route.
 
 ## Create a layout
 

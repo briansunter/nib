@@ -2,7 +2,7 @@ import { createElement, type ComponentType, type ReactNode } from 'react'
 import path from 'node:path'
 import { loadCollections } from './content-server'
 import { createBuildCache } from './cache'
-import { createBuildOutput } from './build-output'
+import { createBuildOutputSession } from './build-output'
 import { DefaultSiteShell } from './default-shell'
 import { renderHead, resolveMeta } from './meta'
 import { deepFreeze } from './freeze'
@@ -33,7 +33,7 @@ import {
   publicRouteHref,
   stripBasePath,
 } from './publication'
-import { canonicalRoutePath } from './paths'
+import { normalizeRoutePath } from './paths'
 import {
   createRendererPluginPipeline,
   resolvedRouteSnapshots,
@@ -285,14 +285,19 @@ export async function createProjectRenderer(
       const pageSpecs = readCollection(definition.pages)
       const seen = new Set<string>()
       for (const [pageIndex, page] of pageSpecs.entries()) {
-        const path = canonicalRoutePath(page.path, options.config.trailingSlash)
+        const path = normalizeRoutePath(
+          page.path,
+          `${label}[${pageIndex}] path`,
+          options.config.trailingSlash,
+        )
         const key = normalizePath(path)
         if (seen.has(key)) throw new Error(`${label} produced duplicate route ${path}`)
         if (routes.has(key)) {
           throw new Error(`Duplicate route ${path}: ${routes.get(key)?.source} and ${label}[${pageIndex}]`)
         }
         seen.add(key)
-        if (page.meta?.draft === true) continue
+        const meta = resolveMeta(page.meta, `${label}[${pageIndex}] metadata`)
+        if (meta.draft === true) continue
         const layouts: ComponentType<any>[] = []
         const layoutName = page.layout ?? definition.layout
         if (layoutName !== undefined) {
@@ -306,7 +311,7 @@ export async function createProjectRenderer(
           kind: 'page',
           path,
           component,
-          meta: resolveMeta(page.meta, `${label}[${pageIndex}] metadata`),
+          meta,
           source: `${label}[${pageIndex}]`,
           status: normalizePath(path) === '/404' ? 404 : 200,
           data: deepFreeze(page.data),
@@ -425,6 +430,10 @@ export async function createProjectRenderer(
     async finalize(context) {
       if (finalized) throw new Error('Nib project renderer can only finalize once')
       finalized = true
+      const outputSession = createBuildOutputSession(
+        context.clientDirectory,
+        context.publication,
+      )
       // The context is shallow-frozen; the cache (like output) is not passed
       // through deepFreeze, so its methods remain callable across finalizers.
       const finalContext: NibFinalizeContext = Object.freeze({
@@ -432,10 +441,23 @@ export async function createProjectRenderer(
         clientDirectory: context.clientDirectory,
         publication: deepFreeze(context.publication),
         readCollection,
-        output: createBuildOutput(context.clientDirectory, context.publication),
+        output: outputSession.output,
         cache: createBuildCache(path.join(options.root, '.nib', 'cache')),
       })
-      await plugins.finalize(finalContext)
+      try {
+        await plugins.finalize(finalContext)
+        await outputSession.complete()
+      } catch (error) {
+        try {
+          await outputSession.abort()
+        } catch (cleanupError) {
+          throw new AggregateError(
+            [error, cleanupError],
+            'Nib project finalization failed and staged output cleanup also failed',
+          )
+        }
+        throw error
+      }
     },
   }
 }

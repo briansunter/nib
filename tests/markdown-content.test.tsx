@@ -3,7 +3,7 @@ import {
   Content,
   markdownBody,
 } from '../src/framework/markdown-content'
-import { renderReactPage } from '../src/framework/render-page'
+import { renderReactPage, type RenderedReactPage } from '../src/testing'
 
 describe('Markdown content values', () => {
   it('uses the shared profile and lets the renderer own a semantic root', async () => {
@@ -17,7 +17,7 @@ describe('Markdown content values', () => {
         ],
       },
     })
-    const rendered = renderReactPage(
+    const rendered: RenderedReactPage = renderReactPage(
       <Content
         body={body}
         as="section"

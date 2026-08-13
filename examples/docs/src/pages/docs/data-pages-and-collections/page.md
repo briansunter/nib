@@ -180,6 +180,28 @@ export default function BlogIndex({
 
 `glob()` recursively loads one entry per matching file and derives its `id` from the relative path. `file()` handles one file that returns either `{ id: data }` or an array of `{ id, data }`. A collection may instead provide any async loader function and use its `root` and `read()` context.
 
+For JSON, prefer the validated server helpers over repeating parsing adapters.
+`jsonFile()` loads an array as one collection entry per element, `jsonGlob()`
+loads one entry per matched file, and `jsonValue()` loads one complete JSON
+value as a single entry:
+
+```tsx
+import { defineCollection, z } from '@briansunter/nib'
+import { jsonValue } from '@briansunter/nib/server'
+
+export const travel = defineCollection(jsonValue({
+  file: 'src/content/travel.json',
+  schema: z.object({
+    countries: z.array(z.string()),
+    cities: z.array(z.object({ name: z.string() })),
+  }),
+  id: 'travel',
+}))
+```
+
+Omit `id` to use `default`. JSON syntax failures include the helper name and
+project-relative filename; schema failures retain the collection and entry id.
+
 ## Folder layouts and typed frontmatter
 
 Add `src/pages/layout.tsx` for the whole site or `src/pages/blog/layout.tsx` for the blog subtree. Layouts compose from root to leaf, followed by an optional frontmatter-selected layout.

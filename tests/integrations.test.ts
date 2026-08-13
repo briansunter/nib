@@ -217,6 +217,104 @@ describe('publication integrations', () => {
     expect(partial).toContain('{"name":"twitter:card","content":"summary"}')
   })
 
+  it('resolves route-aware social defaults below explicit route metadata', async () => {
+    const seenPaths: string[] = []
+    const plugin = metadata({
+      image: {
+        src: '/default-social.png',
+        alt: 'Default preview',
+        width: 1200,
+        height: 630,
+        type: 'image/png',
+      },
+      type: 'website',
+      twitterCard: 'summary',
+      twitterSite: '@nib',
+      structuredData: false,
+      resolve(context) {
+        seenPaths.push(context.route.path)
+        if (!context.route.path.startsWith('/resolved')) return undefined
+        return {
+          image: { src: '/resolved-social.png', alt: 'Resolved preview' },
+          type: 'article',
+          twitterCard: 'summary_large_image',
+        }
+      },
+    })
+    const extension = await plugin.renderer?.({
+      command: 'build', mode: 'production', root: '/site', base: '/',
+      origin: 'https://example.test',
+    })
+
+    const resolvedHead = extension?.head?.({
+      command: 'build', mode: 'production', root: '/site', base: '/',
+      origin: 'https://example.test',
+      route: {
+        kind: 'page', path: '/resolved/', source: 'test', status: 200,
+        meta: {
+          title: 'Resolved',
+          image: '/route-social.png',
+          twitterCard: 'summary',
+        },
+      },
+      data: { kind: 'article' },
+    })
+    const resolved = JSON.stringify(resolvedHead)
+    expect(resolved).toContain('https://example.test/route-social.png')
+    expect(resolved).not.toContain('resolved-social.png')
+    expect(resolved).not.toContain('default-social.png')
+    expect(resolved).toContain('{"property":"og:type","content":"article"}')
+    expect(resolved).toContain('{"name":"twitter:card","content":"summary"}')
+    expect(resolved).toContain('{"name":"twitter:site","content":"@nib"}')
+
+    const resolverOnlyHead = extension?.head?.({
+      command: 'build', mode: 'production', root: '/site', base: '/',
+      origin: 'https://example.test',
+      route: {
+        kind: 'page', path: '/resolved-only/', source: 'test', status: 200,
+        meta: { title: 'Resolver only' },
+      },
+    })
+    const resolverOnly = JSON.stringify(resolverOnlyHead)
+    expect(resolverOnly).toContain('https://example.test/resolved-social.png')
+    expect(resolverOnly).toContain('{"property":"og:image:alt","content":"Resolved preview"}')
+    expect(resolverOnly).toContain('{"property":"og:type","content":"article"}')
+    expect(resolverOnly).toContain('{"name":"twitter:card","content":"summary_large_image"}')
+
+    const defaultHead = extension?.head?.({
+      command: 'build', mode: 'production', root: '/site', base: '/',
+      origin: 'https://example.test',
+      route: {
+        kind: 'page', path: '/default/', source: 'test', status: 200,
+        meta: { title: 'Default' },
+      },
+    })
+    const defaults = JSON.stringify(defaultHead)
+    expect(defaults).toContain('https://example.test/default-social.png')
+    expect(defaults).toContain('{"property":"og:image:width","content":1200}')
+    expect(defaults).toContain('{"property":"og:image:height","content":630}')
+    expect(defaults).toContain('{"property":"og:image:type","content":"image/png"}')
+    expect(defaults).toContain('{"property":"og:image:alt","content":"Default preview"}')
+    expect(seenPaths).toEqual(['/resolved/', '/resolved-only/', '/default/'])
+  })
+
+  it('rejects invalid metadata resolver output with a focused diagnostic', async () => {
+    const extension = await metadata({
+      resolve: (() => 'wrong') as never,
+    }).renderer?.({
+      command: 'build', mode: 'production', root: '/site', base: '/',
+      origin: 'https://example.test',
+    })
+    expect(() => extension?.head?.({
+      command: 'build', mode: 'production', root: '/site', base: '/',
+      origin: 'https://example.test',
+      route: {
+        kind: 'page', path: '/', source: 'test', status: 200,
+        meta: { title: 'Home' },
+      },
+    })).toThrow('metadata resolve() must return an object or undefined')
+  })
+
   it('emits deterministic search resources from page fallbacks and custom items', async () => {
     const context = {
       command: 'build' as const,
