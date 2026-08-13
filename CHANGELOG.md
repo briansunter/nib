@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.21.0] (2026-08-13)
+
+### Features
+
+* expose typed client provenance, public testing helpers, metadata resolution, and singleton JSON loading
+* add guarded content-image resolution and route-aware client asset inspection
+* harden build output, route identity, cache isolation, island ownership, and release verification
+
+### Bug Fixes
+
+* reject symlink escapes, lifecycle races, unsafe route aliases, and cross-runtime ownership overlap
+* drain image workers and enforce safe image middleware methods and boundaries
+
 ## [0.20.0] (2026-07-30)
 
 

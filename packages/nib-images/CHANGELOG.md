@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.0] (2026-08-13)
+
+### Features
+
+* add configured content-image resolution for server and Vite consumers
+* add route-safe image catalog invalidation and packaged content exports
+
+### Bug Fixes
+
+* reject encoded path aliases, symlinked roots, unsupported methods, and undrained worker failures
+
 ## [0.7.0](https://github.com/briansunter/nib/compare/nib-images-v0.6.0...nib-images-v0.7.0) (2026-07-29)
 
 
