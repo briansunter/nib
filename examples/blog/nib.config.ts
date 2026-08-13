@@ -17,6 +17,21 @@ import {
 import { SiteShell } from './src/site-shell'
 import { site } from './src/site'
 
+function deploymentBase(): string {
+  const configured = process.env.SITE_BASE_PATH
+  if (configured !== undefined && configured !== '') {
+    const normalized = configured.startsWith('/') ? configured : `/${configured}`
+    return normalized.endsWith('/') ? normalized : `${normalized}/`
+  }
+  const repository = process.env.GITHUB_REPOSITORY?.split('/')[1]
+  return process.env.GITHUB_ACTIONS === 'true' && repository
+    ? `/${repository}/`
+    : '/'
+}
+
+const base = deploymentBase()
+const publicHref = (path: string): string => `${base}${path.replace(/^\/+/, '')}`
+
 const postFeed = fromCollection(posts, (entries) => entries.map(({ data }) => ({
   title: data.title,
   link: data.path,
@@ -34,6 +49,7 @@ const postSearch = fromCollection(posts, (entries) => entries.map(({ data }) => 
 })))
 
 export default defineConfig({
+  base,
   trailingSlash: 'always',
   origin: 'https://commonplace.example',
   shell: SiteShell,
@@ -58,7 +74,7 @@ export default defineConfig({
             attributes: {
               rel: 'icon',
               type: 'image/svg+xml',
-              href: '/favicon.svg',
+              href: publicHref('/favicon.svg'),
             },
           },
           {
@@ -66,7 +82,7 @@ export default defineConfig({
             attributes: {
               rel: 'alternate',
               type: 'application/rss+xml',
-              href: '/rss.xml',
+              href: publicHref('/rss.xml'),
             },
           },
         ],

@@ -10,6 +10,10 @@ async function read(file) {
   return fs.readFile(path.join(output, file), 'utf8')
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 const [
   home,
   post,
@@ -42,18 +46,27 @@ assert.equal(searchIndex.version, 1)
 assert.equal(searchIndex.items.length, 3)
 assert.ok(searchIndex.items.every((item) => item.kind === 'post'))
 
-assert.match(rss, /<rss version="2.0"/)
-assert.match(rss, /Making room for attention/)
-assert.match(sitemap, /https:\/\/commonplace\.example\/posts\/making-room-for-attention\//)
-
 const manifest = JSON.parse(publication)
 assert.equal(manifest.trailingSlash, 'always')
+const base = manifest.base === '/' ? '' : manifest.base.replace(/\/$/, '')
+
+assert.match(rss, /<rss version="2.0"/)
+assert.match(rss, /Making room for attention/)
+assert.match(
+  sitemap,
+  new RegExp(escapeRegExp(`https://commonplace.example${base}/posts/making-room-for-attention/`)),
+)
+assert.match(home, new RegExp(`href="${escapeRegExp(`${manifest.base}favicon.svg`)}"`))
+
 assert.ok(manifest.routes.some((route) => (
   route.kind === 'redirect'
   && route.path === '/notes/'
-  && route.destination === '/posts/'
+  && route.destination === `${manifest.base}posts/`
 )))
-assert.match(redirects, /^\/notes\/ \/posts\/ 301!$/m)
+assert.match(redirects, new RegExp(
+  `^${escapeRegExp(`${manifest.base}notes/`)} ${escapeRegExp(`${manifest.base}posts/`)} 301!$`,
+  'm',
+))
 assert.equal(JSON.parse(s3).version, 1)
 
 for (const outputText of [home, post, rss, sitemap, search]) {
